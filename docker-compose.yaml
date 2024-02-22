@@ -1,0 +1,48 @@
+# Define a Docker Compose for a FalkorDB deployment with 2 replicas and 3 sentinels
+version: '3.8'
+
+services:
+  falkordb-master:
+    image: falkordb/falkordb:edge
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_PORT=${REDIS_PORT}
+    volumes:
+      - $PWD/data:/data
+    ports:
+      - ${REDIS_PORT}
+    networks:
+      - falkordb
+
+  falkordb-slave:
+    build: ./falkordb-slave
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - MASTER_NAME=falkordb-master
+      - MASTER_PORT=${REDIS_PORT}
+    volumes:
+      - $PWD/data:/data
+    depends_on:
+      - falkordb-master
+    ports:
+      - ${REDIS_PORT}
+    networks:
+      - falkordb
+
+  sentinel:
+    build: ./sentinel
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - MASTER_NAME=falkordb-master
+      - MASTER_PORT=${REDIS_PORT}
+    depends_on:
+      - falkordb-master
+    links:
+      - falkordb-master
+    networks:
+      - falkordb
+
+
+networks:
+  falkordb:
+    driver: bridge

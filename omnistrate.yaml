@@ -1,0 +1,132 @@
+version: "3.9"
+
+x-omnistrate-integrations:
+  - omnistrateLogging
+  - omnistrateMetrics
+
+services:
+  falkordb-master:
+    image: falkordb/falkordb:edge
+    x-omnistrate-compute:
+        instanceTypes:
+        - cloudProvider: aws
+          name: t4g.small
+        - cloudProvider: gcp
+          name: e2-medium
+    x-omnistrate-api-params:
+      - key: parameterGroupId
+        description: Replica configuration
+        name: Parameter Group Id
+        dependentResourceKey: ParameterGroup
+        type: Resource
+        modifiable: true
+        required: true
+        export: true
+    environment:
+      - REDIS_PASSWORD=$parameterGroup.var.falkordbPassword
+      - SECURITY_CONTEXT_USER_ID=0
+      - SECURITY_CONTEXT_GROUP_ID=0
+      - SECURITY_CONTEXT_FS_GROUP=0
+    ports:
+      - "6379:6379"
+    x-omnistrate-capabilities:
+      autoscaling:
+        maxReplicas: 1
+        minReplicas: 1
+        idleMinutesBeforeScalingDown: 20
+        idleThreshold: 1
+      enableMultiZone: true
+
+  falkordb-slave:
+    image: dudizimber/falkordb-slave:latest
+    x-omnistrate-compute:
+        instanceTypes:
+        - cloudProvider: aws
+          name: t3.small
+        - cloudProvider: gcp
+          name: e2-medium
+    x-omnistrate-api-params:
+      - key: parameterGroupId
+        description: Replica configuration
+        name: Parameter Group Id
+        dependentResourceKey: ParameterGroup
+        type: Resource
+        modifiable: true
+        required: true
+        export: true
+      - key: masterInstanceId
+        description: Instance Id of the Master to connect
+        name: Master Instance Id
+        dependentResourceKey: falkordb-master
+        type: Resource
+        modifiable: true
+        required: true
+        export: true
+    environment:
+      - REDIS_PASSWORD=$parameterGroup.var.falkordbPassword
+      - MASTER_NAME=$falkordb-master.sys.network.externalClusterEndpoint
+      - MASTER_PORT=6379
+      - SECURITY_CONTEXT_USER_ID=0
+      - SECURITY_CONTEXT_GROUP_ID=0
+      - SECURITY_CONTEXT_FS_GROUP=0
+    ports:
+      - "6379:6379"
+    x-omnistrate-capabilities:
+      autoscaling:
+        maxReplicas: 1
+        minReplicas: 1
+        idleMinutesBeforeScalingDown: 20
+        idleThreshold: 1
+      enableMultiZone: true
+
+  sentinel:
+    image: dudizimber/redis-sentinel:7.2.4
+    x-omnistrate-compute:
+        instanceTypes:
+        - cloudProvider: aws
+          name: t3.small
+        - cloudProvider: gcp
+          name: e2-medium
+    environment:
+      - REDIS_PASSWORD=$parameterGroup.var.falkordbPassword
+      - MASTER_NAME=$falkordb-master.sys.network.externalClusterEndpoint
+      - SECURITY_CONTEXT_USER_ID=0
+      - SECURITY_CONTEXT_GROUP_ID=0
+      - SECURITY_CONTEXT_FS_GROUP=0
+    ports:
+      - "26379:26379"
+    x-omnistrate-api-params:
+      - key: parameterGroupId
+        description: Replica configuration
+        name: Parameter Group Id
+        dependentResourceKey: ParameterGroup
+        type: Resource
+        modifiable: true
+        required: true
+        export: true
+      - key: masterInstanceId
+        description: Instance Id of the Master to connect
+        name: Master Instance Id
+        dependentResourceKey: falkordb-master
+        type: Resource
+        modifiable: true
+        required: true
+        export: true
+    x-omnistrate-capabilities:
+      autoscaling:
+        maxReplicas: 3
+        minReplicas: 3
+        idleMinutesBeforeScalingDown: 20
+        idleThreshold: 1
+      enableMultiZone: true
+
+  ParameterGroup:
+    image: omnistrate/noop
+    x-omnistrate-api-params:
+      - key: falkordbPassword
+        description: FalkorDB Password
+        name: FalkorDB Password
+        type: String
+        modifiable: false
+        required: true
+        export: false

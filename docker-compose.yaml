@@ -14,8 +14,8 @@ services:
     networks:
       - falkordb
 
-  falkordb-slave:
-    build: ./falkordb-slave
+  falkordb-replica:
+    build: ./falkordb-replica
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - MASTER_NAME=falkordb-master

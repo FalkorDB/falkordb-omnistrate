@@ -37,8 +37,8 @@ services:
         idleThreshold: 1
       enableMultiZone: true
 
-  falkordb-slave:
-    image: dudizimber/falkordb-slave:latest
+  falkordb-replica:
+    image: dudizimber/falkordb-replica:latest
     x-omnistrate-compute:
         instanceTypes:
         - cloudProvider: aws
@@ -64,8 +64,10 @@ services:
         export: true
     environment:
       - REDIS_PASSWORD=$parameterGroup.var.falkordbPassword
-      - MASTER_NAME=$falkordb-master.sys.network.externalClusterEndpoint
+      - MASTER_NAME=$falkordb-master.sys.network.internalClusterEndpoint
       - MASTER_PORT=6379
+      - REPLICA_IP=$sys.network.internalClusterEndpoint
+      - REPLICA_PORT=6379
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
@@ -89,7 +91,7 @@ services:
           name: e2-medium
     environment:
       - REDIS_PASSWORD=$parameterGroup.var.falkordbPassword
-      - MASTER_NAME=$falkordb-master.sys.network.externalClusterEndpoint
+      - MASTER_NAME=$falkordb-master.sys.network.internalClusterEndpoint
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0

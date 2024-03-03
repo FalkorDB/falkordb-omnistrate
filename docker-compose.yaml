@@ -2,11 +2,12 @@
 version: '3.8'
 
 services:
-  falkordb-master:
-    image: falkordb/falkordb:edge
+  master:
+    build: ./falkordb-replica
     environment:
+      - IS_MASTER=1
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_PORT=${REDIS_PORT}
+      - REPLICA_PORT=${REDIS_PORT}
     volumes:
       - $PWD/data:/data
     ports:
@@ -14,16 +15,14 @@ services:
     networks:
       - falkordb
 
-  falkordb-replica:
+  replica:
     build: ./falkordb-replica
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - MASTER_NAME=falkordb-master
+      - MASTER_NAME=master
       - MASTER_PORT=${REDIS_PORT}
     volumes:
       - $PWD/data:/data
-    depends_on:
-      - falkordb-master
     ports:
       - ${REDIS_PORT}
     networks:
@@ -33,12 +32,10 @@ services:
     build: ./sentinel
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - MASTER_NAME=falkordb-master
+      - MASTER_NAME=master
       - MASTER_PORT=${REDIS_PORT}
-    depends_on:
-      - falkordb-master
-    links:
-      - falkordb-master
+    ports:
+      - 26379
     networks:
       - falkordb
 

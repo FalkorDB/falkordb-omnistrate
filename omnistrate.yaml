@@ -6,7 +6,7 @@ x-omnistrate-integrations:
 
 services:
   falkordb-master:
-    image: falkordb/falkordb:edge
+    image: dudizimber/falkordb-replica:latest
     x-omnistrate-compute:
         instanceTypes:
         - cloudProvider: aws
@@ -23,6 +23,7 @@ services:
         required: true
         export: true
     environment:
+      - IS_MASTER=1
       - REDIS_PASSWORD=$parameterGroup.var.falkordbPassword
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
@@ -66,7 +67,7 @@ services:
       - REDIS_PASSWORD=$parameterGroup.var.falkordbPassword
       - MASTER_NAME=$falkordb-master.sys.network.internalClusterEndpoint
       - MASTER_PORT=6379
-      - REPLICA_IP=$sys.network.internalClusterEndpoint
+      - REPLICA_IP=$sys.network.externalClusterEndpoint
       - REPLICA_PORT=6379
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
@@ -91,7 +92,7 @@ services:
           name: e2-medium
     environment:
       - REDIS_PASSWORD=$parameterGroup.var.falkordbPassword
-      - MASTER_NAME=$falkordb-master.sys.network.internalClusterEndpoint
+      - MASTER_NAME=$falkordb-master.sys.network.externalClusterEndpoint
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0

@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: falkordb/falkordb-node
+  IMAGE_NAME: falkordb-node
 
 jobs:
   docker:

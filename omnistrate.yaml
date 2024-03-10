@@ -1,135 +1,187 @@
 version: "3.9"
 
-x-omnistrate-integrations:
-  - omnistrateLogging
-  - omnistrateMetrics
-
 services:
-  falkordb-master:
-    image: dudizimber/falkordb-replica:latest
-    x-omnistrate-compute:
-        instanceTypes:
-        - cloudProvider: aws
-          name: t4g.small
-        - cloudProvider: gcp
-          name: e2-medium
+  FalkorDB:
+    x-omnistrate-mode-internal: false
+    image: omnistrate/noop
     x-omnistrate-api-params:
-      - key: parameterGroupId
-        description: Replica configuration
-        name: Parameter Group Id
-        dependentResourceKey: ParameterGroup
-        type: Resource
+      - key: nodeInstanceType
+        description: Node Instance Type
+        name: Node Instance Type
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: e2-medium
+        options:
+          - e2-small
+          - e2-medium
+        parameterDependencyMap:
+          node: nodeInstanceType
+      - key: numReplicas
+        description: Number of Replicas
+        name: Number of Replicas
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "1"
+        limits:
+          min: 0
+          max: 10
+        parameterDependencyMap:
+          node: numReplicas
+      - key: sentinelInstanceType
+        description: Sentinel Instance Type
+        name: Sentinel Instance Type
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: e2-medium
+        options:
+          - e2-small
+          - e2-medium
+        parameterDependencyMap:
+          node: sentinelInstanceType
+          sentinel: sentinelInstanceType
+      - key: sentinelOnlyReplicas
+        description: Number of Sentinel-only Replicas
+        name: Number of Sentinel-Only Replicas
+        type: Float64
         modifiable: true
         required: true
         export: true
-    environment:
-      - IS_MASTER=1
-      - REDIS_PASSWORD=$parameterGroup.var.falkordbPassword
-      - SECURITY_CONTEXT_USER_ID=0
-      - SECURITY_CONTEXT_GROUP_ID=0
-      - SECURITY_CONTEXT_FS_GROUP=0
-    ports:
-      - "6379:6379"
-    x-omnistrate-capabilities:
-      autoscaling:
-        maxReplicas: 1
-        minReplicas: 1
-        idleMinutesBeforeScalingDown: 20
-        idleThreshold: 1
-      enableMultiZone: true
+        defaultValue: "1"
+        limits:
+          min: 0
+          max: 1
+        parameterDependencyMap:
+          node: sentinelOnlyReplicas
+          sentinel: sentinelOnlyReplicas
+    depends_on:
+      - node
+      - sentinel
 
-  falkordb-replica:
-    image: dudizimber/falkordb-replica:latest
+  node:
+    x-omnistrate-mode-internal: true
+    image: dudizimber/falkordb-node:v0.0.2
     x-omnistrate-compute:
-        instanceTypes:
+      replicaCountAPIParam: numReplicas
+      instanceTypes:
         - cloudProvider: aws
-          name: t3.small
+          apiParam: nodeInstanceType
         - cloudProvider: gcp
-          name: e2-medium
+          apiParam: nodeInstanceType
     x-omnistrate-api-params:
-      - key: parameterGroupId
-        description: Replica configuration
-        name: Parameter Group Id
-        dependentResourceKey: ParameterGroup
-        type: Resource
+      - key: nodeInstanceType
+        description: Node Instance Type
+        name: Node Instance Type
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: e2-medium
+        options:
+          - e2-small
+          - e2-medium
+      - key: numReplicas
+        description: Number of Replicas
+        name: Number of Replicas
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "1"
+        limits:
+          min: 0
+          max: 10
+      - key: sentinelInstanceType
+        description: Sentinel Instance Type
+        name: Sentinel Instance Type
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: e2-medium
+        options:
+          - e2-small
+          - e2-medium
+        parameterDependencyMap:
+          sentinel: sentinelInstanceType
+      - key: sentinelOnlyReplicas
+        description: Number of Sentinel-only Replicas
+        name: Number of Sentinel-Only Replicas
+        type: Float64
         modifiable: true
         required: true
         export: true
-      - key: masterInstanceId
-        description: Instance Id of the Master to connect
-        name: Master Instance Id
-        dependentResourceKey: falkordb-master
-        type: Resource
-        modifiable: true
-        required: true
-        export: true
+        defaultValue: "1"
+        limits:
+          min: 0
+          max: 1
+        parameterDependencyMap:
+          sentinel: sentinelOnlyReplicas
     environment:
-      - REDIS_PASSWORD=$parameterGroup.var.falkordbPassword
-      - MASTER_NAME=$falkordb-master.sys.network.internalClusterEndpoint
-      - MASTER_PORT=6379
-      - REPLICA_IP=$sys.network.externalClusterEndpoint
-      - REPLICA_PORT=6379
+      - RUN_NODE=1
+      - RUN_SENTINEL=1
+      - SENTINEL_HOST=$sentinel.sys.network.externalClusterEndpoint
+      - NODE_HOST=$sys.network.node.externalEndpoint
+      - NODE_PORT=6379
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
     ports:
       - "6379:6379"
+      - "26379:26379"
     x-omnistrate-capabilities:
-      autoscaling:
-        maxReplicas: 1
-        minReplicas: 1
-        idleMinutesBeforeScalingDown: 20
-        idleThreshold: 1
       enableMultiZone: true
+      enableEndpointPerReplica: true
+    depends_on:
+      - sentinel
+
 
   sentinel:
-    image: dudizimber/redis-sentinel:7.2.4
+    x-omnistrate-mode-internal: true
+    image: dudizimber/falkordb-node:v0.0.2
     x-omnistrate-compute:
-        instanceTypes:
+      replicaCountAPIParam: sentinelOnlyReplicas
+      instanceTypes:
         - cloudProvider: aws
-          name: t3.small
+          apiParam: sentinelInstanceType
         - cloudProvider: gcp
-          name: e2-medium
+          apiParam: sentinelInstanceType
     environment:
-      - REDIS_PASSWORD=$parameterGroup.var.falkordbPassword
-      - MASTER_NAME=$falkordb-master.sys.network.externalClusterEndpoint
+      - RUN_NODE=0
+      - RUN_SENTINEL=1
+      - SENTINEL_PORT=26379
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
     ports:
       - "26379:26379"
     x-omnistrate-api-params:
-      - key: parameterGroupId
-        description: Replica configuration
-        name: Parameter Group Id
-        dependentResourceKey: ParameterGroup
-        type: Resource
-        modifiable: true
-        required: true
-        export: true
-      - key: masterInstanceId
-        description: Instance Id of the Master to connect
-        name: Master Instance Id
-        dependentResourceKey: falkordb-master
-        type: Resource
-        modifiable: true
-        required: true
-        export: true
-    x-omnistrate-capabilities:
-      autoscaling:
-        maxReplicas: 3
-        minReplicas: 3
-        idleMinutesBeforeScalingDown: 20
-        idleThreshold: 1
-      enableMultiZone: true
-
-  ParameterGroup:
-    image: omnistrate/noop
-    x-omnistrate-api-params:
-      - key: falkordbPassword
-        description: FalkorDB Password
-        name: FalkorDB Password
+      - key: sentinelInstanceType
+        description: Sentinel Instance Type
+        name: Sentinel Instance Type
         type: String
         modifiable: false
         required: true
-        export: false
+        export: true
+        defaultValue: e2-medium
+        options:
+          - e2-small
+          - e2-medium
+      - key: sentinelOnlyReplicas
+        description: Number of Sentinel-only Replicas
+        name: Number of Sentinel-Only Replicas
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "1"
+        limits:
+          min: 0
+          max: 1
+    x-omnistrate-capabilities:
+      enableMultiZone: true

@@ -1,0 +1,143 @@
+version: "3.9"
+
+services:
+  FalkorDB:
+    x-omnistrate-mode-internal: false
+    image: omnistrate/noop
+    x-omnistrate-api-params:
+      - key: instanceType
+        description: Instance Type
+        name: Instance Type
+        type: String
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: e2-medium
+        parameterDependencyMap:
+          node: instanceType
+          sentinel: instanceType
+      - key: numReplicas
+        description: Number of Replicas
+        name: Number of Replicas
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "1"
+        limits:
+          min: 1
+          max: 10
+        parameterDependencyMap:
+          node: numReplicas
+          sentinel: numReplicas
+      - key: sentinelOnlyReplicas
+        description: Number of Sentinel-only Replicas
+        name: Number of Sentinel-Only Replicas
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "1"
+        limits:
+          min: 0
+          max: 1
+        parameterDependencyMap:
+          sentinel: sentinelOnlyReplicas
+    depends_on:
+      - node
+      - sentinel
+
+  node:
+    x-omnistrate-mode-internal: true
+    image: dudizimber/falkordb-node:latest
+    x-omnistrate-compute:
+      replicaCountAPIParam: numReplicas
+      instanceTypes:
+        - cloudProvider: aws
+          apiParam: instanceType
+        - cloudProvider: gcp
+          apiParam: instanceType
+    x-omnistrate-api-params:
+      - key: instanceType
+        description: Instance Type
+        name: Instance Type
+        type: String
+        modifiable: true
+        required: true
+        export: true
+      - key: numReplicas
+        description: Number of Replicas
+        name: Number of Replicas
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+    environment:
+      - RUN_NODE=1
+      - RUN_SENTINEL=1
+      - MASTER_HOST=$sys.network.node.externalEndpoint
+      - MASTER_PORT=6379
+      - SECURITY_CONTEXT_USER_ID=0
+      - SECURITY_CONTEXT_GROUP_ID=0
+      - SECURITY_CONTEXT_FS_GROUP=0
+    ports:
+      - "6379:6379"
+      - "26379:26379"
+    x-omnistrate-capabilities:
+      enableMultiZone: true
+      enableEndpointPerReplica: true
+
+  sentinel:
+    x-omnistrate-mode-internal: true
+    image: dudizimber/falkordb-node:latest
+    x-omnistrate-compute:
+      replicaCountAPIParam: sentinelOnlyReplicas
+      instanceTypes:
+        - cloudProvider: aws
+          apiParam: instanceType
+        - cloudProvider: gcp
+          apiParam: instanceType
+    environment:
+      - RUN_NODE=0
+      - RUN_SENTINEL=1
+      - MASTER_HOST=$node.sys.network.externalClusterEndpoint
+      - MASTER_PORT=6379
+      - SECURITY_CONTEXT_USER_ID=0
+      - SECURITY_CONTEXT_GROUP_ID=0
+      - SECURITY_CONTEXT_FS_GROUP=0
+    ports:
+      - "26379:26379"
+    x-omnistrate-api-params:
+      - key: instanceType
+        description: Instance Type
+        name: Instance Type
+        type: String
+        modifiable: true
+        required: true
+        export: true
+        parameterDependencyMap:
+          node: instanceType
+      - key: sentinelOnlyReplicas
+        description: Number of Sentinel-only Replicas
+        name: Number of Sentinel-Only Replicas
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+      - key: numReplicas
+        description: Number of Replicas
+        name: Number of Replicas
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "1"
+        limits:
+          min: 1
+          max: 10
+        parameterDependencyMap:
+          node: numReplicas
+    x-omnistrate-capabilities:
+      enableMultiZone: true
+    depends_on:
+      - node

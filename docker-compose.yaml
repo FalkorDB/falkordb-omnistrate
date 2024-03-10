@@ -2,43 +2,30 @@
 version: '3.8'
 
 services:
-  master:
-    build: ./falkordb-replica
+  node:
+    image: falkordb/falkordb-node:latest
     environment:
-      - IS_MASTER=1
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REPLICA_PORT=${REDIS_PORT}
-    volumes:
-      - $PWD/data:/data
-    ports:
-      - ${REDIS_PORT}
-    networks:
-      - falkordb
-
-  replica:
-    build: ./falkordb-replica
-    environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - RUN_NODE=1
+      - RUN_SENTINEL=1
+      - SENTINEL_HOST=sentinel
+      - SENTINEL_PORT=26379
       - MASTER_NAME=master
-      - MASTER_PORT=${REDIS_PORT}
-    volumes:
-      - $PWD/data:/data
     ports:
-      - ${REDIS_PORT}
+      - 6379
     networks:
       - falkordb
 
   sentinel:
-    build: ./sentinel
+    image: falkordb/falkordb-node:latest
     environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - MASTER_NAME=master
-      - MASTER_PORT=${REDIS_PORT}
+      - RUN_NODE=0
+      - RUN_SENTINEL=1
+      - MASTER_HOST=172.21.0.3
+      - MASTER_PORT=6379
     ports:
       - 26379
     networks:
       - falkordb
-
 
 networks:
   falkordb:

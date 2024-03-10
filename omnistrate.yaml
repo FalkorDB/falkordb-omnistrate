@@ -65,7 +65,7 @@ services:
 
   node:
     x-omnistrate-mode-internal: true
-    image: dudizimber/falkordb-node:v0.0.2
+    image: falkordb/falkordb-node:latest
     x-omnistrate-compute:
       replicaCountAPIParam: numReplicas
       instanceTypes:
@@ -143,7 +143,7 @@ services:
 
   sentinel:
     x-omnistrate-mode-internal: true
-    image: dudizimber/falkordb-node:v0.0.2
+    image: falkordb/falkordb-node:latest
     x-omnistrate-compute:
       replicaCountAPIParam: sentinelOnlyReplicas
       instanceTypes:

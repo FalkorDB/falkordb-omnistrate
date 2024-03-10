@@ -1,0 +1,36 @@
+name: Build and release image
+
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: falkordb/falkordb-node
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: falkordb/${{ env.IMAGE_NAME }}:${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/v') && github.ref_name || 'edge'}}, falkordb/${{ env.IMAGE_NAME }}:latest

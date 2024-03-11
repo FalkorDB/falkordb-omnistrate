@@ -1,5 +1,6 @@
 #!/bin/bash
 
+ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
 FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-'falkordb'}
 RUN_SENTINEL=${RUN_SENTINEL:-0}
 RUN_NODE=${RUN_NODE:-1}
@@ -82,6 +83,19 @@ if [ "$RUN_NODE" -eq "1" ]; then
     echo "Starting Master"
   fi
 
+  if [[ $TLS -eq "true" ]]; then
+    sed -i "s/\$NODE_PORT/0/g" /falkordb/node.conf
+    echo "tls-port $PORT" >> /falkordb/node.conf
+    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >> /falkordb/node.conf
+    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >> /falkordb/node.conf
+    echo "tls-ca-cert-file $ROOT_CA_PATH" >> /falkordb/node.conf
+    echo "tls-auth-clients yes" >> /falkordb/node.conf
+
+    if [[ $IS_REPLICA -eq 1 ]]; then
+      echo "tls-replication yes" >> /falkordb/node.conf
+    fi
+  fi
+
   redis-server /falkordb/node.conf &
 
   sleep 10
@@ -102,6 +116,16 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
   sed -i "s/\$SENTINEL_PORT/$SENTINEL_PORT/g" /falkordb/sentinel.conf
 
   echo "Starting Sentinel"
+
+  if [[ $TLS -eq "true" ]]; then
+    sed -i "s/\$SENTINEL_PORT/0/g" /falkordb/sentinel.conf
+    echo "tls-port $SENTINEL_PORT" >> /falkordb/sentinel.conf
+    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >> /falkordb/sentinel.conf
+    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >> /falkordb/sentinel.conf
+    echo "tls-ca-cert-file $ROOT_CA_PATH" >> /falkordb/node.conf
+    echo "tls-replication yes" >> /falkordb/sentinel.conf
+    echo "tls-auth-clients yes" >> /falkordb/sentinel.conf
+ fi
 
   redis-server /falkordb/sentinel.conf --sentinel &
 

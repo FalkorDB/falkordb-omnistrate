@@ -59,6 +59,17 @@ services:
         parameterDependencyMap:
           node: sentinelOnlyReplicas
           sentinel: sentinelOnlyReplicas
+      - key: enableTLS
+        description: Enable TLS
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: false
+        parameterDependencyMap:
+          node: enableTLS
+          sentinel: enableTLS
     depends_on:
       - node
       - sentinel
@@ -122,12 +133,23 @@ services:
           max: 1
         parameterDependencyMap:
           sentinel: sentinelOnlyReplicas
+      - key: enableTLS
+        description: Enable TLS
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: false
+        parameterDependencyMap:
+          sentinel: enableTLS
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
       - SENTINEL_HOST=$sentinel.sys.network.externalClusterEndpoint
       - NODE_HOST=$sys.network.node.externalEndpoint
       - NODE_PORT=6379
+      - TLS=$var.enableTLS
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
@@ -155,6 +177,7 @@ services:
       - RUN_NODE=0
       - RUN_SENTINEL=1
       - SENTINEL_PORT=26379
+      - TLS=$var.enableTLS
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
@@ -183,5 +206,13 @@ services:
         limits:
           min: 0
           max: 1
+      - key: enableTLS
+        description: Enable TLS
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: false
     x-omnistrate-capabilities:
       enableMultiZone: true

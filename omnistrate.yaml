@@ -59,6 +59,16 @@ services:
         parameterDependencyMap:
           node: sentinelOnlyReplicas
           sentinel: sentinelOnlyReplicas
+      - key: falkordbPassword
+        description: FalkorDB Password
+        name: FalkorDB Password
+        type: String
+        modifiable: false
+        required: true
+        export: false
+        parameterDependencyMap:
+          node: falkordbPassword
+          sentinel: falkordbPassword
     depends_on:
       - node
       - sentinel
@@ -122,12 +132,22 @@ services:
           max: 1
         parameterDependencyMap:
           sentinel: sentinelOnlyReplicas
+      - key: falkordbPassword
+        description: FalkorDB Password
+        name: FalkorDB Password
+        type: String
+        modifiable: false
+        required: true
+        export: false
+        parameterDependencyMap:
+          sentinel: falkordbPassword
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
       - SENTINEL_HOST=$sentinel.sys.network.externalClusterEndpoint
       - NODE_HOST=$sys.network.node.externalEndpoint
       - NODE_PORT=6379
+      - FALKORDB_PASSWORD=$var.falkordbPassword
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
@@ -155,6 +175,7 @@ services:
       - RUN_NODE=0
       - RUN_SENTINEL=1
       - SENTINEL_PORT=26379
+      - FALKORDB_PASSWORD=$var.falkordbPassword
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
@@ -183,5 +204,12 @@ services:
         limits:
           min: 0
           max: 1
+      - key: falkordbPassword
+        description: FalkorDB Password
+        name: FalkorDB Password
+        type: String
+        modifiable: false
+        required: true
+        export: false
     x-omnistrate-capabilities:
       enableMultiZone: true

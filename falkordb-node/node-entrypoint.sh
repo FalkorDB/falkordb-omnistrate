@@ -19,7 +19,7 @@ FALKORDB_MASTER_PORT_NUMBER=${MASTER_PORT:-'6379'}
 IS_REPLICA=${IS_REPLICA:-0}
 
 get_master() {
-  master_info=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL get-master-addr-by-name $MASTER_NAME)
+  master_info=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD --no-auth-warn SENTINEL get-master-addr-by-name $MASTER_NAME)
   redisRetVal=$?
   echo "Master Info: $master_info"
   echo "Redis Ret Val: $redisRetVal"

@@ -94,6 +94,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
     echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >> /falkordb/node.conf
     echo "tls-ca-cert-file $ROOT_CA_PATH" >> /falkordb/node.conf
     echo "tls-replication yes" >> /falkordb/node.conf
+    echo "tls-auth-clients no" >> /falkordb/node.conf
   else
     sed -i "s/\$NODE_PORT/$NODE_PORT/g" /falkordb/node.conf
   fi
@@ -126,6 +127,7 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
     echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >> /falkordb/sentinel.conf
     echo "tls-ca-cert-file $ROOT_CA_PATH" >> /falkordb/sentinel.conf
     echo "tls-replication yes" >> /falkordb/sentinel.conf
+    echo "tls-auth-clients no" >> /falkordb/sentinel.conf
   else
     sed -i "s/\$SENTINEL_PORT/$SENTINEL_PORT/g" /falkordb/sentinel.conf
   fi

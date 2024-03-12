@@ -77,7 +77,7 @@ is_replica() {
 
 if [ "$RUN_NODE" -eq "1" ]; then
   sed -i "s/\$NODE_HOST/$NODE_HOST/g" /falkordb/node.conf
-  sed -i "s/\$NODE_PORT/$NODE_HOST/g" /falkordb/node.conf
+  sed -i "s/\$NODE_PORT/$NODE_PORT/g" /falkordb/node.conf
   sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" /falkordb/node.conf
 
   is_replica

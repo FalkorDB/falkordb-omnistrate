@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
-FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-'falkordb'}
+FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
 RUN_SENTINEL=${RUN_SENTINEL:-0}
 RUN_NODE=${RUN_NODE:-1}
 
@@ -20,7 +20,7 @@ FALKORDB_MASTER_PORT_NUMBER=${MASTER_PORT:-'6379'}
 IS_REPLICA=${IS_REPLICA:-0}
 
 get_master() {
-  master_info=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL get-master-addr-by-name $MASTER_NAME)
+  master_info=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD --no-auth-warning SENTINEL get-master-addr-by-name $MASTER_NAME)
   redisRetVal=$?
   echo "Master Info: $master_info"
   echo "Redis Ret Val: $redisRetVal"
@@ -74,6 +74,7 @@ is_replica() {
 if [ "$RUN_NODE" -eq "1" ]; then
   sed -i "s/\$NODE_HOST/$NODE_HOST/g" /falkordb/node.conf
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" /falkordb/node.conf
+  sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" /falkordb/node.conf
 
   is_replica
   if [[ $IS_REPLICA -eq 1 ]]; then
@@ -102,11 +103,11 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
   # If node should be master, add it to sentinel
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL set $MASTER_NAME parallel-syncs 1
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL set $MASTER_NAME auth-pass $FALKORDB_PASSWORD
+    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM
+    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD SENTINEL set $MASTER_NAME auth-pass $FALKORDB_PASSWORD
+    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
+    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
+    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD SENTINEL set $MASTER_NAME parallel-syncs 1
   fi
 
 fi
@@ -114,6 +115,7 @@ fi
 
 if [ "$RUN_SENTINEL" -eq "1" ]; then
   sed -i "s/\$SENTINEL_PORT/$SENTINEL_PORT/g" /falkordb/sentinel.conf
+  sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" /falkordb/sentinel.conf
 
   echo "Starting Sentinel"
 
@@ -133,11 +135,11 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
 
   # If FALKORDB_MASTER_HOST is not empty, add monitor to sentinel
   if [[ ! -z $FALKORDB_MASTER_HOST ]]; then
-    redis-cli -p $SENTINEL_PORT SENTINEL monitor $MASTER_NAME $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER $SENTINEL_QUORUM
-    redis-cli -p $SENTINEL_PORT SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
-    redis-cli -p $SENTINEL_PORT SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
-    redis-cli -p $SENTINEL_PORT SENTINEL set $MASTER_NAME parallel-syncs 1
-    redis-cli -p $SENTINEL_PORT SENTINEL set $MASTER_NAME auth-pass $FALKORDB_PASSWORD
+    redis-cli -p $SENTINEL_PORT -a $FALKORDB_PASSWORD SENTINEL monitor $MASTER_NAME $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER $SENTINEL_QUORUM
+    redis-cli -p $SENTINEL_PORT -a $FALKORDB_PASSWORD SENTINEL set $MASTER_NAME auth-pass $FALKORDB_PASSWORD
+    redis-cli -p $SENTINEL_PORT -a $FALKORDB_PASSWORD SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
+    redis-cli -p $SENTINEL_PORT -a $FALKORDB_PASSWORD SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
+    redis-cli -p $SENTINEL_PORT -a $FALKORDB_PASSWORD SENTINEL set $MASTER_NAME parallel-syncs 1
   fi
 fi
 

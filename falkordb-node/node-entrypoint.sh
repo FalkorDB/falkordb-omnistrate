@@ -125,7 +125,7 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
     echo "tls-port $SENTINEL_PORT" >> /falkordb/sentinel.conf
     echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >> /falkordb/sentinel.conf
     echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >> /falkordb/sentinel.conf
-    echo "tls-ca-cert-file $ROOT_CA_PATH" >> /falkordb/node.conf
+    echo "tls-ca-cert-file $ROOT_CA_PATH" >> /falkordb/sentinel.conf
     echo "tls-replication yes" >> /falkordb/sentinel.conf
  fi
 

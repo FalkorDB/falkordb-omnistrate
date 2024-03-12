@@ -89,7 +89,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
   if [[ $TLS == "true" ]]; then
     sed -i "s/\$NODE_PORT/0/g" /falkordb/node.conf
-    echo "tls-port $PORT" >> /falkordb/node.conf
+    echo "tls-port $NODE_PORT" >> /falkordb/node.conf
     echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >> /falkordb/node.conf
     echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >> /falkordb/node.conf
     echo "tls-ca-cert-file $ROOT_CA_PATH" >> /falkordb/node.conf

@@ -4,6 +4,7 @@ FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
 ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
 RUN_SENTINEL=${RUN_SENTINEL:-0}
 RUN_NODE=${RUN_NODE:-1}
+RUN_METRICS=${RUN_METRICS:-1}
 TLS=${TLS:-'false'}
 
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
@@ -154,6 +155,11 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
   fi
 fi
 
+
+if [[ $RUN_METRICS -eq 1 ]]; then
+  echo "Starting Metrics"
+  redis_exporter --redis.password $ADMIN_PASSWORD --tls-server-key-file $TLS_MOUNT_PATH/tls.key --tls-server-cert-file $TLS_MOUNT_PATH/tls.crt --tls-ca-cert-file $ROOT_CA_PATH --redis.addr $NODE_HOST:$NODE_PORT &
+fi
 
 while true; do
   sleep 1

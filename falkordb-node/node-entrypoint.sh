@@ -81,7 +81,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   sed -i "s/\$NODE_HOST/$NODE_HOST/g" /falkordb/node.conf
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" /falkordb/node.conf
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" /falkordb/node.conf
-  sed -i "s/\$DATA_DIR/$DATA_DIR/g" /falkordb/node.conf
+  echo "dir $DATA_DIR" >> /falkordb/node.conf
 
   is_replica
   if [[ $IS_REPLICA -eq 1 ]]; then

@@ -12,7 +12,7 @@ env:
   IMAGE_NAME: falkordb-node
 
 jobs:
-  docker:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -35,14 +35,51 @@ jobs:
           push: true
           tags: falkordb/${{ env.IMAGE_NAME }}:${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/v') && github.ref_name || 'edge'}}, falkordb/${{ env.IMAGE_NAME }}:latest
 
+  omnistrate-update:
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/v')
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tiers:
+          - name: single zone - node
+            serviceId: s-MdOEhVP7yJ
+            serviceApiId: sa-4dTm1SmTgr
+            productTierId: pt-ASuaTRt89t
+            imageConfigId: imgc-sipNQAPCrB
+          - name: single zone - sentinel
+            serviceId: s-MdOEhVP7yJ
+            serviceApiId: sa-4dTm1SmTgr
+            productTierId: pt-ASuaTRt89t
+            imageConfigId: imgc-9Jg4l6qMB3
+          - name: multi zone - node
+            serviceId: s-MdOEhVP7yJ
+            serviceApiId: sa-4dTm1SmTgr
+            productTierId: pt-mXEXO8FbRK
+            imageConfigId: imgc-9ojJf5CzQh
+          - name: multi zone - sentinel
+            serviceId: s-MdOEhVP7yJ
+            serviceApiId: sa-4dTm1SmTgr
+            productTierId: pt-mXEXO8FbRK
+            imageConfigId: imgc-bmMnLJRayV
+          - name: standalone - node
+            serviceId: s-MdOEhVP7yJ
+            serviceApiId: sa-4dTm1SmTgr
+            productTierId: pt-FwoqriENVP
+            imageConfigId: imgc-ek6aUWWic0
+          - name: free - node
+            serviceId: s-MdOEhVP7yJ
+            serviceApiId: sa-4dTm1SmTgr
+            productTierId: pt-CsGAZopuDp
+            imageConfigId: imgc-JCucNXPYLS
+    steps:
       - name: Update Docker Image Tag on Omnistrate
-        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/v')
         uses: omnistrate/update-image-config@v1
         with:
           username: ${{ secrets.OMNISTRATE_USERNAME }}
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
-          service-id: s-MdOEhVP7yJ
-          image-config-id: imgc-9Jg4l6qMB3
-          service-api-id: sa-4dTm1SmTgr
-          product-tier-id: pt-ASuaTRt89t
+          service-id: ${{ matrix.tiers.serviceId }}
+          service-api-id: ${{ matrix.tiers.serviceApiId }}
+          product-tier-id: ${{ matrix.tiers.productTierId }}
+          image-config-id: ${{ matrix.tiers.imageConfigId }}
           tag: ${{ github.ref_name }}

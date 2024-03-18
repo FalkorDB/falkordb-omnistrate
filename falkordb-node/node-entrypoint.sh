@@ -29,7 +29,6 @@ get_master() {
   master_info=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD $TLS_CONNECTION_STRING --no-auth-warning SENTINEL get-master-addr-by-name $MASTER_NAME)
   redisRetVal=$?
   echo "Master Info: $master_info"
-  echo "Redis Ret Val: $redisRetVal"
 
   # If RUN_SENTINEL is 1 and could not connect to sentinel, wait and try again
   if [[ $RUN_SENTINEL -eq 1 && $redisRetVal -ne 0 ]]; then

@@ -11,6 +11,7 @@ services:
         type: String
         modifiable: true
         required: false
+        defaultValue: FalkorDB Instance
         export: true
       - key: description
         description: Description
@@ -18,6 +19,7 @@ services:
         type: String
         modifiable: true
         required: false
+        defaultValue: FalkorDB Instance
         export: true
       - key: nodeInstanceType
         description: Node Instance Type
@@ -28,7 +30,6 @@ services:
         export: true
         defaultValue: e2-medium
         options:
-          - e2-custom-small-1024
           - e2-small
           - e2-medium
           - e2-custom-2-6144
@@ -50,34 +51,6 @@ services:
           max: 10
         parameterDependencyMap:
           node: numReplicas
-      - key: sentinelInstanceType
-        description: Sentinel Instance Type
-        name: Sentinel Instance Type
-        type: String
-        modifiable: false
-        required: true
-        export: true
-        defaultValue: e2-small
-        options:
-          - e2-small
-          - e2-medium
-        parameterDependencyMap:
-          node: sentinelInstanceType
-          sentinel: sentinelInstanceType
-      - key: sentinelOnlyReplicas
-        description: Number of Sentinel-only Replicas
-        name: Number of Sentinel-Only Replicas
-        type: Float64
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: "1"
-        limits:
-          min: 0
-          max: 1
-        parameterDependencyMap:
-          node: sentinelOnlyReplicas
-          sentinel: sentinelOnlyReplicas
       - key: enableTLS
         description: Enable TLS
         name: Enable TLS
@@ -85,10 +58,9 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: false
+        defaultValue: "false"
         parameterDependencyMap:
           node: enableTLS
-          sentinel: enableTLS
       - key: falkordbPassword
         description: FalkorDB Password
         name: FalkorDB Password
@@ -98,19 +70,15 @@ services:
         export: false
         parameterDependencyMap:
           node: falkordbPassword
-          sentinel: falkordbPassword
     depends_on:
       - node
-      - sentinel
 
   node:
     x-omnistrate-mode-internal: true
-    image: falkordb/falkordb-node:latest
+    image: falkordb/falkordb-node:v0.0.15
     x-omnistrate-compute:
       replicaCountAPIParam: numReplicas
       instanceTypes:
-        - cloudProvider: aws
-          apiParam: nodeInstanceType
         - cloudProvider: gcp
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
@@ -123,7 +91,6 @@ services:
         export: true
         defaultValue: e2-medium
         options:
-          - e2-custom-small-1024
           - e2-small
           - e2-medium
           - e2-custom-2-6144
@@ -141,32 +108,6 @@ services:
         limits:
           min: 0
           max: 10
-      - key: sentinelInstanceType
-        description: Sentinel Instance Type
-        name: Sentinel Instance Type
-        type: String
-        modifiable: false
-        required: true
-        export: true
-        defaultValue: e2-small
-        options:
-          - e2-small
-          - e2-medium
-        parameterDependencyMap:
-          sentinel: sentinelInstanceType
-      - key: sentinelOnlyReplicas
-        description: Number of Sentinel-only Replicas
-        name: Number of Sentinel-Only Replicas
-        type: Float64
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: "1"
-        limits:
-          min: 1
-          max: 1
-        parameterDependencyMap:
-          sentinel: sentinelOnlyReplicas
       - key: enableTLS
         description: Enable TLS
         name: Enable TLS
@@ -174,7 +115,7 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: false
+        defaultValue: "false"
         parameterDependencyMap:
           sentinel: enableTLS
       - key: falkordbPassword
@@ -192,6 +133,7 @@ services:
       - SENTINEL_HOST=$sentinel.sys.network.externalClusterEndpoint
       - NODE_HOST=$sys.network.node.externalEndpoint
       - NODE_PORT=6379
+      - RUN_METRICS=1
       - TLS=$var.enableTLS
       - FALKORDB_PASSWORD=$var.falkordbPassword
       - ADMIN_PASSWORD=$func.random(string, 16)
@@ -211,49 +153,29 @@ services:
 
   sentinel:
     x-omnistrate-mode-internal: true
-    image: falkordb/falkordb-node:latest
+    image: falkordb/falkordb-node:v0.0.15
     x-omnistrate-compute:
-      replicaCountAPIParam: sentinelOnlyReplicas
+      replicaCount: 1
       instanceTypes:
-        - cloudProvider: aws
-          apiParam: sentinelInstanceType
         - cloudProvider: gcp
-          apiParam: sentinelInstanceType
+          name: e2-small
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
+      - RUN_METRICS=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
+      - ADMIN_PASSWORD=rZyD2N7UsFwzkb
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
     ports:
       - "26379:26379"
+    x-omnistrate-capabilities:
+      enableMultiZone: false
+      enableEndpointPerReplica: true
     x-omnistrate-api-params:
-      - key: sentinelInstanceType
-        description: Sentinel Instance Type
-        name: Sentinel Instance Type
-        type: String
-        modifiable: false
-        required: true
-        export: true
-        defaultValue: e2-small
-        options:
-          - e2-small
-          - e2-medium
-      - key: sentinelOnlyReplicas
-        description: Number of Sentinel-only Replicas
-        name: Number of Sentinel-Only Replicas
-        type: Float64
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: "1"
-        limits:
-          min: 0
-          max: 1
       - key: enableTLS
         description: Enable TLS
         name: Enable TLS
@@ -261,7 +183,7 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: false
+        defaultValue: "false"
       - key: falkordbPassword
         description: FalkorDB Password
         name: FalkorDB Password
@@ -269,5 +191,3 @@ services:
         modifiable: false
         required: true
         export: false
-    x-omnistrate-capabilities:
-      enableMultiZone: true

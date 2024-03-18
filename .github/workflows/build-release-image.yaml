@@ -34,3 +34,15 @@ jobs:
           file: ./falkordb-node/Dockerfile
           push: true
           tags: falkordb/${{ env.IMAGE_NAME }}:${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/v') && github.ref_name || 'edge'}}, falkordb/${{ env.IMAGE_NAME }}:latest
+
+      - name: Update Docker Image Tag on Omnistrate
+        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/v')
+        uses: omnistrate/update-image-config@v1
+        with:
+          username: ${{ secrets.OMNISTRATE_USERNAME }}
+          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          service-id: s-MdOEhVP7yJ
+          image-config-id: imgc-9Jg4l6qMB3
+          service-api-id: sa-4dTm1SmTgr
+          product-tier-id: pt-ASuaTRt89t
+          tag: ${{ github.ref_name }}

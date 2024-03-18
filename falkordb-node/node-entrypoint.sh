@@ -22,6 +22,7 @@ FALKORDB_MASTER_PORT_NUMBER=${MASTER_PORT:-'6379'}
 IS_REPLICA=${IS_REPLICA:-0}
 ROOT_CA_PATH=${ROOT_CA_PATH:-'/etc/ssl/certs/GlobalSign_Root_CA.pem'}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-'/etc/tls'}
+DATA_DIR=${DATA_DIR:-'/data'}
 
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
 
@@ -80,6 +81,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   sed -i "s/\$NODE_HOST/$NODE_HOST/g" /falkordb/node.conf
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" /falkordb/node.conf
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" /falkordb/node.conf
+  sed -i "s/\$DATA_DIR/$DATA_DIR/g" /falkordb/node.conf
 
   is_replica
   if [[ $IS_REPLICA -eq 1 ]]; then

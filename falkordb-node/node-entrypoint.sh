@@ -5,6 +5,7 @@ ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
 RUN_SENTINEL=${RUN_SENTINEL:-0}
 RUN_NODE=${RUN_NODE:-1}
 RUN_METRICS=${RUN_METRICS:-1}
+RUN_HEALTH_CHECK=${RUN_HEALTH_CHECK:-1}
 TLS=${TLS:-'false'}
 
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
@@ -168,6 +169,16 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
   METRICS_TLS_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --tls-ca-cert-file $ROOT_CA_PATH --tls-server-key-file $TLS_MOUNT_PATH/tls.key --tls-server-cert-file $TLS_MOUNT_PATH/tls.crt"; else echo ""; fi)
   redis_exporter --redis.password $ADMIN_PASSWORD $METRICS_TLS_STRING --redis.addr $NODE_HOST:$NODE_PORT &
+fi
+
+if [[ $RUN_HEALTH_CHECK -eq 1 ]] && ; then
+  # Check if healthcheck binary exists
+  if [ -f /usr/local/bin/healthcheck ]; then
+    echo "Starting Healthcheck"
+    healthcheck &
+  else
+    echo "Healthcheck binary not found"
+  fi
 fi
 
 while true; do

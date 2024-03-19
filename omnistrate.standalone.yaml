@@ -144,9 +144,10 @@ services:
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
+      - RUN_METRICS=1
+      - RUN_HEALTH_CHECK=1
       - NODE_HOST=$sys.network.node.externalEndpoint
       - NODE_PORT=6379
-      - RUN_METRICS=1
       - TLS=$var.enableTLS
       - FALKORDB_PASSWORD=$var.falkordbPassword
       - ADMIN_PASSWORD=$func.random(string, 16)

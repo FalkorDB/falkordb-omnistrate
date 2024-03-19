@@ -1,7 +1,7 @@
 import sys
+from time import sleep, time
 import redis
 from redis.sentinel import Sentinel
-from time import sleep, time
 
 SENTINEL_HOST = sys.argv[1] if len(sys.argv) > 1 else "localhost"
 SENTINEL_PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 26379
@@ -67,8 +67,6 @@ def test_failover():
             if (time() - failover_triggered_time) > MAX_FAILOVER_TIME_SECONDS:
                 print("Failover took too long: " + str(time() - failover_triggered_time))
             sleep(0.5)
-            pass
-        
 
 if __name__ == "__main__":
     test_failover()

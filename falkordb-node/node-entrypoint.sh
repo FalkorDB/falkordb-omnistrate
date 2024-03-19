@@ -171,7 +171,7 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter --redis.password $ADMIN_PASSWORD $METRICS_TLS_STRING --redis.addr $NODE_HOST:$NODE_PORT &
 fi
 
-if [[ $RUN_HEALTH_CHECK -eq 1 ]] && ; then
+if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   # Check if healthcheck binary exists
   if [ -f /usr/local/bin/healthcheck ]; then
     echo "Starting Healthcheck"

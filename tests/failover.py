@@ -3,7 +3,7 @@ from time import sleep, time
 import redis
 from redis.sentinel import Sentinel
 
-SENTINEL_HOST = sys.argv[1] if len(sys.argv) > 1 else "localhost"
+SENTINEL_HOSTS = sys.argv[1] if len(sys.argv) > 1 else "localhost"
 SENTINEL_PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 26379
 ADMIN_PASSWORD = sys.argv[3] if len(sys.argv) > 3 else "admin"
 
@@ -12,8 +12,10 @@ MAX_FAILOVER_TIME_SECONDS = 10
 
 def test_failover():
 
+    hosts = SENTINEL_HOSTS.split(",")
+
     sentinel = Sentinel(
-        [(SENTINEL_HOST, SENTINEL_PORT)],
+        [(host, SENTINEL_PORT) for host in hosts],
         sentinel_kwargs={"password": ADMIN_PASSWORD},
         connection_kwargs={"password": ADMIN_PASSWORD},
     )

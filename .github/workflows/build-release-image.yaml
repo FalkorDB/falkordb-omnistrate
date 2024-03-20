@@ -35,6 +35,15 @@ jobs:
           push: true
           tags: falkordb/${{ env.IMAGE_NAME }}:${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/v') && github.ref_name || 'edge'}}, falkordb/${{ env.IMAGE_NAME }}:latest
 
+      - name: Notify Google Chat
+        id: test-action
+        if: failure() # only send notification in case of failure
+        uses: SimonScholz/google-chat-action@v1.1.0
+        with:
+            webhookUrl: '${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}'
+            jobStatus: ${{ job.status }}
+            threadKey: ${{ github.job }}
+            
   omnistrate-update:
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags/v')
     needs: build-and-push

@@ -509,7 +509,7 @@ services:
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=rZyD2N7UsFwzkb
+      - ADMIN_PASSWORD=$func.random(string, 16)
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
@@ -770,7 +770,7 @@ services:
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=rZyD2N7UsFwzkb
+      - ADMIN_PASSWORD=$func.random(string, 16)
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0

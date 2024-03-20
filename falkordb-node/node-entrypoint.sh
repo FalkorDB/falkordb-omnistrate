@@ -7,6 +7,7 @@ RUN_NODE=${RUN_NODE:-1}
 RUN_METRICS=${RUN_METRICS:-1}
 RUN_HEALTH_CHECK=${RUN_HEALTH_CHECK:-1}
 TLS=${TLS:-'false'}
+NODE_INDEX=${NODE_INDEX:-0}
 
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
@@ -47,11 +48,8 @@ get_master() {
 is_replica() {
   get_master
   
-  # Get node name format: "node-X"
-  nodeHostName=$(echo $NODE_HOST | grep -Eo 'node-[0-9]*')
-  nodeHostNumber=$(echo $nodeHostName | grep -Eo '[0-9]*')
   # If NODE_HOST starts with node-X, where X > 0, wait until FALKORDB_MASTER_HOST is not empty
-  if [[ $nodeHostNumber -gt 0 && -z $FALKORDB_MASTER_HOST ]]; then
+  if [[ $NODE_INDEX -gt 0 && -z $FALKORDB_MASTER_HOST ]]; then
     echo "Waiting for master to be available"
     sleep 5
     is_replica

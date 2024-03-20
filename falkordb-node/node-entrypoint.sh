@@ -114,7 +114,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
     redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM
     
     if [[ $? -ne 0 ]]; then
-      echo "Could not add master to sentinel, waiting 5 seconds and trying again"
+      echo "Could not add master to sentinel"
       exit 1
     fi
 

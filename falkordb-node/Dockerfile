@@ -1,18 +1,19 @@
 FROM oliver006/redis_exporter:alpine as redis_exporter
 
 
-FROM golang:alpine3.19 as healthcheck_builder
+FROM rust:alpine3.19 as healthcheck_builder
 
-WORKDIR /healthchek
+RUN apk add musl-dev
 
-COPY ./healthcheck /healthchek
+WORKDIR /healthcheck
 
-RUN go build -o /healthchek/healthcheck
+COPY ./healthcheck_rs/ /healthcheck
+
+RUN cargo build --release
 
 
 FROM falkordb/falkordb:edge
 
-# Install curl
 RUN apt-get update && apt-get install -y curl
 
 RUN mkdir -p /falkordb
@@ -23,7 +24,7 @@ COPY sentinel.conf .
 COPY node.conf .
 COPY node-entrypoint.sh /usr/local/bin/
 COPY --from=redis_exporter /redis_exporter /usr/local/bin/
-COPY --from=healthcheck_builder /healthchek/healthcheck /usr/local/bin/
+COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/local/bin/healthcheck
 
 RUN chown redis:redis /falkordb/* && \
   chmod +x /usr/local/bin/node-entrypoint.sh

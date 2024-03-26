@@ -29,6 +29,17 @@ DATA_DIR=${DATA_DIR:-/data}
 
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
 
+wait_until_sentinel_host_resolves() {
+  while true; do
+    if [[ $(getent hosts $SENTINEL_HOST) ]]; then
+      break
+    fi
+    echo "Waiting for sentinel host to resolve"
+    sleep 5
+  done
+
+}
+
 get_master() {
   master_info=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD $TLS_CONNECTION_STRING --no-auth-warning SENTINEL get-master-addr-by-name $MASTER_NAME)
   redisRetVal=$?
@@ -107,9 +118,11 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
   sleep 10
 
+
   # If node should be master, add it to sentinel
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
     echo "Adding master to sentinel"
+    wait_until_sentinel_host_resolves
     redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM
     
     if [[ $? -ne 0 ]]; then

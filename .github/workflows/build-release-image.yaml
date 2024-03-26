@@ -52,35 +52,35 @@ jobs:
       matrix:
         tiers:
           - name: single zone - node
-            serviceId: s-w1pj4Sa95h
-            serviceApiId: sa-UHWIu3Vdco
-            productTierId: pt-X9GENtQ5Os
-            imageConfigId: imgc-BMoXT4BcMp
+            serviceId: s-NDLUXKMVT8
+            serviceApiId: sa-lDkOnxngxk
+            productTierId: pt-3kwYmWn6CQ
+            imageConfigId: imgc-fm14mOwvtd
           - name: single zone - sentinel
-            serviceId: s-w1pj4Sa95h
-            serviceApiId: sa-UHWIu3Vdco
-            productTierId: pt-X9GENtQ5Os
-            imageConfigId: imgc-w1pj4Sa95h
+            serviceId: s-NDLUXKMVT8
+            serviceApiId: sa-lDkOnxngxk
+            productTierId: pt-3kwYmWn6CQ
+            imageConfigId: imgc-LswT8Ib3Yg
           - name: multi zone - node
-            serviceId: s-w1pj4Sa95h
-            serviceApiId: sa-UHWIu3Vdco
-            productTierId: pt-X9GENtQ5Os
-            imageConfigId: imgc-BRwXldVCR6
+            serviceId: s-NDLUXKMVT8
+            serviceApiId: sa-lDkOnxngxk
+            productTierId: pt-3kwYmWn6CQ
+            imageConfigId: imgc-S6CDY5t2xI
           - name: multi zone - sentinel
-            serviceId: s-w1pj4Sa95h
-            serviceApiId: sa-UHWIu3Vdco
-            productTierId: pt-X9GENtQ5Os
-            imageConfigId: imgc-mktYrsWPo9
+            serviceId: s-NDLUXKMVT8
+            serviceApiId: sa-lDkOnxngxk
+            productTierId: pt-3kwYmWn6CQ
+            imageConfigId: imgc-Snwkt2xU1O
           - name: standalone - node
-            serviceId: s-w1pj4Sa95h
-            serviceApiId: sa-UHWIu3Vdco
-            productTierId: pt-X9GENtQ5Os
-            imageConfigId: imgc-Br7UoJfB5k
+            serviceId: s-NDLUXKMVT8
+            serviceApiId: sa-lDkOnxngxk
+            productTierId: pt-3kwYmWn6CQ
+            imageConfigId: imgc-vINSYKjfmr
           - name: free - node
-            serviceId: s-w1pj4Sa95h
-            serviceApiId: sa-UHWIu3Vdco
-            productTierId: pt-X9GENtQ5Os
-            imageConfigId: imgc-yssXkadHna
+            serviceId: s-NDLUXKMVT8
+            serviceApiId: sa-lDkOnxngxk
+            productTierId: pt-UgQgtXwNGu
+            imageConfigId: imgc-4sSPAq6wvP
     steps:
       - name: Update Docker Image Tag on Omnistrate
         uses: omnistrate/update-image-config@v1

@@ -1,129 +1,6 @@
 version: "3.9"
 
-x-omnistrate-my-account:
-  GcpProjectId: app-plane-dev-f7a2434f
-  GcpProjectNumber: '747498641488'
-  GcpServiceAccountEmail: omni-btstrp-org-q9h5kjuc0n@app-plane-dev-f7a2434f.iam.gserviceaccount.com
-
 services:
-
-
-# Free
-
-  Free:
-    x-omnistrate-mode-internal: false
-    image: omnistrate/noop
-    x-omnistrate-api-params:
-      - key: name
-        description: Name
-        name: Name
-        type: String
-        modifiable: true
-        required: false
-        defaultValue: FalkorDB Instance
-        export: true
-      - key: description
-        description: Description
-        name: Description
-        type: String
-        modifiable: true
-        required: false
-        defaultValue: FalkorDB Instance
-        export: true
-      - key: enableTLS
-        description: Enable TLS
-        name: Enable TLS
-        type: Boolean
-        modifiable: false
-        required: true
-        export: true
-        defaultValue: "false"
-        parameterDependencyMap:
-          node-f: enableTLS
-      - key: falkordbUser
-        description: FalkorDB User
-        name: FalkorDB User
-        type: String
-        modifiable: false
-        required: true
-        export: false
-        defaultValue: "falkordb"
-        parameterDependencyMap:
-          node-f: falkordbUser
-      - key: falkordbPassword
-        description: FalkorDB Password
-        name: FalkorDB Password
-        type: String
-        modifiable: false
-        required: true
-        export: false
-        parameterDependencyMap:
-          node-f: falkordbPassword
-    depends_on:
-      - node-f
-
-  node-f:
-    x-omnistrate-mode-internal: true
-    image: falkordb/falkordb-node:v0.0.15
-    x-omnistrate-compute:
-      replicaCount: 1
-      instanceTypes:
-        - cloudProvider: gcp
-          name: e2-custom-small-1024
-    x-omnistrate-api-params:
-      - key: enableTLS
-        description: Enable TLS
-        name: Enable TLS
-        type: Boolean
-        modifiable: false
-        required: true
-        export: true
-        defaultValue: "false"
-      - key: falkordbUser
-        description: FalkorDB User
-        name: FalkorDB User
-        type: String
-        modifiable: false
-        required: true
-        export: false
-        defaultValue: "falkordb"
-      - key: falkordbPassword
-        description: FalkorDB Password
-        name: FalkorDB Password
-        type: String
-        modifiable: false
-        required: true
-        export: false
-    volumes:
-      - ./data:/data
-    environment:
-      - RUN_NODE=1
-      - RUN_SENTINEL=1
-      - RUN_METRICS=1
-      - RUN_HEALTH_CHECK=1
-      - BROWSER=0
-      - NODE_HOST=$sys.network.node.externalEndpoint
-      - NODE_PORT=6379
-      - TLS=$var.enableTLS
-      - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
-      - DATA_DIR=/data
-      - SECURITY_CONTEXT_USER_ID=0
-      - SECURITY_CONTEXT_GROUP_ID=0
-      - SECURITY_CONTEXT_FS_GROUP=0
-    ports:
-      - "6379:6379"
-      - "9121:9121"
-    x-omnistrate-capabilities:
-      enableMultiZone: false
-      enableEndpointPerReplica: true
-    x-omnistrate-storage:
-      gcp:
-        instanceStorageType: GCP::PD_BALANCED
-        instanceStorageSizeGi: 10
-
-
 
 # Standalone
 
@@ -137,7 +14,7 @@ services:
         type: String
         modifiable: true
         required: false
-        defaultValue: FalkorDB Instance
+        defaultValue: My favorite database
         export: true
       - key: description
         description: Description
@@ -145,10 +22,10 @@ services:
         type: String
         modifiable: true
         required: false
-        defaultValue: FalkorDB Instance
+        defaultValue: The best graph database in the world
         export: true
       - key: nodeInstanceType
-        description: Node Instance Type
+        description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
         modifiable: false
@@ -165,7 +42,7 @@ services:
         parameterDependencyMap:
           node-s: nodeInstanceType
       - key: enableTLS
-        description: Enable TLS
+        description: Whether to enable TLS for the database
         name: Enable TLS
         type: Boolean
         modifiable: false
@@ -175,7 +52,7 @@ services:
         parameterDependencyMap:
           node-s: enableTLS
       - key: falkordbUser
-        description: FalkorDB User
+        description: Choose a default username for your database
         name: FalkorDB User
         type: String
         modifiable: false
@@ -185,7 +62,7 @@ services:
         parameterDependencyMap:
           node-s: falkordbUser
       - key: falkordbPassword
-        description: FalkorDB Password
+        description: Choose a default password for your database
         name: FalkorDB Password
         type: String
         modifiable: false
@@ -194,7 +71,7 @@ services:
         parameterDependencyMap:
           node-s: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set.
+        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
         defaultValue: "10"
@@ -227,7 +104,7 @@ services:
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
-        description: Node Instance Type
+        description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
         modifiable: false
@@ -242,7 +119,7 @@ services:
           - e2-custom-8-18432
           - e2-custom-16-34816
       - key: enableTLS
-        description: Enable TLS
+        description: Whether to enable TLS for the database
         name: Enable TLS
         type: Boolean
         modifiable: false
@@ -250,7 +127,7 @@ services:
         export: true
         defaultValue: "false"
       - key: falkordbUser
-        description: FalkorDB User
+        description: Choose a default username for your database
         name: FalkorDB User
         type: String
         modifiable: false
@@ -258,14 +135,14 @@ services:
         export: false
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: FalkorDB Password
+        description: Choose a default password for your database
         name: FalkorDB Password
         type: String
         modifiable: false
         required: true
         export: false
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set.
+        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
         defaultValue: "10"
@@ -287,7 +164,7 @@ services:
       - ./data:/data
     environment:
       - RUN_NODE=1
-      - RUN_SENTINEL=1
+      - RUN_SENTINEL=0
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
       - BROWSER=0
@@ -337,7 +214,7 @@ services:
         defaultValue: FalkorDB Instance
         export: true
       - key: nodeInstanceType
-        description: Node Instance Type
+        description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
         modifiable: false
@@ -366,7 +243,7 @@ services:
         parameterDependencyMap:
           node-sz: numReplicas
       - key: enableTLS
-        description: Enable TLS
+        description: Whether to enable TLS for the database
         name: Enable TLS
         type: Boolean
         modifiable: false
@@ -376,7 +253,7 @@ services:
         parameterDependencyMap:
           node-sz: enableTLS
       - key: falkordbUser
-        description: FalkorDB User
+        description: Choose a default username for your database
         name: FalkorDB User
         type: String
         modifiable: false
@@ -386,7 +263,7 @@ services:
         parameterDependencyMap:
           node-sz: falkordbUser
       - key: falkordbPassword
-        description: FalkorDB Password
+        description: Choose a default password for your database
         name: FalkorDB Password
         type: String
         modifiable: false
@@ -395,7 +272,7 @@ services:
         parameterDependencyMap:
           node-sz: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set.
+        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
         defaultValue: "10"
@@ -428,7 +305,7 @@ services:
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
-        description: Node Instance Type
+        description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
         modifiable: false
@@ -453,7 +330,7 @@ services:
         options:
           - "2"
       - key: enableTLS
-        description: Enable TLS
+        description: Whether to enable TLS for the database
         name: Enable TLS
         type: Boolean
         modifiable: false
@@ -463,7 +340,7 @@ services:
         parameterDependencyMap:
           sentinel-sz: enableTLS
       - key: falkordbUser
-        description: FalkorDB User
+        description: Choose a default username for your database
         name: FalkorDB User
         type: String
         modifiable: false
@@ -471,7 +348,7 @@ services:
         export: false
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: FalkorDB Password
+        description: Choose a default password for your database
         name: FalkorDB Password
         type: String
         modifiable: false
@@ -480,7 +357,7 @@ services:
         parameterDependencyMap:
           sentinel-sz: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set.
+        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
         defaultValue: "10"
@@ -577,7 +454,7 @@ services:
       enableEndpointPerReplica: true
     x-omnistrate-api-params:
       - key: enableTLS
-        description: Enable TLS
+        description: Whether to enable TLS for the database
         name: Enable TLS
         type: Boolean
         modifiable: false
@@ -585,7 +462,7 @@ services:
         export: true
         defaultValue: "false"
       - key: falkordbPassword
-        description: FalkorDB Password
+        description: Choose a default password for your database
         name: FalkorDB Password
         type: String
         modifiable: false
@@ -617,7 +494,7 @@ services:
         defaultValue: FalkorDB Instance
         export: true
       - key: nodeInstanceType
-        description: Node Instance Type
+        description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
         modifiable: false
@@ -646,7 +523,7 @@ services:
         parameterDependencyMap:
           node-mz: numReplicas
       - key: enableTLS
-        description: Enable TLS
+        description: Whether to enable TLS for the database
         name: Enable TLS
         type: Boolean
         modifiable: false
@@ -656,7 +533,7 @@ services:
         parameterDependencyMap:
           node-mz: enableTLS
       - key: falkordbUser
-        description: FalkorDB User
+        description: Choose a default username for your database
         name: FalkorDB User
         type: String
         modifiable: false
@@ -666,7 +543,7 @@ services:
         parameterDependencyMap:
           node-mz: falkordbUser
       - key: falkordbPassword
-        description: FalkorDB Password
+        description: Choose a default password for your database
         name: FalkorDB Password
         type: String
         modifiable: false
@@ -675,7 +552,7 @@ services:
         parameterDependencyMap:
           node-mz: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set.
+        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
         defaultValue: "10"
@@ -708,7 +585,7 @@ services:
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
-        description: Node Instance Type
+        description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
         modifiable: false
@@ -733,7 +610,7 @@ services:
         options:
           - "2"
       - key: enableTLS
-        description: Enable TLS
+        description: Whether to enable TLS for the database
         name: Enable TLS
         type: Boolean
         modifiable: false
@@ -743,7 +620,7 @@ services:
         parameterDependencyMap:
           sentinel-mz: enableTLS
       - key: falkordbUser
-        description: FalkorDB User
+        description: Choose a default username for your database
         name: FalkorDB User
         type: String
         modifiable: false
@@ -751,7 +628,7 @@ services:
         export: false
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: FalkorDB Password
+        description: Choose a default password for your database
         name: FalkorDB Password
         type: String
         modifiable: false
@@ -760,7 +637,7 @@ services:
         parameterDependencyMap:
           sentinel-mz: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set.
+        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
         defaultValue: "10"
@@ -857,7 +734,7 @@ services:
       enableEndpointPerReplica: true
     x-omnistrate-api-params:
       - key: enableTLS
-        description: Enable TLS
+        description: Whether to enable TLS for the database
         name: Enable TLS
         type: Boolean
         modifiable: false
@@ -865,7 +742,7 @@ services:
         export: true
         defaultValue: "false"
       - key: falkordbPassword
-        description: FalkorDB Password
+        description: Choose a default password for your database
         name: FalkorDB Password
         type: String
         modifiable: false

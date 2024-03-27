@@ -40,7 +40,7 @@ wait_until_sentinel_host_resolves() {
   while true; do
     log "Checking if sentinel host resolves $SENTINEL_HOST"
     if [[ $(getent hosts $SENTINEL_HOST) ]]; then
-      sentinel_response=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL sentinels master)
+      sentinel_response=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters)
       sentinel_response_code=$?
       log "Sentinel Response: $sentinel_response_code - $sentinel_response"
       if [[ $? -eq 0 ]] && [[ $sentinel_response != *"ERR"* ]]; then 

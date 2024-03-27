@@ -150,7 +150,13 @@ fi
 
 
 if [ "$RUN_SENTINEL" -eq "1" ]; then
+  sentinelHost=$SENTINEL_HOST
+  if [[ -z $SENTINEL_HOST ]] || [[ $SENTINEL_HOST == "localhost" ]]; then
+    sentinelHost=$NODE_INTERNAL_DNS
+  fi
+
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" /falkordb/sentinel.conf
+  sed -i "s/\$SENTINEL_HOST/$sentinelHost/g" /falkordb/sentinel.conf
 
   echo "Starting Sentinel"
 

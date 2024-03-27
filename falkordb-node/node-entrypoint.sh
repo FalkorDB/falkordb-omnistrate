@@ -26,13 +26,23 @@ IS_REPLICA=${IS_REPLICA:-0}
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
 DATA_DIR=${DATA_DIR:-/data}
+DEBUG=${DEBUG:-0}
 
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
 
+log() {
+  if [[ $DEBUG -eq 1 ]]; then
+    echo $1
+  fi
+}
+
 wait_until_sentinel_host_resolves() {
   while true; do
+    log "Checking if sentinel host resolves $SENTINEL_HOST"
     if [[ $(getent hosts $SENTINEL_HOST) ]]; then
       sentinel_response=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL sentinels master)
+      sentinel_response_code=$?
+      log "Sentinel Response: $sentinel_response_code - $sentinel_response"
       if [[ $? -eq 0 ]] && [[ $sentinel_response != *"ERR"* ]]; then 
         echo "Sentinel host resolved"
         break

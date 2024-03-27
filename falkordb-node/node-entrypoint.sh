@@ -32,8 +32,8 @@ TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT
 wait_until_sentinel_host_resolves() {
   while true; do
     if [[ $(getent hosts $SENTINEL_HOST) ]]; then
-      redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL sentinels master
-      if [[ $? -eq 0 ]]; then
+      sentinel_response=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL sentinels master)
+      if [[ $? -eq 0 ]] && [[ $sentinel_response != *"ERR"* ]]; then 
         echo "Sentinel host resolved"
         break
       fi

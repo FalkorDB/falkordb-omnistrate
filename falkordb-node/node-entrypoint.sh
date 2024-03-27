@@ -54,6 +54,23 @@ wait_until_sentinel_host_resolves() {
 
 }
 
+wait_until_node_host_resolves() {
+  while true; do
+    log "Checking if node host resolves $1"
+    if [[ $(getent hosts $1) ]]; then
+      host_response=$(redis-cli -h $1 -p $2 -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING PING)
+      host_response_code=$?
+      log "Host Response: $host_response_code - $host_response"
+      if [[ $host_response_code -eq 0 ]] && [[ $host_response == "PONG" ]]; then 
+        echo "Node host resolved"
+        break
+      fi
+    fi
+    echo "Waiting for node host to resolve"
+    sleep 5
+  done
+}
+
 get_master() {
   master_info=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD $TLS_CONNECTION_STRING --no-auth-warning SENTINEL get-master-addr-by-name $MASTER_NAME)
   redisRetVal=$?
@@ -189,6 +206,8 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
 
   # If FALKORDB_MASTER_HOST is not empty, add monitor to sentinel
   if [[ ! -z $FALKORDB_MASTER_HOST ]]; then
+    log "Master Name: $MASTER_NAME\Master Host: $FALKORDB_MASTER_HOST\Master Port: $FALKORDB_MASTER_PORT_NUMBER\nSentinel Quorum: $SENTINEL_QUORUM"
+    wait_until_node_host_resolves $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER
     redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER $SENTINEL_QUORUM
     redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
     redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER

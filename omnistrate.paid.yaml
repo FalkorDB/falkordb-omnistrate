@@ -175,12 +175,13 @@ services:
       - FALKORDB_PASSWORD=$var.falkordbPassword
       - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
+      - INSTANCE_TYPE=$var.nodeInstanceType
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
     ports:
       - "6379:6379"
-      - "9121:9121"
+      # - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -391,13 +392,14 @@ services:
       - FALKORDB_PASSWORD=$var.falkordbPassword
       - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
+      - INSTANCE_TYPE=$var.nodeInstanceType
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
     ports:
       - "6379:6379"
       - "26379:26379"
-      - "9121:9121"
+      # - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -676,13 +678,14 @@ services:
       - FALKORDB_PASSWORD=$var.falkordbPassword
       - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
+      - INSTANCE_TYPE=$var.nodeInstanceType
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
     ports:
       - "6379:6379"
       - "26379:26379"
-      - "9121:9121"
+      # - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: true
       enableEndpointPerReplica: true

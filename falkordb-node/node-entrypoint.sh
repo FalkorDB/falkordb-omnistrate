@@ -79,6 +79,7 @@ wait_until_node_host_resolves() {
       log "Host Response: $host_response_code - $host_response"
       if [[ $host_response_code -eq 0 ]] && [[ $host_response == "PONG" ]]; then 
         echo "Node host resolved"
+        sleep 10
         break
       fi
     fi

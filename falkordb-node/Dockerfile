@@ -14,7 +14,7 @@ RUN cargo build --release
 
 FROM falkordb/falkordb:edge
 
-RUN apt-get update && apt-get install -y curl
+RUN apt-get update && apt-get install -y curl jq
 
 RUN mkdir -p /falkordb
 

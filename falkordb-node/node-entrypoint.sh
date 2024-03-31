@@ -62,7 +62,7 @@ get_memory_limit() {
     return
   fi
 
-  MEMORY_LIMIT=$(echo $memory_limit_instance_type_map | jq -r ".$INSTANCE_TYPE")
+  MEMORY_LIMIT=$(echo $memory_limit_instance_type_map | jq -r ".\"$INSTANCE_TYPE\"")
 
   echo "Memory Limit: $MEMORY_LIMIT"
 

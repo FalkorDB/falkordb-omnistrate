@@ -87,6 +87,12 @@ wait_until_sentinel_host_resolves() {
 }
 
 wait_until_node_host_resolves() {
+
+  # If $1 is an IP address, return
+  if [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return
+  fi
+
   while true; do
     log "Checking if node host resolves $1"
     if [[ $(getent hosts $1) ]]; then
@@ -134,13 +140,17 @@ is_replica() {
 
   # IF host is empty, then this node is the master
   if [[ -z $FALKORDB_MASTER_HOST ]]; then
-    FALKORDB_MASTER_HOST=$NODE_HOST
+    if [[ $TLS == "true" ]]; then
+      FALKORDB_MASTER_HOST=$NODE_HOST
+    else
+      FALKORDB_MASTER_HOST=$NODE_HOST_IP
+    fi
     FALKORDB_MASTER_PORT_NUMBER=$NODE_PORT
     IS_REPLICA=0
     return
   fi
 
-  if [[ $FALKORDB_MASTER_HOST == $NODE_HOST && $FALKORDB_MASTER_PORT_NUMBER == $NODE_PORT ]]; then
+  if [[ ($FALKORDB_MASTER_HOST == $NODE_HOST || $FALKORDB_MASTER_HOST == $NODE_HOST_IP) && $FALKORDB_MASTER_PORT_NUMBER == $NODE_PORT ]]; then
     # This node is the master 
     IS_REPLICA=0
     return
@@ -208,13 +218,22 @@ if [ "$RUN_NODE" -eq "1" ]; then
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
     echo "Adding master to sentinel"
     wait_until_sentinel_host_resolves
-    wait_until_node_host_resolves $NODE_HOST $NODE_PORT
-    log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM
-    
-    if [[ $? -ne 0 ]]; then
-      echo "Could not add master to sentinel"
-      exit 1
+
+    if [[ $TLS == "true" ]]; then
+      wait_until_node_host_resolves $NODE_HOST $NODE_PORT
+      log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
+      redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM
+      if [[ $? -ne 0 ]]; then
+        echo "Could not add master to sentinel"
+        exit 1
+      fi
+    else
+      log "Master Name: $MASTER_NAME\nNode IP: $NODE_HOST_IP\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
+      redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST_IP $NODE_PORT $SENTINEL_QUORUM
+      if [[ $? -ne 0 ]]; then
+        echo "Could not add master to sentinel"
+        exit 1
+      fi
     fi
 
     redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
@@ -278,7 +297,7 @@ fi
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
   METRICS_TLS_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --tls-ca-cert-file $ROOT_CA_PATH --tls-server-key-file $TLS_MOUNT_PATH/tls.key --tls-server-cert-file $TLS_MOUNT_PATH/tls.crt"; else echo ""; fi)
-  redis_exporter --redis.password $ADMIN_PASSWORD $METRICS_TLS_STRING --redis.addr $NODE_HOST:$NODE_PORT &
+  redis_exporter --redis.password $ADMIN_PASSWORD $METRICS_TLS_STRING --redis.addr $NODE_HOST_IP:$NODE_PORT &
 fi
 
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then

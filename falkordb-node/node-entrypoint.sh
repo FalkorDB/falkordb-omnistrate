@@ -41,6 +41,17 @@ log() {
   fi
 }
 
+get_self_host_ip() {
+  if [[ $NODE_HOST == "localhost" ]]; then
+    NODE_HOST_IP=$(curl ifconfig.me)
+  else
+    NODE_HOST_IP=$(getent hosts $NODE_HOST | awk '{ print $1 }')
+    if [[ -z $NODE_HOST_IP ]]; then
+      NODE_HOST_IP=$(curl ifconfig.me)
+    fi
+  fi
+}
+
 wait_until_sentinel_host_resolves() {
   while true; do
     log "Checking if sentinel host resolves $SENTINEL_HOST"
@@ -136,8 +147,10 @@ if [ ! -f $SENTINEL_CONF_FILE ] || [ "$REPLACE_SENTINEL_CONF" -eq "1" ]; then
   cp /falkordb/sentinel.conf $SENTINEL_CONF_FILE
 fi
 
+get_self_host_ip
+
 if [ "$RUN_NODE" -eq "1" ]; then
-  sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_CONF_FILE
+  sed -i "s/\$NODE_HOST/$NODE_HOST_IP/g" $NODE_CONF_FILE
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" $NODE_CONF_FILE
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
   echo "dir $DATA_DIR" >> $NODE_CONF_FILE

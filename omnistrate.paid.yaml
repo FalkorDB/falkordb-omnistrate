@@ -444,6 +444,7 @@ services:
       - TLS=$var.enableTLS
       - FALKORDB_PASSWORD=$var.falkordbPassword
       - ADMIN_PASSWORD=$func.random(string, 16)
+      - DATA_DIR=/data
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
@@ -468,6 +469,10 @@ services:
         modifiable: false
         required: true
         export: false
+    x-omnistrate-storage:
+      gcp:
+        instanceStorageType: GCP::PD_BALANCED
+        instanceStorageSizeGi: 10
 
 
 
@@ -724,6 +729,7 @@ services:
       - TLS=$var.enableTLS
       - FALKORDB_PASSWORD=$var.falkordbPassword
       - ADMIN_PASSWORD=$func.random(string, 16)
+      - DATA_DIR=/data
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
@@ -748,4 +754,8 @@ services:
         modifiable: false
         required: true
         export: false
+    x-omnistrate-storage:
+      gcp:
+        instanceStorageType: GCP::PD_BALANCED
+        instanceStorageSizeGi: 10
 

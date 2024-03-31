@@ -260,6 +260,8 @@ fi
 
 if [ "$RUN_SENTINEL" -eq "1" ]; then
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
+
+  # When LB is in place, change external dns to internal ip
   sed -i "s/\$SENTINEL_HOST/$NODE_EXTERNAL_DNS/g" $SENTINEL_CONF_FILE
 
   echo "Starting Sentinel"
@@ -272,9 +274,9 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
     echo "tls-ca-cert-file $ROOT_CA_PATH" >> $SENTINEL_CONF_FILE
     echo "tls-replication yes" >> $SENTINEL_CONF_FILE
     echo "tls-auth-clients no" >> $SENTINEL_CONF_FILE
-    echo "sentinel announce-hostnames yes" >> $SENTINEL_CONF_FILE
   else
     echo "port $SENTINEL_PORT" >> $SENTINEL_CONF_FILE
+    echo "sentinel resolve-hostnames yes" >> $SENTINEL_CONF_FILE
   fi
 
   redis-server $SENTINEL_CONF_FILE --sentinel &

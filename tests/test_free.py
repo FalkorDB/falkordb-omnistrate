@@ -6,9 +6,9 @@ from falkordb import FalkorDB
 import base64
 import os
 
-if len(sys.argv) < 7:
+if len(sys.argv) < 5:
     print(
-        "Usage: python create_standalone.py <omnistrate_user> <omnistrate_password> <deployment_cloud_provider> <deployment_region> <deployment_instance_type> <deployment_storage_size>"
+        "Usage: python create_free.py <omnistrate_user> <omnistrate_password> <deployment_cloud_provider> <deployment_region>"
     )
     sys.exit(1)
 
@@ -16,8 +16,6 @@ OMNISTRATE_USER = sys.argv[1]
 OMNISTRATE_PASSWORD = sys.argv[2]
 DEPLOYMENT_CLOUD_PROVIDER = sys.argv[3]
 DEPLOYMENT_REGION = sys.argv[4]
-DEPLOYMENT_INSTANCE_TYPE = sys.argv[5]
-DEPLOYMENT_STORAGE_SIZE = sys.argv[6]
 
 DEPLOYMENT_CREATE_TIMEOUT_SECONDS = 1200
 DEPLOYMENT_DELETE_TIMEOUT_SECONDS = 1200
@@ -25,11 +23,11 @@ DEPLOYMENT_FAILOVER_TIMEOUT_SECONDS = 1500
 
 API_VERSION = "2022-09-01-00"
 SERVICE_ID = os.getenv("SERVICE_ID", "sp-JvkxkPhinN")
-SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID", "sub-kFDyC8pT5i")
+SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID", "sub-3kyKX3TvYF")
 
 API_URL = "https://api.omnistrate.cloud/"
-API_PATH = f"{API_VERSION}/resource-instance/{SERVICE_ID}/falkordb/v1/prod/falkordb-customer-hosted/falkordb-hosted-tier-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/standalone"
-API_FAILOVER_PATH = f"{API_VERSION}/resource-instance/{SERVICE_ID}/falkordb/v1/prod/falkordb-customer-hosted/falkordb-hosted-tier-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/node-s"
+API_PATH = f"{API_VERSION}/resource-instance/{SERVICE_ID}/falkordb/v1/prod/falkordb-free-customer-hosted/falkordb-free-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/free"
+API_FAILOVER_PATH = f"{API_VERSION}/resource-instance/{SERVICE_ID}/falkordb/v1/prod/falkordb-free-customer-hosted/falkordb-free-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/node-f"
 API_SIGN_IN_PATH = f"{API_VERSION}/resource-instance/user/signin"
 # SUBSCRIPTION_ID_QUERY = f"?subscriptionId={SUBSCRIPTION_ID}"
 SUBSCRIPTION_ID_QUERY = ""
@@ -53,29 +51,29 @@ def _get_token():
     return response.json()["token"]
 
 
-def test_standalone():
+def test_free():
 
     token = _get_token()
-    
-    # Create instance
-    instance_id = create_standalone(token)
-    if instance_id is None:
-        raise Exception("Failed to create standalone")
 
-    try:
-        # Test failover and data loss
-        test_failover(token, instance_id)
-    except Exception as e:
-        delete_standalone(token, instance_id)
-        raise e
-    
+    # Create instance
+    instance_id = create_free(token)
+    if instance_id is None:
+        raise Exception("Failed to create free")
+
+    # try:
+    # Test failover and data loss
+    test_failover(token, instance_id)
+    # except Exception as e:
+    #     delete_free(token, instance_id)
+    #     raise e
+
     # Delete instance
-    delete_standalone(token, instance_id)
+    delete_free(token, instance_id)
 
     print("Test passed")
 
 
-def create_standalone(token):
+def create_free(token):
     headers = {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + token,
@@ -85,17 +83,15 @@ def create_standalone(token):
         "cloud_provider": DEPLOYMENT_CLOUD_PROVIDER,
         "region": DEPLOYMENT_REGION,
         "requestParams": {
-            "name": "standalone",
-            "description": "standalone",
+            "name": "free",
+            "description": "free",
             "enableTLS": False,
             "falkordbUser": "falkordb",
             "falkordbPassword": "falkordb",
-            "nodeInstanceType": DEPLOYMENT_INSTANCE_TYPE,
-            "storageSize": DEPLOYMENT_STORAGE_SIZE,
         },
     }
 
-    print("Creating standalone", API_URL + API_PATH + SUBSCRIPTION_ID_QUERY)
+    print("Creating free", API_URL + API_PATH + SUBSCRIPTION_ID_QUERY)
 
     response = requests.post(
         API_URL + API_PATH + SUBSCRIPTION_ID_QUERY,
@@ -105,11 +101,11 @@ def create_standalone(token):
     )
 
     if response.status_code >= 300 or response.status_code < 200:
-        print("Failed to create standalone")
+        print("Failed to create free")
         print(response.text)
         return
 
-    print("Standalone created", response.json())
+    print("Free created", response.json())
 
     # Wait until instance is ready
 
@@ -136,7 +132,7 @@ def create_standalone(token):
     return instance_id
 
 
-def delete_standalone(token, instance_id):
+def delete_free(token, instance_id):
     headers = {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + token,
@@ -149,7 +145,7 @@ def delete_standalone(token, instance_id):
     )
 
     if response.status_code >= 300 or response.status_code < 200:
-        print("Failed to delete standalone")
+        print("Failed to delete free")
         print(response.text)
         return
 
@@ -266,12 +262,17 @@ def _trigger_failover(token, instance_id):
     }
 
     data = {
-        "failedReplicaID": "node-s-0",
+        "failedReplicaID": "node-f-0",
         "failedReplicaAction": "FAILOVER_AND_RECREATE",
     }
 
     response = requests.post(
-        API_URL + API_FAILOVER_PATH + "/" + instance_id + "/failover" + SUBSCRIPTION_ID_QUERY,
+        API_URL
+        + API_FAILOVER_PATH
+        + "/"
+        + instance_id
+        + "/failover"
+        + SUBSCRIPTION_ID_QUERY,
         headers=headers,
         data=json.dumps(data),
         timeout=5,
@@ -306,4 +307,4 @@ def _get_instance_state(token, instance_id):
 
 
 if __name__ == "__main__":
-    test_standalone()
+    test_free()

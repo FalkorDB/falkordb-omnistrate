@@ -24,9 +24,9 @@ def test_failover():
     last_time = 0
     failover_triggered_time = 0
 
+    master = sentinel.discover_master("master")
     while True:
         try:
-            master = sentinel.discover_master("master")
             if (master is None) or (len(master) < 2):
                 print("No master found")
                 break

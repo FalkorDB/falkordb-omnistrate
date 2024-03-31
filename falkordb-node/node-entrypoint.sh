@@ -9,6 +9,7 @@ RUN_METRICS=${RUN_METRICS:-1}
 RUN_HEALTH_CHECK=${RUN_HEALTH_CHECK:-1}
 TLS=${TLS:-false}
 NODE_INDEX=${NODE_INDEX:-0}
+INSTANCE_TYPE=${INSTANCE_TYPE:-''}
 
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
@@ -50,6 +51,21 @@ get_self_host_ip() {
       NODE_HOST_IP=$(curl ifconfig.me)
     fi
   fi
+}
+
+get_memory_limit() {
+
+  memory_limit_instance_type_map="{\"e2-custom-small-1024\":\"100mb\",\"e2-small\":\"840mb\",\"e2-medium\": \"2.3gb\",\"e2-custom-2-6144\":\"4gb\",\"e2-custom-4-10240\": \"7.59gb\",\"e2-custom-8-18432\": \"15.29gb\",\"e2-custom-16-34816\":\"31.12gb\"}"
+
+  if [[ -z $INSTANCE_TYPE ]]; then
+    echo "INSTANCE_TYPE is not set"
+    return
+  fi
+
+  MEMORY_LIMIT=$(echo $memory_limit_instance_type_map | jq -r ".$INSTANCE_TYPE")
+
+  echo "Memory Limit: $MEMORY_LIMIT"
+
 }
 
 wait_until_sentinel_host_resolves() {
@@ -151,7 +167,14 @@ fi
 get_self_host_ip
 
 if [ "$RUN_NODE" -eq "1" ]; then
-  sed -i "s/\$NODE_HOST/$NODE_HOST_IP/g" $NODE_CONF_FILE
+ 
+  # If TLS is enabled, use NODE_HOST; otherwise, use NODE_HOST_IP
+  if [[ $TLS == "true" ]]; then
+    sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_CONF_FILE
+  else
+    sed -i "s/\$NODE_HOST/$NODE_HOST_IP/g" $NODE_CONF_FILE
+  fi
+  
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" $NODE_CONF_FILE
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
   echo "dir $DATA_DIR" >> $NODE_CONF_FILE
@@ -206,6 +229,13 @@ if [ "$RUN_NODE" -eq "1" ]; then
     redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG
   fi
 
+  # Set maxmemory based on instance type
+  get_memory_limit
+  if [[ ! -z $MEMORY_LIMIT ]]; then
+    echo "Setting maxmemory to $MEMORY_LIMIT"
+    redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
+  fi
+
 fi
 
 
@@ -223,6 +253,7 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
     echo "tls-ca-cert-file $ROOT_CA_PATH" >> $SENTINEL_CONF_FILE
     echo "tls-replication yes" >> $SENTINEL_CONF_FILE
     echo "tls-auth-clients no" >> $SENTINEL_CONF_FILE
+    echo "sentinel announce-hostnames yes" >> $SENTINEL_CONF_FILE
   else
     echo "port $SENTINEL_PORT" >> $SENTINEL_CONF_FILE
   fi

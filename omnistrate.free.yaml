@@ -58,7 +58,7 @@ services:
 
   node-f:
     x-omnistrate-mode-internal: true
-    image: falkordb/falkordb-node:v0.0.15
+    image: falkordb/falkordb-node:v0.0.45
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:

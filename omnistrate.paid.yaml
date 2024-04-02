@@ -173,7 +173,7 @@ services:
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
       - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
+      - ADMIN_PASSWORD=$func.sha256($sys.id, 'bWQeQF72jMFPr')
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - SECURITY_CONTEXT_USER_ID=0
@@ -390,7 +390,7 @@ services:
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
       - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
+      - ADMIN_PASSWORD=$func.sha256($sys.id, 'bWQeQF72jMFPr')
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - SECURITY_CONTEXT_USER_ID=0
@@ -445,7 +445,7 @@ services:
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
+      - ADMIN_PASSWORD=$func.sha256($sys.id, 'bWQeQF72jMFPr')
       - DATA_DIR=/data
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
@@ -676,7 +676,7 @@ services:
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
       - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
+      - ADMIN_PASSWORD=$func.sha256($sys.id, 'bWQeQF72jMFPr')
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - SECURITY_CONTEXT_USER_ID=0
@@ -731,7 +731,7 @@ services:
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
+      - ADMIN_PASSWORD=$func.sha256($sys.id, 'bWQeQF72jMFPr')
       - DATA_DIR=/data
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0

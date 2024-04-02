@@ -51,38 +51,39 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1
       matrix:
         tiers:
           - name: single zone - node
-            serviceId: s-NDLUXKMVT8
-            serviceApiId: sa-lDkOnxngxk
-            productTierId: pt-3kwYmWn6CQ
-            imageConfigId: imgc-fm14mOwvtd
+            serviceId: s-xlHhDG3QlM
+            serviceApiId: sa-uvMK5yOcSo
+            productTierId: pt-Yemkrnavca
+            imageConfigId: imgc-y2q3nWbnvt
           - name: single zone - sentinel
-            serviceId: s-NDLUXKMVT8
-            serviceApiId: sa-lDkOnxngxk
-            productTierId: pt-3kwYmWn6CQ
-            imageConfigId: imgc-LswT8Ib3Yg
+            serviceId: s-xlHhDG3QlM
+            serviceApiId: sa-uvMK5yOcSo
+            productTierId: pt-Yemkrnavca
+            imageConfigId: imgc-2W3145VEcL
           - name: multi zone - node
-            serviceId: s-NDLUXKMVT8
-            serviceApiId: sa-lDkOnxngxk
-            productTierId: pt-3kwYmWn6CQ
-            imageConfigId: imgc-S6CDY5t2xI
+            serviceId: s-xlHhDG3QlM
+            serviceApiId: sa-uvMK5yOcSo
+            productTierId: pt-Yemkrnavca
+            imageConfigId: imgc-PRfAITshta
           - name: multi zone - sentinel
-            serviceId: s-NDLUXKMVT8
-            serviceApiId: sa-lDkOnxngxk
-            productTierId: pt-3kwYmWn6CQ
-            imageConfigId: imgc-Snwkt2xU1O
+            serviceId: s-xlHhDG3QlM
+            serviceApiId: sa-uvMK5yOcSo
+            productTierId: pt-Yemkrnavca
+            imageConfigId: imgc-C4HEeC6OZb
           - name: standalone - node
-            serviceId: s-NDLUXKMVT8
-            serviceApiId: sa-lDkOnxngxk
-            productTierId: pt-3kwYmWn6CQ
-            imageConfigId: imgc-vINSYKjfmr
+            serviceId: s-xlHhDG3QlM
+            serviceApiId: sa-uvMK5yOcSo
+            productTierId: pt-Yemkrnavca
+            imageConfigId: imgc-ZcQDSLurfz
           - name: free - node
-            serviceId: s-NDLUXKMVT8
-            serviceApiId: sa-lDkOnxngxk
-            productTierId: pt-UgQgtXwNGu
-            imageConfigId: imgc-4sSPAq6wvP
+            serviceId: s-xlHhDG3QlM
+            serviceApiId: sa-uvMK5yOcSo
+            productTierId: pt-duwqXS2RS6
+            imageConfigId: imgc-hgQyiDVa9z
     steps:
       - name: Update Docker Image Tag on Omnistrate
         uses: omnistrate/update-image-config@v1

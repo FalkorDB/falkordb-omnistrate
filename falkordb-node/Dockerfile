@@ -1,3 +1,5 @@
+ARG FALKORDB_VERSION=v4.0.6
+
 FROM oliver006/redis_exporter:alpine as redis_exporter
 
 
@@ -12,7 +14,7 @@ COPY ./healthcheck_rs/ /healthcheck
 RUN cargo build --release
 
 
-FROM falkordb/falkordb:edge
+FROM falkordb/falkordb:$FALKORDB_VERSION
 
 RUN apt-get update && apt-get install -y curl jq
 

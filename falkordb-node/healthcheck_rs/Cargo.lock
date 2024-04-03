@@ -280,6 +280,7 @@ dependencies = [
 name = "healthcheck"
 version = "0.1.0"
 dependencies = [
+ "openssl-sys",
  "redis",
  "regex",
  "rouille",

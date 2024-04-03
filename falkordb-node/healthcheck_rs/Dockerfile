@@ -1,7 +1,8 @@
 
-FROM ekidd/rust-musl-builder as healthcheck_builder
+FROM rust:1-slim-buster as healthcheck_builder
 
-RUN apk add musl-dev pkgconfig alpine-sdk openssl-dev
+RUN apt-get update && \
+    apt install -y pkg-config libssl-dev
 
 WORKDIR /healthcheck
 

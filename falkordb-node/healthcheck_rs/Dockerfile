@@ -1,7 +1,7 @@
 
-FROM rust:alpine3.19 as healthcheck_builder
+FROM ekidd/rust-musl-builder as healthcheck_builder
 
-RUN apk add musl-dev pkgconfig libssl-dev
+RUN apk add musl-dev pkgconfig alpine-sdk openssl-dev
 
 WORKDIR /healthcheck
 

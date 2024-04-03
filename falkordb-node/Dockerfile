@@ -5,7 +5,7 @@ FROM oliver006/redis_exporter:alpine as redis_exporter
 
 FROM rust:alpine3.19 as healthcheck_builder
 
-RUN apk add musl-dev
+RUN apk add musl-dev pkgconfig
 
 WORKDIR /healthcheck
 

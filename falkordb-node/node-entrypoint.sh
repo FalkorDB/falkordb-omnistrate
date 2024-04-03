@@ -295,8 +295,7 @@ fi
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
-  METRICS_TLS_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --tls-ca-cert-file $ROOT_CA_PATH --tls-server-key-file $TLS_MOUNT_PATH/tls.key --tls-server-cert-file $TLS_MOUNT_PATH/tls.crt"; else echo ""; fi)
-  redis_exporter --redis.password $ADMIN_PASSWORD $METRICS_TLS_STRING --redis.addr $NODE_HOST_IP:$NODE_PORT &
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $NODE_HOST_IP:$NODE_PORT &
 fi
 
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then

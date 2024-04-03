@@ -3,9 +3,9 @@ ARG FALKORDB_VERSION=v4.0.6
 FROM oliver006/redis_exporter:alpine as redis_exporter
 
 
-FROM rust:alpine3.19 as healthcheck_builder
+FROM rust:1-slim-buster as healthcheck_builder
 
-RUN apk add musl-dev pkgconfig
+RUN apt-get update -y && apt-get install -y pkg-config build-essential cmake libtool openssl libssl-dev
 
 WORKDIR /healthcheck
 

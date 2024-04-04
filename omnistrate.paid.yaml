@@ -161,7 +161,13 @@ services:
           - "90"
           - "100"
     volumes:
-      - ./data:/data
+      - source: ./data
+        target: /data
+        type: bind
+        x-omnistrate-storage:
+          gcp:
+            instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGiAPIParam: storageSize
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=0
@@ -179,16 +185,13 @@ services:
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
+      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
       - "6379:6379"
       # - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
-    x-omnistrate-storage:
-      gcp:
-        instanceStorageType: GCP::PD_BALANCED
-        instanceStorageSizeGiAPIParam: storageSize
 
 
 
@@ -377,7 +380,13 @@ services:
           - "90"
           - "100"
     volumes:
-      - ./data:/data
+      - source: ./data
+        target: /data
+        type: bind
+        x-omnistrate-storage:
+          gcp:
+            instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGiAPIParam: storageSize
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -396,6 +405,7 @@ services:
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
+      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -403,10 +413,6 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
-    x-omnistrate-storage:
-      gcp:
-        instanceStorageType: GCP::PD_BALANCED
-        instanceStorageSizeGiAPIParam: storageSize
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
@@ -450,8 +456,17 @@ services:
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
+      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
       - "26379:26379"
+    volumes:
+      - source: ./data
+        target: /data
+        type: bind
+        x-omnistrate-storage:
+          gcp:
+            instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 10
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -471,11 +486,6 @@ services:
         modifiable: false
         required: true
         export: false
-    x-omnistrate-storage:
-      gcp:
-        instanceStorageType: GCP::PD_BALANCED
-        instanceStorageSizeGi: 10
-
 
 
 # Multi Zone
@@ -663,7 +673,13 @@ services:
           - "90"
           - "100"
     volumes:
-      - ./data:/data
+      - source: ./data
+        target: /data
+        type: bind
+        x-omnistrate-storage:
+          gcp:
+            instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGiAPIParam: storageSize
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -682,6 +698,7 @@ services:
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
+      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -689,10 +706,6 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: true
       enableEndpointPerReplica: true
-    x-omnistrate-storage:
-      gcp:
-        instanceStorageType: GCP::PD_BALANCED
-        instanceStorageSizeGiAPIParam: storageSize
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
@@ -736,8 +749,17 @@ services:
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
+      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
       - "26379:26379"
+    volumes:
+      - source: ./data
+        target: /data
+        type: bind
+        x-omnistrate-storage:
+          gcp:
+            instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 10
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -757,8 +779,4 @@ services:
         modifiable: false
         required: true
         export: false
-    x-omnistrate-storage:
-      gcp:
-        instanceStorageType: GCP::PD_BALANCED
-        instanceStorageSizeGi: 10
 

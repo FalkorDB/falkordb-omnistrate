@@ -9,7 +9,7 @@ services:
     image: omnistrate/noop
     x-omnistrate-api-params:
       - key: name
-        description: Name
+        description: The name of the FalkorDB instance
         name: Name
         type: String
         modifiable: true
@@ -17,15 +17,15 @@ services:
         defaultValue: FalkorDB Instance
         export: true
       - key: description
-        description: Description
+        description: A description of the FalkorDB instance
         name: Description
         type: String
         modifiable: true
         required: false
-        defaultValue: FalkorDB Instance
+        defaultValue: The best graph database in the world
         export: true
       - key: enableTLS
-        description: Enable TLS
+        description: Whether to enable TLS for the database
         name: Enable TLS
         type: Boolean
         modifiable: false
@@ -35,7 +35,7 @@ services:
         parameterDependencyMap:
           node-f: enableTLS
       - key: falkordbUser
-        description: FalkorDB User
+        description: Choose a default username for your database
         name: FalkorDB User
         type: String
         modifiable: false
@@ -45,7 +45,7 @@ services:
         parameterDependencyMap:
           node-f: falkordbUser
       - key: falkordbPassword
-        description: FalkorDB Password
+        description: Choose a default password for your database
         name: FalkorDB Password
         type: String
         modifiable: false
@@ -105,7 +105,14 @@ services:
         export: true
         defaultValue: "false"
     volumes:
-      - ./data:/data
+      - source: ./data
+        target: /data
+        type: bind
+        x-omnistrate-storage:
+          gcp:
+            instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 10
+
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=0
@@ -123,13 +130,10 @@ services:
       - SECURITY_CONTEXT_USER_ID=0
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
+      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
       - "6379:6379"
       # - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
-    x-omnistrate-storage:
-      gcp:
-        instanceStorageType: GCP::PD_BALANCED
-        instanceStorageSizeGi: 10

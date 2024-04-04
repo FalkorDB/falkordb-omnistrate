@@ -24,15 +24,14 @@ DEPLOYMENT_DELETE_TIMEOUT_SECONDS = 1200
 DEPLOYMENT_FAILOVER_TIMEOUT_SECONDS = 1500
 
 API_VERSION = "2022-09-01-00"
-SERVICE_ID = os.getenv("SERVICE_ID", "sp-JvkxkPhinN")
-SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID", "sub-kFDyC8pT5i")
+SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID", "sub-hu50FQYo5w")
 
 API_URL = "https://api.omnistrate.cloud/"
-API_PATH = f"{API_VERSION}/resource-instance/{SERVICE_ID}/falkordb/v1/prod/falkordb-customer-hosted/falkordb-hosted-tier-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/standalone"
-API_FAILOVER_PATH = f"{API_VERSION}/resource-instance/{SERVICE_ID}/falkordb/v1/prod/falkordb-customer-hosted/falkordb-hosted-tier-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/node-s"
+API_PATH = f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb/v1/prod/falkordb-customer-hosted/falkordb-hosted-tier-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/standalone"
+API_FAILOVER_PATH = f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb/v1/prod/falkordb-customer-hosted/falkordb-hosted-tier-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/node-s"
 API_SIGN_IN_PATH = f"{API_VERSION}/resource-instance/user/signin"
-# SUBSCRIPTION_ID_QUERY = f"?subscriptionId={SUBSCRIPTION_ID}"
-SUBSCRIPTION_ID_QUERY = ""
+SUBSCRIPTION_ID_QUERY = f"?subscriptionId={SUBSCRIPTION_ID}"
+# SUBSCRIPTION_ID_QUERY = ""
 
 
 def _get_token():

@@ -10,7 +10,7 @@ on:
 
 env:
   IMAGE_NAME: falkordb-node
-  FALKORDB_VERSION: v4.0.6
+  FALKORDB_VERSION: v4.0.7
 
 jobs:
   build-and-push:
@@ -54,36 +54,36 @@ jobs:
       max-parallel: 1
       matrix:
         tiers:
-          - name: single zone - node
-            serviceId: s-xlHhDG3QlM
-            serviceApiId: sa-uvMK5yOcSo
-            productTierId: pt-Yemkrnavca
-            imageConfigId: imgc-y2q3nWbnvt
-          - name: single zone - sentinel
-            serviceId: s-xlHhDG3QlM
-            serviceApiId: sa-uvMK5yOcSo
-            productTierId: pt-Yemkrnavca
-            imageConfigId: imgc-2W3145VEcL
-          - name: multi zone - node
-            serviceId: s-xlHhDG3QlM
-            serviceApiId: sa-uvMK5yOcSo
-            productTierId: pt-Yemkrnavca
-            imageConfigId: imgc-PRfAITshta
-          - name: multi zone - sentinel
-            serviceId: s-xlHhDG3QlM
-            serviceApiId: sa-uvMK5yOcSo
-            productTierId: pt-Yemkrnavca
-            imageConfigId: imgc-C4HEeC6OZb
-          - name: standalone - node
-            serviceId: s-xlHhDG3QlM
-            serviceApiId: sa-uvMK5yOcSo
-            productTierId: pt-Yemkrnavca
-            imageConfigId: imgc-ZcQDSLurfz
+          # - name: single zone - node
+          #   serviceId: s-xlHhDG3QlM
+          #   serviceApiId: sa-uvMK5yOcSo
+          #   productTierId: pt-Yemkrnavca
+          #   imageConfigId: imgc-y2q3nWbnvt
+          # - name: single zone - sentinel
+          #   serviceId: s-xlHhDG3QlM
+          #   serviceApiId: sa-uvMK5yOcSo
+          #   productTierId: pt-Yemkrnavca
+          #   imageConfigId: imgc-2W3145VEcL
+          # - name: multi zone - node
+          #   serviceId: s-xlHhDG3QlM
+          #   serviceApiId: sa-uvMK5yOcSo
+          #   productTierId: pt-Yemkrnavca
+          #   imageConfigId: imgc-PRfAITshta
+          # - name: multi zone - sentinel
+          #   serviceId: s-xlHhDG3QlM
+          #   serviceApiId: sa-uvMK5yOcSo
+          #   productTierId: pt-Yemkrnavca
+          #   imageConfigId: imgc-C4HEeC6OZb
+          # - name: standalone - node
+          #   serviceId: s-xlHhDG3QlM
+          #   serviceApiId: sa-uvMK5yOcSo
+          #   productTierId: pt-Yemkrnavca
+          #   imageConfigId: imgc-ZcQDSLurfz
           - name: free - node
-            serviceId: s-xlHhDG3QlM
-            serviceApiId: sa-uvMK5yOcSo
-            productTierId: pt-duwqXS2RS6
-            imageConfigId: imgc-hgQyiDVa9z
+            serviceId: s-KgFDwg5vBS
+            serviceApiId: sa-dCmMhdrtu3
+            productTierId: pt-m2FKdsSXSi
+            imageConfigId: imgc-wAKebKdNdM
     steps:
       - name: Update Docker Image Tag on Omnistrate
         uses: omnistrate/update-image-config@v1

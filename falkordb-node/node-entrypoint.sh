@@ -256,8 +256,6 @@ fi
 
 
 if [ "$RUN_SENTINEL" -eq "1" ]; then
-  echo "Starting Sentinel"
-  
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
 
   # When LB is in place, change external dns to internal ip

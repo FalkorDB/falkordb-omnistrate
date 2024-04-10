@@ -25,8 +25,8 @@ API_VERSION = "2022-09-01-00"
 SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID", "sub-BLdnrUpLcT")
 
 API_URL = "https://api.omnistrate.cloud/"
-API_PATH = f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb/v1/prod/falkordb-free-customer-hosted/falkordb-free-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/free"
-API_FAILOVER_PATH = f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb/v1/prod/falkordb-free-customer-hosted/falkordb-free-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/node-f"
+API_PATH = f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb/v1/prod/falkordb-customer-hosted/falkordb-hosted-tier-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/free"
+API_FAILOVER_PATH = f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb/v1/prod/falkordb-customer-hosted/falkordb-hosted-tier-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/node-f"
 API_SIGN_IN_PATH = f"{API_VERSION}/resource-instance/user/signin"
 SUBSCRIPTION_ID_QUERY = f"?subscriptionId={SUBSCRIPTION_ID}"
 # SUBSCRIPTION_ID_QUERY = ""

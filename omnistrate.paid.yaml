@@ -57,7 +57,7 @@ services:
         type: String
         modifiable: false
         required: true
-        export: false
+        export: true
         defaultValue: "falkordb"
         parameterDependencyMap:
           node-s: falkordbUser
@@ -132,7 +132,7 @@ services:
         type: String
         modifiable: false
         required: true
-        export: false
+        export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
         description: Choose a default password for your database
@@ -262,7 +262,7 @@ services:
         type: String
         modifiable: false
         required: true
-        export: false
+        export: true
         defaultValue: "falkordb"
         parameterDependencyMap:
           node-sz: falkordbUser
@@ -349,7 +349,7 @@ services:
         type: String
         modifiable: false
         required: true
-        export: false
+        export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
         description: Choose a default password for your database
@@ -555,7 +555,7 @@ services:
         type: String
         modifiable: false
         required: true
-        export: false
+        export: true
         defaultValue: "falkordb"
         parameterDependencyMap:
           node-mz: falkordbUser
@@ -642,7 +642,7 @@ services:
         type: String
         modifiable: false
         required: true
-        export: false
+        export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
         description: Choose a default password for your database

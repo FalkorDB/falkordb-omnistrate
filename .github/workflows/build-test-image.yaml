@@ -128,7 +128,7 @@ jobs:
         instances:
           - name: free
             cloudProvider: gcp
-            cloudRegion: europe-west1
+            cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
             apiVersion: 2022-09-01-00
             apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/free

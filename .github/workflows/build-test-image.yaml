@@ -95,9 +95,6 @@ jobs:
           product-tier-id: ${{ matrix.tiers.productTierId }}
           image-config-id: ${{ matrix.tiers.imageConfigId }}
           tag: ${{ github.ref_name }}
-      - name: Store output tag
-        run: |
-          echo "${{ matrix.tiers.name }}=${{ steps.update-image-config.outputs.tag }}" >> $GITHUB_ENV
 
   promote-pt-version:
     needs: omnistrate-update
@@ -121,7 +118,7 @@ jobs:
           OMNISTRATE_SERVICE_ID: s-iBKzmR5obS
           OMNISTRATE_PRODUCT_TIER_ID: pt-vnVxCsPEcV
         run: |
-          python ./tests/promote_pt_version.py ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.OMNISTRATE_SERVICE_ID }} ${{ env.OMNISTRATE_PRODUCT_TIER_ID }} "${{ env.node-sz }},${{ env.sentinel-sz }},${{ env.node-mz }},${{ env.sentinel-mz }},${{ env.node-s }},${{ env.node-f }}"
+          python ./tests/promote_pt_version.py ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.OMNISTRATE_SERVICE_ID }} ${{ env.OMNISTRATE_PRODUCT_TIER_ID }}
 
   test:
     needs: promote-pt-version

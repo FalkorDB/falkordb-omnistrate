@@ -98,6 +98,17 @@ jobs:
   test:
     needs: build-and-push
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        instances:
+          - name: free
+            cloudProvider: gcp
+            cloudRegion: europe-west1
+            subscriptionId: sub-GJPV3NoNC0
+            apiVersion: 2022-09-01-00
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/free
+            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-f
+            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
     steps:
       - name: Setup python
         uses: actions/setup-python@v2
@@ -105,14 +116,20 @@ jobs:
           python-version: "3.x"
 
       - name: Install dependencies
-        working-directory: ./tests
+        working-directory: tests
         run: |
           python -m pip install --upgrade pip
-          pip install -r ./requirements.txt
+          pip install -r requirements.txt
 
       - name: Run "Free" instance tests
+        working-directory: tests
         env:
-          CLOUD_PROVIDER: gcp
-          CLOUD_REGION: europe-west1
+          CLOUD_PROVIDER: ${{ matrix.instances.cloudProvider }}
+          CLOUD_REGION: ${{ matrix.instances.cloudRegion }}
+          SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
+          API_VERSION: ${{ matrix.instances.apiVersion }}
+          API_PATH: ${{ matrix.instances.apiPath }}
+          API_FAILOVER_PATH: ${{ matrix.instances.apiFailoverPath }}
+          API_SIGN_IN_PATH: ${{ matrix.instances.apiSignInPath }}
         run: |
           python test_free.py ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }}

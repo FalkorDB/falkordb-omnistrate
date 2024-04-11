@@ -94,7 +94,7 @@ jobs:
           service-api-id: ${{ matrix.tiers.serviceApiId }}
           product-tier-id: ${{ matrix.tiers.productTierId }}
           image-config-id: ${{ matrix.tiers.imageConfigId }}
-          tag: ${{ github.ref_name }}
+          tag: dev-${{ github.event.head_commit.id }}
 
   promote-pt-version:
     needs: omnistrate-update

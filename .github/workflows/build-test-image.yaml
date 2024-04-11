@@ -53,38 +53,39 @@ jobs:
       max-parallel: 1
       matrix:
         tiers:
-          - name: single zone - node
+          - name: node-sz
             serviceId: s-iBKzmR5obS
             serviceApiId: sa-FF7Ckx3VC3
             productTierId: pt-vnVxCsPEcV
             imageConfigId: imgc-kIAclNV7Pt
-          - name: single zone - sentinel
+          - name: sentinel-sz
             serviceId: s-iBKzmR5obS
             serviceApiId: sa-FF7Ckx3VC3
             productTierId: pt-vnVxCsPEcV
             imageConfigId: imgc-jChPv7D4wM
-          - name: multi zone - node
+          - name: node-mz
             serviceId: s-iBKzmR5obS
             serviceApiId: sa-FF7Ckx3VC3
             productTierId: pt-vnVxCsPEcV
             imageConfigId: imgc-A5OTVYi7D8
-          - name: multi zone - sentinel
+          - name: sentinel-mz
             serviceId: s-iBKzmR5obS
             serviceApiId: sa-FF7Ckx3VC3
             productTierId: pt-vnVxCsPEcV
             imageConfigId: imgc-x0nEVUZbIm
-          - name: standalone - node
+          - name: node-s
             serviceId: s-iBKzmR5obS
             serviceApiId: sa-FF7Ckx3VC3
             productTierId: pt-vnVxCsPEcV
             imageConfigId: imgc-wSJ2umk0E7
-          - name: free - node
+          - name: node-f
             serviceId: s-iBKzmR5obS
             serviceApiId: sa-FF7Ckx3VC3
             productTierId: pt-vnVxCsPEcV
             imageConfigId: imgc-FhmFmFh9XF
     steps:
       - name: Update Docker Image Tag on Omnistrate
+        id: update-image-config
         uses: omnistrate/update-image-config@v1
         with:
           username: ${{ secrets.OMNISTRATE_USERNAME }}
@@ -94,9 +95,36 @@ jobs:
           product-tier-id: ${{ matrix.tiers.productTierId }}
           image-config-id: ${{ matrix.tiers.imageConfigId }}
           tag: ${{ github.ref_name }}
+      - name: Store output tag
+        run: |
+          echo "${{ matrix.tiers.name }}=${{ steps.update-image-config.outputs.tag }}" >> $GITHUB_ENV
+
+  promote-pt-version:
+    needs: omnistrate-update
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ./tests/requirements.txt
+
+      - name: Promote PT version
+        env: 
+          OMNISTRATE_SERVICE_ID: s-iBKzmR5obS
+          OMNISTRATE_PRODUCT_TIER_ID: pt-vnVxCsPEcV
+        run: |
+          python ./tests/promote_pt_version.py ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.OMNISTRATE_SERVICE_ID }} ${{ env.OMNISTRATE_PRODUCT_TIER_ID }} "${{ env.node-sz }},${{ env.sentinel-sz }},${{ env.node-mz }},${{ env.sentinel-mz }},${{ env.node-s }},${{ env.node-f }}"
 
   test:
-    needs: omnistrate-update
+    needs: promote-pt-version
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -110,6 +138,9 @@ jobs:
             apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-f
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
       - name: Setup python
         uses: actions/setup-python@v2
         with:
@@ -119,10 +150,9 @@ jobs:
         working-directory: tests
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r ./tests/requirements.txt
 
       - name: Run "Free" instance tests
-        working-directory: tests
         env:
           CLOUD_PROVIDER: ${{ matrix.instances.cloudProvider }}
           CLOUD_REGION: ${{ matrix.instances.cloudRegion }}
@@ -132,4 +162,4 @@ jobs:
           API_FAILOVER_PATH: ${{ matrix.instances.apiFailoverPath }}
           API_SIGN_IN_PATH: ${{ matrix.instances.apiSignInPath }}
         run: |
-          python test_free.py ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }}
+          python ./tests/test_free.py ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }}

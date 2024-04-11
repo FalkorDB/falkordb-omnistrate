@@ -131,8 +131,8 @@ jobs:
             cloudRegion: europe-west1
             subscriptionId: sub-GJPV3NoNC0
             apiVersion: 2022-09-01-00
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/free
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-f
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/free
+            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-f
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
     steps:
       - name: Checkout

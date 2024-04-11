@@ -96,7 +96,7 @@ jobs:
           tag: ${{ github.ref_name }}
 
   test:
-    needs: build-and-push
+    needs: omnistrate-update
     runs-on: ubuntu-latest
     strategy:
       matrix:

@@ -15,10 +15,18 @@ DEPLOYMENT_CLOUD_PROVIDER = sys.argv[3]
 DEPLOYMENT_REGION = sys.argv[4]
 
 
-API_VERSION = "2022-09-01-00"
-API_PATH = f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb/v1/dev/falkordb-customer-hosted/falkordb-hosted-tier-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/free"
-API_FAILOVER_PATH = f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb/v1/dev/falkordb-customer-hosted/falkordb-hosted-tier-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/node-f"
-API_SIGN_IN_PATH = f"{API_VERSION}/resource-instance/user/signin"
+API_VERSION = os.getenv("API_VERSION", "2022-09-01-00")
+API_PATH = os.getenv(
+    "API_PATH",
+    f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/free",
+)
+API_FAILOVER_PATH = os.getenv(
+    "API_FAILOVER_PATH",
+    f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-f",
+)
+API_SIGN_IN_PATH = os.getenv(
+    "API_SIGN_IN_PATH", f"{API_VERSION}/resource-instance/user/signin"
+)
 SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID", "sub-bHEl5iUoPd")
 
 

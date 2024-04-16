@@ -126,7 +126,8 @@ jobs:
     strategy:
       matrix:
         instances:
-          - name: free
+          - name: free_gcp_us-central1
+            testFile: test_free.py
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -148,7 +149,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r ./tests/requirements.txt
 
-      - name: Run "Free" instance tests
+      - name: Run ${{ matrix.instances.name }} instance tests
         env:
           CLOUD_PROVIDER: ${{ matrix.instances.cloudProvider }}
           CLOUD_REGION: ${{ matrix.instances.cloudRegion }}
@@ -158,4 +159,4 @@ jobs:
           API_FAILOVER_PATH: ${{ matrix.instances.apiFailoverPath }}
           API_SIGN_IN_PATH: ${{ matrix.instances.apiSignInPath }}
         run: |
-          python ./tests/test_free.py ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }}
+          python ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }}

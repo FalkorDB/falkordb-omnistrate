@@ -73,13 +73,16 @@ class OmnistrateInstance:
             self.api_url + self.api_sign_in_path, headers=headers, timeout=5
         )
 
-        if response.status_code >= 300 or response.status_code < 200:
-            print(response.text)
-            raise Exception("Failed to get token")
+        self._handle_response(response, "Failed to get token")
 
         self._token = response.json()["token"]
         print("Token received")
         return self._token
+
+    def _handle_response(self, response, message):
+        if response.status_code >= 300 or response.status_code < 200:
+            print(f"{message}: {response.text}")
+            raise Exception(f"{message}")
 
     def create(
         self,
@@ -119,9 +122,7 @@ class OmnistrateInstance:
             timeout=5,
         )
 
-        if response.status_code >= 300 or response.status_code < 200:
-            print(f"Failed to create instance {name}: {response.text}")
-            raise Exception(f"Failed to create instance {name}")
+        self._handle_response(response, f"Failed to create instance {name}")
 
         self.instance_id = response.json()["id"]
 
@@ -133,8 +134,11 @@ class OmnistrateInstance:
         timeout_timer = time.time() + self.deployment_create_timeout_seconds
         while True:
             if time.time() > timeout_timer:
-                print("Timeout reached")
-                raise Exception("Timeout reached")
+                raise Exception(
+                    "Instance creation timed out after {} seconds".format(
+                        self.deployment_create_timeout_seconds
+                    )
+                )
 
             state = self._get_instance_state()
             if state == "RUNNING":
@@ -165,9 +169,7 @@ class OmnistrateInstance:
             timeout=5,
         )
 
-        if response.status_code >= 300 or response.status_code < 200:
-            print(f"Failed to delete instance {self.instance_id}: {response.text}")
-            raise Exception(f"Failed to delete instance {self.instance_id}")
+        self._handle_response(response, f"Failed to delete instance {self.instance_id}")
 
         if not wait_for_delete:
             return
@@ -177,8 +179,11 @@ class OmnistrateInstance:
         while True:
 
             if time.time() > timeout_timer:
-                print("Timeout reached")
-                raise Exception("Timeout reached")
+                raise Exception(
+                    "Instance deletion timed out after {} seconds".format(
+                        self.deployment_delete_timeout_seconds
+                    )
+                )
             try:
                 state = self._get_instance_state()
                 if state == "FAILED":
@@ -219,13 +224,9 @@ class OmnistrateInstance:
             timeout=5,
         )
 
-        if response.status_code >= 300 or response.status_code < 200:
-            print(
-                f"Failed to trigger failover for instance {self.instance_id}: {response.text}"
-            )
-            raise Exception(
-                f"Failed to trigger failover for instance {self.instance_id}"
-            )
+        self._handle_response(
+            response, f"Failed to trigger failover for instance {self.instance_id}"
+        )
 
         if not wait_for_ready:
             return
@@ -234,8 +235,11 @@ class OmnistrateInstance:
 
         while True:
             if time.time() > timeout_timer:
-                print("Timeout reached")
-                raise Exception("Timeout reached")
+                raise Exception(
+                    "Instance failover timed out after {} seconds".format(
+                        self.deployment_failover_timeout_seconds
+                    )
+                )
 
             state = self._get_instance_state()
             if state == "RUNNING":
@@ -265,9 +269,9 @@ class OmnistrateInstance:
             timeout=5,
         )
 
-        if response.status_code >= 300 or response.status_code < 200:
-            print(f"Failed to get instance connection data: {response.text}")
-            raise Exception("Failed to get instance connection data")
+        self._handle_response(
+            response, f"Failed to get instance connection data {self.instance_id}"
+        )
 
         resources = response.json()["detailedNetworkTopology"]
 
@@ -313,8 +317,8 @@ class OmnistrateInstance:
             timeout=5,
         )
 
-        if response.status_code >= 300 or response.status_code < 200:
-            print(f"Failed to get instance state {response.text}")
-            raise Exception("Failed to get instance state")
+        self._handle_response(
+            response, f"Failed to get instance state {self.instance_id}"
+        )
 
         return response.json()["status"]

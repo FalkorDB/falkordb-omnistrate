@@ -12,7 +12,7 @@ concurrency:
 
 env:
   IMAGE_NAME: falkordb-node
-  FALKORDB_VERSION: v4.0.7
+  FALKORDB_VERSION: v4.0.8
 
 jobs:
   build-and-push:

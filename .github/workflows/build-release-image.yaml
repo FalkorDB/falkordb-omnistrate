@@ -4,9 +4,11 @@ on:
   push:
     tags:
       - v*
-    branches:
-      - main
   workflow_dispatch:
+
+concurrency: 
+  group: falkordb-node-release
+  cancel-in-progress: true
 
 env:
   IMAGE_NAME: falkordb-node

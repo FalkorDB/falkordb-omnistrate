@@ -1,5 +1,25 @@
 version: "3.9"
 
+x-omnistrate-load-balancer:
+  tcp:
+    - name: Single Zone Sentinel LB
+      description: L4 Load Balancer for Sentinel in Single Zone
+      ports:
+        - associatedResourceKeys:
+            - node-sz
+            - sentinel-sz
+          ingressPort: 26379
+          backendPort: 26379
+
+    - name: Multi Zone Sentinel LB
+      description: L4 Load Balancer for Sentinel in Multi Zone
+      ports:
+        - associatedResourceKeys:
+            - node-mz
+            - sentinel-mz
+          ingressPort: 26379
+          backendPort: 26379
+
 services:
 
 # Standalone

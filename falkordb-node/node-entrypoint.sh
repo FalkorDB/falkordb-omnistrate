@@ -282,9 +282,6 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
 
   sleep 10
 
-  redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER ON >$FALKORDB_PASSWORD allcommands allchannels
-  redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER default off
-
   # If FALKORDB_MASTER_HOST is not empty, add monitor to sentinel
   if [[ ! -z $FALKORDB_MASTER_HOST ]]; then
     log "Master Name: $MASTER_NAME\Master Host: $FALKORDB_MASTER_HOST\Master Port: $FALKORDB_MASTER_PORT_NUMBER\nSentinel Quorum: $SENTINEL_QUORUM"

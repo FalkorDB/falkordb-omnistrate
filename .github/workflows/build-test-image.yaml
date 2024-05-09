@@ -136,6 +136,7 @@ jobs:
             apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/free
             apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-f
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
+            extraParams: ""
           - name: standalone_gcp_us-central1
             testFile: test_standalone.py
             cloudProvider: gcp
@@ -144,6 +145,7 @@ jobs:
             apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
             apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-s
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
+            extraParams: "e2-medium 10"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -167,5 +169,6 @@ jobs:
           API_PATH: ${{ matrix.instances.apiPath }}
           API_FAILOVER_PATH: ${{ matrix.instances.apiFailoverPath }}
           API_SIGN_IN_PATH: ${{ matrix.instances.apiSignInPath }}
+          extraParams: ${{ matrix.instances.extraParams }}
         run: |
-          python ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }}
+          python ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} ${{ env.extraParams }}

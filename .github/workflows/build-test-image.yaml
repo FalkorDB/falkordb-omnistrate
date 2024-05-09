@@ -124,6 +124,7 @@ jobs:
     needs: promote-pt-version
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         instances:
           - name: free_gcp_us-central1
@@ -134,6 +135,14 @@ jobs:
             apiVersion: 2022-09-01-00
             apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/free
             apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-f
+            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
+          - name: standalone_gcp_us-central1
+            testFile: test_standalone.py
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
+            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-s
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
     steps:
       - name: Checkout

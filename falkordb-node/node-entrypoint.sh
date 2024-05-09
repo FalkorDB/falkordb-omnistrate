@@ -72,7 +72,7 @@ wait_until_sentinel_host_resolves() {
   while true; do
     log "Checking if sentinel host resolves $SENTINEL_HOST"
     if [[ $(getent hosts $SENTINEL_HOST) ]]; then
-      sentinel_response=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters)
+      sentinel_response=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters)
       sentinel_response_code=$?
       log "Sentinel Response: $sentinel_response_code - $sentinel_response"
       if [[ $? -eq 0 ]] && [[ $sentinel_response != *"ERR"* ]]; then 
@@ -111,7 +111,7 @@ wait_until_node_host_resolves() {
 }
 
 get_master() {
-  master_info=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD $TLS_CONNECTION_STRING --no-auth-warning SENTINEL get-master-addr-by-name $MASTER_NAME)
+  master_info=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD $TLS_CONNECTION_STRING --no-auth-warning SENTINEL get-master-addr-by-name $MASTER_NAME)
   redisRetVal=$?
   echo "Master Info: $master_info"
 
@@ -222,24 +222,24 @@ if [ "$RUN_NODE" -eq "1" ]; then
     if [[ $TLS == "true" ]]; then
       wait_until_node_host_resolves $NODE_HOST $NODE_PORT
       log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
-      redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM
+      redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM
       if [[ $? -ne 0 ]]; then
         echo "Could not add master to sentinel"
         exit 1
       fi
     else
       log "Master Name: $MASTER_NAME\nNode IP: $NODE_HOST_IP\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
-      redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST_IP $NODE_PORT $SENTINEL_QUORUM
+      redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST_IP $NODE_PORT $SENTINEL_QUORUM
       if [[ $? -ne 0 ]]; then
         echo "Could not add master to sentinel"
         exit 1
       fi
     fi
 
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
+    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
+    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
+    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
+    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
   fi
 
   echo "Creating falkordb user"
@@ -256,6 +256,8 @@ fi
 
 
 if [ "$RUN_SENTINEL" -eq "1" ]; then
+  sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
+  sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
 
   # When LB is in place, change external dns to internal ip
@@ -284,12 +286,14 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
   if [[ ! -z $FALKORDB_MASTER_HOST ]]; then
     log "Master Name: $MASTER_NAME\Master Host: $FALKORDB_MASTER_HOST\Master Port: $FALKORDB_MASTER_PORT_NUMBER\nSentinel Quorum: $SENTINEL_QUORUM"
     wait_until_node_host_resolves $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER
-    redis-cli -p $SENTINEL_PORT -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER $SENTINEL_QUORUM
-    redis-cli -p $SENTINEL_PORT -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
-    redis-cli -p $SENTINEL_PORT -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
-    redis-cli -p $SENTINEL_PORT -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
-    redis-cli -p $SENTINEL_PORT -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
+    redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER $SENTINEL_QUORUM
+    redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
+    redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
+    redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
+    redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
   fi
+
+  
 fi
 
 

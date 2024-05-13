@@ -3,12 +3,15 @@ import requests
 import json
 import time
 from falkordb import FalkorDB
+from redis import Sentinel
 import base64
 import os
+from classes.omnistrate_instance import OmnistrateInstance
+import random
 
 if len(sys.argv) < 8:
     print(
-        "Usage: python test_single_zone.py <omnistrate_user> <omnistrate_password> <deployment_cloud_provider> <deployment_region> <deployment_instance_type> <deployment_storage_size> <replica_count>"
+        "Usage: python test_single_zone.py <omnistrate_user> <omnistrate_password> <deployment_cloud_provider> <deployment_region> <deployment_instance_type> <deployment_storage_size> <replica_count> <tls=false>"
     )
     sys.exit(1)
 
@@ -19,291 +22,205 @@ DEPLOYMENT_REGION = sys.argv[4]
 DEPLOYMENT_INSTANCE_TYPE = sys.argv[5]
 DEPLOYMENT_STORAGE_SIZE = sys.argv[6]
 DEPLOYMENT_REPLICA_COUNT = sys.argv[7]
+DEPLOYMENT_TLS = sys.argv[8] if len(sys.argv) > 8 else "false"
 
-DEPLOYMENT_CREATE_TIMEOUT_SECONDS = 1200
-DEPLOYMENT_DELETE_TIMEOUT_SECONDS = 1200
-DEPLOYMENT_FAILOVER_TIMEOUT_SECONDS = 1500
-
-API_VERSION = "2022-09-01-00"
-SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID", "sub-hu50FQYo5w")
-
-API_URL = "https://api.omnistrate.cloud/"
-API_PATH = f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb/v1/prod/falkordb-customer-hosted/falkordb-hosted-tier-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone"
-API_FAILOVER_PATH = f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb/v1/prod/falkordb-customer-hosted/falkordb-hosted-tier-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/node-sz"
-API_SIGN_IN_PATH = f"{API_VERSION}/resource-instance/user/signin"
-SUBSCRIPTION_ID_QUERY = f"?subscriptionId={SUBSCRIPTION_ID}"
-# SUBSCRIPTION_ID_QUERY = ""
-
-
-def _get_token():
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": "Basic "
-        + base64.b64encode(
-            (OMNISTRATE_USER + ":" + OMNISTRATE_PASSWORD).encode("utf-8")
-        ).decode("utf-8"),
-    }
-    print("Getting token")
-    response = requests.post(API_URL + API_SIGN_IN_PATH, headers=headers, timeout=5)
-
-    if response.status_code >= 300 or response.status_code < 200:
-        print(response.text)
-        raise Exception("Failed to get token")
-
-    return response.json()["token"]
+API_VERSION = os.getenv("API_VERSION", "2022-09-01-00")
+API_PATH = os.getenv(
+    "API_PATH",
+    f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone",
+)
+API_FAILOVER_PATH = os.getenv(
+    "API_FAILOVER_PATH",
+    f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy",
+)
+API_SIGN_IN_PATH = os.getenv(
+    "API_SIGN_IN_PATH", f"{API_VERSION}/resource-instance/user/signin"
+)
+SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID", "sub-bHEl5iUoPd")
 
 
 def test_single_zone():
 
-    token = _get_token()
-    
-    # Create instance
-    instance_id = create_single_zone(token)
-    if instance_id is None:
-        raise Exception("Failed to create instance")
+    instance = OmnistrateInstance(
+        api_path=API_PATH,
+        api_failover_path=API_FAILOVER_PATH,
+        api_sign_in_path=API_SIGN_IN_PATH,
+        subscription_id=SUBSCRIPTION_ID,
+        omnistrate_user=OMNISTRATE_USER,
+        omnistrate_password=OMNISTRATE_PASSWORD,
+    )
 
     try:
+        instance.create(
+            wait_for_ready=True,
+            deployment_cloud_provider=DEPLOYMENT_CLOUD_PROVIDER,
+            deployment_region=DEPLOYMENT_REGION,
+            name="github-pipeline-single-zone",
+            description="single zone",
+            falkordb_user="falkordb",
+            falkordb_password="falkordb",
+            nodeInstanceType=DEPLOYMENT_INSTANCE_TYPE,
+            storageSize=DEPLOYMENT_STORAGE_SIZE,
+            enableTLS=True if DEPLOYMENT_TLS == "true" else False,
+        )
         # Test failover and data loss
-        test_failover(token, instance_id)
+        test_failover(instance)
     except Exception as e:
-        delete_single_zone(token, instance_id)
+        instance.delete(True)
         raise e
-    
+
     # Delete instance
-    delete_single_zone(token, instance_id)
+    instance.delete(True)
 
     print("Test passed")
 
 
-def create_single_zone(token):
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + token,
-    }
+def test_failover(instance: OmnistrateInstance):
+    """
+    Single Zone tests are the following:
+    1. Create a single zone instance
+    2. Write some data to the master node
+    3. Trigger a failover for the master node
+    4. Wait until the sentinels promote a new master
+    5. Check if the data is still there
+    6. Write more data to the new master
+    7. Trigger a failover for one of the sentinels
+    8. Make sure we can still connect and read the data
+    9. Trigger a failover for the new master
+    10. Wait until the sentinels promote a new master
+    11. Make sure we still have the both writes in the new master and slave
+    12. Delete the instance
+    """
 
-    data = {
-        "cloud_provider": DEPLOYMENT_CLOUD_PROVIDER,
-        "region": DEPLOYMENT_REGION,
-        "requestParams": {
-            "name": "single_zone",
-            "description": "single_zone",
-            "enableTLS": False,
-            "falkordbUser": "falkordb",
-            "falkordbPassword": "falkordb",
-            "nodeInstanceType": DEPLOYMENT_INSTANCE_TYPE,
-            "storageSize": DEPLOYMENT_STORAGE_SIZE,
-            "numberOfReplicas": DEPLOYMENT_REPLICA_COUNT,
+    resources = instance.get_connection_endpoints()
+    db_resource = list(
+        filter(lambda resource: resource["id"].startswith("node-sz"), resources)
+    )
+    sentinel_resource = next(
+        (resource for resource in resources if resource["id"].startswith("sentinel-sz")), None
+    )
+    db_0 = FalkorDB(
+        host=db_resource[0]["endpoint"],
+        port=db_resource[0]["ports"][0],
+        username="falkordb",
+        password="falkordb",
+    )
+    db_1 = FalkorDB(
+        host=db_resource[1]["endpoint"],
+        port=db_resource[1]["ports"][0],
+        username="falkordb",
+        password="falkordb",
+    )
+    sentinels = Sentinel(
+        sentinels=[
+            (sentinel_resource["endpoint"], sentinel_resource["ports"][0]),
+            (db_resource[0]["endpoint"], db_resource[0]["ports"][1]),
+            (db_resource[1]["endpoint"], db_resource[1]["ports"][1]),
+        ],
+        sentinel_kwargs={
+            "username": "falkordb",
+            "password": "falkordb",
         },
-    }
-
-    print("Creating single_zone", API_URL + API_PATH + SUBSCRIPTION_ID_QUERY)
-
-    response = requests.post(
-        API_URL + API_PATH + SUBSCRIPTION_ID_QUERY,
-        headers=headers,
-        data=json.dumps(data),
-        timeout=5,
+        connection_kwargs={
+            "username": "falkordb",
+            "password": "falkordb",
+        },
     )
 
-    if response.status_code >= 300 or response.status_code < 200:
-        print("Failed to create single_zone")
-        print(response.text)
-        return
+    sentinels_list = random.choice(sentinels.sentinels).execute_command("sentinel sentinels master")
 
-    print("Single_zone created", response.json())
+    if len(sentinels_list) != 2:
+        raise Exception(f"Sentinel list not correct. Expected 2, got {len(sentinels_list)}")
 
-    # Wait until instance is ready
-
-    instance_id = response.json()["id"]
-
-    timeout_timer = time.time() + DEPLOYMENT_CREATE_TIMEOUT_SECONDS
-    while True:
-
-        if time.time() > timeout_timer:
-            print("Timeout reached")
-            raise Exception("Timeout reached")
-
-        state = _get_instance_state(token, instance_id)
-        if state == "RUNNING":
-            print("Instance is ready")
-            break
-        elif state == "FAILED":
-            print("Instance is in error state")
-            raise Exception("Instance is in error state")
-        else:
-            print("Instance is in " + state + " state")
-            time.sleep(5)
-
-    return instance_id
-
-
-def delete_single_zone(token, instance_id):
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + token,
-    }
-
-    response = requests.delete(
-        API_URL + API_PATH + "/" + instance_id + SUBSCRIPTION_ID_QUERY,
-        headers=headers,
-        timeout=5,
-    )
-
-    if response.status_code >= 300 or response.status_code < 200:
-        print("Failed to delete single_zone")
-        print(response.text)
-        return
-
-    timeout_timer = time.time() + DEPLOYMENT_DELETE_TIMEOUT_SECONDS
-
-    while True:
-
-        if time.time() > timeout_timer:
-            print("Timeout reached")
-            raise Exception("Timeout reached")
-        try:
-            state = _get_instance_state(token, instance_id)
-            if state == "FAILED":
-                print("Instance is in error state")
-                raise Exception("Instance is in error state")
-            else:
-                print("Instance is in " + state + " state")
-                time.sleep(5)
-        except:
-            print("Instance is deleted")
-            break
-
-
-def test_failover(token, instance_id):
-    """This function should retrieve the instance host and port for connection, write some data to the DB, then trigger a failover. After X seconds, the instance should be back online and data should have persisted"""
-
-    # Get instance host and port
-    (host, port) = _get_instance_connection_data(token, instance_id)
-
-    print("Connection data: {}:{}".format(host, port))
-    db = FalkorDB(host=host, port=port, username="falkordb", password="falkordb")
-
-    graph = db.select_graph("test")
+    graph_0 = db_0.select_graph("test")
 
     # Write some data to the DB
-    graph.query("CREATE (n:Person {name: 'Alice'})")
+    graph_0.query("CREATE (n:Person {name: 'Alice'})")
 
+    print("Triggering failover for node-sz-0")
     # Trigger failover
-    _trigger_failover(token, instance_id)
+    instance.trigger_failover(
+        replica_id="node-sz-0",
+        wait_for_ready=False,
+        resource_id="node-sz"
+    )
 
-    # Wait for failover to complete
-    timeout_timer = time.time() + DEPLOYMENT_FAILOVER_TIMEOUT_SECONDS
+    promotion_completed = False
+    while not promotion_completed:
+        try:
+            graph = db_1.execute_command("info replication")
+            if "role:master" in graph:
+                promotion_completed = True
+            time.sleep(1)
+        except Exception as e:
+            print("Promotion not completed yet")
 
-    while True:
-        if time.time() > timeout_timer:
-            print("Timeout reached")
-            raise Exception("Timeout reached")
-
-        state = _get_instance_state(token, instance_id)
-        if state == "RUNNING":
-            print("Failover completed")
-            break
-        elif state == "FAILED":
-            print("Instance is in error state")
-            raise Exception("Instance is in error state")
-        else:
-            print("Instance is in " + state + " state")
-            time.sleep(5)
+    print("Promotion completed")
 
     # Check if data is still there
+    graph_1 = db_1.select_graph("test")
 
-    graph = db.select_graph("test")
-
-    result = graph.ro_query("MATCH (n:Person) RETURN n")
+    result = graph_1.query("MATCH (n:Person) RETURN n")
 
     if len(result.result_set) == 0:
-        raise Exception("Data lost after failover")
+        raise Exception("Data lost after first failover")
 
-    print("Data persisted after failover")
+    print("Data persisted after first failover")
 
+    graph_1.query("CREATE (n:Person {name: 'Bob'})")
 
-def _get_instance_connection_data(token, instance_id):
-
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + token,
-    }
-
-    response = requests.get(
-        API_URL + API_PATH + "/" + instance_id + SUBSCRIPTION_ID_QUERY,
-        headers=headers,
-        timeout=5,
+    # wait until the node-sz-0 is ready
+    instance.wait_for_ready(timeout_seconds=600)
+    
+    print("Triggering failover for sentinel-sz-0")
+    # Trigger sentinel failover
+    instance.trigger_failover(
+        replica_id="sentinel-sz-0",
+        wait_for_ready=False,
+        resource_id="sentinel-sz"
     )
 
-    if response.status_code >= 300 or response.status_code < 200:
-        print("Failed to get instance connection data")
-        print(response.text)
-        return
+    graph_1 = db_1.select_graph("test")
 
-    resources = response.json()["detailedNetworkTopology"]
+    result = graph_1.query("MATCH (n:Person) RETURN n")
 
-    resources_keys = resources.keys()
+    if len(result.result_set) < 2:
+        raise Exception("Data lost after second failover")
 
-    resource = None
-    for key in resources_keys:
-        if "nodes" in resources[key] and len(resources[key]["nodes"]) > 0 and resources[key]["resourceName"] == "node-sz":
-            resource = resources[key]
-            break
+    print("Data persisted after second failover")
 
-    if resource is None:
-        print("No resource with nodes found")
-        return
+    # wait until the node-sz-0 is ready
+    instance.wait_for_ready(timeout_seconds=600)
 
-    endpoint = resource["nodes"][0]["endpoint"]
-    port = resource["nodes"][0]["ports"][0]
-
-    return (endpoint, port)
-
-
-def _trigger_failover(token, instance_id):
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + token,
-    }
-
-    data = {
-        "failedReplicaID": "node-sz-0",
-        "failedReplicaAction": "FAILOVER_AND_RECREATE",
-    }
-
-    response = requests.post(
-        API_URL + API_FAILOVER_PATH + "/" + instance_id + "/failover" + SUBSCRIPTION_ID_QUERY,
-        headers=headers,
-        data=json.dumps(data),
-        timeout=5,
+    print("Triggering failover for node-sz-1")
+    # Trigger failover
+    instance.trigger_failover(
+        replica_id="node-sz-1",
+        wait_for_ready=False,
+        resource_id="node-sz"
     )
 
-    if response.status_code >= 300 or response.status_code < 200:
-        print("Failed to trigger failover")
-        print(response.text)
-        return
+    promotion_completed = False
+    while not promotion_completed:
+        try:
+            graph = db_0.execute_command("info replication")
+            if "role:master" in graph:
+                promotion_completed = True
+            time.sleep(1)
+        except Exception as e:
+            print("Promotion not completed yet")
 
-    print("Failover triggered")
+    print("Promotion completed")
 
+    # Check if data is still there
+    graph_0 = db_0.select_graph("test")
 
-def _get_instance_state(token, instance_id):
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + token,
-    }
+    result = graph_0.query("MATCH (n:Person) RETURN n")
 
-    response = requests.get(
-        API_URL + API_PATH + "/" + instance_id + SUBSCRIPTION_ID_QUERY,
-        headers=headers,
-        timeout=5,
-    )
+    if len(result.result_set) < 2:
+        raise Exception("Data lost after third failover")
 
-    if response.status_code >= 300 or response.status_code < 200:
-        print("Failed to get instance state")
-        print(response.text)
-        return
-
-    return response.json()["status"]
+    print("Data persisted after third failover")
 
 
 if __name__ == "__main__":

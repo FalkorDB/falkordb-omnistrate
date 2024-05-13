@@ -71,7 +71,7 @@ def test_failover(instance: OmnistrateInstance):
 
     nodeId = endpoints[0]["id"]
     host = endpoints[0]["endpoint"]
-    port = endpoints[0]["port"]
+    port = endpoints[0]["ports"][0]
 
     print("Connection data: {}:{}".format(host, port))
     db = FalkorDB(host=host, port=port, username="falkordb", password="falkordb")

@@ -11,6 +11,8 @@ DEFAULT_API_URL = "https://api.omnistrate.cloud/"
 
 class OmnistrateInstance:
 
+    _network_topology = None
+
     def __init__(
         self,
         api_url: str = DEFAULT_API_URL,
@@ -131,25 +133,10 @@ class OmnistrateInstance:
         if not wait_for_ready:
             return
 
-        timeout_timer = time.time() + self.deployment_create_timeout_seconds
-        while True:
-            if time.time() > timeout_timer:
-                raise Exception(
-                    "Instance creation timed out after {} seconds".format(
-                        self.deployment_create_timeout_seconds
-                    )
-                )
-
-            state = self._get_instance_state()
-            if state == "RUNNING":
-                print("Instance is ready")
-                break
-            elif state == "FAILED":
-                print("Instance is in error state")
-                raise Exception("Instance is in error state")
-            else:
-                print("Instance is in " + state + " state")
-                time.sleep(5)
+        try:
+            self.wait_for_ready(timeout_seconds=self.deployment_create_timeout_seconds)
+        except:
+            raise Exception(f"Failed to create instance {name}")
 
     def delete(self, wait_for_delete: bool):
         """Delete the instance. Optionally wait for the instance to be deleted."""
@@ -174,32 +161,14 @@ class OmnistrateInstance:
         if not wait_for_delete:
             return
 
-        timeout_timer = time.time() + self.deployment_delete_timeout_seconds
-
-        while True:
-
-            if time.time() > timeout_timer:
-                raise Exception(
-                    "Instance deletion timed out after {} seconds".format(
-                        self.deployment_delete_timeout_seconds
-                    )
-                )
-            try:
-                state = self._get_instance_state()
-                if state == "FAILED":
-                    print("Instance is in error state")
-                    raise Exception("Instance is in error state")
-                else:
-                    print("Instance is in " + state + " state")
-                    time.sleep(5)
-            except:
-                print("Instance is deleted")
-                break
+        try:
+            self.wait_for_ready(timeout_seconds=self.deployment_delete_timeout_seconds)
+        except Exception as e:
+            if e.args[0] == "Timeout":
+                raise Exception(f"Failed to delete instance {self.instance_id}")
 
     def trigger_failover(
-        self,
-        replica_id: str,
-        wait_for_ready: bool,
+        self, replica_id: str, wait_for_ready: bool, resource_id: str = None
     ):
         """Trigger failover for the instance. Optionally wait for the instance to be ready."""
         headers = {
@@ -216,6 +185,7 @@ class OmnistrateInstance:
             self.api_url
             + self.api_failover_path
             + "/"
+            + (f"{resource_id}/" if resource_id is not None else "")
             + self.instance_id
             + "/failover"
             + self.subscription_id_query,
@@ -231,29 +201,13 @@ class OmnistrateInstance:
         if not wait_for_ready:
             return
 
-        timeout_timer = time.time() + self.deployment_failover_timeout_seconds
+        self.wait_for_ready(timeout_seconds=self.deployment_failover_timeout_seconds)
 
-        while True:
-            if time.time() > timeout_timer:
-                raise Exception(
-                    "Instance failover timed out after {} seconds".format(
-                        self.deployment_failover_timeout_seconds
-                    )
-                )
+    def _get_network_topology(self):
 
-            state = self._get_instance_state()
-            if state == "RUNNING":
-                print("Instance is ready")
-                break
-            elif state == "FAILED":
-                print("Instance is in error state")
-                raise Exception("Instance is in error state")
-            else:
-                print("Instance is in " + state + " state")
-                time.sleep(5)
+        if self._network_topology is not None:
+            return self._network_topology
 
-    def get_connection_endpoints(self):
-        """Get the connection endpoints for the instance."""
         headers = {
             "Content-Type": "application/json",
             "Authorization": "Bearer " + self._get_token(),
@@ -273,32 +227,67 @@ class OmnistrateInstance:
             response, f"Failed to get instance connection data {self.instance_id}"
         )
 
-        resources = response.json()["detailedNetworkTopology"]
+        self._network_topology = response.json()["detailedNetworkTopology"]
+
+        return self._network_topology
+
+    def get_connection_endpoints(self):
+        """Get the connection endpoints for the instance."""
+
+        resources = self._get_network_topology()
 
         resources_keys = resources.keys()
 
-        resource = None
+        endpoints = []
         for key in resources_keys:
             if "nodes" in resources[key] and len(resources[key]["nodes"]) > 0:
-                resource = resources[key]
-                break
+                for node in resources[key]["nodes"]:
+                    endpoints.append(
+                        {
+                            "id": node["id"],
+                            "endpoint": node["endpoint"],
+                            "ports": node["ports"],
+                        }
+                    )
 
-        if resource is None:
-            print("No resource with nodes found")
-            return
-
-        endpoints = []
-
-        for node in resource["nodes"]:
-            endpoints.append(
-                {
-                    "id": node["id"],
-                    "endpoint": node["endpoint"],
-                    "port": node["ports"][0],
-                }
-            )
+        if len(endpoints) == 0:
+            raise Exception("No endpoints found")
 
         return endpoints
+
+    def get_cluster_endpoint(self):
+        resources = self._get_network_topology()
+
+        resources_keys = resources.keys()
+
+        for key in resources_keys:
+            if (
+                "clusterEndpoint" in resources[key]
+                and len(resources[key]["clusterEndpoint"]) > 0
+            ):
+                return {
+                    "endpoint": resources[key]["clusterEndpoint"],
+                    "ports": resources[key]["clusterPorts"],
+                }
+
+    def wait_for_ready(self, timeout_seconds: int = 1200):
+        """Wait for the instance to be ready."""
+        timeout_timer = time.time() + timeout_seconds
+
+        while True:
+            if time.time() > timeout_timer:
+                raise Exception("Timeout")
+
+            state = self._get_instance_state()
+            if state == "RUNNING":
+                print("Instance is ready")
+                break
+            elif state == "FAILED":
+                print("Instance is in error state")
+                raise Exception("Instance is in error state")
+            else:
+                print("Instance is in " + state + " state")
+                time.sleep(5)
 
     def _get_instance_state(self):
         """Get the state of the instance."""

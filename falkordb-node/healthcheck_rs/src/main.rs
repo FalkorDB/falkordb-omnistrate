@@ -47,7 +47,7 @@ fn health_check_handler() -> Result<bool, redis::RedisError> {
     let redis_url = match env::var("TLS") {
         Ok(tls) => {
             if tls == "true" {
-                format!("rediss://:{}@localhost:{}", password, node_port)
+                format!("rediss://:{}@{}:{}", password, env::var("INTERNAL_DNS_SUFFIX"), node_port)
             } else {
                 format!("redis://:{}@localhost:{}", password, node_port)
             }

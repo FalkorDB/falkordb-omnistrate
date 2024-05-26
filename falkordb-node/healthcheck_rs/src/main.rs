@@ -48,6 +48,7 @@ fn health_check_handler() -> Result<bool, redis::RedisError> {
         Ok(tls) => {
             if tls == "true" {
                 let url = env::var("NODE_EXTERNAL_DNS").unwrap();
+                resolve_host(url);
                 format!("rediss://:{}@{}:{}", password, url, node_port)
             } else {
                 format!("redis://:{}@localhost:{}", password, node_port)
@@ -93,4 +94,19 @@ fn health_check_handler() -> Result<bool, redis::RedisError> {
 
     return Ok(false);
 
+}
+
+fn resolve_host(host: str) {
+    // Wait until host is resolved to an IP
+    let mut resolved = false;
+    while !resolved {
+        let ip = match dns_lookup::lookup_host(host) {
+            Ok(ip) => ip,
+            Err(_) => {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                continue;
+            }
+        };
+        resolved = true;
+    }
 }

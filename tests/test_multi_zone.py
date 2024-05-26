@@ -104,12 +104,14 @@ def test_failover(instance: OmnistrateInstance):
         port=db_resource[0]["ports"][0],
         username="falkordb",
         password="falkordb",
+        ssl=True if DEPLOYMENT_TLS == "true" else False,
     )
     db_1 = FalkorDB(
         host=db_resource[1]["endpoint"],
         port=db_resource[1]["ports"][0],
         username="falkordb",
         password="falkordb",
+        ssl=True if DEPLOYMENT_TLS == "true" else False,
     )
     sentinels = Sentinel(
         sentinels=[
@@ -120,10 +122,12 @@ def test_failover(instance: OmnistrateInstance):
         sentinel_kwargs={
             "username": "falkordb",
             "password": "falkordb",
+            "ssl": True if DEPLOYMENT_TLS == "true" else False,
         },
         connection_kwargs={
             "username": "falkordb",
             "password": "falkordb",
+            "ssl": True if DEPLOYMENT_TLS == "true" else False,
         },
     )
 

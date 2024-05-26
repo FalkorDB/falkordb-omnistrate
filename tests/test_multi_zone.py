@@ -11,7 +11,7 @@ import random
 
 if len(sys.argv) < 8:
     print(
-        "Usage: python test_single_zone.py <omnistrate_user> <omnistrate_password> <deployment_cloud_provider> <deployment_region> <deployment_instance_type> <deployment_storage_size> <replica_count> <tls=false>"
+        "Usage: python test_multi_zone.py <omnistrate_user> <omnistrate_password> <deployment_cloud_provider> <deployment_region> <deployment_instance_type> <deployment_storage_size> <replica_count> <tls=false>"
     )
     sys.exit(1)
 
@@ -27,7 +27,7 @@ DEPLOYMENT_TLS = sys.argv[8] if len(sys.argv) > 8 else "false"
 API_VERSION = os.getenv("API_VERSION", "2022-09-01-00")
 API_PATH = os.getenv(
     "API_PATH",
-    f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone",
+    f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/multi-Zone",
 )
 API_FAILOVER_PATH = os.getenv(
     "API_FAILOVER_PATH",
@@ -39,7 +39,7 @@ API_SIGN_IN_PATH = os.getenv(
 SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID", "sub-bHEl5iUoPd")
 
 
-def test_single_zone():
+def test_multi_zone():
 
     instance = OmnistrateInstance(
         api_path=API_PATH,
@@ -55,8 +55,8 @@ def test_single_zone():
             wait_for_ready=True,
             deployment_cloud_provider=DEPLOYMENT_CLOUD_PROVIDER,
             deployment_region=DEPLOYMENT_REGION,
-            name="github-pipeline-single-zone",
-            description="single zone",
+            name="github-pipeline-multi-zone",
+            description="multi zone",
             falkordb_user="falkordb",
             falkordb_password="falkordb",
             nodeInstanceType=DEPLOYMENT_INSTANCE_TYPE,
@@ -77,8 +77,8 @@ def test_single_zone():
 
 def test_failover(instance: OmnistrateInstance):
     """
-    Single Zone tests are the following:
-    1. Create a single zone instance
+    Multi Zone tests are the following:
+    1. Create a multi zone instance
     2. Write some data to the master node
     3. Trigger a failover for the master node
     4. Wait until the sentinels promote a new master
@@ -94,10 +94,10 @@ def test_failover(instance: OmnistrateInstance):
 
     resources = instance.get_connection_endpoints()
     db_resource = list(
-        filter(lambda resource: resource["id"].startswith("node-sz"), resources)
+        filter(lambda resource: resource["id"].startswith("node-mz"), resources)
     )
     sentinel_resource = next(
-        (resource for resource in resources if resource["id"].startswith("sentinel-sz")), None
+        (resource for resource in resources if resource["id"].startswith("sentinel-mz")), None
     )
     db_0 = FalkorDB(
         host=db_resource[0]["endpoint"],
@@ -145,12 +145,12 @@ def test_failover(instance: OmnistrateInstance):
     if len(result.result_set) == 0:
         raise Exception("Data was not replicated to the slave")
 
-    print("Triggering failover for node-sz-0")
+    print("Triggering failover for node-mz-0")
     # Trigger failover
     instance.trigger_failover(
-        replica_id="node-sz-0",
+        replica_id="node-mz-0",
         wait_for_ready=False,
-        resource_id="node-sz"
+        resource_id="node-mz"
     )
 
     promotion_completed = False
@@ -182,15 +182,15 @@ def test_failover(instance: OmnistrateInstance):
 
     print("result after bob", result.result_set)
 
-    # wait until the node-sz-0 is ready
+    # wait until the node-mz-0 is ready
     instance.wait_for_ready(timeout_seconds=600)
     
-    print("Triggering failover for sentinel-sz-0")
+    print("Triggering failover for sentinel-mz-0")
     # Trigger sentinel failover
     instance.trigger_failover(
-        replica_id="sentinel-sz-0",
+        replica_id="sentinel-mz-0",
         wait_for_ready=False,
-        resource_id="sentinel-sz"
+        resource_id="sentinel-mz"
     )
 
     graph_1 = db_1.select_graph("test")
@@ -202,15 +202,15 @@ def test_failover(instance: OmnistrateInstance):
 
     print("Data persisted after second failover")
 
-    # wait until the node-sz-0 is ready
+    # wait until the node-mz-0 is ready
     instance.wait_for_ready(timeout_seconds=600)
 
-    print("Triggering failover for node-sz-1")
+    print("Triggering failover for node-mz-1")
     # Trigger failover
     instance.trigger_failover(
-        replica_id="node-sz-1",
+        replica_id="node-mz-1",
         wait_for_ready=False,
-        resource_id="node-sz"
+        resource_id="node-mz"
     )
 
     promotion_completed = False
@@ -239,4 +239,4 @@ def test_failover(instance: OmnistrateInstance):
 
 
 if __name__ == "__main__":
-    test_single_zone()
+    test_multi_zone()

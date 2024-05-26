@@ -178,17 +178,23 @@ class OmnistrateInstance:
 
         data = {
             "failedReplicaID": replica_id,
-            "failedReplicaAction": "FAILOVER_AND_RECREATE",
+            "failedReplicaAction": "FAILOVER_AND_RESTART",
         }
 
-        response = requests.post(
+        url = (
             self.api_url
             + self.api_failover_path
             + "/"
             + (f"{resource_id}/" if resource_id is not None else "")
             + self.instance_id
             + "/failover"
-            + self.subscription_id_query,
+            + self.subscription_id_query
+        )
+
+        print(f"Calling URL {url}")
+
+        response = requests.post(
+            url,
             headers=headers,
             data=json.dumps(data),
             timeout=5,

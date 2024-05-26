@@ -146,6 +146,24 @@ jobs:
             apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-s
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             extraParams: "e2-medium 10"
+          - name: single_zone_gcp_us-central1
+            testFile: test_single_zone.py
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
+            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy
+            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
+            extraParams: "e2-medium 10 2"
+          - name: multi_zone_gcp_us-central1
+            testFile: test_multi_zone.py
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/multi-Zone
+            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy
+            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
+            extraParams: "e2-medium 10 2"
     steps:
       - name: Checkout
         uses: actions/checkout@v3

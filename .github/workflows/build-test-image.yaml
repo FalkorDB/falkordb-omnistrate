@@ -55,7 +55,7 @@ jobs:
 
       - name: Merge omnistrate composes
         run: 
-          apt install yq
+          sudo apt install yq
           yq ea '. as $item ireduce ({}; . * $item )' omnistrate.paid.yaml omnistrate.free.yaml > merged.yaml
   
       - name: Update Omnistrate plan

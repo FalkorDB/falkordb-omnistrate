@@ -71,7 +71,7 @@ jobs:
           username: ${{ secrets.OMNISTRATE_USERNAME }}
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
           file: merged.yaml
-          plan-name: FalkorDB Internal
+          service-name: "FalkorDB Internal"
 
   omnistrate-update-image:
     needs: omnistrate-update-plans

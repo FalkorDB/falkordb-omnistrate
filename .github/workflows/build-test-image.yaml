@@ -46,8 +46,29 @@ jobs:
           jobStatus: ${{ job.status }}
           threadKey: ${{ github.job }}
 
-  omnistrate-update:
+  omnistrate-update-plans:
     needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Merge omnistrate composes
+        run: 
+          apt install yq
+          yq ea '. as $item ireduce ({}; . * $item )' omnistrate.paid.yaml omnistrate.free.yaml > merged.yaml
+  
+      - name: Update Omnistrate plan
+        uses: ./.github/actions/update-omnistrate-plan
+        with:
+          username: ${{ secrets.OMNISTRATE_USERNAME }}
+          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          file: merged.yaml
+          plan-name: FalkorDB Internal
+  
+
+  omnistrate-update-image:
+    needs: omnistrate-update-plans
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 1
@@ -97,7 +118,7 @@ jobs:
           tag: dev-${{ github.event.head_commit.id }}
 
   promote-pt-version:
-    needs: omnistrate-update
+    needs: omnistrate-update-image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

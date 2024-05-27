@@ -21,4 +21,4 @@ runs:
   entrypoint: /bin/sh
   args:
     - -c
-    - "/usr/local/bin/omnistrate-ctl login --email ${{ inputs.username }} --password ${{ inputs.password }} && /usr/local/bin/omnistrate-ctl build -f ${{ inputs.file }} -n ${{ inputs.plan-name }} --release-as-preferred"
+    - "/usr/local/bin/omnistrate-ctl login --email ${{ inputs.username }} --password ${{ inputs.password }} && /usr/local/bin/omnistrate-ctl build -f /github/workspace/${{ inputs.file }} -n ${{ inputs.plan-name }} --release-as-preferred"

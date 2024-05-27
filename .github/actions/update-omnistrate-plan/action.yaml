@@ -1,0 +1,28 @@
+name: Update Omnistrate Plan
+description: "Update an Omnistrate plan with a new compose file"
+
+inputs:
+  username:
+    description: "The username to use for authentication"
+    required: true
+  password:
+    description: "The password to use for authentication"
+    required: true
+  file:
+    description: "The file to update the plan with"
+    required: true
+  plan-name:
+    description: "The name of the plan to update"
+    required: true
+
+runs:
+  using: docker
+  image: ghcr.io/omnistrate/ctl:latest
+  entrypoint: /usr/local/bin/omnistrate-ctl login --email ${{ inputs.username }} --password ${{ inputs.password }}
+  args:
+    - build
+    - -f
+    - ${{ inputs.file }}
+    - -n
+    - ${{ inputs.plan-name }}
+    - --release-as-preferred

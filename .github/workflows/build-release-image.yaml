@@ -48,9 +48,33 @@ jobs:
             jobStatus: ${{ job.status }}
             threadKey: ${{ github.job }}
             
-  omnistrate-update:
+  omnistrate-update-plans:
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags/v')
     needs: build-and-push
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        plans:
+          - name: FalkorDB Free
+            file: omnistrate.free.yaml
+          - name: FalkorDB Pro
+            file: omnistrate.paid.yaml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Update Omnistrate plan
+        uses: ./.github/actions/update-omnistrate-plan
+        with:
+          username: ${{ secrets.OMNISTRATE_USERNAME }}
+          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          file: ${{ matrix.plans.file }}
+          plan-name: ${{ matrix.plans.name }}
+  
+  omnistrate-update-image:
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/v')
+    needs: omnistrate-update-plans
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 1

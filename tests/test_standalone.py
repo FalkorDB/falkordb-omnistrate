@@ -19,7 +19,7 @@ DEPLOYMENT_CLOUD_PROVIDER = sys.argv[3]
 DEPLOYMENT_REGION = sys.argv[4]
 DEPLOYMENT_INSTANCE_TYPE = sys.argv[5]
 DEPLOYMENT_STORAGE_SIZE = sys.argv[6]
-DEPLOYMENT_TLS = sys.argv[7] if len(sys.argv) > 7 else "false" 
+DEPLOYMENT_TLS = sys.argv[7] if len(sys.argv) > 7 else "false"
 
 API_VERSION = os.getenv("API_VERSION", "2022-09-01-00")
 API_PATH = os.getenv(
@@ -83,7 +83,13 @@ def test_failover(instance: OmnistrateInstance):
     port = endpoints[0]["ports"][0]
 
     print("Connection data: {}:{}".format(host, port))
-    db = FalkorDB(host=host, port=port, username="falkordb", password="falkordb")
+    db = FalkorDB(
+        host=host,
+        port=port,
+        username="falkordb",
+        password="falkordb",
+        ssl=True if DEPLOYMENT_TLS == "true" else False,
+    )
 
     graph = db.select_graph("test")
 

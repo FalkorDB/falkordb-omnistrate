@@ -68,6 +68,7 @@ services:
           - e2-custom-4-10240
           - e2-custom-8-18432
           - e2-custom-16-34816
+          - e2-custom-32-69632
         parameterDependencyMap:
           node-s: nodeInstanceType
       - key: enableTLS
@@ -147,6 +148,7 @@ services:
           - e2-custom-4-10240
           - e2-custom-8-18432
           - e2-custom-16-34816
+          - e2-custom-32-69632
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -261,6 +263,7 @@ services:
           - e2-custom-4-10240
           - e2-custom-8-18432
           - e2-custom-16-34816
+          - e2-custom-32-69632
         parameterDependencyMap:
           node-sz: nodeInstanceType
       - key: numReplicas
@@ -352,6 +355,7 @@ services:
           - e2-custom-4-10240
           - e2-custom-8-18432
           - e2-custom-16-34816
+          - e2-custom-32-69632
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -554,6 +558,7 @@ services:
           - e2-custom-4-10240
           - e2-custom-8-18432
           - e2-custom-16-34816
+          - e2-custom-32-69632
         parameterDependencyMap:
           node-mz: nodeInstanceType
       - key: numReplicas
@@ -645,6 +650,7 @@ services:
           - e2-custom-4-10240
           - e2-custom-8-18432
           - e2-custom-16-34816
+          - e2-custom-32-69632
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas

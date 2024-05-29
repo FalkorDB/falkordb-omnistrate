@@ -60,7 +60,7 @@ jobs:
             file: omnistrate.free.yaml
             key: free
           - name: FalkorDB Pro
-            file: omnistrate.paid.yaml
+            file: omnistrate.pro.yaml
             key: pro
     steps:
       - name: Checkout

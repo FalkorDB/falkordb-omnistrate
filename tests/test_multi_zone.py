@@ -1,10 +1,7 @@
 import sys
-import requests
-import json
 import time
 from falkordb import FalkorDB
 from redis import Sentinel
-import base64
 import os
 from classes.omnistrate_instance import OmnistrateInstance
 import random
@@ -164,7 +161,7 @@ def test_failover(instance: OmnistrateInstance):
             if "role:master" in graph:
                 promotion_completed = True
             time.sleep(5)
-        except Exception as e:
+        except Exception:
             print("Promotion not completed yet")
             time.sleep(5)
 
@@ -224,7 +221,7 @@ def test_failover(instance: OmnistrateInstance):
             if "role:master" in graph:
                 promotion_completed = True
             time.sleep(5)
-        except Exception as e:
+        except Exception:
             print("Promotion not completed yet")
             time.sleep(5)
 

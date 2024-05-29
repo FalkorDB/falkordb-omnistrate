@@ -2,6 +2,7 @@ use rouille::router;
 use rouille::Response;
 use rouille::Server;
 use std::env;
+use dns_lookup;
 
 fn main() {
     start_health_check_server();
@@ -47,7 +48,9 @@ fn health_check_handler() -> Result<bool, redis::RedisError> {
     let redis_url = match env::var("TLS") {
         Ok(tls) => {
             if tls == "true" {
-                format!("rediss://:{}@localhost:{}", password, node_port)
+                let url = env::var("NODE_EXTERNAL_DNS").unwrap();
+                resolve_host(&url);
+                format!("rediss://:{}@{}:{}", password, url, node_port)
             } else {
                 format!("redis://:{}@localhost:{}", password, node_port)
             }
@@ -92,4 +95,19 @@ fn health_check_handler() -> Result<bool, redis::RedisError> {
 
     return Ok(false);
 
+}
+
+fn resolve_host(host: &str) {
+    // Wait until host is resolved to an IP
+    let mut resolved = false;
+    while !resolved {
+        let ip = match dns_lookup::lookup_host(host) {
+            Ok(ip) => ip,
+            Err(_) => {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                continue;
+            }
+        };
+        resolved = true;
+    }
 }

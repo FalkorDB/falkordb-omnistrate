@@ -328,7 +328,8 @@ fi
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
-  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $NODE_HOST_IP:$NODE_PORT &
+  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://$NODE_HOST_IP:$NODE_PORT"; fi)
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url &
 fi
 
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then

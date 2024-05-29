@@ -60,7 +60,7 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-medium
+        defaultValue: e2-custom-4-10240
         options:
           - e2-custom-4-10240
           - e2-custom-8-18432
@@ -137,7 +137,7 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-medium
+        defaultValue: e2-custom-4-10240
         options:
           - e2-custom-4-10240
           - e2-custom-8-18432
@@ -249,7 +249,7 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-medium
+        defaultValue: e2-custom-4-10240
         options:
           - e2-custom-4-10240
           - e2-custom-8-18432
@@ -338,7 +338,7 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-medium
+        defaultValue: e2-custom-4-10240
         options:
           - e2-custom-4-10240
           - e2-custom-8-18432
@@ -538,7 +538,7 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-medium
+        defaultValue: e2-custom-4-10240
         options:
           - e2-custom-4-10240
           - e2-custom-8-18432
@@ -627,7 +627,7 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-medium
+        defaultValue: e2-custom-4-10240
         options:
           - e2-custom-4-10240
           - e2-custom-8-18432

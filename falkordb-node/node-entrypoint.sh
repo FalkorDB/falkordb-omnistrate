@@ -10,6 +10,9 @@ RUN_HEALTH_CHECK=${RUN_HEALTH_CHECK:-1}
 TLS=${TLS:-false}
 NODE_INDEX=${NODE_INDEX:-0}
 INSTANCE_TYPE=${INSTANCE_TYPE:-''}
+PERSISTENCE_RDB_CONFIG_INPUT=${PERSISTENCE_RDB_CONFIG_INPUT:-'low'}
+PERSISTENCE_RDB_CONFIG=${PERSISTENCE_RDB_CONFIG:-'86400 1 21600 100 3600 10000'}
+PERSISTENCE_AOF_CONFIG=${PERSISTENCE_AOF_CONFIG:-'no'}
 
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
@@ -162,6 +165,20 @@ is_replica() {
 
 }
 
+set_persistence_config() {
+  echo "Setting persistence config"
+  if [[ $PERSISTENCE_RDB_CONFIG_INPUT == "low" ]]; then
+    PERSISTENCE_RDB_CONFIG='86400 1 21600 100 3600 10000'
+  elif [[ $PERSISTENCE_RDB_CONFIG_INPUT == "medium" ]]; then
+    PERSISTENCE_RDB_CONFIG='21600 1 3600 100 300 10000'
+  elif [[ $PERSISTENCE_RDB_CONFIG_INPUT == "high" ]]; then
+    PERSISTENCE_RDB_CONFIG='3600 1 300 100 60 10000'
+  else 
+    PERSISTENCE_RDB_CONFIG='86400 1 21600 100 3600 10000'
+  fi
+}
+
+
 # If node.conf doesn't exist or $REPLACE_NODE_CONF=1, copy it from /falkordb
 if [ ! -f $NODE_CONF_FILE ] || [ "$REPLACE_NODE_CONF" -eq "1" ]; then
   echo "Copying node.conf from /falkordb"
@@ -174,6 +191,7 @@ if [ ! -f $SENTINEL_CONF_FILE ] || [ "$REPLACE_SENTINEL_CONF" -eq "1" ]; then
   cp /falkordb/sentinel.conf $SENTINEL_CONF_FILE
 fi
 
+set_persistence_config
 get_self_host_ip
 
 if [ "$RUN_NODE" -eq "1" ]; then
@@ -251,6 +269,17 @@ if [ "$RUN_NODE" -eq "1" ]; then
     echo "Setting maxmemory to $MEMORY_LIMIT"
     redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
   fi
+
+  # Set persistence config
+  echo "Setting persistence config"
+  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET save $PERSISTENCE_RDB_CONFIG
+  
+  if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then
+    echo "Setting AOF persistence"
+    redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET appendonly yes
+    redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET appendfsync $PERSISTENCE_AOF_CONFIG
+  fi
+
 
 fi
 

@@ -111,6 +111,34 @@ services:
           - "100"
         parameterDependencyMap:
           node-s: storageSize
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+        parameterDependencyMap:
+          node-s: RDBPersistenceConfig
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "no"
+        options:
+          - "no"
+          - "everysec"
+          - "always"
+        parameterDependencyMap:
+          node-s: AOFPersistenceConfig
     depends_on:
       - node-s
 
@@ -180,6 +208,30 @@ services:
           - "80"
           - "90"
           - "100"
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "no"
+        options:
+          - "no"
+          - "everysec"
+          - "always"
     volumes:
       - source: ./data
         target: /data
@@ -206,9 +258,10 @@ services:
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
+      - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
     ports:
       - "6379:6379"
-      # - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -316,6 +369,34 @@ services:
           - "100"
         parameterDependencyMap:
           node-sz: storageSize
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+        parameterDependencyMap:
+          node-sz: RDBPersistenceConfig
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "no"
+        options:
+          - "no"
+          - "everysec"
+          - "always"
+        parameterDependencyMap:
+          node-sz: AOFPersistenceConfig
     depends_on:
       - node-sz
 
@@ -399,6 +480,30 @@ services:
           - "80"
           - "90"
           - "100"
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "no"
+        options:
+          - "no"
+          - "everysec"
+          - "always"
     volumes:
       - source: ./data
         target: /data
@@ -426,10 +531,11 @@ services:
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
+      - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
     ports:
       - "6379:6379"
       - "26379:26379"
-      # - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -609,6 +715,34 @@ services:
           - "100"
         parameterDependencyMap:
           node-mz: storageSize
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+        parameterDependencyMap:
+          node-mz: RDBPersistenceConfig
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "no"
+        options:
+          - "no"
+          - "everysec"
+          - "always"
+        parameterDependencyMap:
+          node-mz: AOFPersistenceConfig
     depends_on:
       - node-mz
 
@@ -692,6 +826,30 @@ services:
           - "80"
           - "90"
           - "100"
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "no"
+        options:
+          - "no"
+          - "everysec"
+          - "always"
     volumes:
       - source: ./data
         target: /data
@@ -719,10 +877,11 @@ services:
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
+      - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
     ports:
       - "6379:6379"
       - "26379:26379"
-      # - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: true
       enableEndpointPerReplica: true

@@ -1,10 +1,7 @@
 import sys
-import requests
-import json
 import time
 from falkordb import FalkorDB
 from redis import Sentinel
-import base64
 import os
 from classes.omnistrate_instance import OmnistrateInstance
 import random

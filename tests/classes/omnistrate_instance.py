@@ -135,7 +135,7 @@ class OmnistrateInstance:
 
         try:
             self.wait_for_ready(timeout_seconds=self.deployment_create_timeout_seconds)
-        except:
+        except Exception:
             raise Exception(f"Failed to create instance {name}")
 
     def delete(self, wait_for_delete: bool):

@@ -18,11 +18,11 @@ DEPLOYMENT_REGION = sys.argv[4]
 API_VERSION = os.getenv("API_VERSION", "2022-09-01-00")
 API_PATH = os.getenv(
     "API_PATH",
-    f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/free",
+    f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/free",
 )
 API_FAILOVER_PATH = os.getenv(
     "API_FAILOVER_PATH",
-    f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-f",
+    f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-f",
 )
 API_SIGN_IN_PATH = os.getenv(
     "API_SIGN_IN_PATH", f"{API_VERSION}/resource-instance/user/signin"
@@ -46,7 +46,7 @@ def test_free():
             wait_for_ready=True,
             deployment_cloud_provider=DEPLOYMENT_CLOUD_PROVIDER,
             deployment_region=DEPLOYMENT_REGION,
-            name="free",
+            name="github-pipeline-free",
             description="free",
             falkordb_user="falkordb",
             falkordb_password="falkordb",
@@ -71,7 +71,7 @@ def test_failover(instance: OmnistrateInstance):
 
     nodeId = endpoints[0]["id"]
     host = endpoints[0]["endpoint"]
-    port = endpoints[0]["port"]
+    port = endpoints[0]["ports"][0]
 
     print("Connection data: {}:{}".format(host, port))
     db = FalkorDB(host=host, port=port, username="falkordb", password="falkordb")

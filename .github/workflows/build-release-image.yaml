@@ -6,7 +6,7 @@ on:
       - v*
   workflow_dispatch:
 
-concurrency: 
+concurrency:
   group: falkordb-node-release
   cancel-in-progress: true
 
@@ -44,10 +44,10 @@ jobs:
         if: failure() # only send notification in case of failure
         uses: SimonScholz/google-chat-action@v1.1.0
         with:
-            webhookUrl: '${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}'
-            jobStatus: ${{ job.status }}
-            threadKey: ${{ github.job }}
-            
+          webhookUrl: "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}"
+          jobStatus: ${{ job.status }}
+          threadKey: ${{ github.job }}
+
   omnistrate-update-plans:
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags/v')
     needs: build-and-push
@@ -58,20 +58,24 @@ jobs:
         plans:
           - name: FalkorDB Free
             file: omnistrate.free.yaml
+            key: free
           - name: FalkorDB Pro
             file: omnistrate.paid.yaml
+            key: pro
     steps:
       - name: Checkout
+        if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
         uses: actions/checkout@v3
 
       - name: Update Omnistrate plan
+        if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
         uses: ./.github/actions/update-omnistrate-plan
         with:
           username: ${{ secrets.OMNISTRATE_USERNAME }}
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
           file: ${{ matrix.plans.file }}
           plan-name: ${{ matrix.plans.name }}
-  
+
   omnistrate-update-image:
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags/v')
     needs: omnistrate-update-plans

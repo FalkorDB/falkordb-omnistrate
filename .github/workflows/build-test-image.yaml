@@ -46,8 +46,35 @@ jobs:
           jobStatus: ${{ job.status }}
           threadKey: ${{ github.job }}
 
-  omnistrate-update:
+  omnistrate-update-plans:
     needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Replace GCP Variables
+        run: |
+          sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' omnistrate.free.yaml
+          sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' omnistrate.free.yaml
+          sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' omnistrate.free.yaml
+          sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' omnistrate.paid.yaml
+          sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' omnistrate.paid.yaml
+          sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' omnistrate.paid.yaml
+
+      - name: Merge omnistrate composes
+        run: sudo add-apt-repository ppa:rmescandon/yq && sudo apt update && sudo apt install yq -y && yq ea '. as $item ireduce ({}; . * $item )' omnistrate.paid.yaml omnistrate.free.yaml | sed 's/FalkorDB Free/FalkorDB Internal/' > merged.yaml
+
+      - name: Update Omnistrate plan
+        uses: ./.github/actions/update-omnistrate-plan
+        with:
+          username: ${{ secrets.OMNISTRATE_USERNAME }}
+          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          file: merged.yaml
+          service-name: "FalkorDB Internal"
+
+  omnistrate-update-image:
+    needs: omnistrate-update-plans
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 1
@@ -97,7 +124,7 @@ jobs:
           tag: dev-${{ github.event.head_commit.id }}
 
   promote-pt-version:
-    needs: omnistrate-update
+    needs: omnistrate-update-image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

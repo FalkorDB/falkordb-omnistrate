@@ -1,5 +1,14 @@
 version: "3.9"
 
+x-omnistrate-service-plan:
+  name: 'FalkorDB Pro'
+  tenancyType: 'OMNISTRATE_DEDICATED_TENANCY'
+  deployment:
+    hostedDeployment:
+      GcpProjectId: '$GcpProjectId'
+      GcpProjectNumber: '$GcpProjectNumber'   
+      GcpServiceAccountEmail: '$GcpServiceAccountEmail'
+
 x-omnistrate-load-balancer:
   tcp:
     - name: Single Zone Sentinel LB

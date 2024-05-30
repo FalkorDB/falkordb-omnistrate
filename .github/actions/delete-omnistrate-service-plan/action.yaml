@@ -28,17 +28,19 @@ runs:
           -X POST \
           -H "Content-Type: application/json" \
           -d "{\"email\":\"${{ inputs.username }}\",\"password\":\"${{ inputs.password }}\"}" \
-          -o token.json &&
+          -o token.json
         echo "OMNISTRATE_TOKEN=$(jq -r .jwtToken token.json)" >> $GITHUB_ENV
 
     - name: Find product tier ID
       shell: bash
       run: |
+        sudo apt-get update
+        sudo apt-get install -y jq
         curl "https://api.omnistrate.cloud/2022-09-01-00/service/${{ inputs.service-id }}/environment/${{ inputs.environment-id }}/service-plan" \
           -X GET \
           -H "Authorization: Bearer $OMNISTRATE_TOKEN" \
-          -o service-plans.json &&
-        jq -r ".servicePlans[] | select(.productTierName == \"${{ inputs.product-tier-name }}\") | .id" service-plans.json > product-tier-id.txt &&
+          -o service-plans.json
+        jq -r ".servicePlans[] | select(.productTierName == \"${{ inputs.product-tier-name }}\") | .id" service-plans.json > product-tier-id.txt
         echo "PRODUCT_TIER_ID=$(cat product-tier-id.txt)" >> $GITHUB_ENV
 
     - name: Delete product tier

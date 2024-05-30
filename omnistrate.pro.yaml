@@ -123,7 +123,7 @@ services:
 
   node-s:
     x-omnistrate-mode-internal: true
-    image: falkordb/falkordb-node:v0.0.45
+    image: $FalkorDBNodeImage
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:
@@ -324,7 +324,7 @@ services:
 
   node-sz:
     x-omnistrate-mode-internal: true
-    image: falkordb/falkordb-node:v0.0.45
+    image: $FalkorDBNodeImage
     x-omnistrate-compute:
       replicaCountAPIParam: numReplicas
       instanceTypes:
@@ -459,7 +459,7 @@ services:
 
   sentinel-sz:
     x-omnistrate-mode-internal: true
-    image: falkordb/falkordb-node:v0.0.45
+    image: $FalkorDBNodeImage
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:
@@ -613,7 +613,7 @@ services:
 
   node-mz:
     x-omnistrate-mode-internal: true
-    image: falkordb/falkordb-node:v0.0.45
+    image: $FalkorDBNodeImage
     x-omnistrate-compute:
       replicaCountAPIParam: numReplicas
       instanceTypes:
@@ -748,7 +748,7 @@ services:
 
   sentinel-mz:
     x-omnistrate-mode-internal: true
-    image: falkordb/falkordb-node:v0.0.45
+    image: $FalkorDBNodeImage
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:

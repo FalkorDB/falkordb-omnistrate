@@ -34,7 +34,7 @@ def get_token():
         f"{API_URL}{API_SIGN_IN_PATH}",
         data=json.dumps(data),
         headers=headers,
-        timeout=5,
+        timeout=15,
     )
 
     if response.status_code >= 300 or response.status_code < 200:
@@ -56,7 +56,7 @@ def get_last_version():
     response = requests.get(
         f"{API_URL}{API_VERSION}/service/{SERVICE_ID}/productTier/{PRODUCT_TIER_ID}/version-set",
         headers=headers,
-        timeout=5,
+        timeout=15,
     )
 
     if response.status_code >= 300 or response.status_code < 200:
@@ -98,7 +98,7 @@ def promote_pt_version():
     response = requests.patch(
         f"{API_URL}{API_VERSION}/service/{SERVICE_ID}/productTier/{PRODUCT_TIER_ID}/version-set/{last_version}/promote",
         headers=headers,
-        timeout=5,
+        timeout=15,
     )
 
     if response.status_code >= 300 or response.status_code < 200:

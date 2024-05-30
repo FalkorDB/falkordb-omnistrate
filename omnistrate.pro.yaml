@@ -98,16 +98,14 @@ services:
         parameterDependencyMap:
           node-s: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
+        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
-        defaultValue: "10"
+        defaultValue: "30"
         modifiable: false
         required: true
         export: true
         options:
-          - "10"
-          - "20"
           - "30"
           - "40"
           - "50"
@@ -116,8 +114,50 @@ services:
           - "80"
           - "90"
           - "100"
+          - "120"
+          - "140"
+          - "160"
+          - "180"
+          - "200"
+          - "220"
+          - "240"
+          - "260"
+          - "280"
+          - "300"
+          - "350"
+          - "400"
+          - "450"
+          - "500"
         parameterDependencyMap:
           node-s: storageSize
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+        parameterDependencyMap:
+          node-s: RDBPersistenceConfig
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "no"
+        options:
+          - "no"
+          - "everysec"
+          - "always"
+        parameterDependencyMap:
+          node-s: AOFPersistenceConfig
     depends_on:
       - node-s
 
@@ -167,16 +207,14 @@ services:
         required: true
         export: false
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
+        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
-        defaultValue: "10"
+        defaultValue: "30"
         modifiable: false
         required: true
         export: true
         options:
-          - "10"
-          - "20"
           - "30"
           - "40"
           - "50"
@@ -185,6 +223,44 @@ services:
           - "80"
           - "90"
           - "100"
+          - "120"
+          - "140"
+          - "160"
+          - "180"
+          - "200"
+          - "220"
+          - "240"
+          - "260"
+          - "280"
+          - "300"
+          - "350"
+          - "400"
+          - "450"
+          - "500"
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "no"
+        options:
+          - "no"
+          - "everysec"
+          - "always"
     volumes:
       - source: ./data
         target: /data
@@ -211,9 +287,10 @@ services:
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
+      - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
     ports:
       - "6379:6379"
-      # - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -299,16 +376,14 @@ services:
         parameterDependencyMap:
           node-sz: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
+        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
-        defaultValue: "10"
+        defaultValue: "30"
         modifiable: false
         required: true
         export: true
         options:
-          - "10"
-          - "20"
           - "30"
           - "40"
           - "50"
@@ -317,8 +392,50 @@ services:
           - "80"
           - "90"
           - "100"
+          - "120"
+          - "140"
+          - "160"
+          - "180"
+          - "200"
+          - "220"
+          - "240"
+          - "260"
+          - "280"
+          - "300"
+          - "350"
+          - "400"
+          - "450"
+          - "500"
         parameterDependencyMap:
           node-sz: storageSize
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+        parameterDependencyMap:
+          node-sz: RDBPersistenceConfig
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "no"
+        options:
+          - "no"
+          - "everysec"
+          - "always"
+        parameterDependencyMap:
+          node-sz: AOFPersistenceConfig
     depends_on:
       - node-sz
 
@@ -382,16 +499,14 @@ services:
         parameterDependencyMap:
           sentinel-sz: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
+        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
-        defaultValue: "10"
+        defaultValue: "30"
         modifiable: false
         required: true
         export: true
         options:
-          - "10"
-          - "20"
           - "30"
           - "40"
           - "50"
@@ -400,6 +515,44 @@ services:
           - "80"
           - "90"
           - "100"
+          - "120"
+          - "140"
+          - "160"
+          - "180"
+          - "200"
+          - "220"
+          - "240"
+          - "260"
+          - "280"
+          - "300"
+          - "350"
+          - "400"
+          - "450"
+          - "500"
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "no"
+        options:
+          - "no"
+          - "everysec"
+          - "always"
     volumes:
       - source: ./data
         target: /data
@@ -427,10 +580,11 @@ services:
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
+      - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
     ports:
       - "6379:6379"
       - "26379:26379"
-      # - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -588,16 +742,14 @@ services:
         parameterDependencyMap:
           node-mz: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
+        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
-        defaultValue: "10"
+        defaultValue: "30"
         modifiable: false
         required: true
         export: true
         options:
-          - "10"
-          - "20"
           - "30"
           - "40"
           - "50"
@@ -606,8 +758,50 @@ services:
           - "80"
           - "90"
           - "100"
+          - "120"
+          - "140"
+          - "160"
+          - "180"
+          - "200"
+          - "220"
+          - "240"
+          - "260"
+          - "280"
+          - "300"
+          - "350"
+          - "400"
+          - "450"
+          - "500"
         parameterDependencyMap:
           node-mz: storageSize
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+        parameterDependencyMap:
+          node-mz: RDBPersistenceConfig
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "no"
+        options:
+          - "no"
+          - "everysec"
+          - "always"
+        parameterDependencyMap:
+          node-mz: AOFPersistenceConfig
     depends_on:
       - node-mz
 
@@ -671,16 +865,14 @@ services:
         parameterDependencyMap:
           sentinel-mz: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
+        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
-        defaultValue: "10"
+        defaultValue: "30"
         modifiable: false
         required: true
         export: true
         options:
-          - "10"
-          - "20"
           - "30"
           - "40"
           - "50"
@@ -689,6 +881,44 @@ services:
           - "80"
           - "90"
           - "100"
+          - "120"
+          - "140"
+          - "160"
+          - "180"
+          - "200"
+          - "220"
+          - "240"
+          - "260"
+          - "280"
+          - "300"
+          - "350"
+          - "400"
+          - "450"
+          - "500"
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "no"
+        options:
+          - "no"
+          - "everysec"
+          - "always"
     volumes:
       - source: ./data
         target: /data
@@ -716,10 +946,11 @@ services:
       - SECURITY_CONTEXT_GROUP_ID=0
       - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
+      - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
     ports:
       - "6379:6379"
       - "26379:26379"
-      # - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: true
       enableEndpointPerReplica: true

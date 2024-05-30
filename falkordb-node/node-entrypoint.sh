@@ -55,7 +55,7 @@ get_self_host_ip() {
 
 get_memory_limit() {
 
-  memory_limit_instance_type_map="{\"e2-custom-small-1024\":\"100000000\",\"e2-small\":\"840000000\",\"e2-medium\": \"23000000000\",\"e2-custom-2-6144\":\"4000000000\",\"e2-custom-4-10240\": \"7590000000\",\"e2-custom-8-18432\": \"15290000000\",\"e2-custom-16-34816\":\"31120000000\"}"
+  memory_limit_instance_type_map="{\"e2-custom-small-1024\":\"100000000\",\"e2-small\":\"840000000\",\"e2-medium\": \"23000000000\",\"e2-custom-2-6144\":\"4000000000\",\"e2-custom-4-10240\": \"7590000000\",\"e2-custom-8-18432\": \"15290000000\",\"e2-custom-16-34816\":\"31120000000\",\"e2-custom-32-69632\":\"63200000000\"}"
 
   if [[ -z $INSTANCE_TYPE ]]; then
     echo "INSTANCE_TYPE is not set"

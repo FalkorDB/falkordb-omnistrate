@@ -1,4 +1,4 @@
 redis
 requests
-FalkorDB
+git+https://github.com/FalkorDB/falkordb-py
 pyjwt

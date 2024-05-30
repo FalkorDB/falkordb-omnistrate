@@ -100,16 +100,14 @@ services:
         parameterDependencyMap:
           node-s: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
+        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
-        defaultValue: "10"
+        defaultValue: "30"
         modifiable: false
         required: true
         export: true
         options:
-          - "10"
-          - "20"
           - "30"
           - "40"
           - "50"
@@ -118,6 +116,20 @@ services:
           - "80"
           - "90"
           - "100"
+          - "120"
+          - "140"
+          - "160"
+          - "180"
+          - "200"
+          - "220"
+          - "240"
+          - "260"
+          - "280"
+          - "300"
+          - "350"
+          - "400"
+          - "450"
+          - "500"
         parameterDependencyMap:
           node-s: storageSize
       - key: RDBPersistenceConfig
@@ -199,16 +211,14 @@ services:
         required: true
         export: false
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
+        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
-        defaultValue: "10"
+        defaultValue: "30"
         modifiable: false
         required: true
         export: true
         options:
-          - "10"
-          - "20"
           - "30"
           - "40"
           - "50"
@@ -217,6 +227,20 @@ services:
           - "80"
           - "90"
           - "100"
+          - "120"
+          - "140"
+          - "160"
+          - "180"
+          - "200"
+          - "220"
+          - "240"
+          - "260"
+          - "280"
+          - "300"
+          - "350"
+          - "400"
+          - "450"
+          - "500"
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -358,16 +382,14 @@ services:
         parameterDependencyMap:
           node-sz: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
+        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
-        defaultValue: "10"
+        defaultValue: "30"
         modifiable: false
         required: true
         export: true
         options:
-          - "10"
-          - "20"
           - "30"
           - "40"
           - "50"
@@ -376,6 +398,20 @@ services:
           - "80"
           - "90"
           - "100"
+          - "120"
+          - "140"
+          - "160"
+          - "180"
+          - "200"
+          - "220"
+          - "240"
+          - "260"
+          - "280"
+          - "300"
+          - "350"
+          - "400"
+          - "450"
+          - "500"
         parameterDependencyMap:
           node-sz: storageSize
       - key: RDBPersistenceConfig
@@ -471,16 +507,14 @@ services:
         parameterDependencyMap:
           sentinel-sz: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
+        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
-        defaultValue: "10"
+        defaultValue: "30"
         modifiable: false
         required: true
         export: true
         options:
-          - "10"
-          - "20"
           - "30"
           - "40"
           - "50"
@@ -489,6 +523,20 @@ services:
           - "80"
           - "90"
           - "100"
+          - "120"
+          - "140"
+          - "160"
+          - "180"
+          - "200"
+          - "220"
+          - "240"
+          - "260"
+          - "280"
+          - "300"
+          - "350"
+          - "400"
+          - "450"
+          - "500"
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -704,16 +752,14 @@ services:
         parameterDependencyMap:
           node-mz: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
+        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
-        defaultValue: "10"
+        defaultValue: "30"
         modifiable: false
         required: true
         export: true
         options:
-          - "10"
-          - "20"
           - "30"
           - "40"
           - "50"
@@ -722,6 +768,20 @@ services:
           - "80"
           - "90"
           - "100"
+          - "120"
+          - "140"
+          - "160"
+          - "180"
+          - "200"
+          - "220"
+          - "240"
+          - "260"
+          - "280"
+          - "300"
+          - "350"
+          - "400"
+          - "450"
+          - "500"
         parameterDependencyMap:
           node-mz: storageSize
       - key: RDBPersistenceConfig
@@ -817,16 +877,14 @@ services:
         parameterDependencyMap:
           sentinel-mz: falkordbPassword
       - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 2x the size of the data set. Check the documentation for more information.
+        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
         name: Disk Size (in Gi)
         type: String
-        defaultValue: "10"
+        defaultValue: "30"
         modifiable: false
         required: true
         export: true
         options:
-          - "10"
-          - "20"
           - "30"
           - "40"
           - "50"
@@ -835,6 +893,20 @@ services:
           - "80"
           - "90"
           - "100"
+          - "120"
+          - "140"
+          - "160"
+          - "180"
+          - "200"
+          - "220"
+          - "240"
+          - "260"
+          - "280"
+          - "300"
+          - "350"
+          - "400"
+          - "450"
+          - "500"
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config

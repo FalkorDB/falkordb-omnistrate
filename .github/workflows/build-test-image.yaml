@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: falkordb-node-tests
+  group: falkordb-node-branch-${{ github.ref_name }}
   cancel-in-progress: false
 
 env:
@@ -63,10 +63,11 @@ jobs:
           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' omnistrate.pro.yaml
 
       - name: Merge omnistrate composes
-        run: sudo add-apt-repository ppa:rmescandon/yq && sudo apt update && sudo apt install yq -y && yq ea '. as $item ireduce ({}; . * $item )' omnistrate.pro.yaml omnistrate.free.yaml | sed 's/FalkorDB Free/FalkorDB Internal/' > merged.yaml
+        run: sudo add-apt-repository ppa:rmescandon/yq && sudo apt update && sudo apt install yq -y && yq ea '. as $item ireduce ({}; . * $item )' omnistrate.pro.yaml omnistrate.free.yaml | sed 's/FalkorDB Free/${{ github.ref_name }}/' > merged.yaml
 
       - name: Update Omnistrate plan
         uses: ./.github/actions/update-omnistrate-plan
+        id: update_omnistrate_plan
         with:
           username: ${{ secrets.OMNISTRATE_USERNAME }}
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
@@ -81,33 +82,33 @@ jobs:
       matrix:
         tiers:
           - name: node-sz
-            serviceId: s-iBKzmR5obS
-            serviceApiId: sa-FF7Ckx3VC3
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            serviceApiId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_API_ID }}
             productTierId: pt-vnVxCsPEcV
             imageConfigId: imgc-kIAclNV7Pt
           - name: sentinel-sz
-            serviceId: s-iBKzmR5obS
-            serviceApiId: sa-FF7Ckx3VC3
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            serviceApiId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_API_ID }}
             productTierId: pt-vnVxCsPEcV
             imageConfigId: imgc-jChPv7D4wM
           - name: node-mz
-            serviceId: s-iBKzmR5obS
-            serviceApiId: sa-FF7Ckx3VC3
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            serviceApiId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_API_ID }}
             productTierId: pt-vnVxCsPEcV
             imageConfigId: imgc-A5OTVYi7D8
           - name: sentinel-mz
-            serviceId: s-iBKzmR5obS
-            serviceApiId: sa-FF7Ckx3VC3
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            serviceApiId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_API_ID }}
             productTierId: pt-vnVxCsPEcV
             imageConfigId: imgc-x0nEVUZbIm
           - name: node-s
-            serviceId: s-iBKzmR5obS
-            serviceApiId: sa-FF7Ckx3VC3
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            serviceApiId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_API_ID }}
             productTierId: pt-vnVxCsPEcV
             imageConfigId: imgc-wSJ2umk0E7
           - name: node-f
-            serviceId: s-iBKzmR5obS
-            serviceApiId: sa-FF7Ckx3VC3
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            serviceApiId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_API_ID }}
             productTierId: pt-vnVxCsPEcV
             imageConfigId: imgc-FhmFmFh9XF
     steps:
@@ -214,7 +215,7 @@ jobs:
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <replica_count> <tls>
             extraParams: "e2-custom-4-10240 10 2 true"
-          - name:  PRO/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
+          - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
             testFile: test_multi_zone.py
             cloudProvider: gcp
             cloudRegion: us-central1

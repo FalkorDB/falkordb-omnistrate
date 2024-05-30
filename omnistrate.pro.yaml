@@ -60,14 +60,12 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-medium
+        defaultValue: e2-custom-4-10240
         options:
-          - e2-small
-          - e2-medium
-          - e2-custom-2-6144
           - e2-custom-4-10240
           - e2-custom-8-18432
           - e2-custom-16-34816
+          - e2-custom-32-69632
         parameterDependencyMap:
           node-s: nodeInstanceType
       - key: enableTLS
@@ -179,14 +177,12 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-medium
+        defaultValue: e2-custom-4-10240
         options:
-          - e2-small
-          - e2-medium
-          - e2-custom-2-6144
           - e2-custom-4-10240
           - e2-custom-8-18432
           - e2-custom-16-34816
+          - e2-custom-32-69632
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -330,14 +326,12 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-medium
+        defaultValue: e2-custom-4-10240
         options:
-          - e2-small
-          - e2-medium
-          - e2-custom-2-6144
           - e2-custom-4-10240
           - e2-custom-8-18432
           - e2-custom-16-34816
+          - e2-custom-32-69632
         parameterDependencyMap:
           node-sz: nodeInstanceType
       - key: numReplicas
@@ -461,14 +455,12 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-medium
+        defaultValue: e2-custom-4-10240
         options:
-          - e2-small
-          - e2-medium
-          - e2-custom-2-6144
           - e2-custom-4-10240
           - e2-custom-8-18432
           - e2-custom-16-34816
+          - e2-custom-32-69632
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -700,14 +692,12 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-medium
+        defaultValue: e2-custom-4-10240
         options:
-          - e2-small
-          - e2-medium
-          - e2-custom-2-6144
           - e2-custom-4-10240
           - e2-custom-8-18432
           - e2-custom-16-34816
+          - e2-custom-32-69632
         parameterDependencyMap:
           node-mz: nodeInstanceType
       - key: numReplicas
@@ -831,14 +821,12 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-medium
+        defaultValue: e2-custom-4-10240
         options:
-          - e2-small
-          - e2-medium
-          - e2-custom-2-6144
           - e2-custom-4-10240
           - e2-custom-8-18432
           - e2-custom-16-34816
+          - e2-custom-32-69632
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas

@@ -1,13 +1,13 @@
 version: "3.9"
 
 x-omnistrate-service-plan:
-  name: 'FalkorDB Pro'
-  tenancyType: 'OMNISTRATE_DEDICATED_TENANCY'
+  name: "FalkorDB Pro"
+  tenancyType: "OMNISTRATE_DEDICATED_TENANCY"
   deployment:
     hostedDeployment:
-      GcpProjectId: '$GcpProjectId'
-      GcpProjectNumber: '$GcpProjectNumber'   
-      GcpServiceAccountEmail: '$GcpServiceAccountEmail'
+      GcpProjectId: "$GcpProjectId"
+      GcpProjectNumber: "$GcpProjectNumber"
+      GcpServiceAccountEmail: "$GcpServiceAccountEmail"
 
 x-omnistrate-load-balancer:
   tcp:
@@ -30,8 +30,7 @@ x-omnistrate-load-balancer:
           backendPort: 26379
 
 services:
-
-# Standalone
+  # Standalone
 
   Standalone:
     x-omnistrate-mode-internal: false
@@ -158,6 +157,10 @@ services:
           - "always"
         parameterDependencyMap:
           node-s: AOFPersistenceConfig
+    x-omnistrate-capabilities:
+      backupConfiguration:
+        backupRetentionInDays: 7
+        backupPeriodInHours: 12
     depends_on:
       - node-s
 
@@ -295,9 +298,7 @@ services:
       enableMultiZone: false
       enableEndpointPerReplica: true
 
-
-
-# Single Zone
+  # Single Zone
 
   Single-Zone:
     x-omnistrate-mode-internal: false
@@ -436,6 +437,10 @@ services:
           - "always"
         parameterDependencyMap:
           node-sz: AOFPersistenceConfig
+        x-omnistrate-capabilities:
+    backupConfiguration:
+      backupRetentionInDays: 7
+      backupPeriodInHours: 12
     depends_on:
       - node-sz
 
@@ -662,8 +667,7 @@ services:
         required: true
         export: false
 
-
-# Multi Zone
+  # Multi Zone
 
   Multi-Zone:
     x-omnistrate-mode-internal: false
@@ -802,6 +806,10 @@ services:
           - "always"
         parameterDependencyMap:
           node-mz: AOFPersistenceConfig
+        x-omnistrate-capabilities:
+    backupConfiguration:
+      backupRetentionInDays: 7
+      backupPeriodInHours: 12
     depends_on:
       - node-mz
 
@@ -1027,4 +1035,3 @@ services:
         modifiable: false
         required: true
         export: false
-

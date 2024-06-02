@@ -40,7 +40,7 @@ runs:
           -X GET \
           -H "Authorization: Bearer $OMNISTRATE_TOKEN" \
           -o service-plans.json
-        jq -r ".servicePlans[] | select(.productTierName == \"${{ inputs.product-tier-name }}\") | .id" service-plans.json > product-tier-id.txt
+        jq -r ".servicePlans[] | select(.productTierName == \"${{ inputs.product-tier-name }}\") | .productTierId" service-plans.json > product-tier-id.txt
         echo "PRODUCT_TIER_ID=$(cat product-tier-id.txt)" >> $GITHUB_ENV
 
     - name: Delete product tier

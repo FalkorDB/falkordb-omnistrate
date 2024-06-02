@@ -79,21 +79,18 @@ fn health_check_handler() -> Result<bool, redis::RedisError> {
         return Ok(true);
     }
 
-    // If role:slave, check if master_sync_in_progress:0
-    let master_sync_in_progress_regex = regex::Regex::new(r"master_sync_in_progress:(\d+)").unwrap();
-    let sync_matches = master_sync_in_progress_regex.captures(&db_info);
-
-    if sync_matches.is_none() {
+    // If role:slave, check if master_sync_in_progress:0 and master_link_status:up
+    
+    if !db_info.contains("master_link_status:up") {
         return Ok(false);
     }
 
-    let master_sync_in_progress = sync_matches.unwrap().get(1).unwrap().as_str();
-
-    if master_sync_in_progress == "0" {
-        return Ok(true);
+    if !db_info.contains("master_sync_in_progress:0") {
+        return Ok(false);
     }
 
-    return Ok(false);
+
+    return Ok(true);
 
 }
 

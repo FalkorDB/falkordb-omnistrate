@@ -5,7 +5,7 @@ from classes.omnistrate_instance import OmnistrateInstance
 
 if len(sys.argv) < 7:
     print(
-        "Usage: python create_standalone.py <omnistrate_user> <omnistrate_password> <deployment_cloud_provider> <deployment_region> <deployment_instance_type> <deployment_storage_size> <tls=false>"
+        "Usage: python create_standalone.py <omnistrate_user> <omnistrate_password> <deployment_cloud_provider> <deployment_region> <deployment_instance_type> <deployment_storage_size> <tls=false> <rdb_config=medium> <aof_config=always>"
     )
     sys.exit(1)
 
@@ -16,6 +16,8 @@ DEPLOYMENT_REGION = sys.argv[4]
 DEPLOYMENT_INSTANCE_TYPE = sys.argv[5]
 DEPLOYMENT_STORAGE_SIZE = sys.argv[6]
 DEPLOYMENT_TLS = sys.argv[7] if len(sys.argv) > 7 else "false"
+DEPLOYMENT_RDB_CONFIG = sys.argv[8] if len(sys.argv) > 9 else "medium"
+DEPLOYMENT_AOF_CONFIG = sys.argv[9] if len(sys.argv) > 10 else "always"
 
 API_VERSION = os.getenv("API_VERSION", "2022-09-01-00")
 API_PATH = os.getenv(
@@ -55,6 +57,8 @@ def test_standalone():
             nodeInstanceType=DEPLOYMENT_INSTANCE_TYPE,
             storageSize=DEPLOYMENT_STORAGE_SIZE,
             enableTLS=True if DEPLOYMENT_TLS == "true" else False,
+            RDBPersistenceConfig=DEPLOYMENT_RDB_CONFIG,
+            AOFPersistenceConfig=DEPLOYMENT_AOF_CONFIG,
         )
         # Test failover and data loss
         test_failover(instance)

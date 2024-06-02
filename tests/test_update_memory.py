@@ -81,7 +81,7 @@ def test_update_memory():
 
 def check_data_loss(instance: OmnistrateInstance, keys: int):
 
-    connection = instance.get_connection()
+    connection = instance.create_connection()
 
     # Get info
     info = connection.execute_command("INFO")

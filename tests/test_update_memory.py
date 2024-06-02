@@ -90,3 +90,7 @@ def check_data_loss(instance: OmnistrateInstance, keys: int):
 
     # Check the number of keys
     assert int(info["db0"]["keys"]) == keys
+
+
+if __name__ == "__main__":
+    test_update_memory()

@@ -32,7 +32,6 @@ class OmnistrateInstance:
     ) -> None:
 
         assert len(api_path) > 0, "api_path must be provided"
-        assert len(api_failover_path) > 0, "api_failover_path must be provided"
         assert len(api_sign_in_path) > 0, "api_sign_in_path must be provided"
         assert len(omnistrate_user) > 0, "omnistrate_user must be provided"
         assert len(omnistrate_password) > 0, "omnistrate_password must be provided"
@@ -175,6 +174,7 @@ class OmnistrateInstance:
         self, replica_id: str, wait_for_ready: bool, resource_id: str = None
     ):
         """Trigger failover for the instance. Optionally wait for the instance to be ready."""
+        assert len(self.api_failover_path) > 0, "api_failover_path must be provided"
         headers = {
             "Content-Type": "application/json",
             "Authorization": "Bearer " + self._get_token(),

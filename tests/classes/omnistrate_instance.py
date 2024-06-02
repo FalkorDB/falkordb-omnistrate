@@ -5,6 +5,9 @@ import requests
 import base64
 import jwt
 import time
+import random
+import string
+from falkordb import FalkorDB
 
 DEFAULT_API_URL = "https://api.omnistrate.cloud/"
 
@@ -12,6 +15,7 @@ DEFAULT_API_URL = "https://api.omnistrate.cloud/"
 class OmnistrateInstance:
 
     _network_topology = None
+    _connection: FalkorDB = None
 
     def __init__(
         self,
@@ -209,6 +213,37 @@ class OmnistrateInstance:
 
         self.wait_for_ready(timeout_seconds=self.deployment_failover_timeout_seconds)
 
+    def update_instance_type(self, new_instance_type: str, wait_until_ready: bool = True):
+        """Update the instance type."""
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + self._get_token(),
+        }
+
+        data = {
+            "nodeInstanceType": new_instance_type,
+        }
+
+        response = requests.put(
+            self.api_url
+            + self.api_path
+            + "/"
+            + self.instance_id
+            + self.subscription_id_query,
+            headers=headers,
+            data=json.dumps(data),
+            timeout=15,
+        )
+
+        self._handle_response(
+            response, f"Failed to update instance type {self.instance_id}"
+        )
+
+        if not wait_until_ready:
+            return
+
+        self.wait_for_ready(timeout_seconds=self.deployment_failover_timeout_seconds)
+
     def _get_network_topology(self):
 
         if self._network_topology is not None:
@@ -317,3 +352,50 @@ class OmnistrateInstance:
         )
 
         return response.json()["status"]
+
+    def create_connection(self, ssl: bool = False, force_reconnect: bool = False):
+
+        if self._connection is not None and not force_reconnect:
+            return self._connection
+
+        endpoint = self.get_cluster_endpoint()
+
+        # Connect to the master node
+
+        self._connection = FalkorDB(
+            host=endpoint["endpoint"],
+            port=endpoint["ports"][0],
+            username="falkordb",
+            password="falkordb",
+            ssl=ssl,
+        )
+
+        return self._connection
+
+    def generate_data(self, graph_count: int):
+        """Generate data for the instance."""
+
+        db = self.create_connection()
+
+        for i in range(0, graph_count):
+            print(f"creating graph {i} out of {graph_count}")
+
+            name = rand_string()
+            g = db.select_graph(name)
+
+            node_count = rand_range(2000, 1000000)
+            node_count = rand_range(200, 1000)
+            g.query(
+                """UNWIND range (0, $node_count) as x
+                    CREATE (a:L {v:x})-[:R]->(b:X {v: tostring(x)}), (a)-[:Z]->(:Y {v:tostring(x)})""",
+                {"node_count": node_count},
+            )
+
+
+def rand_range(a, b):
+    return random.randint(a, b)
+
+
+def rand_string(l=12):
+    letters = string.ascii_letters
+    return "".join(random.choice(letters) for _ in range(l))

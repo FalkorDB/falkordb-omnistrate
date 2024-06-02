@@ -119,7 +119,6 @@ jobs:
             apiVersion: 2022-09-01-00
             apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/free
             apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-f
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             extraParams: ""
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence
             testFile: test_standalone.py
@@ -128,7 +127,6 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
             apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-s
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <tls>
             extraParams: "e2-custom-4-10240 30 false"
           - name: PRO/SingleZone - GCP/us-central1 - Failover & Persistence
@@ -138,7 +136,6 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
             apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <replica_count> <tls>
             extraParams: "e2-custom-4-10240 30 2 false"
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence
@@ -148,7 +145,6 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/multi-Zone
             apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <replica_count> <tls>
             extraParams: "e2-custom-4-10240 30 2 false"
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence With TLS
@@ -158,17 +154,15 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
             apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-s
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <tls>
             extraParams: "e2-custom-4-10240 30 true"
-          - name: PRO/SingleZone -GCP/us-central1 - Failover & Persistence With TLS
+          - name: PRO/SingleZone - GCP/us-central1 - Failover & Persistence With TLS
             testFile: test_single_zone.py
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
             apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
             apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <replica_count> <tls>
             extraParams: "e2-custom-4-10240 30 2 true"
           - name:  PRO/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
@@ -178,9 +172,25 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/multi-Zone
             apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <replica_count> <tls>
             extraParams: "e2-custom-4-10240 30 2 true"
+          - name: PRO/Standalone - GCP/us-central1 - Update Memory
+            testFile: test_update_memory.py
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
+            # extraParams: <instance_size> <disk_size> <instance_type_new> <tls>
+            extraParams: "e2-custom-4-10240 30 e2-custom-8-10240 false"
+          - name: PRO/SingleZone - GCP/us-central1 - Update Memory
+            testFile: test_update_memory.py
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
+            # extraParams: <instance_size> <disk_size> <instance_type_new> <tls>
+            extraParams: "e2-custom-4-10240 30 e2-custom-8-10240 false"
+     
     steps:
       - name: Checkout
         uses: actions/checkout@v3

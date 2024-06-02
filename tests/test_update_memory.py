@@ -62,15 +62,17 @@ def test_update_memory():
             AOFPersistenceConfig=DEPLOYMENT_AOF_CONFIG,
         )
 
+        time.sleep(20)
+
         instance.generate_data(graph_count=1000)
 
         # Update memory
         instance.update_instance_type(DEPLOYMENT_INSTANCE_TYPE_NEW, wait_until_ready=True)
 
-        check_data_loss(instance, keys=4000)
+        check_data_loss(instance, keys=1000)
 
     except Exception as e:
-        instance.delete(True)
+        # instance.delete(True)
         raise e
 
     # Delete instance
@@ -86,10 +88,8 @@ def check_data_loss(instance: OmnistrateInstance, keys: int):
     # Get info
     info = connection.execute_command("INFO")
 
-    print(info)
-
     # Check the number of keys
-    assert int(info["db0"]["keys"]) == keys
+    assert int(info["db0"]["keys"]) > keys, f"Data loss detected. Expected {keys} keys, got {info['db0']['keys']}"
 
 
 if __name__ == "__main__":

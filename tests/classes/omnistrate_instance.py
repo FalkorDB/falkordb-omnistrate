@@ -213,7 +213,9 @@ class OmnistrateInstance:
 
         self.wait_for_ready(timeout_seconds=self.deployment_failover_timeout_seconds)
 
-    def update_instance_type(self, new_instance_type: str, wait_until_ready: bool = True):
+    def update_instance_type(
+        self, new_instance_type: str, wait_until_ready: bool = True
+    ):
         """Update the instance type."""
         headers = {
             "Content-Type": "application/json",
@@ -330,22 +332,31 @@ class OmnistrateInstance:
                 print("Instance is in " + state + " state")
                 time.sleep(5)
 
-    def _get_instance_state(self):
+    def _get_instance_state(self, retries=5):
         """Get the state of the instance."""
         headers = {
             "Content-Type": "application/json",
             "Authorization": "Bearer " + self._get_token(),
         }
 
-        response = requests.get(
-            self.api_url
-            + self.api_path
-            + "/"
-            + self.instance_id
-            + self.subscription_id_query,
-            headers=headers,
-            timeout=15,
-        )
+        while retries > 0:
+            
+            response = requests.get(
+                self.api_url
+                + self.api_path
+                + "/"
+                + self.instance_id
+                + self.subscription_id_query,
+                headers=headers,
+                timeout=15,
+            )
+
+            if response.status_code >= 500:
+                retries -= 1
+                time.sleep(3)
+                continue
+            else:
+                break
 
         self._handle_response(
             response, f"Failed to get instance state {self.instance_id}"
@@ -353,7 +364,9 @@ class OmnistrateInstance:
 
         return response.json()["status"]
 
-    def create_connection(self, ssl: bool = False, force_reconnect: bool = False):
+    def create_connection(
+        self, ssl: bool = False, force_reconnect: bool = False, retries=5
+    ):
 
         if self._connection is not None and not force_reconnect:
             return self._connection
@@ -361,14 +374,23 @@ class OmnistrateInstance:
         endpoint = self.get_cluster_endpoint()
 
         # Connect to the master node
+        while retries > 0:
+            try:
+                self._connection = FalkorDB(
+                    host=endpoint["endpoint"],
+                    port=endpoint["ports"][0],
+                    username="falkordb",
+                    password="falkordb",
+                    ssl=ssl,
+                )
+                break
+            except Exception as e:
+                print(f"Failed to connect to the master node: {e}")
+                retries -= 1    
+                time.sleep(10)
 
-        self._connection = FalkorDB(
-            host=endpoint["endpoint"],
-            port=endpoint["ports"][0],
-            username="falkordb",
-            password="falkordb",
-            ssl=ssl,
-        )
+        if self._connection is None:
+            raise Exception("Failed to connect to the master node")
 
         return self._connection
 

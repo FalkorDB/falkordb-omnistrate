@@ -72,7 +72,7 @@ class OmnistrateInstance:
         }
         print("Getting token")
         response = requests.post(
-            self.api_url + self.api_sign_in_path, headers=headers, timeout=5
+            self.api_url + self.api_sign_in_path, headers=headers, timeout=15
         )
 
         self._handle_response(response, "Failed to get token")
@@ -121,7 +121,7 @@ class OmnistrateInstance:
             self.api_url + self.api_path + self.subscription_id_query,
             headers=headers,
             data=json.dumps(data),
-            timeout=5,
+            timeout=15,
         )
 
         self._handle_response(response, f"Failed to create instance {name}")
@@ -153,7 +153,7 @@ class OmnistrateInstance:
             + self.instance_id
             + self.subscription_id_query,
             headers=headers,
-            timeout=5,
+            timeout=15,
         )
 
         self._handle_response(response, f"Failed to delete instance {self.instance_id}")
@@ -197,7 +197,7 @@ class OmnistrateInstance:
             url,
             headers=headers,
             data=json.dumps(data),
-            timeout=5,
+            timeout=15,
         )
 
         self._handle_response(
@@ -226,7 +226,7 @@ class OmnistrateInstance:
             + self.instance_id
             + self.subscription_id_query,
             headers=headers,
-            timeout=5,
+            timeout=15,
         )
 
         self._handle_response(
@@ -309,7 +309,7 @@ class OmnistrateInstance:
             + self.instance_id
             + self.subscription_id_query,
             headers=headers,
-            timeout=5,
+            timeout=15,
         )
 
         self._handle_response(

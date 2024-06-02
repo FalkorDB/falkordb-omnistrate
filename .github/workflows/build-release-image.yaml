@@ -67,6 +67,13 @@ jobs:
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
         uses: actions/checkout@v3
 
+      - name: Replace Variables
+        run: |
+          sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' omnistrate.${{ matrix.plans.key}}.yaml
+          sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' omnistrate.${{ matrix.plans.key}}.yaml
+          sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' omnistrate.${{ matrix.plans.key}}.yaml
+          sed -i 's/$FalkorDBNodeImage/falkordb\/falkordb-node:${{ github.ref_name }}/g' omnistrate.${{ matrix.plans.key}}.yaml
+    
       - name: Update Omnistrate plan
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
         uses: ./.github/actions/update-omnistrate-plan
@@ -75,53 +82,3 @@ jobs:
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
           file: ${{ matrix.plans.file }}
           plan-name: ${{ matrix.plans.name }}
-
-  omnistrate-update-image:
-    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/v')
-    needs: omnistrate-update-plans
-    runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 1
-      matrix:
-        tiers:
-          # - name: single zone - node
-          #   serviceId: s-xlHhDG3QlM
-          #   serviceApiId: sa-uvMK5yOcSo
-          #   productTierId: pt-Yemkrnavca
-          #   imageConfigId: imgc-y2q3nWbnvt
-          # - name: single zone - sentinel
-          #   serviceId: s-xlHhDG3QlM
-          #   serviceApiId: sa-uvMK5yOcSo
-          #   productTierId: pt-Yemkrnavca
-          #   imageConfigId: imgc-2W3145VEcL
-          # - name: multi zone - node
-          #   serviceId: s-xlHhDG3QlM
-          #   serviceApiId: sa-uvMK5yOcSo
-          #   productTierId: pt-Yemkrnavca
-          #   imageConfigId: imgc-PRfAITshta
-          # - name: multi zone - sentinel
-          #   serviceId: s-xlHhDG3QlM
-          #   serviceApiId: sa-uvMK5yOcSo
-          #   productTierId: pt-Yemkrnavca
-          #   imageConfigId: imgc-C4HEeC6OZb
-          # - name: standalone - node
-          #   serviceId: s-xlHhDG3QlM
-          #   serviceApiId: sa-uvMK5yOcSo
-          #   productTierId: pt-Yemkrnavca
-          #   imageConfigId: imgc-ZcQDSLurfz
-          - name: free - node
-            serviceId: s-KgFDwg5vBS
-            serviceApiId: sa-dCmMhdrtu3
-            productTierId: pt-m2FKdsSXSi
-            imageConfigId: imgc-wAKebKdNdM
-    steps:
-      - name: Update Docker Image Tag on Omnistrate
-        uses: omnistrate/update-image-config@v1
-        with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
-          service-id: ${{ matrix.tiers.serviceId }}
-          service-api-id: ${{ matrix.tiers.serviceApiId }}
-          product-tier-id: ${{ matrix.tiers.productTierId }}
-          image-config-id: ${{ matrix.tiers.imageConfigId }}
-          tag: ${{ github.ref_name }}

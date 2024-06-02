@@ -1,0 +1,51 @@
+name: Delete Omnistrate Service Plan
+description: "Delete an Omnistrate service plan"
+
+inputs:
+  username:
+    description: "The username to use for authentication"
+    required: true
+  password:
+    description: "The password to use for authentication"
+    required: true
+  service-id:
+    description: "The ID of the service"
+    required: true
+  environment-id:
+    description: "The ID of the environment"
+    required: true
+  product-tier-name:
+    description: "The name of the product tier to delete"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Login
+      shell: bash
+      run: |
+        curl "https://api.omnistrate.cloud/2022-09-01-00/signin" \
+          -X POST \
+          -H "Content-Type: application/json" \
+          -d "{\"email\":\"${{ inputs.username }}\",\"password\":\"${{ inputs.password }}\"}" \
+          -o token.json
+        echo "OMNISTRATE_TOKEN=$(jq -r .jwtToken token.json)" >> $GITHUB_ENV
+
+    - name: Find product tier ID
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq
+        curl "https://api.omnistrate.cloud/2022-09-01-00/service/${{ inputs.service-id }}/environment/${{ inputs.environment-id }}/service-plan" \
+          -X GET \
+          -H "Authorization: Bearer $OMNISTRATE_TOKEN" \
+          -o service-plans.json
+        jq -r ".servicePlans[] | select(.productTierName == \"${{ inputs.product-tier-name }}\") | .id" service-plans.json > product-tier-id.txt
+        echo "PRODUCT_TIER_ID=$(cat product-tier-id.txt)" >> $GITHUB_ENV
+
+    - name: Delete product tier
+      shell: bash
+      run: |
+        curl "https://api.omnistrate.cloud/2022-09-01-00/service/${{ inputs.service-id }}/product-tier/${{ env.PRODUCT_TIER_ID }}" \
+          -X DELETE \
+          -H "Authorization: Bearer $OMNISTRATE_TOKEN"

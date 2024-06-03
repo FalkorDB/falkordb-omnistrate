@@ -155,4 +155,5 @@ services:
         type: REMOVE
         commandTemplate: >
           #!/bin/bash
+
           redis-cli -p $NODE_PORT save

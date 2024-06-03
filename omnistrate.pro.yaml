@@ -214,9 +214,8 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "no"
+        defaultValue: "everysec"
         options:
-          - "no"
           - "everysec"
           - "always"
         parameterDependencyMap:
@@ -319,9 +318,8 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "no"
+        defaultValue: "everysec"
         options:
-          - "no"
           - "everysec"
           - "always"
     volumes:
@@ -356,7 +354,13 @@ services:
       - "6379:6379"
     x-omnistrate-capabilities:
       enableMultiZone: false
-      enableEndpointPerReplica: true
+      enableEndpointPerReplica: true    
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: REMOVE
+        commandTemplate: >
+          #!/bin/bash
+          redis-cli -p $NODE_PORT save
 
 
 
@@ -492,9 +496,8 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "no"
+        defaultValue: "everysec"
         options:
-          - "no"
           - "everysec"
           - "always"
         parameterDependencyMap:
@@ -611,9 +614,8 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "no"
+        defaultValue: "everysec"
         options:
-          - "no"
           - "everysec"
           - "always"
     volumes:
@@ -655,6 +657,11 @@ services:
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
       - scope: NODE
+        type: REMOVE
+        commandTemplate: >
+          #!/bin/bash
+          redis-cli -p $NODE_PORT save
+      - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: >
           #!/bin/bash
@@ -684,7 +691,8 @@ services:
         
           if [ "$role" == "master" ]; then
               redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL failover $MASTER_NAME
-          fi
+          fi  - scope: NODE
+  
     depends_on:
       - sentinel-sz
 
@@ -872,9 +880,8 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "no"
+        defaultValue: "everysec"
         options:
-          - "no"
           - "everysec"
           - "always"
         parameterDependencyMap:
@@ -991,9 +998,8 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "no"
+        defaultValue: "everysec"
         options:
-          - "no"
           - "everysec"
           - "always"
     volumes:
@@ -1034,6 +1040,11 @@ services:
       enableMultiZone: true
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
+      - scope: NODE
+        type: REMOVE
+        commandTemplate: >
+          #!/bin/bash
+          redis-cli -p $NODE_PORT save
       - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: >

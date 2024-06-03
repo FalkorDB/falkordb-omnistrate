@@ -150,3 +150,9 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: REMOVE
+        commandTemplate: >
+          #!/bin/bash
+          redis-cli -p $NODE_PORT save

@@ -652,7 +652,6 @@ services:
       enableMultiZone: false
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
-      
       - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: >
@@ -683,7 +682,7 @@ services:
         
           if [ "$role" == "master" ]; then
               redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL failover $MASTER_NAME
-          fi  - scope: NODE
+          fi 
   
     depends_on:
       - sentinel-sz

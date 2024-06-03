@@ -356,12 +356,7 @@ services:
       enableMultiZone: false
       enableEndpointPerReplica: true    
     x-omnistrate-actionhooks:
-      - scope: NODE
-        type: REMOVE
-        commandTemplate: >
-          #!/bin/bash
-
-          redis-cli -p $NODE_PORT save
+      
 
 
 
@@ -657,12 +652,7 @@ services:
       enableMultiZone: false
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
-      - scope: NODE
-        type: REMOVE
-        commandTemplate: >
-          #!/bin/bash
-
-          redis-cli -p $NODE_PORT save
+      
       - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: >
@@ -1042,12 +1032,7 @@ services:
       enableMultiZone: true
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
-      - scope: NODE
-        type: REMOVE
-        commandTemplate: >
-          #!/bin/bash
-
-          redis-cli -p $NODE_PORT save
+      
       - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: >

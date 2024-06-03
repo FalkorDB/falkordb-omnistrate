@@ -360,6 +360,7 @@ services:
         type: REMOVE
         commandTemplate: >
           #!/bin/bash
+
           redis-cli -p $NODE_PORT save
 
 
@@ -660,6 +661,7 @@ services:
         type: REMOVE
         commandTemplate: >
           #!/bin/bash
+
           redis-cli -p $NODE_PORT save
       - scope: NODE
         type: HEALTH_CHECK
@@ -1044,6 +1046,7 @@ services:
         type: REMOVE
         commandTemplate: >
           #!/bin/bash
+
           redis-cli -p $NODE_PORT save
       - scope: NODE
         type: HEALTH_CHECK

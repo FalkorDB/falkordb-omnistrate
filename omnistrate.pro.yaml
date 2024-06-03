@@ -30,7 +30,6 @@ x-omnistrate-load-balancer:
           backendPort: 26379
 
 x-omnistrate-integrations:
-  - omnistrateAlerting:
   - omnistrateMetrics:
       additionalMetrics:
         node-s: 

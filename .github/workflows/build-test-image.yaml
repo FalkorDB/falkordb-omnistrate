@@ -69,7 +69,7 @@ jobs:
           sudo add-apt-repository ppa:rmescandon/yq 
           sudo apt update 
           sudo apt install yq -y
-          yq ea '. as $item ireduce ({}; . * $item )' omnistrate.pro.yaml omnistrate.free.yaml | sed 's/FalkorDB Free/${{ github.ref_name }}/' > merged.yaml
+          yq ea '. as $item ireduce ({}; . * $item )' omnistrate.free.yaml omnistrate.pro.yaml | sed 's/FalkorDB Pro/${{ github.ref_name }}/' > merged.yaml
 
       - name: Update Omnistrate plan
         uses: ./.github/actions/update-omnistrate-plan
@@ -161,7 +161,7 @@ jobs:
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <tls>
             extraParams: "e2-custom-4-10240 30 true"
-          - name: PRO/SingleZone -GCP/us-central1 - Failover & Persistence With TLS
+          - name: PRO/SingleZone - GCP/us-central1 - Failover & Persistence With TLS
             testFile: test_single_zone.py
             cloudProvider: gcp
             cloudRegion: us-central1
@@ -181,6 +181,25 @@ jobs:
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <replica_count> <tls>
             extraParams: "e2-custom-4-10240 30 2 true"
+          - name: PRO/Standalone - GCP/us-central1 - Update Memory
+            testFile: test_update_memory.py
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
+            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
+            # extraParams: <instance_size> <disk_size> <instance_type_new> <tls>
+            extraParams: "e2-custom-4-10240 30 e2-custom-8-10240 false"
+          - name: PRO/SingleZone - GCP/us-central1 - Update Memory
+            testFile: test_update_memory.py
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
+            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
+            # extraParams: <instance_size> <disk_size> <instance_type_new> <tls>
+            extraParams: "e2-custom-4-10240 30 e2-custom-8-10240 false"
+     
     steps:
       - name: Checkout
         uses: actions/checkout@v3

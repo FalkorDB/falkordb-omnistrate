@@ -9,6 +9,8 @@ x-omnistrate-service-plan:
       GcpProjectNumber: '$GcpProjectNumber'   
       GcpServiceAccountEmail: '$GcpServiceAccountEmail'
 
+x-omnistrate-integrations:
+
 services:
 
 # Free

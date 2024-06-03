@@ -283,7 +283,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET save $PERSISTENCE_RDB_CONFIG
   
   if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then
-    echo "Setting AOF persistence"
+    echo "Setting AOF persistence: $PERSISTENCE_AOF_CONFIG"
     redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET appendonly yes
     redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET appendfsync $PERSISTENCE_AOF_CONFIG
   fi

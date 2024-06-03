@@ -34,8 +34,13 @@ DEBUG=${DEBUG:-0}
 REPLACE_NODE_CONF=${REPLACE_NODE_CONF:-0}
 REPLACE_SENTINEL_CONF=${REPLACE_SENTINEL_CONF:-0}
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
+SAVE_LOGS_TO_FILE=${SAVE_LOGS_TO_FILE:-1}
+LOG_LEVEL=${LOG_LEVEL:-notice}
 
+DATE_NOW=$(date +"%Y%m%d%H%M%S")
 
+FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo ""; fi)
+SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 
@@ -205,6 +210,8 @@ if [ "$RUN_NODE" -eq "1" ]; then
   
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" $NODE_CONF_FILE
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
+  sed -i "s/\$LOG_FILE_PATH/$FALKORDB_LOG_FILE_PATH/g" $NODE_CONF_FILE
+  sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
   echo "dir $DATA_DIR" >> $NODE_CONF_FILE
 
   is_replica
@@ -228,6 +235,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   fi
 
   redis-server $NODE_CONF_FILE &
+  tail -F $FALKORDB_LOG_FILE_PATH &
 
   sleep 10
 
@@ -288,6 +296,8 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
+  sed -i "s/\$LOG_FILE_PATH/$SENTINEL_LOG_FILE_PATH/g" $SENTINEL_CONF_FILE
+  sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
 
   # When LB is in place, change external dns to internal ip
   sed -i "s/\$SENTINEL_HOST/$NODE_EXTERNAL_DNS/g" $SENTINEL_CONF_FILE
@@ -308,6 +318,7 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
   fi
 
   redis-server $SENTINEL_CONF_FILE --sentinel &
+  tail -F $SENTINEL_LOG_FILE_PATH &
 
   sleep 10
 

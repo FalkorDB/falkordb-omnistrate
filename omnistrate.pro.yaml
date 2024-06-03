@@ -437,10 +437,10 @@ services:
           - "always"
         parameterDependencyMap:
           node-sz: AOFPersistenceConfig
-        x-omnistrate-capabilities:
-    backupConfiguration:
-      backupRetentionInDays: 7
-      backupPeriodInHours: 12
+    x-omnistrate-capabilities:
+      backupConfiguration:
+        backupRetentionInDays: 7
+        backupPeriodInHours: 12
     depends_on:
       - node-sz
 
@@ -806,10 +806,10 @@ services:
           - "always"
         parameterDependencyMap:
           node-mz: AOFPersistenceConfig
-        x-omnistrate-capabilities:
-    backupConfiguration:
-      backupRetentionInDays: 7
-      backupPeriodInHours: 12
+    x-omnistrate-capabilities:
+      backupConfiguration:
+        backupRetentionInDays: 7
+        backupPeriodInHours: 12
     depends_on:
       - node-mz
 

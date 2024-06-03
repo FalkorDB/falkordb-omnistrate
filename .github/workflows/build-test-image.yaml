@@ -71,6 +71,12 @@ jobs:
           sudo apt install yq -y
           yq ea '. as $item ireduce ({}; . * $item )' omnistrate.free.yaml omnistrate.pro.yaml | sed 's/FalkorDB Pro/${{ github.ref_name }}/' > merged.yaml
 
+      - name: Upload yaml as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: merged.yaml
+          path: merged.yaml
+
       - name: Update Omnistrate plan
         uses: ./.github/actions/update-omnistrate-plan
         id: update_omnistrate_plan

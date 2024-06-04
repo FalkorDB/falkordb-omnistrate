@@ -217,6 +217,9 @@ class OmnistrateInstance:
         self, new_instance_type: str, wait_until_ready: bool = True
     ):
         """Update the instance type."""
+
+        self.wait_for_ready()
+      
         headers = {
             "Content-Type": "application/json",
             "Authorization": "Bearer " + self._get_token(),

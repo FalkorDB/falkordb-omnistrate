@@ -37,8 +37,14 @@ SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID", "sub-bHEl5iUoPd")
 REF_NAME = os.getenv("REF_NAME", None)
 if REF_NAME is not None:
     if len(REF_NAME) > 50:
-        API_PATH = REF_NAME[:50].join(API_PATH.split(REF_NAME))
-        API_FAILOVER_PATH = REF_NAME[:50].join(API_FAILOVER_PATH.split(REF_NAME))
+        # Replace the second occurrence of REF_NAME with the first 50 characters of REF_NAME
+        API_PATH = f"customer-hosted/{REF_NAME[:50]}".join(
+            API_PATH.split(f"customer-hosted/{REF_NAME}")
+        )
+        API_FAILOVER_PATH = f"customer-hosted/{REF_NAME[:50]}".join(
+            API_FAILOVER_PATH.split(f"customer-hosted/{REF_NAME}")
+        )
+
 
 def test_update_memory():
 
@@ -72,7 +78,9 @@ def test_update_memory():
         instance.generate_data(graph_count=1000)
 
         # Update memory
-        instance.update_instance_type(DEPLOYMENT_INSTANCE_TYPE_NEW, wait_until_ready=True)
+        instance.update_instance_type(
+            DEPLOYMENT_INSTANCE_TYPE_NEW, wait_until_ready=True
+        )
 
         check_data_loss(instance, keys=1000)
 
@@ -94,7 +102,9 @@ def check_data_loss(instance: OmnistrateInstance, keys: int):
     info = connection.execute_command("INFO")
 
     # Check the number of keys
-    assert int(info["db0"]["keys"]) > keys, f"Data loss detected. Expected {keys} keys, got {info['db0']['keys']}"
+    assert (
+        int(info["db0"]["keys"]) > keys
+    ), f"Data loss detected. Expected {keys} keys, got {info['db0']['keys']}"
 
 
 if __name__ == "__main__":

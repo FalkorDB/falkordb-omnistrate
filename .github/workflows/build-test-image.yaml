@@ -205,6 +205,7 @@ jobs:
           API_PATH: ${{ matrix.instances.apiPath }}
           API_FAILOVER_PATH: ${{ matrix.instances.apiFailoverPath }}
           API_SIGN_IN_PATH: ${{ matrix.instances.apiSignInPath }}
+          REF_NAME: ${{ github.ref_name }}
           extraParams: ${{ matrix.instances.extraParams }}
         run: |
           python ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} ${{ env.extraParams }}

@@ -81,4 +81,4 @@ jobs:
           username: ${{ secrets.OMNISTRATE_USERNAME }}
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
           file: ${{ matrix.plans.file }}
-          plan-name: ${{ matrix.plans.name }}
+          service-name: ${{ matrix.plans.name }}

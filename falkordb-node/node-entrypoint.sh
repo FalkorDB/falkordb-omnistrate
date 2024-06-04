@@ -284,7 +284,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   fi
 
   # Set persistence config
-  echo "Setting persistence config"
+  echo "Setting persistence config: CONFIG SET save '$PERSISTENCE_RDB_CONFIG'"
   redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET save "$PERSISTENCE_RDB_CONFIG"
   
   if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then

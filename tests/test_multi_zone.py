@@ -40,8 +40,13 @@ SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID", "sub-bHEl5iUoPd")
 REF_NAME = os.getenv("REF_NAME", None)
 if REF_NAME is not None:
     if len(REF_NAME) > 50:
-        API_PATH = REF_NAME[:50].join(API_PATH.split(REF_NAME))
-        API_FAILOVER_PATH = REF_NAME[:50].join(API_FAILOVER_PATH.split(REF_NAME))
+        # Replace the second occurrence of REF_NAME with the first 50 characters of REF_NAME
+        API_PATH = f"customer-hosted/{REF_NAME[:50]}".join(
+            API_PATH.split(f"customer-hosted/{REF_NAME}")
+        )
+        API_FAILOVER_PATH = f"customer-hosted/{REF_NAME[:50]}".join(
+            API_FAILOVER_PATH.split(f"customer-hosted/{REF_NAME}")
+        )
 
 
 def test_multi_zone():
@@ -104,7 +109,12 @@ def test_failover(instance: OmnistrateInstance):
         filter(lambda resource: resource["id"].startswith("node-mz"), resources)
     )
     sentinel_resource = next(
-        (resource for resource in resources if resource["id"].startswith("sentinel-mz")), None
+        (
+            resource
+            for resource in resources
+            if resource["id"].startswith("sentinel-mz")
+        ),
+        None,
     )
     db_0 = FalkorDB(
         host=db_resource[0]["endpoint"],
@@ -138,10 +148,14 @@ def test_failover(instance: OmnistrateInstance):
         },
     )
 
-    sentinels_list = random.choice(sentinels.sentinels).execute_command("sentinel sentinels master")
+    sentinels_list = random.choice(sentinels.sentinels).execute_command(
+        "sentinel sentinels master"
+    )
 
     if len(sentinels_list) != 2:
-        raise Exception(f"Sentinel list not correct. Expected 2, got {len(sentinels_list)}")
+        raise Exception(
+            f"Sentinel list not correct. Expected 2, got {len(sentinels_list)}"
+        )
 
     graph_0 = db_0.select_graph("test")
 
@@ -159,9 +173,7 @@ def test_failover(instance: OmnistrateInstance):
     print("Triggering failover for node-mz-0")
     # Trigger failover
     instance.trigger_failover(
-        replica_id="node-mz-0",
-        wait_for_ready=False,
-        resource_id="node-mz"
+        replica_id="node-mz-0", wait_for_ready=False, resource_id="node-mz"
     )
 
     promotion_completed = False
@@ -195,13 +207,11 @@ def test_failover(instance: OmnistrateInstance):
 
     # wait until the node-mz-0 is ready
     instance.wait_for_ready(timeout_seconds=600)
-    
+
     print("Triggering failover for sentinel-mz-0")
     # Trigger sentinel failover
     instance.trigger_failover(
-        replica_id="sentinel-mz-0",
-        wait_for_ready=False,
-        resource_id="sentinel-mz"
+        replica_id="sentinel-mz-0", wait_for_ready=False, resource_id="sentinel-mz"
     )
 
     graph_1 = db_1.select_graph("test")
@@ -219,9 +229,7 @@ def test_failover(instance: OmnistrateInstance):
     print("Triggering failover for node-mz-1")
     # Trigger failover
     instance.trigger_failover(
-        replica_id="node-mz-1",
-        wait_for_ready=False,
-        resource_id="node-mz"
+        replica_id="node-mz-1", wait_for_ready=False, resource_id="node-mz"
     )
 
     promotion_completed = False

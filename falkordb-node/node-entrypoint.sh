@@ -356,3 +356,27 @@ fi
 while true; do
   sleep 1
 done
+
+
+
+
+# Handle signals
+
+_handle_sigterm() {
+  echo "Caught SIGTERM"
+  echo "Stopping FalkorDB"
+
+  if [[ $RUN_SENTINEL -eq 1 || $RUN_NODE -eq 1 ]]; then
+    killall redis-server
+  fi
+
+  if [[ $RUN_METRICS -eq 1 ]]; then
+    killall redis_exporter
+  fi
+
+  if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
+    killall healthcheck
+  fi
+}
+
+trap _handle_sigterm SIGTERM

@@ -214,9 +214,8 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "no"
+        defaultValue: "everysec"
         options:
-          - "no"
           - "everysec"
           - "always"
         parameterDependencyMap:
@@ -319,9 +318,8 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "no"
+        defaultValue: "everysec"
         options:
-          - "no"
           - "everysec"
           - "always"
     volumes:
@@ -356,7 +354,9 @@ services:
       - "6379:6379"
     x-omnistrate-capabilities:
       enableMultiZone: false
-      enableEndpointPerReplica: true
+      enableEndpointPerReplica: true    
+    x-omnistrate-actionhooks:
+      
 
 
 
@@ -492,9 +492,8 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "no"
+        defaultValue: "everysec"
         options:
-          - "no"
           - "everysec"
           - "always"
         parameterDependencyMap:
@@ -611,9 +610,8 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "no"
+        defaultValue: "everysec"
         options:
-          - "no"
           - "everysec"
           - "always"
     volumes:
@@ -680,11 +678,12 @@ services:
 
           # Trigger failover before master is removed
 
-          $role=$(redis-cli -p $NODE_PORT info replication | grep role | cut -d ':' -f 2)
+          role=$(redis-cli -p $NODE_PORT info replication | grep role | cut -d ':' -f 2)
         
           if [ "$role" == "master" ]; then
               redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL failover $MASTER_NAME
-          fi
+          fi 
+  
     depends_on:
       - sentinel-sz
 
@@ -872,9 +871,8 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "no"
+        defaultValue: "everysec"
         options:
-          - "no"
           - "everysec"
           - "always"
         parameterDependencyMap:
@@ -991,9 +989,8 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "no"
+        defaultValue: "everysec"
         options:
-          - "no"
           - "everysec"
           - "always"
     volumes:
@@ -1034,6 +1031,7 @@ services:
       enableMultiZone: true
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
+      
       - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: >
@@ -1060,7 +1058,7 @@ services:
 
           # Trigger failover before master is removed
 
-          $role=$(redis-cli -p $NODE_PORT info replication | grep role | cut -d ':' -f 2)
+          role=$(redis-cli -p $NODE_PORT info replication | grep role | cut -d ':' -f 2)
         
           if [ "$role" == "master" ]; then
               redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL failover $MASTER_NAME

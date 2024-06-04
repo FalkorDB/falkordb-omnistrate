@@ -12,7 +12,7 @@ NODE_INDEX=${NODE_INDEX:-0}
 INSTANCE_TYPE=${INSTANCE_TYPE:-''}
 PERSISTENCE_RDB_CONFIG_INPUT=${PERSISTENCE_RDB_CONFIG_INPUT:-'low'}
 PERSISTENCE_RDB_CONFIG=${PERSISTENCE_RDB_CONFIG:-'86400 1 21600 100 3600 10000'}
-PERSISTENCE_AOF_CONFIG=${PERSISTENCE_AOF_CONFIG:-'no'}
+PERSISTENCE_AOF_CONFIG=${PERSISTENCE_AOF_CONFIG:-'everysec'}
 
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
@@ -171,7 +171,6 @@ is_replica() {
 }
 
 set_persistence_config() {
-  echo "Setting persistence config"
   if [[ $PERSISTENCE_RDB_CONFIG_INPUT == "low" ]]; then
     PERSISTENCE_RDB_CONFIG='86400 1 21600 100 3600 10000'
   elif [[ $PERSISTENCE_RDB_CONFIG_INPUT == "medium" ]]; then
@@ -196,6 +195,16 @@ if [ ! -f $SENTINEL_CONF_FILE ] || [ "$REPLACE_SENTINEL_CONF" -eq "1" ]; then
   cp /falkordb/sentinel.conf $SENTINEL_CONF_FILE
 fi
 
+# Create log files if they don't exist
+if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
+  if [ "$RUN_NODE" -eq "1" ]; then
+    touch $FALKORDB_LOG_FILE_PATH
+  fi
+  if [ "$RUN_SENTINEL" -eq "1" ]; then
+    touch $SENTINEL_LOG_FILE_PATH
+  fi
+fi
+
 set_persistence_config
 get_self_host_ip
 
@@ -210,7 +219,6 @@ if [ "$RUN_NODE" -eq "1" ]; then
   
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" $NODE_CONF_FILE
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
-  sed -i "s/\$LOG_FILE_PATH/$FALKORDB_LOG_FILE_PATH/g" $NODE_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
   echo "dir $DATA_DIR" >> $NODE_CONF_FILE
 
@@ -234,7 +242,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
     echo "port $NODE_PORT" >> $NODE_CONF_FILE
   fi
 
-  redis-server $NODE_CONF_FILE &
+  redis-server $NODE_CONF_FILE --logfile $FALKORDB_LOG_FILE_PATH &
   tail -F $FALKORDB_LOG_FILE_PATH &
 
   sleep 10
@@ -279,8 +287,8 @@ if [ "$RUN_NODE" -eq "1" ]; then
   fi
 
   # Set persistence config
-  echo "Setting persistence config"
-  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET save $PERSISTENCE_RDB_CONFIG
+  echo "Setting persistence config: CONFIG SET save '$PERSISTENCE_RDB_CONFIG'"
+  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET save "$PERSISTENCE_RDB_CONFIG"
   
   if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then
     echo "Setting AOF persistence: $PERSISTENCE_AOF_CONFIG"
@@ -289,6 +297,9 @@ if [ "$RUN_NODE" -eq "1" ]; then
   fi
 
 
+  # Config rewrite
+  echo "Rewriting config"
+  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
 fi
 
 
@@ -296,8 +307,7 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
-  sed -i "s/\$LOG_FILE_PATH/$SENTINEL_LOG_FILE_PATH/g" $SENTINEL_CONF_FILE
-  sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
+  sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $SENTINEL_CONF_FILE
 
   # When LB is in place, change external dns to internal ip
   sed -i "s/\$SENTINEL_HOST/$NODE_EXTERNAL_DNS/g" $SENTINEL_CONF_FILE
@@ -317,7 +327,7 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
     echo "sentinel resolve-hostnames yes" >> $SENTINEL_CONF_FILE
   fi
 
-  redis-server $SENTINEL_CONF_FILE --sentinel &
+  redis-server $SENTINEL_CONF_FILE --sentinel --logfile $SENTINEL_LOG_FILE_PATH &
   tail -F $SENTINEL_LOG_FILE_PATH &
 
   sleep 10

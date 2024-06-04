@@ -197,8 +197,12 @@ fi
 
 # Create log files if they don't exist
 if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
-  touch $FALKORDB_LOG_FILE_PATH
-  touch $SENTINEL_LOG_FILE_PATH
+  if [ "$RUN_NODE" -eq "1" ]; then
+    touch $FALKORDB_LOG_FILE_PATH
+  fi
+  if [ "$RUN_SENTINEL" -eq "1" ]; then
+    touch $SENTINEL_LOG_FILE_PATH
+  fi
 fi
 
 set_persistence_config
@@ -215,7 +219,6 @@ if [ "$RUN_NODE" -eq "1" ]; then
   
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" $NODE_CONF_FILE
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
-  sed -i "s|\$LOG_FILE_PATH|$FALKORDB_LOG_FILE_PATH|g" $NODE_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
   echo "dir $DATA_DIR" >> $NODE_CONF_FILE
 
@@ -239,7 +242,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
     echo "port $NODE_PORT" >> $NODE_CONF_FILE
   fi
 
-  redis-server $NODE_CONF_FILE &
+  redis-server $NODE_CONF_FILE --logfile $FALKORDB_LOG_FILE_PATH &
   tail -F $FALKORDB_LOG_FILE_PATH &
 
   sleep 10
@@ -294,6 +297,9 @@ if [ "$RUN_NODE" -eq "1" ]; then
   fi
 
 
+  # Config rewrite
+  echo "Rewriting config"
+  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
 fi
 
 
@@ -301,7 +307,6 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
-  sed -i "s|\$LOG_FILE_PATH|$SENTINEL_LOG_FILE_PATH|g" $SENTINEL_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $SENTINEL_CONF_FILE
 
   # When LB is in place, change external dns to internal ip
@@ -322,7 +327,7 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
     echo "sentinel resolve-hostnames yes" >> $SENTINEL_CONF_FILE
   fi
 
-  redis-server $SENTINEL_CONF_FILE --sentinel &
+  redis-server $SENTINEL_CONF_FILE --sentinel --logfile $SENTINEL_LOG_FILE_PATH &
   tail -F $SENTINEL_LOG_FILE_PATH &
 
   sleep 10

@@ -150,3 +150,5 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+    x-omnistrate-actionhooks:
+      

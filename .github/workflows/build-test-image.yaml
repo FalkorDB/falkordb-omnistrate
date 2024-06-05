@@ -69,7 +69,7 @@ jobs:
           sudo add-apt-repository ppa:rmescandon/yq 
           sudo apt update 
           sudo apt install yq -y
-          yq ea '. as $item ireduce ({}; . * $item )' omnistrate.free.yaml omnistrate.pro.yaml | sed 's/FalkorDB Pro/${{ github.ref_name }}/' > merged.yaml
+          yq ea '. as $item ireduce ({}; . * $item )' omnistrate.free.yaml omnistrate.pro.yaml | sed 's/FalkorDB Pro/${{ github.ref_name == 'main' && 'FalkorDB Internal' || github.ref_name }}/' > merged.yaml
 
       - name: Upload yaml as artifact
         uses: actions/upload-artifact@v2

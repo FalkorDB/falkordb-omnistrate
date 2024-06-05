@@ -69,10 +69,10 @@ jobs:
 
       - name: Replace Variables
         run: |
-          sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' omnistrate.${{ matrix.plans.key}}.yaml
-          sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' omnistrate.${{ matrix.plans.key}}.yaml
-          sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' omnistrate.${{ matrix.plans.key}}.yaml
-          sed -i 's/$FalkorDBNodeImage/falkordb\/falkordb-node:${{ github.ref_name }}/g' omnistrate.${{ matrix.plans.key}}.yaml
+          sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' omnistrate.${{ matrix.plans.key }}.yaml
+          sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' omnistrate.${{ matrix.plans.key }}.yaml
+          sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' omnistrate.${{ matrix.plans.key }}.yaml
+          sed -i 's/$FalkorDBNodeImage/falkordb\/falkordb-node:${{ github.ref_name }}/g' omnistrate.${{ matrix.plans.key }}.yaml
     
       - name: Update Omnistrate plan
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}

@@ -56,10 +56,10 @@ jobs:
       fail-fast: false
       matrix:
         plans:
-          - name: FalkorDB Free
+          - name: FalkorDB
             file: omnistrate.free.yaml
             key: free
-          - name: FalkorDB Pro
+          - name: FalkorDB
             file: omnistrate.pro.yaml
             key: pro
     steps:
@@ -68,12 +68,21 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Replace Variables
+        if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
         run: |
-          sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' omnistrate.${{ matrix.plans.key }}.yaml
-          sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' omnistrate.${{ matrix.plans.key }}.yaml
-          sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' omnistrate.${{ matrix.plans.key }}.yaml
-          sed -i 's/$FalkorDBNodeImage/falkordb\/falkordb-node:${{ github.ref_name }}/g' omnistrate.${{ matrix.plans.key }}.yaml
+          sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBNodeImage/falkordb\/falkordb-node:${{ github.ref_name }}/g' ${{ matrix.plans.file }}
     
+      - name: Upload yaml to artifacts
+        if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.plans.file }}
+          path: ${{ matrix.plans.file }}
+
+
       - name: Update Omnistrate plan
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
         uses: ./.github/actions/update-omnistrate-plan

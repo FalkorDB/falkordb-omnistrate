@@ -243,6 +243,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   fi
 
   redis-server $NODE_CONF_FILE --logfile $FALKORDB_LOG_FILE_PATH &
+  falkordb_pid=$!
   tail -F $FALKORDB_LOG_FILE_PATH &
 
   sleep 10
@@ -328,6 +329,7 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
   fi
 
   redis-server $SENTINEL_CONF_FILE --sentinel --logfile $SENTINEL_LOG_FILE_PATH &
+  sentinel_pid=$!
   tail -F $SENTINEL_LOG_FILE_PATH &
 
   sleep 10
@@ -351,6 +353,7 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://$NODE_HOST_IP:$NODE_PORT"; fi)
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url &
+  redis_exporter_pid=$!
 fi
 
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
@@ -358,6 +361,7 @@ if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   if [ -f /usr/local/bin/healthcheck ]; then
     echo "Starting Healthcheck"
     healthcheck &
+    healthcheck_pid=$!
   else
     echo "Healthcheck binary not found"
   fi
@@ -366,3 +370,42 @@ fi
 while true; do
   sleep 1
 done
+
+
+
+
+# Handle signals
+
+handle_sigterm() {
+  echo "Caught SIGTERM"
+  echo "Stopping FalkorDB"
+
+  if  [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
+    kill -TERM $falkordb_pid
+  fi
+
+  if [[ $RUN_SENTINEL -eq 1 && ! -z $sentinel_pid ]]; then
+    kill -TERM $sentinel_pid
+  fi
+
+  if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
+    kill -TERM $redis_exporter_pid
+  fi
+
+  if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $healthcheck_pid ]]; then
+    kill -TERM $healthcheck_pid
+  fi
+
+  if [[ ! -z $falkordb_pid ]]; then
+    wait $falkordb_pid
+  fi
+
+  if [[ ! -z $sentinel_pid ]]; then
+    wait $sentinel_pid
+  fi
+
+}
+
+trap handle_sigterm SIGTERM
+
+wait $falkordb_pid

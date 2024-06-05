@@ -29,6 +29,17 @@ API_SIGN_IN_PATH = os.getenv(
 )
 SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID", "sub-bHEl5iUoPd")
 
+REF_NAME = os.getenv("REF_NAME", None)
+if REF_NAME is not None:
+    if len(REF_NAME) > 50:
+        # Replace the second occurrence of REF_NAME with the first 50 characters of REF_NAME
+        API_PATH = f"customer-hosted/{REF_NAME[:50]}".join(
+            API_PATH.split(f"customer-hosted/{REF_NAME}")
+        )
+        API_FAILOVER_PATH = f"customer-hosted/{REF_NAME[:50]}".join(
+            API_FAILOVER_PATH.split(f"customer-hosted/{REF_NAME}")
+        )
+
 
 def test_free():
 

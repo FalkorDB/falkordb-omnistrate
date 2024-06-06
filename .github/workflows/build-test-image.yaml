@@ -55,9 +55,11 @@ jobs:
       matrix:
         plans:
           - service-name: FalkorDB
+            plan-name: FalkorDB Free
             file: omnistrate.free.yaml
             key: free
           - service-name: FalkorDB
+            plan-name: FalkorDB Pro
             file: omnistrate.pro.yaml
             key: pro
     steps:
@@ -70,6 +72,7 @@ jobs:
           sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBNodeImage/falkordb\/falkordb-node:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
+          sed -i 's/${{ matrix.plans.plan-name }}/${{ github.ref_name }}/g' ${{ matrix.plans.file }}
 
       - name: Upload yaml as artifact
         uses: actions/upload-artifact@v2

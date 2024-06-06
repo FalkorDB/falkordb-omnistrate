@@ -50,6 +50,8 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
+      max-parallel: 1
       matrix:
         plans:
           - service-name: FalkorDB

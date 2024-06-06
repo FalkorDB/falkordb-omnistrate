@@ -55,7 +55,7 @@ jobs:
           - service-name: FalkorDB
             file: omnistrate.free.yaml
             key: free
-          - service-: FalkorDB
+          - service-name: FalkorDB
             file: omnistrate.pro.yaml
             key: pro
     steps:

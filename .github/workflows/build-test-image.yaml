@@ -49,33 +49,31 @@ jobs:
   omnistrate-update-plans:
     needs: build-and-push
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        plans:
+          - service-name: FalkorDB
+            file: omnistrate.free.yaml
+            key: free
+          - service-: FalkorDB
+            file: omnistrate.pro.yaml
+            key: pro
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
       - name: Replace Variables
         run: |
-          sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' omnistrate.free.yaml
-          sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' omnistrate.free.yaml
-          sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' omnistrate.free.yaml
-          sed -i 's/$FalkorDBNodeImage/falkordb\/falkordb-node:dev-${{ github.event.head_commit.id }}/g' omnistrate.free.yaml
-          sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' omnistrate.pro.yaml
-          sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' omnistrate.pro.yaml
-          sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' omnistrate.pro.yaml
-          sed -i 's/$FalkorDBNodeImage/falkordb\/falkordb-node:dev-${{ github.event.head_commit.id }}/g' omnistrate.pro.yaml
-
-      - name: Merge omnistrate composes
-        run: |
-          sudo add-apt-repository ppa:rmescandon/yq 
-          sudo apt update 
-          sudo apt install yq -y
-          yq ea '. as $item ireduce ({}; . * $item )' omnistrate.free.yaml omnistrate.pro.yaml | sed 's/FalkorDB Pro/${{ github.ref_name == 'main' && 'FalkorDB Internal' || github.ref_name }}/' > merged.yaml
+          sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBNodeImage/falkordb\/falkordb-node:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
 
       - name: Upload yaml as artifact
         uses: actions/upload-artifact@v2
         with:
-          name: merged.yaml
-          path: merged.yaml
+          name: ${{ matrix.plans.file }}
+          path: ${{ matrix.plans.file }}
 
       - name: Update Omnistrate plan
         uses: ./.github/actions/update-omnistrate-plan
@@ -83,8 +81,9 @@ jobs:
         with:
           username: ${{ secrets.OMNISTRATE_USERNAME }}
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
-          file: merged.yaml
-          service-name: "FalkorDB Internal"
+          file: ${{ matrix.plans.file }}
+          service-name: ${{ matrix.plans.service-name }}
+          environment: testing
 
   test:
     needs: omnistrate-update-plans
@@ -99,8 +98,8 @@ jobs:
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
             apiVersion: 2022-09-01-00
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/free
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-f
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-multi-tenancy/free
+            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-multi-tenancy/node-f
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             extraParams: ""
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence
@@ -108,8 +107,8 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-s
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
+            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/node-s
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <tls>
             extraParams: "e2-custom-4-10240 30 false"
@@ -118,8 +117,8 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
+            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <replica_count> <tls>
             extraParams: "e2-custom-4-10240 30 2 false"
@@ -128,8 +127,8 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/multi-Zone
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/multi-Zone
+            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <replica_count> <tls>
             extraParams: "e2-custom-4-10240 30 2 false"
@@ -138,8 +137,8 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-s
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
+            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/node-s
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <tls>
             extraParams: "e2-custom-4-10240 30 true"
@@ -148,18 +147,18 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
+            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <replica_count> <tls>
             extraParams: "e2-custom-4-10240 30 2 true"
-          - name:  PRO/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
+          - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
             testFile: test_multi_zone.py
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/multi-Zone
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/multi-Zone
+            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <replica_count> <tls>
             extraParams: "e2-custom-4-10240 30 2 true"
@@ -168,7 +167,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <instance_type_new> <tls>
             extraParams: "e2-custom-4-10240 30 e2-custom-8-10240 false"
@@ -177,11 +176,11 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <instance_type_new> <tls>
             extraParams: "e2-custom-4-10240 30 e2-custom-8-10240 false"
-     
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3

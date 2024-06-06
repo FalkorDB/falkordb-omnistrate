@@ -14,6 +14,9 @@ inputs:
   service-name:
     description: "The name of the service to update"
     required: true
+  environment:
+    description: "The environment to update the plan with"
+    required: true
 
 runs:
   using: docker
@@ -21,4 +24,4 @@ runs:
   entrypoint: /bin/sh
   args:
     - -c
-    - "/usr/local/bin/omnistrate-ctl login --email ${{ inputs.username }} --password ${{ inputs.password }} && /usr/local/bin/omnistrate-ctl build -f /github/workspace/${{ inputs.file }} -n '${{ inputs.service-name }}' --release-as-preferred"
+    - "/usr/local/bin/omnistrate-ctl login --email ${{ inputs.username }} --password ${{ inputs.password }} && /usr/local/bin/omnistrate-ctl build -f /github/workspace/${{ inputs.file }} -n '${{ inputs.service-name }}' --environment '${{ inputs.environment }}' --release-as-preferred"

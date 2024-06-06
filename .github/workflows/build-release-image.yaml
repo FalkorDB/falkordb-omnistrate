@@ -91,3 +91,4 @@ jobs:
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
           file: ${{ matrix.plans.file }}
           service-name: ${{ matrix.plans.name }}
+          environment: dev

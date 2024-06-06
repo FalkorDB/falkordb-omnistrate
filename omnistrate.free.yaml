@@ -153,9 +153,9 @@ services:
     deploy:
       resources:
         limits:
-          cpu: '0.5'
+          cpus: '0.5'
           memory: 100M
-        requests:
-          cpu: '0.1'
+        reservations:
+          cpus: '0.1'
           memory: 100M
 

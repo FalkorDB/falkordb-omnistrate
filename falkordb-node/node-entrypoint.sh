@@ -12,7 +12,7 @@ NODE_INDEX=${NODE_INDEX:-0}
 INSTANCE_TYPE=${INSTANCE_TYPE:-''}
 PERSISTENCE_RDB_CONFIG_INPUT=${PERSISTENCE_RDB_CONFIG_INPUT:-'low'}
 PERSISTENCE_RDB_CONFIG=${PERSISTENCE_RDB_CONFIG:-'86400 1 21600 100 3600 10000'}
-PERSISTENCE_AOF_CONFIG=${PERSISTENCE_AOF_CONFIG:-'no'}
+PERSISTENCE_AOF_CONFIG=${PERSISTENCE_AOF_CONFIG:-'everysec'}
 
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
@@ -34,8 +34,13 @@ DEBUG=${DEBUG:-0}
 REPLACE_NODE_CONF=${REPLACE_NODE_CONF:-0}
 REPLACE_SENTINEL_CONF=${REPLACE_SENTINEL_CONF:-0}
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
+SAVE_LOGS_TO_FILE=${SAVE_LOGS_TO_FILE:-1}
+LOG_LEVEL=${LOG_LEVEL:-notice}
 
+DATE_NOW=$(date +"%Y%m%d%H%M%S")
 
+FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo ""; fi)
+SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 
@@ -58,7 +63,7 @@ get_self_host_ip() {
 
 get_memory_limit() {
 
-  memory_limit_instance_type_map="{\"e2-custom-small-1024\":\"100000000\",\"e2-small\":\"840000000\",\"e2-medium\": \"23000000000\",\"e2-custom-2-6144\":\"4000000000\",\"e2-custom-4-10240\": \"7590000000\",\"e2-custom-8-18432\": \"15290000000\",\"e2-custom-16-34816\":\"31120000000\"}"
+  memory_limit_instance_type_map="{\"e2-custom-small-1024\":\"100000000\",\"e2-small\":\"840000000\",\"e2-medium\": \"23000000000\",\"e2-custom-2-6144\":\"4000000000\",\"e2-custom-4-10240\": \"7590000000\",\"e2-custom-8-18432\": \"15290000000\",\"e2-custom-16-34816\":\"31120000000\",\"e2-custom-32-69632\":\"63200000000\"}"
 
   if [[ -z $INSTANCE_TYPE ]]; then
     echo "INSTANCE_TYPE is not set"
@@ -166,7 +171,6 @@ is_replica() {
 }
 
 set_persistence_config() {
-  echo "Setting persistence config"
   if [[ $PERSISTENCE_RDB_CONFIG_INPUT == "low" ]]; then
     PERSISTENCE_RDB_CONFIG='86400 1 21600 100 3600 10000'
   elif [[ $PERSISTENCE_RDB_CONFIG_INPUT == "medium" ]]; then
@@ -191,6 +195,16 @@ if [ ! -f $SENTINEL_CONF_FILE ] || [ "$REPLACE_SENTINEL_CONF" -eq "1" ]; then
   cp /falkordb/sentinel.conf $SENTINEL_CONF_FILE
 fi
 
+# Create log files if they don't exist
+if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
+  if [ "$RUN_NODE" -eq "1" ]; then
+    touch $FALKORDB_LOG_FILE_PATH
+  fi
+  if [ "$RUN_SENTINEL" -eq "1" ]; then
+    touch $SENTINEL_LOG_FILE_PATH
+  fi
+fi
+
 set_persistence_config
 get_self_host_ip
 
@@ -205,6 +219,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" $NODE_CONF_FILE
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
+  sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
   echo "dir $DATA_DIR" >> $NODE_CONF_FILE
 
   is_replica
@@ -227,7 +242,9 @@ if [ "$RUN_NODE" -eq "1" ]; then
     echo "port $NODE_PORT" >> $NODE_CONF_FILE
   fi
 
-  redis-server $NODE_CONF_FILE &
+  redis-server $NODE_CONF_FILE --logfile $FALKORDB_LOG_FILE_PATH &
+  falkordb_pid=$!
+  tail -F $FALKORDB_LOG_FILE_PATH &
 
   sleep 10
 
@@ -271,16 +288,19 @@ if [ "$RUN_NODE" -eq "1" ]; then
   fi
 
   # Set persistence config
-  echo "Setting persistence config"
-  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET save $PERSISTENCE_RDB_CONFIG
+  echo "Setting persistence config: CONFIG SET save '$PERSISTENCE_RDB_CONFIG'"
+  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET save "$PERSISTENCE_RDB_CONFIG"
   
   if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then
-    echo "Setting AOF persistence"
+    echo "Setting AOF persistence: $PERSISTENCE_AOF_CONFIG"
     redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET appendonly yes
     redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET appendfsync $PERSISTENCE_AOF_CONFIG
   fi
 
 
+  # Config rewrite
+  echo "Rewriting config"
+  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
 fi
 
 
@@ -288,6 +308,7 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
+  sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $SENTINEL_CONF_FILE
 
   # When LB is in place, change external dns to internal ip
   sed -i "s/\$SENTINEL_HOST/$NODE_EXTERNAL_DNS/g" $SENTINEL_CONF_FILE
@@ -307,7 +328,9 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
     echo "sentinel resolve-hostnames yes" >> $SENTINEL_CONF_FILE
   fi
 
-  redis-server $SENTINEL_CONF_FILE --sentinel &
+  redis-server $SENTINEL_CONF_FILE --sentinel --logfile $SENTINEL_LOG_FILE_PATH &
+  sentinel_pid=$!
+  tail -F $SENTINEL_LOG_FILE_PATH &
 
   sleep 10
 
@@ -330,6 +353,7 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://$NODE_HOST_IP:$NODE_PORT"; fi)
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url &
+  redis_exporter_pid=$!
 fi
 
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
@@ -337,6 +361,7 @@ if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   if [ -f /usr/local/bin/healthcheck ]; then
     echo "Starting Healthcheck"
     healthcheck &
+    healthcheck_pid=$!
   else
     echo "Healthcheck binary not found"
   fi
@@ -345,3 +370,42 @@ fi
 while true; do
   sleep 1
 done
+
+
+
+
+# Handle signals
+
+handle_sigterm() {
+  echo "Caught SIGTERM"
+  echo "Stopping FalkorDB"
+
+  if  [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
+    kill -TERM $falkordb_pid
+  fi
+
+  if [[ $RUN_SENTINEL -eq 1 && ! -z $sentinel_pid ]]; then
+    kill -TERM $sentinel_pid
+  fi
+
+  if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
+    kill -TERM $redis_exporter_pid
+  fi
+
+  if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $healthcheck_pid ]]; then
+    kill -TERM $healthcheck_pid
+  fi
+
+  if [[ ! -z $falkordb_pid ]]; then
+    wait $falkordb_pid
+  fi
+
+  if [[ ! -z $sentinel_pid ]]; then
+    wait $sentinel_pid
+  fi
+
+}
+
+trap handle_sigterm SIGTERM
+
+wait $falkordb_pid

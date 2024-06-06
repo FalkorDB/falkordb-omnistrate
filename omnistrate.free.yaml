@@ -9,6 +9,8 @@ x-omnistrate-service-plan:
       GcpProjectNumber: '$GcpProjectNumber'   
       GcpServiceAccountEmail: '$GcpServiceAccountEmail'
 
+x-omnistrate-integrations:
+
 services:
 
 # Free
@@ -67,7 +69,7 @@ services:
 
   node-f:
     x-omnistrate-mode-internal: true
-    image: falkordb/falkordb-node:v0.0.45
+    image: $FalkorDBNodeImage
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:
@@ -148,3 +150,5 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+    x-omnistrate-actionhooks:
+      

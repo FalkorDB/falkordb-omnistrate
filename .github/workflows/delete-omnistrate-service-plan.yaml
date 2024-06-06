@@ -1,0 +1,25 @@
+name: Delete Omnistrate Service Plan
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [closed]
+  delete:
+
+jobs:
+  delete-service-plan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Delete Service Plan
+        uses: ./.github/actions/delete-omnistrate-service-plan
+        continue-on-error: true
+        with:
+          username: ${{ secrets.OMNISTRATE_USERNAME }}
+          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          service-id: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          environment-id: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}
+          # The clsosed PR's ref name will be the product tier name
+          product-tier-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}

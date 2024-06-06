@@ -9,10 +9,14 @@ on:
 jobs:
   delete-service-plan:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        plans:
+          - tier-name: free-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - tier-name: pro-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
       - name: Delete Service Plan
         uses: ./.github/actions/delete-omnistrate-service-plan
         continue-on-error: true
@@ -22,4 +26,4 @@ jobs:
           service-id: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
           environment-id: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}
           # The clsosed PR's ref name will be the product tier name
-          product-tier-name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          product-tier-name: ${{ matrix.plans.tier-name }}

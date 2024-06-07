@@ -171,7 +171,7 @@ jobs:
             apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <instance_type_new> <tls>
-            extraParams: "e2-custom-4-8192 30 e2-custom-8-10240 false"
+            extraParams: "e2-custom-4-8192 30 e2-custom-8-16384 false"
           - name: PRO/SingleZone - GCP/us-central1 - Update Memory
             testFile: test_update_memory.py
             cloudProvider: gcp
@@ -180,7 +180,7 @@ jobs:
             apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/${{ github.ref_name }}-customer-hosted/${{ github.ref_name }}-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <instance_type_new> <tls>
-            extraParams: "e2-custom-4-8192 30 e2-custom-8-10240 false"
+            extraParams: "e2-custom-4-8192 30 e2-custom-8-16384 false"
      
     steps:
       - name: Checkout

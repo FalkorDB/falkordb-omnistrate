@@ -408,4 +408,6 @@ handle_sigterm() {
 
 trap handle_sigterm SIGTERM
 
-wait $falkordb_pid
+while true; do
+  sleep 1
+done

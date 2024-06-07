@@ -367,13 +367,6 @@ if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   fi
 fi
 
-while true; do
-  sleep 1
-done
-
-
-
-
 # Handle signals
 
 handle_sigterm() {

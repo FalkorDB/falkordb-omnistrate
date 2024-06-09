@@ -2,7 +2,7 @@ version: "3.9"
 
 x-omnistrate-service-plan:
   name: 'FalkorDB Free'
-  tenancyType: 'OMNISTRATE_DEDICATED_TENANCY'
+  tenancyType: 'OMNISTRATE_MULTI_TENANCY'
   deployment:
     hostedDeployment:
       GcpProjectId: '$GcpProjectId'
@@ -10,11 +10,10 @@ x-omnistrate-service-plan:
       GcpServiceAccountEmail: '$GcpServiceAccountEmail'
 
 x-omnistrate-integrations:
+  - omnistrateMetrics:
 
 services:
-
 # Free
-
   Free:
     x-omnistrate-mode-internal: false
     image: omnistrate/noop
@@ -150,5 +149,12 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
-    x-omnistrate-actionhooks:
-      
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 100M
+        reservations:
+          cpus: '0.1'
+          memory: 100M
+

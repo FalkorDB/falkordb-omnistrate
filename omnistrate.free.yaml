@@ -10,11 +10,10 @@ x-omnistrate-service-plan:
       GcpServiceAccountEmail: '$GcpServiceAccountEmail'
 
 x-omnistrate-integrations:
+  - omnistrateMetrics:
 
 services:
-
 # Free
-
   Free:
     x-omnistrate-mode-internal: false
     image: omnistrate/noop

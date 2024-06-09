@@ -54,6 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         plans:
           - name: FalkorDB
@@ -91,3 +92,4 @@ jobs:
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
           file: ${{ matrix.plans.file }}
           service-name: ${{ matrix.plans.name }}
+          environment: dev

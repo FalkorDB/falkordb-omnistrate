@@ -122,12 +122,12 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-custom-4-10240
+        defaultValue: e2-custom-4-8192
         options:
-          - e2-custom-4-10240
-          - e2-custom-8-18432
-          - e2-custom-16-34816
-          - e2-custom-32-69632
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
         parameterDependencyMap:
           node-s: nodeInstanceType
       - key: enableTLS
@@ -159,39 +159,6 @@ services:
         export: false
         parameterDependencyMap:
           node-s: falkordbPassword
-      - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
-        name: Disk Size (in Gi)
-        type: String
-        defaultValue: "30"
-        modifiable: false
-        required: true
-        export: true
-        options:
-          - "30"
-          - "40"
-          - "50"
-          - "60"
-          - "70"
-          - "80"
-          - "90"
-          - "100"
-          - "120"
-          - "140"
-          - "160"
-          - "180"
-          - "200"
-          - "220"
-          - "240"
-          - "260"
-          - "280"
-          - "300"
-          - "350"
-          - "400"
-          - "450"
-          - "500"
-        parameterDependencyMap:
-          node-s: storageSize
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -242,12 +209,12 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-custom-4-10240
+        defaultValue: e2-custom-4-8192
         options:
-          - e2-custom-4-10240
-          - e2-custom-8-18432
-          - e2-custom-16-34816
-          - e2-custom-32-69632
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -271,37 +238,6 @@ services:
         modifiable: false
         required: true
         export: false
-      - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
-        name: Disk Size (in Gi)
-        type: String
-        defaultValue: "30"
-        modifiable: false
-        required: true
-        export: true
-        options:
-          - "30"
-          - "40"
-          - "50"
-          - "60"
-          - "70"
-          - "80"
-          - "90"
-          - "100"
-          - "120"
-          - "140"
-          - "160"
-          - "180"
-          - "200"
-          - "220"
-          - "240"
-          - "260"
-          - "280"
-          - "300"
-          - "350"
-          - "400"
-          - "450"
-          - "500"
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -332,7 +268,7 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
-            instanceStorageSizeGiAPIParam: storageSize
+            instanceStorageSizeGi: 200
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=0
@@ -390,12 +326,12 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-custom-4-10240
+        defaultValue: e2-custom-4-8192
         options:
-          - e2-custom-4-10240
-          - e2-custom-8-18432
-          - e2-custom-16-34816
-          - e2-custom-32-69632
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
         parameterDependencyMap:
           node-sz: nodeInstanceType
       - key: numReplicas
@@ -439,39 +375,6 @@ services:
         export: false
         parameterDependencyMap:
           node-sz: falkordbPassword
-      - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
-        name: Disk Size (in Gi)
-        type: String
-        defaultValue: "30"
-        modifiable: false
-        required: true
-        export: true
-        options:
-          - "30"
-          - "40"
-          - "50"
-          - "60"
-          - "70"
-          - "80"
-          - "90"
-          - "100"
-          - "120"
-          - "140"
-          - "160"
-          - "180"
-          - "200"
-          - "220"
-          - "240"
-          - "260"
-          - "280"
-          - "300"
-          - "350"
-          - "400"
-          - "450"
-          - "500"
-        parameterDependencyMap:
-          node-sz: storageSize
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -522,12 +425,12 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-custom-4-10240
+        defaultValue: e2-custom-4-8192
         options:
-          - e2-custom-4-10240
-          - e2-custom-8-18432
-          - e2-custom-16-34816
-          - e2-custom-32-69632
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -565,37 +468,6 @@ services:
         export: false
         parameterDependencyMap:
           sentinel-sz: falkordbPassword
-      - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
-        name: Disk Size (in Gi)
-        type: String
-        defaultValue: "30"
-        modifiable: false
-        required: true
-        export: true
-        options:
-          - "30"
-          - "40"
-          - "50"
-          - "60"
-          - "70"
-          - "80"
-          - "90"
-          - "100"
-          - "120"
-          - "140"
-          - "160"
-          - "180"
-          - "200"
-          - "220"
-          - "240"
-          - "260"
-          - "280"
-          - "300"
-          - "350"
-          - "400"
-          - "450"
-          - "500"
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -626,7 +498,7 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
-            instanceStorageSizeGiAPIParam: storageSize
+            instanceStorageSizeGi: 200
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -772,12 +644,12 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-custom-4-10240
+        defaultValue: e2-custom-4-8192
         options:
-          - e2-custom-4-10240
-          - e2-custom-8-18432
-          - e2-custom-16-34816
-          - e2-custom-32-69632
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
         parameterDependencyMap:
           node-mz: nodeInstanceType
       - key: numReplicas
@@ -821,39 +693,6 @@ services:
         export: false
         parameterDependencyMap:
           node-mz: falkordbPassword
-      - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
-        name: Disk Size (in Gi)
-        type: String
-        defaultValue: "30"
-        modifiable: false
-        required: true
-        export: true
-        options:
-          - "30"
-          - "40"
-          - "50"
-          - "60"
-          - "70"
-          - "80"
-          - "90"
-          - "100"
-          - "120"
-          - "140"
-          - "160"
-          - "180"
-          - "200"
-          - "220"
-          - "240"
-          - "260"
-          - "280"
-          - "300"
-          - "350"
-          - "400"
-          - "450"
-          - "500"
-        parameterDependencyMap:
-          node-mz: storageSize
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -904,12 +743,12 @@ services:
         modifiable: false
         required: true
         export: true
-        defaultValue: e2-custom-4-10240
+        defaultValue: e2-custom-4-8192
         options:
-          - e2-custom-4-10240
-          - e2-custom-8-18432
-          - e2-custom-16-34816
-          - e2-custom-32-69632
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -947,37 +786,6 @@ services:
         export: false
         parameterDependencyMap:
           sentinel-mz: falkordbPassword
-      - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
-        name: Disk Size (in Gi)
-        type: String
-        defaultValue: "30"
-        modifiable: false
-        required: true
-        export: true
-        options:
-          - "30"
-          - "40"
-          - "50"
-          - "60"
-          - "70"
-          - "80"
-          - "90"
-          - "100"
-          - "120"
-          - "140"
-          - "160"
-          - "180"
-          - "200"
-          - "220"
-          - "240"
-          - "260"
-          - "280"
-          - "300"
-          - "350"
-          - "400"
-          - "450"
-          - "500"
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -1008,7 +816,7 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
-            instanceStorageSizeGiAPIParam: storageSize
+            instanceStorageSizeGi: 200
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1

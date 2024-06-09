@@ -372,6 +372,7 @@ remove_master_from_group() {
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
     echo "Removing master from sentinel"
     redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL failover $MASTER_NAME
+    tries=5
     while true; do
       master_info=$(redis-cli -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING info replication | grep role)
       if [[ $master_info == *"role:master"* ]]; then
@@ -381,11 +382,18 @@ remove_master_from_group() {
         echo "Master is down"
         break
       fi
+      tries=$((tries-1))
+      if [[ $tries -eq 0 ]]; then
+        echo "Master did not failover"
+        break
+      fi
     done
   fi
 }
 
 get_sentinels_list() {
+  echo "Getting sentinels list"
+  
   sentinels_list=$(redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL sentinels $MASTER_NAME)
   echo $sentinels_list > /tmp/sentinels_list.txt
   sentinels_list=$(IFS=' ' read -r -a sentinels <<< $(cat /tmp/sentinels_list.txt))
@@ -401,6 +409,8 @@ get_sentinels_list() {
 }
 
 send_reset_to_sentinels() {
+  echo "Sending reset to sentinels"
+   
   sentinels_list=$1
   i=0
   for sentinel in $sentinels_list; do

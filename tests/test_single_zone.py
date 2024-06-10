@@ -108,6 +108,7 @@ def test_failover(instance: OmnistrateInstance):
     db_resource = list(
         filter(lambda resource: resource["id"].startswith("node-sz"), resources)
     )
+    db_resource.sort(key=lambda resource: resource["id"])
     sentinel_resource = next(
         (
             resource

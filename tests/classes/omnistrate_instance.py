@@ -310,8 +310,7 @@ class OmnistrateInstance:
             if (
                 "clusterEndpoint" in resources[key]
                 and len(resources[key]["clusterEndpoint"]) > 0
-                and "nodes" in resources[key]
-                and len(resources[key]["nodes"]) > 0
+                and "@streamer" not in resources[key]["clusterEndpoint"]
             ):
                 return {
                     "endpoint": resources[key]["clusterEndpoint"],

@@ -120,7 +120,7 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
           aws:
-            instanceStorageType: AWS::EBS::gp2
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 10
 
     environment:

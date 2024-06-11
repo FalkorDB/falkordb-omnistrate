@@ -280,7 +280,7 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
           aws:
-            instanceStorageType: AWS::EBS::gp2
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
     environment:
       - RUN_NODE=1
@@ -521,7 +521,7 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
           aws:
-            instanceStorageType: AWS::EBS::gp2
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
     environment:
       - RUN_NODE=1
@@ -620,7 +620,7 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
           aws:
-            instanceStorageType: AWS::EBS::gp2
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 10
     x-omnistrate-capabilities:
       enableMultiZone: false
@@ -853,7 +853,7 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
           aws:
-            instanceStorageType: AWS::EBS::gp2
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
     environment:
       - RUN_NODE=1
@@ -952,7 +952,7 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
           aws:
-            instanceStorageType: AWS::EBS::gp2
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 10
     x-omnistrate-capabilities:
       enableMultiZone: false

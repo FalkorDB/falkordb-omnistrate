@@ -16,10 +16,9 @@ env:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform == 'linux/amd64' && 'ubuntu-latest' || 'ARM64' }}
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
         platform: [linux/amd64, linux/arm64]
     steps:

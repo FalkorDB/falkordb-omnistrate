@@ -100,7 +100,7 @@ jobs:
             $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
 
   omnistrate-update-plans:
-    needs: build-and-push
+    needs: merge
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

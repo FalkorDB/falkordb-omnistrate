@@ -136,7 +136,7 @@ services:
       - TLS=false
       - FALKORDB_USER=$var.falkordbUser
       - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.sha256($sys.id, 'bWQeQF72jMFPr')
+      - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=e2-custom-small-1024
       - SECURITY_CONTEXT_USER_ID=0

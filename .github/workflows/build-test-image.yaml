@@ -74,7 +74,7 @@ jobs:
           sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
           sed -i 's/$AwsAccountId/${{ vars.AWS_ACCOUNT_ID }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$AwsBootstrapRoleAccountArn/${{ vars.AWS_BOOTSTRAP_ROLE_ACCOUNT_ARN }}/g' ${{ matrix.plans.file }}
+          sed -i 's|$AwsBootstrapRoleAccountArn|${{ vars.AWS_BOOTSTRAP_ROLE_ACCOUNT_ARN }}|g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBNodeImage/falkordb\/falkordb-node:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
           sed -i 's/${{ matrix.plans.plan-name }}/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
 
@@ -94,13 +94,13 @@ jobs:
           service-name: ${{ matrix.plans.service-name }}
           environment: testing
 
-  test:
+  tests:
     needs: omnistrate-update-plans
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        instances:
+        tests:
           ###################### GCP ######################
           - name: Free - GCP/us-central1 - Failover & Persistence
             testFile: test_free.py
@@ -300,16 +300,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r ./tests/requirements.txt
 
-      - name: ${{ matrix.instances.name }}
+      - name: ${{ matrix.tests.name }}
         env:
-          CLOUD_PROVIDER: ${{ matrix.instances.cloudProvider }}
-          CLOUD_REGION: ${{ matrix.instances.cloudRegion }}
-          SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
-          API_VERSION: ${{ matrix.instances.apiVersion }}
-          API_PATH: ${{ matrix.instances.apiPath }}
-          API_FAILOVER_PATH: ${{ matrix.instances.apiFailoverPath }}
-          API_SIGN_IN_PATH: ${{ matrix.instances.apiSignInPath }}
-          REF_NAME: ${{ matrix.instances.tierName }}
-          extraParams: ${{ matrix.instances.extraParams }}
+          CLOUD_PROVIDER: ${{ matrix.tests.cloudProvider }}
+          CLOUD_REGION: ${{ matrix.tests.cloudRegion }}
+          SUBSCRIPTION_ID: ${{ matrix.tests.subscriptionId }}
+          API_VERSION: ${{ matrix.tests.apiVersion }}
+          API_PATH: ${{ matrix.tests.apiPath }}
+          API_FAILOVER_PATH: ${{ matrix.tests.apiFailoverPath }}
+          API_SIGN_IN_PATH: ${{ matrix.tests.apiSignInPath }}
+          REF_NAME: ${{ matrix.tests.tierName }}
+          extraParams: ${{ matrix.tests.extraParams }}
         run: |
-          python ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} ${{ env.extraParams }}
+          python ./tests/${{ matrix.tests.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} ${{ env.extraParams }}

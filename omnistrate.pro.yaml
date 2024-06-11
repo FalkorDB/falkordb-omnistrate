@@ -8,6 +8,8 @@ x-omnistrate-service-plan:
       GcpProjectId: "$GcpProjectId"
       GcpProjectNumber: "$GcpProjectNumber"
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
+      AwsAccountId: "$AwsAccountId"
+      AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
 
 x-omnistrate-load-balancer:
   tcp:
@@ -128,6 +130,10 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - c6g.xlarge
+          - c6g.2xlarge
+          - c6g.4xlarge
+          - c6g.8xlarge
         parameterDependencyMap:
           node-s: nodeInstanceType
       - key: enableTLS
@@ -201,6 +207,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -215,6 +223,10 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - c6g.xlarge
+          - c6g.2xlarge
+          - c6g.4xlarge
+          - c6g.8xlarge
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -332,6 +344,10 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - c6g.xlarge
+          - c6g.2xlarge
+          - c6g.4xlarge
+          - c6g.8xlarge
         parameterDependencyMap:
           node-sz: nodeInstanceType
       - key: numReplicas
@@ -417,6 +433,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -431,6 +449,10 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - c6g.xlarge
+          - c6g.2xlarge
+          - c6g.4xlarge
+          - c6g.8xlarge
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -650,6 +672,10 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - c6g.xlarge
+          - c6g.2xlarge
+          - c6g.4xlarge
+          - c6g.8xlarge
         parameterDependencyMap:
           node-mz: nodeInstanceType
       - key: numReplicas
@@ -735,6 +761,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -749,6 +777,10 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - c6g.xlarge
+          - c6g.2xlarge
+          - c6g.4xlarge
+          - c6g.8xlarge
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas

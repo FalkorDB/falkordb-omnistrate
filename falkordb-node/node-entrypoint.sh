@@ -44,6 +44,102 @@ SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/
 NODE_CONF_FILE=$DATA_DIR/node.conf
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 
+remove_master_from_group() {
+  # If it's master and sentinel is running, trigger and wait for failover
+  if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
+    echo "Removing master from sentinel"
+    redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL failover $MASTER_NAME
+    tries=5
+    while true; do
+      master_info=$(redis-cli -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING info replication | grep role)
+      if [[ $master_info == *"role:master"* ]]; then
+        echo "Master is still alive"
+        sleep 2
+      else
+        echo "Master is down"
+        break
+      fi
+      tries=$((tries-1))
+      if [[ $tries -eq 0 ]]; then
+        echo "Master did not failover"
+        break
+      fi
+    done
+  fi
+}
+
+get_sentinels_list() {
+  echo "Getting sentinels list"
+  
+  sentinels_list=$(redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL sentinels $MASTER_NAME)
+  echo $sentinels_list > /tmp/sentinels_list.txt
+  sentinels_list=$(IFS=' ' read -r -a sentinels <<< $(cat /tmp/sentinels_list.txt))
+  sentinels_count=$(echo -n ${sentinels[@]} | grep -Fo name | wc -l)
+  # Parse sentinels into an array of "{ip} {port}"
+  sentinels_list=''
+  for ((i=0; i<$sentinels_count; i++)); do
+    sentinel_ip=${sentinels[i*28+3]}
+    sentinel_port=${sentinels[i*28+5]}
+    sentinels_list="$sentinels_list $sentinel_ip:$sentinel_port "
+  done
+  return $sentinels_list
+}
+
+send_reset_to_sentinels() {
+  echo "Sending reset to sentinels"
+   
+  sentinels_list=$1
+  i=0
+  for sentinel in $sentinels_list; do
+    # Wait 30 seconds for the reset to take effect before sending the next reset
+    if [[ $i -gt 0 ]]; then
+      sleep 30
+    fi
+    sentinel_ip=$(echo ${sentinel//:/ } | awk '{print $1}')
+    sentinel_port=$(echo ${sentinel//:/ } | awk '{print $2}')
+    echo "Sending reset to $sentinel_ip:$sentinel_port"
+    redis-cli -h $sentinel_ip -p $sentinel_port -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL reset $MASTER_NAME
+  done
+}
+
+# Handle signals
+
+handle_sigterm() {
+  echo "Caught SIGTERM"
+  echo "Stopping FalkorDB"
+
+  sentinels_list=$(get_sentinels_list)
+
+  if  [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
+    remove_master_from_group
+    kill -TERM $falkordb_pid
+  fi
+
+  if [[ $RUN_SENTINEL -eq 1 && ! -z $sentinel_pid ]]; then
+    kill -TERM $sentinel_pid
+  fi
+
+  if [[ ! -z $falkordb_pid ]]; then
+    wait $falkordb_pid
+  fi
+
+  if [[ ! -z $sentinel_pid ]]; then
+    wait $sentinel_pid
+  fi
+
+  send_reset_to_sentinels $sentinels_list
+
+  if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
+    kill -TERM $redis_exporter_pid
+  fi
+
+  if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $healthcheck_pid ]]; then
+    kill -TERM $healthcheck_pid
+  fi
+}
+
+trap handle_sigterm SIGTERM
+
 log() {
   if [[ $DEBUG -eq 1 ]]; then
     echo $1
@@ -257,16 +353,16 @@ if [ "$RUN_NODE" -eq "1" ]; then
     if [[ $TLS == "true" ]]; then
       wait_until_node_host_resolves $NODE_HOST $NODE_PORT
       log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
-      redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM
-      if [[ $? -ne 0 ]]; then
-        echo "Could not add master to sentinel"
+      res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
+      if [[ $? -ne 0 || $res == *"ERR"* ]]; then
+        echo "Could not add master to sentinel: $res"
         exit 1
       fi
     else
       log "Master Name: $MASTER_NAME\nNode IP: $NODE_HOST_IP\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
-      redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST_IP $NODE_PORT $SENTINEL_QUORUM
-      if [[ $? -ne 0 ]]; then
-        echo "Could not add master to sentinel"
+      res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST_IP $NODE_PORT $SENTINEL_QUORUM)
+      if [[ $? -ne 0 || $res == *"ERR"* ]]; then
+        echo "Could not add master to sentinel: $res"
         exit 1
       fi
     fi
@@ -367,101 +463,6 @@ if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   fi
 fi
 
-remove_master_from_group() {
-  # If it's master and sentinel is running, trigger and wait for failover
-  if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
-    echo "Removing master from sentinel"
-    redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL failover $MASTER_NAME
-    tries=5
-    while true; do
-      master_info=$(redis-cli -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING info replication | grep role)
-      if [[ $master_info == *"role:master"* ]]; then
-        echo "Master is still alive"
-        sleep 2
-      else
-        echo "Master is down"
-        break
-      fi
-      tries=$((tries-1))
-      if [[ $tries -eq 0 ]]; then
-        echo "Master did not failover"
-        break
-      fi
-    done
-  fi
-}
-
-get_sentinels_list() {
-  echo "Getting sentinels list"
-  
-  sentinels_list=$(redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL sentinels $MASTER_NAME)
-  echo $sentinels_list > /tmp/sentinels_list.txt
-  sentinels_list=$(IFS=' ' read -r -a sentinels <<< $(cat /tmp/sentinels_list.txt))
-  sentinels_count=$(echo -n ${sentinels[@]} | grep -Fo name | wc -l)
-  # Parse sentinels into an array of "{ip} {port}"
-  sentinels_list=''
-  for ((i=0; i<$sentinels_count; i++)); do
-    sentinel_ip=${sentinels[i*28+3]}
-    sentinel_port=${sentinels[i*28+5]}
-    sentinels_list="$sentinels_list $sentinel_ip:$sentinel_port "
-  done
-  return $sentinels_list
-}
-
-send_reset_to_sentinels() {
-  echo "Sending reset to sentinels"
-   
-  sentinels_list=$1
-  i=0
-  for sentinel in $sentinels_list; do
-    # Wait 30 seconds for the reset to take effect before sending the next reset
-    if [[ $i -gt 0 ]]; then
-      sleep 30
-    fi
-    sentinel_ip=$(echo ${sentinel//:/ } | awk '{print $1}')
-    sentinel_port=$(echo ${sentinel//:/ } | awk '{print $2}')
-    echo "Sending reset to $sentinel_ip:$sentinel_port"
-    redis-cli -h $sentinel_ip -p $sentinel_port -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL reset $MASTER_NAME
-  done
-}
-
-# Handle signals
-
-handle_sigterm() {
-  echo "Caught SIGTERM"
-  echo "Stopping FalkorDB"
-
-  sentinels_list=$(get_sentinels_list)
-
-  if  [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
-    remove_master_from_group
-    kill -TERM $falkordb_pid
-  fi
-
-  if [[ $RUN_SENTINEL -eq 1 && ! -z $sentinel_pid ]]; then
-    kill -TERM $sentinel_pid
-  fi
-
-  if [[ ! -z $falkordb_pid ]]; then
-    wait $falkordb_pid
-  fi
-
-  if [[ ! -z $sentinel_pid ]]; then
-    wait $sentinel_pid
-  fi
-
-  send_reset_to_sentinels $sentinels_list
-
-  if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
-    kill -TERM $redis_exporter_pid
-  fi
-
-  if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $healthcheck_pid ]]; then
-    kill -TERM $healthcheck_pid
-  fi
-}
-
-trap handle_sigterm SIGTERM
 
 while true; do
   sleep 1

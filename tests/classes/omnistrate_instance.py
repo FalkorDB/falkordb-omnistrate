@@ -219,7 +219,7 @@ class OmnistrateInstance:
         """Update the instance type."""
 
         self.wait_for_ready()
-      
+
         headers = {
             "Content-Type": "application/json",
             "Authorization": "Bearer " + self._get_token(),
@@ -310,6 +310,7 @@ class OmnistrateInstance:
             if (
                 "clusterEndpoint" in resources[key]
                 and len(resources[key]["clusterEndpoint"]) > 0
+                and "@streamer" not in resources[key]["clusterEndpoint"]
             ):
                 return {
                     "endpoint": resources[key]["clusterEndpoint"],
@@ -343,7 +344,7 @@ class OmnistrateInstance:
         }
 
         while retries > 0:
-            
+
             response = requests.get(
                 self.api_url
                 + self.api_path
@@ -389,7 +390,7 @@ class OmnistrateInstance:
                 break
             except Exception as e:
                 print(f"Failed to connect to the master node: {e}")
-                retries -= 1    
+                retries -= 1
                 time.sleep(10)
 
         if self._connection is None:

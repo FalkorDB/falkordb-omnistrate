@@ -119,7 +119,7 @@ jobs:
             tier-name: pro-${{ github.ref_name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Replace Variables
         run: |
@@ -132,7 +132,7 @@ jobs:
           sed -i 's/${{ matrix.plans.plan-name }}/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
 
       - name: Upload yaml as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.plans.file }}
           path: ${{ matrix.plans.file }}
@@ -341,10 +341,10 @@ jobs:
             extraParams: "c6g.xlarge 30 c6g.2xlarge false"
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 

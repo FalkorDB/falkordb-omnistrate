@@ -369,7 +369,7 @@ class OmnistrateInstance:
         return response.json()["status"]
 
     def create_connection(
-        self, ssl: bool = False, force_reconnect: bool = False, retries=5
+        self, ssl: bool = False, force_reconnect: bool = False, retries=10
     ):
 
         if self._connection is not None and not force_reconnect:
@@ -391,7 +391,7 @@ class OmnistrateInstance:
             except Exception as e:
                 print(f"Failed to connect to the master node: {e}")
                 retries -= 1
-                time.sleep(10)
+                time.sleep(30)
 
         if self._connection is None:
             raise Exception("Failed to connect to the master node")

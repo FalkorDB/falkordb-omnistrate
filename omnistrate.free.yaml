@@ -32,7 +32,7 @@ services:
         type: String
         modifiable: true
         required: false
-        defaultValue: The best graph database in the world
+        defaultValue: Description
         export: true
       # - key: enableTLS
       #   description: Whether to enable TLS for the database
@@ -89,7 +89,7 @@ services:
         type: String
         modifiable: true
         required: false
-        defaultValue: The best graph database in the world
+        defaultValue: Description
         export: true
       - key: falkordbUser
         description: Choose a default username for your database

@@ -113,7 +113,7 @@ services:
         type: String
         modifiable: true
         required: false
-        defaultValue: The best graph database in the world
+        defaultValue: Description
         export: true
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.

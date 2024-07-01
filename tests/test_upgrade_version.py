@@ -32,7 +32,7 @@ parser.add_argument(
 parser.add_argument(
     "--subscription-id", required=False, default=os.getenv("SUBSCRIPTION_ID")
 )
-parser.add_argument("--ref-name", required=True, default=os.getenv("REF_NAME"))
+parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
 parser.add_argument("--product-tier-id", required=False)

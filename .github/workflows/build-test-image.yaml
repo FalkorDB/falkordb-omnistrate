@@ -196,6 +196,25 @@ jobs:
             apiSignInPath: 2022-09-01-00/resource-instance/user/signin
             # extraParams: <instance_size> <disk_size> <instance_type_new> <tls>
             extraParams: "e2-custom-4-8192 30 e2-custom-8-16384 false"
+          - name: PRO/Standalone - GCP/us-central1 - Upgrade Version
+            testFile: test_upgrade_version.py
+            tierName: pro-${{ github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
+            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
+            extraParams: --service-id ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }} --environment-id ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }} --instance-type "e2-custom-4-8192" --subscription-id "sub-GJPV3NoNC0" --instance-name "upgrade-version-standalone"
+          - name: PRO/SingleZone - GCP/us-central1 - Upgrade Version
+            testFile: test_upgrade_version.py
+            tierName: pro-${{ github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
+            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
+            extraParams: --service-id ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }} --environment-id ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }} --instance-type "e2-custom-4-8192" --subscription-id "sub-GJPV3NoNC0" --instance-name "upgrade-version-single-zone" --check-failover true
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v3

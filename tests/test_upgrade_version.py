@@ -19,7 +19,7 @@ parser.add_argument(
     required=False,
     default=os.getenv(
         "API_PATH",
-        "resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/standalone",
+        "2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/standalone",
     ),
 )
 parser.add_argument(
@@ -103,8 +103,7 @@ def test_upgrade_version():
 
     # 2. Create omnistrate instance with previous version
     instance = OmnistrateInstance(
-        api_path=f"{API_VERSION}/{API_PATH}",
-        api_create_instance_path=f"{API_VERSION}/fleet/{API_PATH}",
+        api_path=API_PATH,
         api_sign_in_path=API_SIGN_IN_PATH,
         subscription_id=SUBSCRIPTION_ID,
         omnistrate_user=args.omnistrate_user,

@@ -240,7 +240,7 @@ class OmnistrateInstance:
             timeout=15,
         )
 
-        if "another operation is already in progress" in response.json()["message"]:
+        if "another operation is already in progress" in str(response.text):
             if retry == 0:
                 raise Exception(
                     f"Failed to update instance type {self.instance_id} after {retry} retries"

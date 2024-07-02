@@ -283,9 +283,6 @@ services:
       - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
-      - SECURITY_CONTEXT_USER_ID=0
-      - SECURITY_CONTEXT_GROUP_ID=0
-      - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
@@ -516,9 +513,6 @@ services:
       - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
-      - SECURITY_CONTEXT_USER_ID=0
-      - SECURITY_CONTEXT_GROUP_ID=0
-      - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
@@ -581,9 +575,6 @@ services:
       - FALKORDB_PASSWORD=$var.falkordbPassword
       - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
-      - SECURITY_CONTEXT_USER_ID=0
-      - SECURITY_CONTEXT_GROUP_ID=0
-      - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
       - "26379:26379"
@@ -834,9 +825,6 @@ services:
       - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
-      - SECURITY_CONTEXT_USER_ID=0
-      - SECURITY_CONTEXT_GROUP_ID=0
-      - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
@@ -899,9 +887,6 @@ services:
       - FALKORDB_PASSWORD=$var.falkordbPassword
       - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
-      - SECURITY_CONTEXT_USER_ID=0
-      - SECURITY_CONTEXT_GROUP_ID=0
-      - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
       - "26379:26379"

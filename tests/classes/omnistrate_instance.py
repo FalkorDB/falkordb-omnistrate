@@ -214,7 +214,7 @@ class OmnistrateInstance:
         self.wait_for_ready(timeout_seconds=self.deployment_failover_timeout_seconds)
 
     def update_instance_type(
-        self, new_instance_type: str, wait_until_ready: bool = True
+        self, new_instance_type: str, wait_until_ready: bool = True, retry=5
     ):
         """Update the instance type."""
 
@@ -239,6 +239,16 @@ class OmnistrateInstance:
             data=json.dumps(data),
             timeout=15,
         )
+
+        if "another operation is already in progress" in str(response.text):
+            if retry == 0:
+                raise Exception(
+                    f"Failed to update instance type {self.instance_id} after {retry} retries"
+                )
+            time.sleep(60)
+            return self.update_instance_type(
+                new_instance_type, wait_until_ready, retry - 1
+            )
 
         self._handle_response(
             response, f"Failed to update instance type {self.instance_id}"

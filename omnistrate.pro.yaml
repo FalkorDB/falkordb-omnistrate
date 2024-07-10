@@ -153,7 +153,7 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
@@ -234,7 +234,7 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
@@ -366,7 +366,7 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
@@ -459,7 +459,7 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
@@ -601,7 +601,7 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
@@ -678,7 +678,7 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
@@ -771,7 +771,7 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
@@ -913,7 +913,7 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false

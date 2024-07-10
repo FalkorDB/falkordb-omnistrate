@@ -57,7 +57,7 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
@@ -102,7 +102,7 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
@@ -139,9 +139,6 @@ services:
       - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=e2-custom-small-1024
-      - SECURITY_CONTEXT_USER_ID=0
-      - SECURITY_CONTEXT_GROUP_ID=0
-      - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
       - "6379:6379"

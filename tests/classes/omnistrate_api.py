@@ -288,17 +288,21 @@ class OmnistrateApi:
 
         endpoint = self._get_instance_endpoint(service_id, environment_id, instance_id)
 
-        right_now = time.time()
+        right_now = None
+        started_failover = False
         while True:
             try:
-                right_now = time.time()
                 falkordb = FalkorDB(
                     endpoint["endpoint"], endpoint["port"], "falkordb", "falkordb"
                 )
                 falkordb.list_graphs()
-                break
+                right_now = time.time()
+                if started_failover:
+                    print("Failover completed")
+                    break
             except Exception as e:
                 if time.time() - right_now > failover_timeout:
                     raise Exception("Failover timed out")
                 print("Failover in progress")
+                started_failover = True
                 time.sleep(1)

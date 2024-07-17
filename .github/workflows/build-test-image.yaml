@@ -215,10 +215,12 @@ jobs:
 
       - name: ${{ matrix.instances.name }}
         env:
+          SERVICE_ID: ${{ matrix.instances.serviceId }}
+          ENVIRONMENT_ID: ${{ matrix.instances.environmentId }}
           CLOUD_PROVIDER: ${{ matrix.instances.cloudProvider }}
           CLOUD_REGION: ${{ matrix.instances.cloudRegion }}
           extraParams: ${{ matrix.instances.extraParams }}
           SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
           REF_NAME: ${{ matrix.instances.tierName }}
         run: |
-          python ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} ${{ env.extraParams }}
+          python ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}

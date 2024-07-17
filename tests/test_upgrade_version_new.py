@@ -78,6 +78,7 @@ def test_upgrade_version():
 
     # 2. Create omnistrate instance with previous version
     instance = omnistrate.instance(
+        service_id=service.service_id,
         service_provider_id=service.service_provider_id,
         service_key=service.key,
         service_environment_id=args.environment_id,

@@ -21,11 +21,12 @@ parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
 parser.add_argument("--resource-key", required=True)
+parser.add_argument("--replica-id", required=True)
 
 
 parser.add_argument("--instance-name", required=True)
 parser.add_argument(
-    "--instance-description", required=False, default="test-upgrade-version"
+    "--instance-description", required=False, default="test-standalone"
 )
 parser.add_argument("--instance-type", required=True)
 parser.add_argument("--storage-size", required=False, default="30")
@@ -36,7 +37,7 @@ parser.add_argument("--aof-config", required=False, default="always")
 args = parser.parse_args()
 
 
-def test_upgrade_version():
+def test_standalone():
 
     omnistrate = OmnistrateFleetAPI(
         email=args.omnistrate_user,
@@ -55,28 +56,6 @@ def test_upgrade_version():
 
     print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
-    # 1. List product tier versions
-    tiers = omnistrate.list_tier_versions(
-        service_id=args.service_id, tier_id=product_tier.product_tier_id
-    )
-
-    preferred_tier = next(
-        (tier for tier in tiers if tier.status == TierVersionStatus.PREFERRED), None
-    )
-    if preferred_tier is None:
-        raise ValueError("No preferred tier found")
-
-    last_tier = next(
-        (tier for tier in tiers if tier.status == TierVersionStatus.ACTIVE), None
-    )
-
-    if last_tier is None:
-        raise ValueError("No last tier found")
-
-    print(f"Preferred tier: {preferred_tier.version}")
-    print(f"Last tier: {last_tier.version}")
-
-    # 2. Create omnistrate instance with previous version
     instance = omnistrate.instance(
         service_provider_id=service.service_provider_id,
         service_key=service.key,
@@ -88,6 +67,7 @@ def test_upgrade_version():
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
     )
+
     try:
         instance.create(
             wait_for_ready=True,
@@ -102,61 +82,50 @@ def test_upgrade_version():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
-            product_tier_version=last_tier.version,
         )
 
-        # 3. Add data to the instance
-        add_data(instance)
-
-        # 4. Upgrade version for the omnistrate instance
-        upgrade_timer = time.time()
-        instance.upgrade(
-            service_id=args.service_id,
-            product_tier_id=product_tier.product_tier_id,
-            source_version=last_tier.version,
-            target_version=preferred_tier.version,
-            wait_until_ready=True,
-        )
-
-        print(f"Upgrade time: {(time.time() - upgrade_timer):.2f}s")
-
-        # 6. Verify the upgrade was successful
-        query_data(instance)
+        # Test failover and data loss
+        test_failover(instance)
     except Exception as e:
-        print("Error " + str(e))
         instance.delete(True)
         raise e
 
-    # 7. Delete the instance
+    # Delete instance
     instance.delete(True)
 
-    print("Upgrade version test passed")
+    print("Test passed")
 
 
-def add_data(instance: OmnistrateFleetInstance):
+def test_failover(instance: OmnistrateFleetInstance):
+    """This function should retrieve the instance host and port for connection, write some data to the DB, then trigger a failover. After X seconds, the instance should be back online and data should have persisted"""
 
     # Get instance host and port
-    db = instance.create_connection(ssl=args.tls)
+    db = instance.create_connection(
+        ssl=args.tls,
+    )
 
     graph = db.select_graph("test")
 
     # Write some data to the DB
     graph.query("CREATE (n:Person {name: 'Alice'})")
 
+    # Trigger failover
+    instance.trigger_failover(
+        replica_id=args.replica_id,
+        wait_for_ready=True,
+    )
 
-def query_data(instance: OmnistrateFleetInstance):
-
-    # Get instance host and port
-    db = instance.create_connection(ssl=args.tls)
+    # Check if data is still there
 
     graph = db.select_graph("test")
 
-    # Get info
-    result = graph.query("MATCH (n:Person) RETURN n.name")
+    result = graph.query("MATCH (n:Person) RETURN n")
 
     if len(result.result_set) == 0:
-        raise ValueError("No data found in the graph after upgrade")
+        raise Exception("Data lost after failover")
+
+    print("Data persisted after failover")
 
 
 if __name__ == "__main__":
-    test_upgrade_version()
+    test_standalone()

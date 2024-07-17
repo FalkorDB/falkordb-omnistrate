@@ -9,7 +9,14 @@ import string
 
 class Service:
 
-    def __init__(self, id: str, name: str, key: str, service_provider_id: str, environments: list["Environment"]):
+    def __init__(
+        self,
+        id: str,
+        name: str,
+        key: str,
+        service_provider_id: str,
+        environments: list["Environment"],
+    ):
         self.id = id
         self.name = name
         self.key = key
@@ -152,7 +159,7 @@ class OmnistrateFleetInstance:
         print(f"Creating instance {name}" + f" with parameters: {data}")
 
         response = self._fleet_api.client().post(
-            f"{self._fleet_api.base_url}/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}?subscriptionId={self.subscription_id}",
+            f"{self._fleet_api.base_url}/fleet/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}?subscriptionId={self.subscription_id}",
             data=json.dumps(data),
             timeout=15,
         )
@@ -333,7 +340,7 @@ class OmnistrateFleetInstance:
 
         if wait_until_ready:
             self._wait_until_upgrade_ready(
-                service_id, product_tier_id, upgrade_id, upgrade_timeout, check_failover
+                service_id, product_tier_id, upgrade_id, upgrade_timeout
             )
 
     def _wait_until_upgrade_ready(
@@ -342,7 +349,6 @@ class OmnistrateFleetInstance:
         product_tier_id: str,
         upgrade_id: str,
         upgrade_timeout: int = 1200,
-        check_failover: bool = False,
     ):
         right_now = time.time()
         while True:
@@ -367,9 +373,6 @@ class OmnistrateFleetInstance:
 
             if time.time() - right_now > upgrade_timeout:
                 raise Exception("Upgrade timed out")
-
-            if check_failover:
-                self._check_failover()
 
     def _get_network_topology(self):
 
@@ -469,27 +472,6 @@ class OmnistrateFleetInstance:
                 {"node_count": node_count},
             )
         print("Data generated")
-
-    def _check_failover(
-        self,
-        failover_timeout: int = 10,
-    ):
-        right_now = None
-        started_failover = False
-        while True:
-            try:
-                falkordb = self.create_connection(force_reconnect=True, retries=0)
-                falkordb.list_graphs()
-                right_now = time.time()
-                if started_failover:
-                    print("Failover completed")
-                    break
-            except Exception as e:
-                if time.time() - right_now > failover_timeout:
-                    raise Exception("Failover timed out")
-                print("Failover in progress")
-                started_failover = True
-                time.sleep(1)
 
 
 def rand_range(a, b):

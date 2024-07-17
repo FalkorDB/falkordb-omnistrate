@@ -205,7 +205,7 @@ class OmnistrateFleetInstance:
         while retries > 0:
 
             response = self._fleet_api.client().get(
-                f"{self._fleet_api.base_url}/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}/{self.instance_id}?subscriptionId={self.subscription_id}",
+                f"{self._fleet_api.base_url}/fleet/service/{self.service_provider_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
                 timeout=15,
             )
 
@@ -226,7 +226,7 @@ class OmnistrateFleetInstance:
         """Delete the instance. Optionally wait for the instance to be deleted."""
 
         response = self._fleet_api.client().delete(
-            f"{self._fleet_api.base_url}/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}/{self.instance_id}?subscriptionId={self.subscription_id}",
+            f"{self._fleet_api.base_url}/fleet/service/{self.service_provider_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
             timeout=15,
         )
 
@@ -285,7 +285,7 @@ class OmnistrateFleetInstance:
         }
 
         response = self._fleet_api.client().put(
-            f"{self._fleet_api.base_url}/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}/{self.instance_id}?subscriptionId={self.subscription_id}",
+            f"{self._fleet_api.base_url}/fleet/service/{self.service_provider_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
             data=json.dumps(data),
             timeout=15,
         )

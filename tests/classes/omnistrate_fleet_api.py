@@ -70,6 +70,7 @@ class OmnistrateFleetInstance:
     def __init__(
         self,
         fleet_api: "OmnistrateFleetAPI",
+        service_id: str = os.getenv("SERVICE_ID"),
         service_provider_id: str = os.getenv("SERVICE_PROVIDER_ID"),
         service_key: str = os.getenv("SERVICE_KEY"),
         service_api_version: str = os.getenv("SERVICE_API_VERSION"),
@@ -115,6 +116,7 @@ class OmnistrateFleetInstance:
         ), "Missing resource_key or RESOURCE_KEY environment variable"
 
         self._fleet_api = fleet_api
+        self.service_id = service_id
         self.service_provider_id = service_provider_id
         self.service_key = service_key
         self.service_api_version = service_api_version
@@ -205,7 +207,7 @@ class OmnistrateFleetInstance:
         while retries > 0:
 
             response = self._fleet_api.client().get(
-                f"{self._fleet_api.base_url}/fleet/service/{self.service_provider_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
+                f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
                 timeout=15,
             )
 
@@ -226,7 +228,7 @@ class OmnistrateFleetInstance:
         """Delete the instance. Optionally wait for the instance to be deleted."""
 
         response = self._fleet_api.client().delete(
-            f"{self._fleet_api.base_url}/fleet/service/{self.service_provider_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
+            f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
             timeout=15,
         )
 
@@ -257,7 +259,7 @@ class OmnistrateFleetInstance:
         }
 
         response = requests.post(
-            f"{self._fleet_api.base_url}/fleet/service/{self.service_provider_id}/environment/{self.service_environment_id}/instance/{self.instance_id}/failover",
+            f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}/failover",
             data=json.dumps(data),
             timeout=15,
         )
@@ -285,7 +287,7 @@ class OmnistrateFleetInstance:
         }
 
         response = self._fleet_api.client().put(
-            f"{self._fleet_api.base_url}/fleet/service/{self.service_provider_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
+            f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
             data=json.dumps(data),
             timeout=15,
         )
@@ -669,6 +671,7 @@ class OmnistrateFleetAPI:
 
     def instance(
         self,
+        service_id: str = None,
         service_provider_id: str = None,
         service_key: str = None,
         service_api_version: str = None,
@@ -684,6 +687,7 @@ class OmnistrateFleetAPI:
     ):
         return OmnistrateFleetInstance(
             self,
+            service_id,
             service_provider_id,
             service_key,
             service_api_version,

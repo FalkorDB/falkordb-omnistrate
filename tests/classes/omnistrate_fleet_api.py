@@ -275,7 +275,7 @@ class OmnistrateFleetInstance:
             "resourceId": resource_id or self.get_resource_id(),
         }
 
-        response = requests.post(
+        response = self._fleet_api.client().post(
             f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}/failover",
             data=json.dumps(data),
             timeout=15,
@@ -454,6 +454,7 @@ class OmnistrateFleetInstance:
         # Connect to the master node
         while retries > 0:
             try:
+                print(f"Connecting to {endpoint['endpoint']}:{endpoint['ports'][0]}")
                 self._connection = FalkorDB(
                     host=endpoint["endpoint"],
                     port=endpoint["ports"][0],

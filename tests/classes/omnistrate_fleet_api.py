@@ -222,7 +222,7 @@ class OmnistrateFleetInstance:
             response, f"Failed to get instance state {self.instance_id}"
         )
 
-        return response.json()
+        return response.json()["consumptionResourceInstanceResult"]
 
     def delete(self, wait_for_delete: bool):
         """Delete the instance. Optionally wait for the instance to be deleted."""
@@ -361,7 +361,7 @@ class OmnistrateFleetInstance:
 
             self._fleet_api.handle_response(response, "Failed to get upgrade status")
 
-            status = response.json()["consumptionResourceInstanceResult"]["status"]
+            status = response.json()["status"]
 
             if status == "IN_PROGRESS":
                 print("Upgrade in progress")

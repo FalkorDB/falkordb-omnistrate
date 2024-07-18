@@ -224,7 +224,7 @@ class OmnistrateFleetInstance:
 
         return response.json()["consumptionResourceInstanceResult"]
 
-    def _get_resource_id(self):
+    def get_resource_id(self):
         """Get the resource ID of the instance."""
 
         network_topology = self._get_network_topology()
@@ -238,7 +238,7 @@ class OmnistrateFleetInstance:
     def delete(self, wait_for_delete: bool):
         """Delete the instance. Optionally wait for the instance to be deleted."""
 
-        resource_id = self._get_resource_id()
+        resource_id = self.get_resource_id()
 
         if resource_id is None:
             raise Exception(f"Resource ID not found for instance {self.instance_id}")
@@ -272,7 +272,7 @@ class OmnistrateFleetInstance:
         data = {
             "failedReplicaID": replica_id,
             "failedReplicaAction": "FAILOVER_AND_RESTART",
-            "resourceId": resource_id,
+            "resourceId": resource_id or self.get_resource_id(),
         }
 
         response = requests.post(
@@ -465,7 +465,7 @@ class OmnistrateFleetInstance:
             except Exception as e:
                 print(f"Failed to connect to the master node: {e}")
                 retries -= 1
-                time.sleep(30)
+                time.sleep(60)
 
         if self._connection is None:
             raise Exception("Failed to connect to the master node")

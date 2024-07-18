@@ -224,12 +224,29 @@ class OmnistrateFleetInstance:
 
         return response.json()["consumptionResourceInstanceResult"]
 
+    def _get_resource_id(self):
+        """Get the resource ID of the instance."""
+
+        network_topology = self._get_network_topology()
+
+        # find key for object with the correct resourceKey
+
+        for key in network_topology.keys():
+            if network_topology[key]["resourceKey"] == self.resource_key:
+                return key
+
     def delete(self, wait_for_delete: bool):
         """Delete the instance. Optionally wait for the instance to be deleted."""
+
+        resource_id = self._get_resource_id()
+
+        if resource_id is None:
+            raise Exception(f"Resource ID not found for instance {self.instance_id}")
 
         response = self._fleet_api.client().delete(
             f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
             timeout=15,
+            data=json.dumps({"resourceId": resource_id}),
         )
 
         self._fleet_api.handle_response(

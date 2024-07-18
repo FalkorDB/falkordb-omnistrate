@@ -122,7 +122,7 @@ class OmnistrateInstance:
             "productTierVersion": product_tier_version,
         }
 
-        print(f"Creating instance {name}" + f" with parameters: {data}")
+        print(f"Creating instance {name}")
 
         response = requests.post(
             self.api_url + self.api_create_instance_path + self.subscription_id_query,

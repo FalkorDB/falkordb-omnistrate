@@ -158,7 +158,7 @@ class OmnistrateFleetInstance:
             "productTierVersion": product_tier_version,
         }
 
-        print(f"Creating instance {name}" + f" with parameters: {data}")
+        print(f"Creating instance {name}")
 
         response = self._fleet_api.client().post(
             f"{self._fleet_api.base_url}/fleet/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}?subscriptionId={self.subscription_id}",

@@ -232,7 +232,9 @@ class OmnistrateFleetInstance:
         # find key for object with the correct resourceKey
 
         for key in network_topology.keys():
-            if network_topology[key]["resourceKey"] == (resource_key or self.resource_key):
+            if network_topology[key]["resourceKey"] == (
+                resource_key or self.resource_key
+            ):
                 return key
 
     def delete(self, wait_for_delete: bool):
@@ -265,7 +267,7 @@ class OmnistrateFleetInstance:
                 raise Exception(f"Failed to delete instance {self.instance_id}")
 
     def trigger_failover(
-        self, replica_id: str, wait_for_ready: bool, resource_id: str = None
+        self, replica_id: str, wait_for_ready: bool, resource_id: str = None, retry=5
     ):
         """Trigger failover for the instance. Optionally wait for the instance to be ready."""
 
@@ -280,6 +282,12 @@ class OmnistrateFleetInstance:
             data=json.dumps(data),
             timeout=15,
         )
+
+        if "another operation is already in progress" in response.text and retry > 0:
+            time.sleep(60)
+            return self.trigger_failover(
+                replica_id, wait_for_ready, resource_id, retry - 1
+            )
 
         self._fleet_api.handle_response(
             response, f"Failed to trigger failover for instance {self.instance_id}"

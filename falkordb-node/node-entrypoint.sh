@@ -244,11 +244,11 @@ is_replica() {
 
   # IF host is empty, then this node is the master
   if [[ -z $FALKORDB_MASTER_HOST ]]; then
-    if [[ $TLS == "true" ]]; then
-      FALKORDB_MASTER_HOST=$NODE_HOST
-    else
-      FALKORDB_MASTER_HOST=$NODE_HOST_IP
-    fi
+    # if [[ $TLS == "true" ]]; then
+    FALKORDB_MASTER_HOST=$NODE_HOST
+    # else
+    #   FALKORDB_MASTER_HOST=$NODE_HOST_IP
+    # fi
     FALKORDB_MASTER_PORT_NUMBER=$NODE_PORT
     IS_REPLICA=0
     return
@@ -307,11 +307,11 @@ get_self_host_ip
 if [ "$RUN_NODE" -eq "1" ]; then
  
   # If TLS is enabled, use NODE_HOST; otherwise, use NODE_HOST_IP
-  if [[ $TLS == "true" ]]; then
+  # if [[ $TLS == "true" ]]; then
     sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_CONF_FILE
-  else
-    sed -i "s/\$NODE_HOST/$NODE_HOST_IP/g" $NODE_CONF_FILE
-  fi
+  # else
+  #   sed -i "s/\$NODE_HOST/$NODE_HOST_IP/g" $NODE_CONF_FILE
+  # fi
   
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" $NODE_CONF_FILE
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
@@ -350,22 +350,22 @@ if [ "$RUN_NODE" -eq "1" ]; then
     echo "Adding master to sentinel"
     wait_until_sentinel_host_resolves
 
-    if [[ $TLS == "true" ]]; then
-      wait_until_node_host_resolves $NODE_HOST $NODE_PORT
-      log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
-      res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
-      if [[ $? -ne 0 || $res == *"ERR"* ]]; then
-        echo "Could not add master to sentinel: $res"
-        exit 1
-      fi
-    else
-      log "Master Name: $MASTER_NAME\nNode IP: $NODE_HOST_IP\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
-      res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST_IP $NODE_PORT $SENTINEL_QUORUM)
-      if [[ $? -ne 0 || $res == *"ERR"* ]]; then
-        echo "Could not add master to sentinel: $res"
-        exit 1
-      fi
+    # if [[ $TLS == "true" ]]; then
+    wait_until_node_host_resolves $NODE_HOST $NODE_PORT
+    log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
+    res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
+    if [[ $? -ne 0 || $res == *"ERR"* ]]; then
+      echo "Could not add master to sentinel: $res"
+      exit 1
     fi
+    # else
+    #   log "Master Name: $MASTER_NAME\nNode IP: $NODE_HOST_IP\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
+    #   res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST_IP $NODE_PORT $SENTINEL_QUORUM)
+    #   if [[ $? -ne 0 || $res == *"ERR"* ]]; then
+    #     echo "Could not add master to sentinel: $res"
+    #     exit 1
+    #   fi
+    # fi
 
     redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
     redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
@@ -421,7 +421,6 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
     echo "tls-auth-clients no" >> $SENTINEL_CONF_FILE
   else
     echo "port $SENTINEL_PORT" >> $SENTINEL_CONF_FILE
-    echo "sentinel resolve-hostnames yes" >> $SENTINEL_CONF_FILE
   fi
 
   redis-server $SENTINEL_CONF_FILE --sentinel --logfile $SENTINEL_LOG_FILE_PATH &

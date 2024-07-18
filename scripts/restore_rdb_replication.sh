@@ -1,5 +1,5 @@
 CONTEXT=${CONTEXT:-'gke_app-plane-dev-f7a2434f_us-central1_c-hcjx5tis6bc'}
-NAMESPACE=${NAMESPACE:-'instance-6m6izdn81'}
+NAMESPACE=${NAMESPACE:-'instance-k3g93zqgy'}
 RDB_URL=${RDB_URL:-'https://storage.googleapis.com/falkordb_rdbs_test_eu/dump_60gb.rdb?x-goog-signature=2a9706d78ade85b0631554fb2cfff7c8fc5d2d33eae17c6a4bcbdb9902d5dc0983d287e11639bbfa86e12b6c062f0daa3b93ae24acb72cf2cf6a36f07296be864f5221cd353c34b42d07cbee64a81ceb75d3196902ee197509018d607ae7591590db948ca6924aa8088d8c5d36a98a0b4256bc04fc8bb5d687b531b05e22f1e23546269a42e73cfca66af08b7e683542d853f07a44075892972efc98e3d088f06569ffca4ada327d8f37fbb929b52676b0709f24f00779e427234f795739848d66837c0eb27ab83290d99ac44d3156be6f9baeb83783d8c46a676209676b689262d162082ab833fa04a5cdf7e71432407e1013c4e70f1a6d95edb1eb038d6aca&x-goog-algorithm=GOOG4-RSA-SHA256&x-goog-credential=falkordb-rdb-storage-reader%40pipelines-development-f7a2434f.iam.gserviceaccount.com%2F20240530%2Feu%2Fstorage%2Fgoog4_request&x-goog-date=20240530T125036Z&x-goog-expires=604800&x-goog-signedheaders=host'}
 
 kubectl config use-context $CONTEXT

@@ -361,7 +361,7 @@ class OmnistrateFleetInstance:
 
             self._fleet_api.handle_response(response, "Failed to get upgrade status")
 
-            status = response.json()["status"]
+            status = response.json()["consumptionResourceInstanceResult"]["status"]
 
             if status == "IN_PROGRESS":
                 print("Upgrade in progress")

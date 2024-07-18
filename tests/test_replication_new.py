@@ -133,14 +133,14 @@ def test_failover(instance: OmnistrateFleetInstance):
         port=db_resource[0]["ports"][0],
         username="falkordb",
         password="falkordb",
-        ssl=True if args.tls == "true" else False,
+        ssl=args.tls,
     )
     db_1 = FalkorDB(
         host=db_resource[1]["endpoint"],
         port=db_resource[1]["ports"][0],
         username="falkordb",
         password="falkordb",
-        ssl=True if args.tls == "true" else False,
+        ssl=args.tls,
     )
     sentinels = Sentinel(
         sentinels=[
@@ -151,12 +151,12 @@ def test_failover(instance: OmnistrateFleetInstance):
         sentinel_kwargs={
             "username": "falkordb",
             "password": "falkordb",
-            "ssl": True if args.tls == "true" else False,
+            "ssl": args.tls,
         },
         connection_kwargs={
             "username": "falkordb",
             "password": "falkordb",
-            "ssl": True if args.tls == "true" else False,
+            "ssl": args.tls,
         },
     )
 
@@ -222,7 +222,7 @@ def test_failover(instance: OmnistrateFleetInstance):
     print("result after bob", result.result_set)
 
     # wait until the node 0 is ready
-    instance.wait_for_ready(timeout_seconds=600)
+    instance.wait_for_instance_ready(timeout_seconds=600)
 
     print(f"Triggering failover for sentinel-{id_key}-0")
     # Trigger sentinel failover
@@ -242,7 +242,7 @@ def test_failover(instance: OmnistrateFleetInstance):
     print("Data persisted after second failover")
 
     # wait until the node 0 is ready
-    instance.wait_for_ready(timeout_seconds=600)
+    instance.wait_for_instance_ready(timeout_seconds=600)
 
     print(f"Triggering failover for node-{id_key}-1")
     # Trigger failover

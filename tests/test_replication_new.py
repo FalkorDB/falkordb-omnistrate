@@ -62,7 +62,7 @@ def test_replication():
     print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     instance = omnistrate.instance(
-        service_id=service.service_id,
+        service_id=args.service_id,
         service_provider_id=service.service_provider_id,
         service_key=service.key,
         service_environment_id=args.environment_id,

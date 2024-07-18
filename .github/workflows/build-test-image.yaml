@@ -143,7 +143,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-tls' --instance-description 'test-sz-failover-tls' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls 'true' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'single-Zone' --replica-id 'node-sz-0' --instance-name 'test-sz-failover-tls' --instance-description 'test-sz-failover-tls' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls 'true' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Failover & Persistence With TLS
             testFile: test_replication_new.py
             tierName: pro-${{ github.ref_name }}
@@ -190,7 +190,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-upgrade' --instance-description 'test-standalone-upgrade' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls 'false' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Upgrade Version
-            testFile: test_upgrade_version.py
+            testFile: test_upgrade_version_new.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1

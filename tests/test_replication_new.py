@@ -188,7 +188,7 @@ def test_failover(instance: OmnistrateFleetInstance):
     instance.trigger_failover(
         replica_id=f"node-{id_key}-0",
         wait_for_ready=False,
-        resource_id=f"node-{id_key}",
+        resource_id=instance.get_resource_id(f"node-{id_key}"),
     )
 
     promotion_completed = False
@@ -228,7 +228,7 @@ def test_failover(instance: OmnistrateFleetInstance):
     instance.trigger_failover(
         replica_id=f"sentinel-{id_key}-0",
         wait_for_ready=False,
-        resource_id=f"sentinel-{id_key}",
+        resource_id=instance.get_resource_id(f"sentinel-{id_key}"),
     )
 
     graph_1 = db_1.select_graph("test")
@@ -248,7 +248,7 @@ def test_failover(instance: OmnistrateFleetInstance):
     instance.trigger_failover(
         replica_id=f"node-{id_key}-1",
         wait_for_ready=False,
-        resource_id=f"node-{id_key}",
+        resource_id=instance.get_resource_id(f"node-{id_key}"),
     )
 
     promotion_completed = False

@@ -1,76 +1,91 @@
 import sys
-from falkordb import FalkorDB
+import time
 import os
-from classes.omnistrate_instance import OmnistrateInstance
-
-if len(sys.argv) < 7:
-    print(
-        "Usage: python create_standalone.py <omnistrate_user> <omnistrate_password> <deployment_cloud_provider> <deployment_region> <deployment_instance_type> <deployment_storage_size> <tls=false> <rdb_config=medium> <aof_config=always>"
-    )
-    sys.exit(1)
-
-OMNISTRATE_USER = sys.argv[1]
-OMNISTRATE_PASSWORD = sys.argv[2]
-DEPLOYMENT_CLOUD_PROVIDER = sys.argv[3]
-DEPLOYMENT_REGION = sys.argv[4]
-DEPLOYMENT_INSTANCE_TYPE = sys.argv[5]
-DEPLOYMENT_STORAGE_SIZE = sys.argv[6]
-DEPLOYMENT_TLS = sys.argv[7] if len(sys.argv) > 7 else "false"
-DEPLOYMENT_RDB_CONFIG = sys.argv[8] if len(sys.argv) > 9 else "medium"
-DEPLOYMENT_AOF_CONFIG = sys.argv[9] if len(sys.argv) > 10 else "always"
-
-API_VERSION = os.getenv("API_VERSION", "2022-09-01-00")
-API_PATH = os.getenv(
-    "API_PATH",
-    f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/standalone",
+from classes.omnistrate_fleet_api import (
+    OmnistrateFleetAPI,
+    OmnistrateFleetInstance,
+    TierVersionStatus,
 )
-API_FAILOVER_PATH = os.getenv(
-    "API_FAILOVER_PATH",
-    f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/node-s",
-)
-API_SIGN_IN_PATH = os.getenv(
-    "API_SIGN_IN_PATH", f"{API_VERSION}/resource-instance/user/signin"
-)
-SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID", "sub-bHEl5iUoPd")
+import argparse
 
-REF_NAME = os.getenv("REF_NAME", None)
-if REF_NAME is not None:
-    if len(REF_NAME) > 50:
-        # Replace the second occurrence of REF_NAME with the first 50 characters of REF_NAME
-        API_PATH = f"customer-hosted/{REF_NAME[:50]}".join(
-            API_PATH.split(f"customer-hosted/{REF_NAME}")
-        )
-        API_FAILOVER_PATH = f"customer-hosted/{REF_NAME[:50]}".join(
-            API_FAILOVER_PATH.split(f"customer-hosted/{REF_NAME}")
-        )
+parser = argparse.ArgumentParser()
+parser.add_argument("omnistrate_user")
+parser.add_argument("omnistrate_password")
+parser.add_argument("cloud_provider", choices=["aws", "gcp"])
+parser.add_argument("region")
+
+parser.add_argument(
+    "--subscription-id", required=False, default=os.getenv("SUBSCRIPTION_ID")
+)
+parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
+parser.add_argument("--service-id", required=True)
+parser.add_argument("--environment-id", required=True)
+parser.add_argument("--resource-key", required=True)
+parser.add_argument("--replica-id", required=True)
+
+
+parser.add_argument("--instance-name", required=True)
+parser.add_argument(
+    "--instance-description", required=False, default="test-standalone"
+)
+parser.add_argument("--instance-type", required=True)
+parser.add_argument("--storage-size", required=False, default="30")
+parser.add_argument("--tls", action="store_true")
+parser.add_argument("--rdb-config", required=False, default="medium")
+parser.add_argument("--aof-config", required=False, default="always")
+
+parser.set_defaults(tls=False)
+args = parser.parse_args()
 
 
 def test_standalone():
 
-    instance = OmnistrateInstance(
-        api_path=API_PATH,
-        api_failover_path=API_FAILOVER_PATH,
-        api_sign_in_path=API_SIGN_IN_PATH,
-        subscription_id=SUBSCRIPTION_ID,
-        omnistrate_user=OMNISTRATE_USER,
-        omnistrate_password=OMNISTRATE_PASSWORD,
+    omnistrate = OmnistrateFleetAPI(
+        email=args.omnistrate_user,
+        password=args.omnistrate_password,
+    )
+
+    service = omnistrate.get_service(args.service_id)
+    product_tier = omnistrate.get_product_tier(
+        service_id=args.service_id,
+        environment_id=args.environment_id,
+        tier_name=args.ref_name,
+    )
+    service_model = omnistrate.get_service_model(
+        args.service_id, product_tier.service_model_id
+    )
+
+    print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
+
+    instance = omnistrate.instance(
+        service_id=args.service_id,
+        service_provider_id=service.service_provider_id,
+        service_key=service.key,
+        service_environment_id=args.environment_id,
+        service_environment_key=service.get_environment(args.environment_id).key,
+        service_model_key=service_model.key,
+        service_api_version="v1",
+        product_tier_key=product_tier.product_tier_key,
+        resource_key=args.resource_key,
+        subscription_id=args.subscription_id,
     )
 
     try:
         instance.create(
             wait_for_ready=True,
-            deployment_cloud_provider=DEPLOYMENT_CLOUD_PROVIDER,
-            deployment_region=DEPLOYMENT_REGION,
-            name="github-pipeline-standalone",
-            description="standalone",
+            deployment_cloud_provider=args.cloud_provider,
+            deployment_region=args.region,
+            name=args.instance_name,
+            description=args.instance_description,
             falkordb_user="falkordb",
             falkordb_password="falkordb",
-            nodeInstanceType=DEPLOYMENT_INSTANCE_TYPE,
-            storageSize=DEPLOYMENT_STORAGE_SIZE,
-            enableTLS=True if DEPLOYMENT_TLS == "true" else False,
-            RDBPersistenceConfig=DEPLOYMENT_RDB_CONFIG,
-            AOFPersistenceConfig=DEPLOYMENT_AOF_CONFIG,
+            nodeInstanceType=args.instance_type,
+            storageSize=args.storage_size,
+            enableTLS=args.tls,
+            RDBPersistenceConfig=args.rdb_config,
+            AOFPersistenceConfig=args.aof_config,
         )
+
         # Test failover and data loss
         test_failover(instance)
     except Exception as e:
@@ -83,23 +98,12 @@ def test_standalone():
     print("Test passed")
 
 
-def test_failover(instance: OmnistrateInstance):
+def test_failover(instance: OmnistrateFleetInstance):
     """This function should retrieve the instance host and port for connection, write some data to the DB, then trigger a failover. After X seconds, the instance should be back online and data should have persisted"""
 
     # Get instance host and port
-    endpoints = instance.get_connection_endpoints()
-
-    nodeId = endpoints[0]["id"]
-    host = endpoints[0]["endpoint"]
-    port = endpoints[0]["ports"][0]
-
-    print("Connection data: {}:{}".format(host, port))
-    db = FalkorDB(
-        host=host,
-        port=port,
-        username="falkordb",
-        password="falkordb",
-        ssl=True if DEPLOYMENT_TLS == "true" else False,
+    db = instance.create_connection(
+        ssl=args.tls,
     )
 
     graph = db.select_graph("test")
@@ -109,7 +113,7 @@ def test_failover(instance: OmnistrateInstance):
 
     # Trigger failover
     instance.trigger_failover(
-        replica_id=nodeId,
+        replica_id=args.replica_id,
         wait_for_ready=True,
     )
 

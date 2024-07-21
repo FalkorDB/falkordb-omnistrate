@@ -100,6 +100,7 @@ jobs:
       matrix:
         instances:
           - name: Free - GCP/us-central1 - Failover & Persistence
+            if: 'true'
             testFile: test_standalone.py
             tierName: free-${{ github.ref_name }}
             cloudProvider: gcp
@@ -109,6 +110,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'free' --replica-id 'node-f-0' --instance-name 'test-free-failover' --instance-description 'test-free-failover' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence
+            if: 'true'
             testFile: test_standalone.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -118,6 +120,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover' --instance-description 'test-standalone-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Failover & Persistence
+            if: 'true'
             testFile: test_replication.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -127,6 +130,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover' --instance-description 'test-sz-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence
+            if: 'true'
             testFile: test_replication.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -136,6 +140,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover' --instance-description 'test-mz-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence With TLS
+            if: 'true'
             testFile: test_standalone.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -145,6 +150,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover-tls' --instance-description 'test-standalone-failover-tls' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Failover & Persistence With TLS
+            if: 'true'
             testFile: test_replication.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -154,6 +160,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-tls' --instance-description 'test-sz-failover-tls' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
+            if: 'true'
             testFile: test_replication.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -163,6 +170,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-tls' --instance-description 'test-mz-failover-tls' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Update Memory
+            if: 'true'
             testFile: test_update_memory.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -172,6 +180,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-update-memory' --instance-description 'test-standalone-update-memory' --instance-type 'e2-custom-4-8192' --new-instance-type 'e2-custom-8-16384' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Update Memory
+            if: 'true'
             testFile: test_update_memory.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -203,23 +212,23 @@ jobs:
        
     steps:
       - name: Checkout
-        if: ${{ matrix.instances.if }}
+        if: ${{ matrix.instances.if == 'true' }}
         uses: actions/checkout@v3
 
       - name: Setup python
-        if: ${{ matrix.instances.if }}
+        if: ${{ matrix.instances.if == 'true' }}
         uses: actions/setup-python@v2
         with:
           python-version: "3.x"
 
       - name: Install dependencies
-        if: ${{ matrix.instances.if }}
+        if: ${{ matrix.instances.if == 'true' }}
         run: |
           python -m pip install --upgrade pip
           pip install -r ./tests/requirements.txt
 
       - name: ${{ matrix.instances.name }}
-        if: ${{ matrix.instances.if }}
+        if: ${{ matrix.instances.if == 'true' }}
         env:
           SERVICE_ID: ${{ matrix.instances.serviceId }}
           ENVIRONMENT_ID: ${{ matrix.instances.environmentId }}

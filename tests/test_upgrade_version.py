@@ -1,47 +1,32 @@
 import sys
 import time
 import os
-from classes.omnistrate_instance import OmnistrateInstance
-from classes.omnistrate_api import OmnistrateApi, TierVersionStatus
+from classes.omnistrate_fleet_api import (
+    OmnistrateFleetAPI,
+    OmnistrateFleetInstance,
+    TierVersionStatus,
+)
 import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("omnistrate_user")
 parser.add_argument("omnistrate_password")
-parser.add_argument("cloud_provider")
+parser.add_argument("cloud_provider", choices=["aws", "gcp"])
 parser.add_argument("region")
 
-parser.add_argument(
-    "--api-version", required=False, default=os.getenv("API_VERSION", "2022-09-01-00")
-)
-parser.add_argument(
-    "--api-path",
-    required=False,
-    default=os.getenv(
-        "API_PATH",
-        "2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/standalone",
-    ),
-)
-parser.add_argument(
-    "--api-sign-in-path",
-    required=False,
-    default=os.getenv(
-        "API_SIGN_IN_PATH", "2022-09-01-00/resource-instance/user/signin"
-    ),
-)
 parser.add_argument(
     "--subscription-id", required=False, default=os.getenv("SUBSCRIPTION_ID")
 )
 parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
-parser.add_argument("--product-tier-id", required=False)
+parser.add_argument("--resource-key", required=True)
+
+
 parser.add_argument("--instance-name", required=True)
 parser.add_argument(
     "--instance-description", required=False, default="test-upgrade-version"
 )
-parser.add_argument("--check-failover", required=False, default=False, type=bool)
-
 parser.add_argument("--instance-type", required=True)
 parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
@@ -51,39 +36,29 @@ parser.add_argument("--aof-config", required=False, default="always")
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
-API_VERSION = args.api_version
-API_PATH = args.api_path
-API_SIGN_IN_PATH = args.api_sign_in_path
-SUBSCRIPTION_ID = args.subscription_id
-
-REF_NAME = args.ref_name
-if REF_NAME is not None:
-    if len(REF_NAME) > 50:
-        # Replace the second occurrence of REF_NAME with the first 50 characters of REF_NAME
-        API_PATH = f"customer-hosted/{REF_NAME[:50]}".join(
-            API_PATH.split(f"customer-hosted/{REF_NAME}")
-        )
-
 
 def test_upgrade_version():
 
-    omnistrate = OmnistrateApi(
-        api_sign_in_path=API_SIGN_IN_PATH,
-        omnistrate_user=args.omnistrate_user,
-        omnistrate_password=args.omnistrate_password,
+    omnistrate = OmnistrateFleetAPI(
+        email=args.omnistrate_user,
+        password=args.omnistrate_password,
     )
 
-    product_tier_id = args.product_tier_id or omnistrate.get_product_tier_id(
+    service = omnistrate.get_service(args.service_id)
+    product_tier = omnistrate.get_product_tier(
         service_id=args.service_id,
         environment_id=args.environment_id,
-        tier_name=REF_NAME,
+        tier_name=args.ref_name,
+    )
+    service_model = omnistrate.get_service_model(
+        args.service_id, product_tier.service_model_id
     )
 
-    print(f"Product tier id: {product_tier_id} for {REF_NAME}")
+    print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     # 1. List product tier versions
     tiers = omnistrate.list_tier_versions(
-        service_id=args.service_id, tier_id=product_tier_id
+        service_id=args.service_id, tier_id=product_tier.product_tier_id
     )
 
     preferred_tier = next(
@@ -103,12 +78,17 @@ def test_upgrade_version():
     print(f"Last tier: {last_tier.version}")
 
     # 2. Create omnistrate instance with previous version
-    instance = OmnistrateInstance(
-        api_path=API_PATH,
-        api_sign_in_path=API_SIGN_IN_PATH,
-        subscription_id=SUBSCRIPTION_ID,
-        omnistrate_user=args.omnistrate_user,
-        omnistrate_password=args.omnistrate_password,
+    instance = omnistrate.instance(
+        service_id=args.service_id,
+        service_provider_id=service.service_provider_id,
+        service_key=service.key,
+        service_environment_id=args.environment_id,
+        service_environment_key=service.get_environment(args.environment_id).key,
+        service_model_key=service_model.key,
+        service_api_version="v1",
+        product_tier_key=product_tier.product_tier_key,
+        resource_key=args.resource_key,
+        subscription_id=args.subscription_id,
     )
     try:
         instance.create(
@@ -132,14 +112,12 @@ def test_upgrade_version():
 
         # 4. Upgrade version for the omnistrate instance
         upgrade_timer = time.time()
-        omnistrate.upgrade_instance(
+        instance.upgrade(
             service_id=args.service_id,
-            product_tier_id=product_tier_id,
-            instance_id=instance.instance_id,
+            product_tier_id=product_tier.product_tier_id,
             source_version=last_tier.version,
             target_version=preferred_tier.version,
             wait_until_ready=True,
-            check_failover=args.check_failover,
         )
 
         print(f"Upgrade time: {(time.time() - upgrade_timer):.2f}s")
@@ -147,7 +125,7 @@ def test_upgrade_version():
         # 6. Verify the upgrade was successful
         query_data(instance)
     except Exception as e:
-        print("Error")
+        print("Error " + str(e))
         instance.delete(True)
         raise e
 
@@ -157,7 +135,7 @@ def test_upgrade_version():
     print("Upgrade version test passed")
 
 
-def add_data(instance: OmnistrateInstance):
+def add_data(instance: OmnistrateFleetInstance):
 
     # Get instance host and port
     db = instance.create_connection(ssl=args.tls)
@@ -168,7 +146,7 @@ def add_data(instance: OmnistrateInstance):
     graph.query("CREATE (n:Person {name: 'Alice'})")
 
 
-def query_data(instance: OmnistrateInstance):
+def query_data(instance: OmnistrateFleetInstance):
 
     # Get instance host and port
     db = instance.create_connection(ssl=args.tls)

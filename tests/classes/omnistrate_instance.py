@@ -21,6 +21,7 @@ class OmnistrateInstance:
         self,
         api_url: str = DEFAULT_API_URL,
         api_path: str = "",
+        api_create_instance_path: str = "",
         api_failover_path: str = "",
         api_sign_in_path: str = "",
         subscription_id: str = "",
@@ -38,6 +39,7 @@ class OmnistrateInstance:
 
         self.api_url = api_url
         self.api_path = api_path
+        self.api_create_instance_path = api_create_instance_path or api_path
         self.api_failover_path = api_failover_path
         self.api_sign_in_path = api_sign_in_path
         self.subscription_id = subscription_id
@@ -98,6 +100,7 @@ class OmnistrateInstance:
         description: str,
         falkordb_user: str,
         falkordb_password: str,
+        product_tier_version: str | None = None,
         **kwargs,
     ) -> str:
         """Create an instance with the specified parameters. Optionally wait for the instance to be ready."""
@@ -116,12 +119,13 @@ class OmnistrateInstance:
                 "falkordbPassword": falkordb_password,
                 **kwargs,
             },
+            "productTierVersion": product_tier_version,
         }
 
         print(f"Creating instance {name}")
 
         response = requests.post(
-            self.api_url + self.api_path + self.subscription_id_query,
+            self.api_url + self.api_create_instance_path + self.subscription_id_query,
             headers=headers,
             data=json.dumps(data),
             timeout=15,
@@ -401,7 +405,7 @@ class OmnistrateInstance:
             except Exception as e:
                 print(f"Failed to connect to the master node: {e}")
                 retries -= 1
-                time.sleep(10)
+                time.sleep(30)
 
         if self._connection is None:
             raise Exception("Failed to connect to the master node")

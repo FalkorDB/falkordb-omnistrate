@@ -25,10 +25,9 @@ parser.add_argument("--resource-key", required=True)
 
 parser.add_argument("--instance-name", required=True)
 parser.add_argument(
-    "--instance-description", required=False, default="test-update-memory"
+    "--instance-description", required=False, default="test-upgrade-version"
 )
 parser.add_argument("--instance-type", required=True)
-parser.add_argument("--new-instance-type", required=True)
 parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
@@ -38,7 +37,7 @@ parser.set_defaults(tls=False)
 args = parser.parse_args()
 
 
-def test_update_memory():
+def test_upgrade_version():
 
     omnistrate = OmnistrateFleetAPI(
         email=args.omnistrate_user,
@@ -57,6 +56,28 @@ def test_update_memory():
 
     print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
+    # 1. List product tier versions
+    tiers = omnistrate.list_tier_versions(
+        service_id=args.service_id, tier_id=product_tier.product_tier_id
+    )
+
+    preferred_tier = next(
+        (tier for tier in tiers if tier.status == TierVersionStatus.PREFERRED), None
+    )
+    if preferred_tier is None:
+        raise ValueError("No preferred tier found")
+
+    last_tier = next(
+        (tier for tier in tiers if tier.status == TierVersionStatus.ACTIVE), None
+    )
+
+    if last_tier is None:
+        raise ValueError("No last tier found")
+
+    print(f"Preferred tier: {preferred_tier.version}")
+    print(f"Last tier: {last_tier.version}")
+
+    # 2. Create omnistrate instance with previous version
     instance = omnistrate.instance(
         service_id=args.service_id,
         service_provider_id=service.service_provider_id,
@@ -69,7 +90,6 @@ def test_update_memory():
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
     )
-
     try:
         instance.create(
             wait_for_ready=True,
@@ -84,23 +104,35 @@ def test_update_memory():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            product_tier_version=last_tier.version,
         )
 
+        # 3. Add data to the instance
         add_data(instance)
 
-        # Update memory
-        instance.update_instance_type(args.new_instance_type, wait_until_ready=True)
+        # 4. Upgrade version for the omnistrate instance
+        upgrade_timer = time.time()
+        instance.upgrade(
+            service_id=args.service_id,
+            product_tier_id=product_tier.product_tier_id,
+            source_version=last_tier.version,
+            target_version=preferred_tier.version,
+            wait_until_ready=True,
+        )
 
+        print(f"Upgrade time: {(time.time() - upgrade_timer):.2f}s")
+
+        # 6. Verify the upgrade was successful
         query_data(instance)
-
     except Exception as e:
+        print("Error " + str(e))
         instance.delete(True)
         raise e
 
-    # Delete instance
+    # 7. Delete the instance
     instance.delete(True)
 
-    print("Update memory size test passed")
+    print("Upgrade version test passed")
 
 
 def add_data(instance: OmnistrateFleetInstance):
@@ -129,4 +161,4 @@ def query_data(instance: OmnistrateFleetInstance):
 
 
 if __name__ == "__main__":
-    test_update_memory()
+    test_upgrade_version()

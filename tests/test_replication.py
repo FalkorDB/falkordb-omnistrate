@@ -1,79 +1,94 @@
 import sys
 import time
+import os
+from classes.omnistrate_fleet_api import (
+    OmnistrateFleetAPI,
+    OmnistrateFleetInstance,
+    TierVersionStatus,
+)
+import argparse
 from falkordb import FalkorDB
 from redis import Sentinel
-import os
-from classes.omnistrate_instance import OmnistrateInstance
 import random
 
-if len(sys.argv) < 8:
-    print(
-        "Usage: python test_single_zone.py <omnistrate_user> <omnistrate_password> <deployment_cloud_provider> <deployment_region> <deployment_instance_type> <deployment_storage_size> <replica_count> <tls=false> <rdb_config=medium> <aof_config=always>"
+
+parser = argparse.ArgumentParser()
+parser.add_argument("omnistrate_user")
+parser.add_argument("omnistrate_password")
+parser.add_argument("cloud_provider", choices=["aws", "gcp"])
+parser.add_argument("region")
+
+parser.add_argument(
+    "--subscription-id", required=False, default=os.getenv("SUBSCRIPTION_ID")
+)
+parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
+parser.add_argument("--service-id", required=True)
+parser.add_argument("--environment-id", required=True)
+parser.add_argument(
+    "--resource-key", required=True, choices=["single-Zone", "multi-Zone"]
+)
+
+
+parser.add_argument("--instance-name", required=True)
+parser.add_argument(
+    "--instance-description", required=False, default="test-replication"
+)
+parser.add_argument("--instance-type", required=True)
+parser.add_argument("--storage-size", required=False, default="30")
+parser.add_argument("--tls", action="store_true")
+parser.add_argument("--rdb-config", required=False, default="medium")
+parser.add_argument("--aof-config", required=False, default="always")
+
+parser.set_defaults(tls=False)
+args = parser.parse_args()
+
+
+def test_replication():
+
+    omnistrate = OmnistrateFleetAPI(
+        email=args.omnistrate_user,
+        password=args.omnistrate_password,
     )
-    sys.exit(1)
 
-OMNISTRATE_USER = sys.argv[1]
-OMNISTRATE_PASSWORD = sys.argv[2]
-DEPLOYMENT_CLOUD_PROVIDER = sys.argv[3]
-DEPLOYMENT_REGION = sys.argv[4]
-DEPLOYMENT_INSTANCE_TYPE = sys.argv[5]
-DEPLOYMENT_STORAGE_SIZE = sys.argv[6]
-DEPLOYMENT_REPLICA_COUNT = sys.argv[7]
-DEPLOYMENT_TLS = sys.argv[8] if len(sys.argv) > 8 else "false"
-DEPLOYMENT_RDB_CONFIG = sys.argv[9] if len(sys.argv) > 9 else "medium"
-DEPLOYMENT_AOF_CONFIG = sys.argv[10] if len(sys.argv) > 10 else "always"
+    service = omnistrate.get_service(args.service_id)
+    product_tier = omnistrate.get_product_tier(
+        service_id=args.service_id,
+        environment_id=args.environment_id,
+        tier_name=args.ref_name,
+    )
+    service_model = omnistrate.get_service_model(
+        args.service_id, product_tier.service_model_id
+    )
 
-API_VERSION = os.getenv("API_VERSION", "2022-09-01-00")
-API_PATH = os.getenv(
-    "API_PATH",
-    f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone",
-)
-API_FAILOVER_PATH = os.getenv(
-    "API_FAILOVER_PATH",
-    f"{API_VERSION}/resource-instance/sp-JvkxkPhinN/falkordb-internal/v1/dev/falkordb-internal-customer-hosted/falkordb-internal-hosted-tier-falkordb-internal-customer-hosted-model-omnistrate-dedicated-tenancy",
-)
-API_SIGN_IN_PATH = os.getenv(
-    "API_SIGN_IN_PATH", f"{API_VERSION}/resource-instance/user/signin"
-)
-SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID", "sub-bHEl5iUoPd")
+    print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
-REF_NAME = os.getenv("REF_NAME", None)
-if REF_NAME is not None:
-    if len(REF_NAME) > 50:
-        # Replace the second occurrence of REF_NAME with the first 50 characters of REF_NAME
-        API_PATH = f"customer-hosted/{REF_NAME[:50]}".join(
-            API_PATH.split(f"customer-hosted/{REF_NAME}")
-        )
-        API_FAILOVER_PATH = f"customer-hosted/{REF_NAME[:50]}".join(
-            API_FAILOVER_PATH.split(f"customer-hosted/{REF_NAME}")
-        )
-
-
-def test_single_zone():
-
-    instance = OmnistrateInstance(
-        api_path=API_PATH,
-        api_failover_path=API_FAILOVER_PATH,
-        api_sign_in_path=API_SIGN_IN_PATH,
-        subscription_id=SUBSCRIPTION_ID,
-        omnistrate_user=OMNISTRATE_USER,
-        omnistrate_password=OMNISTRATE_PASSWORD,
+    instance = omnistrate.instance(
+        service_id=args.service_id,
+        service_provider_id=service.service_provider_id,
+        service_key=service.key,
+        service_environment_id=args.environment_id,
+        service_environment_key=service.get_environment(args.environment_id).key,
+        service_model_key=service_model.key,
+        service_api_version="v1",
+        product_tier_key=product_tier.product_tier_key,
+        resource_key=args.resource_key,
+        subscription_id=args.subscription_id,
     )
 
     try:
         instance.create(
             wait_for_ready=True,
-            deployment_cloud_provider=DEPLOYMENT_CLOUD_PROVIDER,
-            deployment_region=DEPLOYMENT_REGION,
-            name="github-pipeline-single-zone",
-            description="single zone",
+            deployment_cloud_provider=args.cloud_provider,
+            deployment_region=args.region,
+            name=args.instance_name,
+            description=args.instance_description,
             falkordb_user="falkordb",
             falkordb_password="falkordb",
-            nodeInstanceType=DEPLOYMENT_INSTANCE_TYPE,
-            storageSize=DEPLOYMENT_STORAGE_SIZE,
-            enableTLS=True if DEPLOYMENT_TLS == "true" else False,
-            RDBPersistenceConfig=DEPLOYMENT_RDB_CONFIG,
-            AOFPersistenceConfig=DEPLOYMENT_AOF_CONFIG,
+            nodeInstanceType=args.instance_type,
+            storageSize=args.storage_size,
+            enableTLS=args.tls,
+            RDBPersistenceConfig=args.rdb_config,
+            AOFPersistenceConfig=args.aof_config,
         )
         # Test failover and data loss
         test_failover(instance)
@@ -87,7 +102,7 @@ def test_single_zone():
     print("Test passed")
 
 
-def test_failover(instance: OmnistrateInstance):
+def test_failover(instance: OmnistrateFleetInstance):
     """
     Single Zone tests are the following:
     1. Create a single zone instance
@@ -106,15 +121,11 @@ def test_failover(instance: OmnistrateInstance):
 
     resources = instance.get_connection_endpoints()
     db_resource = list(
-        filter(lambda resource: resource["id"].startswith("node-sz"), resources)
+        filter(lambda resource: resource["id"].startswith("node-"), resources)
     )
     db_resource.sort(key=lambda resource: resource["id"])
     sentinel_resource = next(
-        (
-            resource
-            for resource in resources
-            if resource["id"].startswith("sentinel-sz")
-        ),
+        (resource for resource in resources if resource["id"].startswith("sentinel-")),
         None,
     )
     db_0 = FalkorDB(
@@ -122,14 +133,14 @@ def test_failover(instance: OmnistrateInstance):
         port=db_resource[0]["ports"][0],
         username="falkordb",
         password="falkordb",
-        ssl=True if DEPLOYMENT_TLS == "true" else False,
+        ssl=args.tls,
     )
     db_1 = FalkorDB(
         host=db_resource[1]["endpoint"],
         port=db_resource[1]["ports"][0],
         username="falkordb",
         password="falkordb",
-        ssl=True if DEPLOYMENT_TLS == "true" else False,
+        ssl=args.tls,
     )
     sentinels = Sentinel(
         sentinels=[
@@ -140,12 +151,12 @@ def test_failover(instance: OmnistrateInstance):
         sentinel_kwargs={
             "username": "falkordb",
             "password": "falkordb",
-            "ssl": True if DEPLOYMENT_TLS == "true" else False,
+            "ssl": args.tls,
         },
         connection_kwargs={
             "username": "falkordb",
             "password": "falkordb",
-            "ssl": True if DEPLOYMENT_TLS == "true" else False,
+            "ssl": args.tls,
         },
     )
 
@@ -171,10 +182,14 @@ def test_failover(instance: OmnistrateInstance):
     if len(result.result_set) == 0:
         raise Exception("Data was not replicated to the slave")
 
-    print("Triggering failover for node-sz-0")
+    id_key = "sz" if args.resource_key == "single-Zone" else "mz"
+
+    print(f"Triggering failover for node-{id_key}-0")
     # Trigger failover
     instance.trigger_failover(
-        replica_id="node-sz-0", wait_for_ready=False, resource_id="node-sz"
+        replica_id=f"node-{id_key}-0",
+        wait_for_ready=False,
+        resource_id=instance.get_resource_id(f"node-{id_key}"),
     )
 
     promotion_completed = False
@@ -206,13 +221,15 @@ def test_failover(instance: OmnistrateInstance):
 
     print("result after bob", result.result_set)
 
-    # wait until the node-sz-0 is ready
-    instance.wait_for_ready(timeout_seconds=600)
+    # wait until the node 0 is ready
+    instance.wait_for_instance_ready(timeout_seconds=600)
 
-    print("Triggering failover for sentinel-sz-0")
+    print(f"Triggering failover for sentinel-{id_key}-0")
     # Trigger sentinel failover
     instance.trigger_failover(
-        replica_id="sentinel-sz-0", wait_for_ready=False, resource_id="sentinel-sz"
+        replica_id=f"sentinel-{id_key}-0",
+        wait_for_ready=False,
+        resource_id=instance.get_resource_id(f"sentinel-{id_key}"),
     )
 
     graph_1 = db_1.select_graph("test")
@@ -224,13 +241,15 @@ def test_failover(instance: OmnistrateInstance):
 
     print("Data persisted after second failover")
 
-    # wait until the node-sz-0 is ready
-    instance.wait_for_ready(timeout_seconds=600)
+    # wait until the node 0 is ready
+    instance.wait_for_instance_ready(timeout_seconds=600)
 
-    print("Triggering failover for node-sz-1")
+    print(f"Triggering failover for node-{id_key}-1")
     # Trigger failover
     instance.trigger_failover(
-        replica_id="node-sz-1", wait_for_ready=False, resource_id="node-sz"
+        replica_id=f"node-{id_key}-1",
+        wait_for_ready=False,
+        resource_id=instance.get_resource_id(f"node-{id_key}"),
     )
 
     promotion_completed = False
@@ -259,4 +278,4 @@ def test_failover(instance: OmnistrateInstance):
 
 
 if __name__ == "__main__":
-    test_single_zone()
+    test_replication()

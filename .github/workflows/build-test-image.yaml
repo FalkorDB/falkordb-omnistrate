@@ -100,126 +100,142 @@ jobs:
       matrix:
         instances:
           - name: Free - GCP/us-central1 - Failover & Persistence
-            testFile: test_free.py
+            if: 'true'
+            testFile: test_standalone.py
             tierName: free-${{ github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiVersion: 2022-09-01-00
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/free-${{ github.ref_name }}-customer-hosted/free-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-multi-tenancy/free
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/free-${{ github.ref_name }}-customer-hosted/free-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-multi-tenancy/node-f
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
-            extraParams: ""
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'free' --replica-id 'node-f-0' --instance-name 'test-free-failover' --instance-description 'test-free-failover' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence
+            if: 'true'
             testFile: test_standalone.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/node-s
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
-            # extraParams: <instance_size> <disk_size> <tls>
-            extraParams: "e2-custom-4-8192 30 false"
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover' --instance-description 'test-standalone-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Failover & Persistence
-            testFile: test_single_zone.py
+            if: 'true'
+            testFile: test_replication.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
-            # extraParams: <instance_size> <disk_size> <replica_count> <tls>
-            extraParams: "e2-custom-4-8192 30 2 false"
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover' --instance-description 'test-sz-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence
-            testFile: test_multi_zone.py
+            if: 'true'
+            testFile: test_replication.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/multi-Zone
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
-            # extraParams: <instance_size> <disk_size> <replica_count> <tls>
-            extraParams: "e2-custom-4-8192 30 2 false"
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover' --instance-description 'test-mz-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence With TLS
+            if: 'true'
             testFile: test_standalone.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/node-s
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
-            # extraParams: <instance_size> <disk_size> <tls>
-            extraParams: "e2-custom-4-8192 30 true"
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover-tls' --instance-description 'test-standalone-failover-tls' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Failover & Persistence With TLS
-            testFile: test_single_zone.py
+            if: 'true'
+            testFile: test_replication.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
-            # extraParams: <instance_size> <disk_size> <replica_count> <tls>
-            extraParams: "e2-custom-4-8192 30 2 true"
-          - name:  PRO/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
-            testFile: test_multi_zone.py
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-tls' --instance-description 'test-sz-failover-tls' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+          - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
+            if: 'true'
+            testFile: test_replication.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/multi-Zone
-            apiFailoverPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
-            # extraParams: <instance_size> <disk_size> <replica_count> <tls>
-            extraParams: "e2-custom-4-8192 30 2 true"
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-tls' --instance-description 'test-mz-failover-tls' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Update Memory
+            if: 'true'
             testFile: test_update_memory.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/standalone
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
-            # extraParams: <instance_size> <disk_size> <instance_type_new> <tls>
-            extraParams: "e2-custom-4-8192 30 e2-custom-8-16384 false"
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-update-memory' --instance-description 'test-standalone-update-memory' --instance-type 'e2-custom-4-8192' --new-instance-type 'e2-custom-8-16384' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Update Memory
+            if: 'true'
             testFile: test_update_memory.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
-            apiPath: 2022-09-01-00/resource-instance/sp-JvkxkPhinN/falkordb/v1/testing/pro-${{ github.ref_name }}-customer-hosted/pro-${{ github.ref_name }}-falkordb-customer-hosted-model-omnistrate-dedicated-tenancy/single-Zone
-            apiSignInPath: 2022-09-01-00/resource-instance/user/signin
-            # extraParams: <instance_size> <disk_size> <instance_type_new> <tls>
-            extraParams: "e2-custom-4-8192 30 e2-custom-8-16384 false"
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-update-memory' --instance-description 'test-replication-update-memory' --instance-type 'e2-custom-4-8192' --new-instance-type 'e2-custom-8-16384' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          - name: PRO/Standalone - GCP/us-central1 - Upgrade Version
+            if: ${{ github.event_name == 'push' && (contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main')) }}
+            testFile: test_upgrade_version.py
+            tierName: pro-${{ github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-upgrade' --instance-description 'test-standalone-upgrade' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          - name: PRO/SingleZone - GCP/us-central1 - Upgrade Version
+            if: ${{ github.event_name == 'push' && (contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main')) }}
+            testFile: test_upgrade_version.py
+            tierName: pro-${{ github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-upgrade' --instance-description 'test-replication-upgrade' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+       
     steps:
       - name: Checkout
+        if: ${{ matrix.instances.if == 'true' }}
         uses: actions/checkout@v3
 
       - name: Setup python
+        if: ${{ matrix.instances.if == 'true' }}
         uses: actions/setup-python@v2
         with:
           python-version: "3.x"
 
       - name: Install dependencies
+        if: ${{ matrix.instances.if == 'true' }}
         run: |
           python -m pip install --upgrade pip
           pip install -r ./tests/requirements.txt
 
       - name: ${{ matrix.instances.name }}
+        if: ${{ matrix.instances.if == 'true' }}
         env:
+          SERVICE_ID: ${{ matrix.instances.serviceId }}
+          ENVIRONMENT_ID: ${{ matrix.instances.environmentId }}
           CLOUD_PROVIDER: ${{ matrix.instances.cloudProvider }}
           CLOUD_REGION: ${{ matrix.instances.cloudRegion }}
-          SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
-          API_VERSION: ${{ matrix.instances.apiVersion }}
-          API_PATH: ${{ matrix.instances.apiPath }}
-          API_FAILOVER_PATH: ${{ matrix.instances.apiFailoverPath }}
-          API_SIGN_IN_PATH: ${{ matrix.instances.apiSignInPath }}
-          REF_NAME: ${{ matrix.instances.tierName }}
           extraParams: ${{ matrix.instances.extraParams }}
+          SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
+          REF_NAME: ${{ matrix.instances.tierName }}
         run: |
-          python ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} ${{ env.extraParams }}
+          python ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}

@@ -1,11 +1,7 @@
 import sys
 import time
 import os
-from classes.omnistrate_fleet_api import (
-    OmnistrateFleetAPI,
-    OmnistrateFleetInstance,
-    TierVersionStatus,
-)
+from tests.classes import OmnistrateFleetInstance, OmnistrateFleetAPI, TierVersionStatus
 import argparse
 
 parser = argparse.ArgumentParser()

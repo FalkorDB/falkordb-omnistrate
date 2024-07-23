@@ -1,0 +1,10 @@
+[tool.poetry]
+name = "tests"
+version = "0.1.0"
+description = "tests for"
+authors = ["FalkorDB <info@falkordb.com>"]
+package-mode = false
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -91,6 +91,7 @@ jobs:
           file: ${{ matrix.plans.file }}
           service-name: ${{ matrix.plans.service-name }}
           environment: testing
+          environment-type: qa
 
   test:
     needs: omnistrate-update-plans

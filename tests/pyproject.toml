@@ -8,3 +8,9 @@ package-mode = false
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.dependencies]
+python = "^3.11.4"
+falkordb = "^1.0.4"
+redis = "^5.0.7"
+requests = "^2.32.3"

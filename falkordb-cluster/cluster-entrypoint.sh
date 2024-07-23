@@ -38,18 +38,6 @@ log() {
   fi
 }
 
-set_persistence_config() {
-  if [[ $PERSISTENCE_RDB_CONFIG_INPUT == "low" ]]; then
-    PERSISTENCE_RDB_CONFIG='86400 1 21600 100 3600 10000'
-  elif [[ $PERSISTENCE_RDB_CONFIG_INPUT == "medium" ]]; then
-    PERSISTENCE_RDB_CONFIG='21600 1 3600 100 300 10000'
-  elif [[ $PERSISTENCE_RDB_CONFIG_INPUT == "high" ]]; then
-    PERSISTENCE_RDB_CONFIG='3600 1 300 100 60 10000'
-  else 
-    PERSISTENCE_RDB_CONFIG='86400 1 21600 100 3600 10000'
-  fi
-}
-
 get_host() {
   local host_idx=$1
   # substitute -0 from NODE_HOST with host_idx
@@ -143,6 +131,51 @@ check_if_cluster_exists() {
 
 }
 
+create_user() {
+  echo "Creating falkordb user"
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG
+}
+
+set_memory_limit() {
+  memory_limit_instance_type_map="{\"e2-custom-small-1024\":\"100MB\",\"e2-custom-4-8192\":\"6GB\",\"e2-custom-8-16384\":\"13GB\",\"e2-custom-16-32768\":\"30GB\",\"e2-custom-32-65536\":\"62GB\"}"
+
+  if [[ -z $INSTANCE_TYPE ]]; then
+    echo "INSTANCE_TYPE is not set"
+    return
+  fi
+
+  memory_limit=$(echo $memory_limit_instance_type_map | jq -r ".\"$INSTANCE_TYPE\"")
+
+  if [[ ! -z $memory_limit ]]; then
+    echo "Setting maxmemory to $memory_limit"
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
+  fi
+}
+
+
+set_rdb_persistence_config() {
+  if [[ $PERSISTENCE_RDB_CONFIG_INPUT == "low" ]]; then
+    PERSISTENCE_RDB_CONFIG='86400 1 21600 100 3600 10000'
+  elif [[ $PERSISTENCE_RDB_CONFIG_INPUT == "medium" ]]; then
+    PERSISTENCE_RDB_CONFIG='21600 1 3600 100 300 10000'
+  elif [[ $PERSISTENCE_RDB_CONFIG_INPUT == "high" ]]; then
+    PERSISTENCE_RDB_CONFIG='3600 1 300 100 60 10000'
+  else 
+    PERSISTENCE_RDB_CONFIG='86400 1 21600 100 3600 10000'
+  fi
+  echo "Setting persistence config: CONFIG SET save '$PERSISTENCE_RDB_CONFIG'"
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET save "$PERSISTENCE_RDB_CONFIG"
+}
+
+set_aof_persistence_config() {
+  if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then
+    echo "Setting AOF persistence: $PERSISTENCE_AOF_CONFIG"
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET appendonly yes
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET appendfsync $PERSISTENCE_AOF_CONFIG
+  fi
+}
+
+
 create_cluster() {
 
   local urls=""
@@ -223,10 +256,9 @@ fi
 # Create log file
 touch $FALKORDB_LOG_FILE_PATH
 
-set_persistence_config
-
 run_node
 
+sleep 10
 # Check if cluster exist on any other host. 
 # If it doesn't exist, and it's node 0, create one. If not, wait for it to be created
 # If it does exist, join the cluster
@@ -245,6 +277,12 @@ elif [[ $cluster_exists -eq 0 && ! -f "/data/cluster_initialized" ]]; then
 else
   echo "Cluster does not exist. Waiting for it to be created"
 fi
+
+
+create_user
+set_memory_limit
+set_rdb_persistence_config
+set_aof_persistence_config
 
 
 if [[ $RUN_METRICS -eq 1 ]]; then

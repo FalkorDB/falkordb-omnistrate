@@ -1,0 +1,4 @@
+auths:
+  - auth: jwt_auth
+    email: david.zimberknopf@falkordb.com
+    token: eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjE3MzI3MTYsImlhdCI6MTcyMTY0NjMxNiwiaXNzIjoib21uaXN0cmF0ZS5jb20iLCJsYXN0TG9nb3V0Q291bnRlciI6NSwicm9sZSI6InJvb3QiLCJ0b2tlbklEIjoiOTVlMmQyOTgtMjY1Mi00OGVmLTk2MTktOWNlYTE4NjVjNzI1IiwidXNlcklEIjoidXNlci1RNTV1b3RxRWtHIn0.ImvyoZCg06jm-wlSzF8MSgQPItngCFT89n-nj20haAO-DOaQRSxYzJie0c5QvK8ifqESdlwPJ-4VPed_WJgqAQ

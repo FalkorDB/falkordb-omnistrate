@@ -238,11 +238,13 @@ jobs:
           curl -sSL https://install.python-poetry.org | python3 -
 
       - name: Install dependencies
+        working-directory: ./tests
         if: ${{ matrix.instances.if == 'true' }}
         run: poetry install
 
       - name: ${{ matrix.instances.name }}
         if: ${{ matrix.instances.if == 'true' }}
+        working-directory: ./tests
         env:
           SERVICE_ID: ${{ matrix.instances.serviceId }}
           ENVIRONMENT_ID: ${{ matrix.instances.environmentId }}
@@ -252,4 +254,4 @@ jobs:
           SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
           REF_NAME: ${{ matrix.instances.tierName }}
         run: |
-          python ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
+          python ./${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}

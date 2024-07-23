@@ -1,11 +1,7 @@
 import sys
 import time
 import os
-from classes.omnistrate_fleet_api import (
-    OmnistrateFleetAPI,
-    OmnistrateFleetInstance,
-    TierVersionStatus,
-)
+from tests.classes import OmnistrateFleetInstance, OmnistrateFleetAPI
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -25,9 +21,7 @@ parser.add_argument("--replica-id", required=True)
 
 
 parser.add_argument("--instance-name", required=True)
-parser.add_argument(
-    "--instance-description", required=False, default="test-standalone"
-)
+parser.add_argument("--instance-description", required=False, default="test-standalone")
 parser.add_argument("--instance-type", required=True)
 parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
@@ -88,6 +82,9 @@ def test_standalone():
 
         # Test failover and data loss
         test_failover(instance)
+
+        # Test stop and start instance
+        test_stop_start(instance)
     except Exception as e:
         instance.delete(True)
         raise e
@@ -127,6 +124,39 @@ def test_failover(instance: OmnistrateFleetInstance):
         raise Exception("Data lost after failover")
 
     print("Data persisted after failover")
+
+    graph.delete()
+
+
+def test_stop_start(instance: OmnistrateFleetInstance):
+    """This function should stop the instance, check that it is stopped, then start it again and check that it is running"""
+
+    # Get instance host and port
+    db = instance.create_connection(
+        ssl=args.tls,
+    )
+
+    graph = db.select_graph("test")
+
+    # Write some data to the DB
+    graph.query("CREATE (n:Person {name: 'Alice'})")
+
+    print("Stopping instance")
+
+    instance.stop(wait_for_ready=True)
+
+    print("Instance stopped")
+
+    instance.start(wait_for_ready=True)
+
+    graph = db.select_graph("test")
+
+    result = graph.query("MATCH (n:Person) RETURN n")
+
+    if len(result.result_set) == 0:
+        raise Exception("Data lost after stop/start")
+
+    print("Instance started")
 
 
 if __name__ == "__main__":

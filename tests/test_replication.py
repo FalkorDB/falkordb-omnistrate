@@ -1,11 +1,7 @@
 import sys
 import time
 import os
-from classes.omnistrate_fleet_api import (
-    OmnistrateFleetAPI,
-    OmnistrateFleetInstance,
-    TierVersionStatus,
-)
+from tests.classes import OmnistrateFleetInstance, OmnistrateFleetAPI
 import argparse
 from falkordb import FalkorDB
 from redis import Sentinel
@@ -90,8 +86,12 @@ def test_replication():
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
         )
+
         # Test failover and data loss
         test_failover(instance)
+
+        # Test stop and start instance
+        test_stop_start(instance)
     except Exception as e:
         instance.delete(True)
         raise e
@@ -222,7 +222,7 @@ def test_failover(instance: OmnistrateFleetInstance):
     print("result after bob", result.result_set)
 
     # wait until the node 0 is ready
-    instance.wait_for_instance_ready(timeout_seconds=600)
+    instance.wait_for_instance_status(timeout_seconds=600)
 
     print(f"Triggering failover for sentinel-{id_key}-0")
     # Trigger sentinel failover
@@ -242,7 +242,7 @@ def test_failover(instance: OmnistrateFleetInstance):
     print("Data persisted after second failover")
 
     # wait until the node 0 is ready
-    instance.wait_for_instance_ready(timeout_seconds=600)
+    instance.wait_for_instance_status(timeout_seconds=600)
 
     print(f"Triggering failover for node-{id_key}-1")
     # Trigger failover
@@ -275,6 +275,51 @@ def test_failover(instance: OmnistrateFleetInstance):
         raise Exception("Data lost after third failover")
 
     print("Data persisted after third failover")
+
+
+def test_stop_start(instance: OmnistrateFleetInstance):
+    """
+    Single Zone tests are the following:
+    1. Create a single zone instance
+    2. Write some data to the master node
+    3. Stop the master node
+    4. Make sure we can still connect and read the data
+    5. Start the master node
+    6. Make sure we can still connect and read the data
+    7. Delete the instance
+    """
+
+    endpoint = instance.get_cluster_endpoint()
+
+    db = FalkorDB(
+        host=endpoint["endpoint"],
+        port=endpoint["ports"][0],
+        username="falkordb",
+        password="falkordb",
+        ssl=args.tls,
+    )
+
+    graph = db.select_graph("test")
+
+    # Write some data to the DB
+    graph.query("CREATE (n:Person {name: 'Alice'})")
+
+    print("Stopping node")
+
+    instance.stop(wait_for_ready=True)
+
+    print("Instance stopped")
+
+    instance.start(wait_for_ready=True)
+
+    graph = db.select_graph("test")
+
+    result = graph.query("MATCH (n:Person) RETURN n")
+
+    if len(result.result_set) == 0:
+        raise Exception("Data lost after stop/start")
+
+    print("Instance started")
 
 
 if __name__ == "__main__":

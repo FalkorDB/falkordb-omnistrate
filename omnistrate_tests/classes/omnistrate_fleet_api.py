@@ -1,6 +1,6 @@
 import requests
-from tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
-from tests.classes.omnistrate_types import (
+from .omnistrate_fleet_instance import OmnistrateFleetInstance
+from .omnistrate_types import (
     ProductTier,
     Service,
     ServiceModel,

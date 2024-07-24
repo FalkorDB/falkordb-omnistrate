@@ -301,11 +301,15 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     7. Delete the instance
     """
 
-    endpoint = instance.get_cluster_endpoint()
-
+    resources = instance.get_connection_endpoints()
+    db_resource = list(
+        filter(lambda resource: resource["id"].startswith("node-"), resources)
+    )
+    db_resource.sort(key=lambda resource: resource["id"])
+    
     db = FalkorDB(
-        host=endpoint["endpoint"],
-        port=endpoint["ports"][0],
+        host=db_resource[0]["endpoint"],
+        port=db_resource[0]["ports"][0],
         username="falkordb",
         password="falkordb",
         ssl=args.tls,

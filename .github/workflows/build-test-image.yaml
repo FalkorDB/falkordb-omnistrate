@@ -252,4 +252,4 @@ jobs:
           SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
           REF_NAME: ${{ matrix.instances.tierName }}
         run: |
-          poetry run python python ./omnistrate_tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
+          poetry run python ./omnistrate_tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}

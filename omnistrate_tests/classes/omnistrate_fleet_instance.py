@@ -4,7 +4,7 @@ import os
 import time
 import random
 import string
-from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
+import omnistrate_tests.classes.omnistrate_fleet_api
 
 
 def rand_range(a, b):
@@ -24,7 +24,7 @@ class OmnistrateFleetInstance:
 
     def __init__(
         self,
-        fleet_api: OmnistrateFleetAPI,
+        fleet_api: omnistrate_tests.classes.omnistrate_fleet_api.OmnistrateFleetAPI,
         service_id: str = os.getenv("SERVICE_ID"),
         service_provider_id: str = os.getenv("SERVICE_PROVIDER_ID"),
         service_key: str = os.getenv("SERVICE_KEY"),

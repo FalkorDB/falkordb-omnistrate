@@ -11,12 +11,23 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  IMAGE_NAME: falkordb-node
+  NODE_IMAGE_NAME: falkordb-node
+  CLUSTER_IMAGE_NAME: falkordb-cluster
   FALKORDB_VERSION: v4.0.8
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - context: ./falkordb-node
+            dockerfile: ./falkordb-node/Dockerfile
+            image-name: falkordb-node
+          - context: ./falkordb-cluster
+            dockerfile: ./falkordb-cluster/Dockerfile
+            image-name: falkordb-cluster
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -34,19 +45,10 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: FALKORDB_VERSION=${{ env.FALKORDB_VERSION }}
-          context: ./falkordb-node
-          file: ./falkordb-node/Dockerfile
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
           push: true
-          tags: falkordb/${{ env.IMAGE_NAME }}:${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/v') && github.ref_name || 'edge'}}, falkordb/${{ env.IMAGE_NAME }}:latest
-
-      - name: Notify Google Chat
-        id: test-action
-        if: failure() # only send notification in case of failure
-        uses: SimonScholz/google-chat-action@v1.1.0
-        with:
-          webhookUrl: "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}"
-          jobStatus: ${{ job.status }}
-          threadKey: ${{ github.job }}
+          tags: falkordb/${{ matrix.image-name }}:${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/v') && github.ref_name || 'edge'}}, falkordb/${{ matrix.image-name }}:latest
 
   omnistrate-update-plans:
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags/v')
@@ -74,7 +76,8 @@ jobs:
           sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBNodeImage/falkordb\/falkordb-node:${{ github.ref_name }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:${{ github.ref_name }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:${{ github.ref_name }}/g' ${{ matrix.plans.file }}
     
       - name: Upload yaml to artifacts
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}

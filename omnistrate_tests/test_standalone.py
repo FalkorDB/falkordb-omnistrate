@@ -1,11 +1,19 @@
 import sys
+from pathlib import Path # if you haven't already done so
+file = Path(__file__).resolve()
+parent, root = file.parent, file.parents[1]
+sys.path.append(str(root))
+
+# Additionally remove the current file's directory from sys.path
+try:
+    sys.path.remove(str(parent))
+except ValueError: # Already removed
+    pass
+
 import time
 import os
-from classes.omnistrate_fleet_api import (
-    OmnistrateFleetAPI,
-    OmnistrateFleetInstance,
-    TierVersionStatus,
-)
+from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
+from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -21,14 +29,12 @@ parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
 parser.add_argument("--resource-key", required=True)
+parser.add_argument("--replica-id", required=True)
 
 
 parser.add_argument("--instance-name", required=True)
-parser.add_argument(
-    "--instance-description", required=False, default="test-update-memory"
-)
+parser.add_argument("--instance-description", required=False, default="test-standalone")
 parser.add_argument("--instance-type", required=True)
-parser.add_argument("--new-instance-type", required=True)
 parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
@@ -38,7 +44,7 @@ parser.set_defaults(tls=False)
 args = parser.parse_args()
 
 
-def test_update_memory():
+def test_standalone():
 
     omnistrate = OmnistrateFleetAPI(
         email=args.omnistrate_user,
@@ -86,13 +92,11 @@ def test_update_memory():
             AOFPersistenceConfig=args.aof_config,
         )
 
-        add_data(instance)
+        # Test failover and data loss
+        test_failover(instance)
 
-        # Update memory
-        instance.update_instance_type(args.new_instance_type, wait_until_ready=True)
-
-        query_data(instance)
-
+        # Test stop and start instance
+        test_stop_start(instance)
     except Exception as e:
         instance.delete(True)
         raise e
@@ -100,33 +104,72 @@ def test_update_memory():
     # Delete instance
     instance.delete(True)
 
-    print("Update memory size test passed")
+    print("Test passed")
 
 
-def add_data(instance: OmnistrateFleetInstance):
+def test_failover(instance: OmnistrateFleetInstance):
+    """This function should retrieve the instance host and port for connection, write some data to the DB, then trigger a failover. After X seconds, the instance should be back online and data should have persisted"""
 
     # Get instance host and port
-    db = instance.create_connection(ssl=args.tls)
+    db = instance.create_connection(
+        ssl=args.tls,
+    )
 
     graph = db.select_graph("test")
 
     # Write some data to the DB
     graph.query("CREATE (n:Person {name: 'Alice'})")
 
+    # Trigger failover
+    instance.trigger_failover(
+        replica_id=args.replica_id,
+        wait_for_ready=True,
+    )
 
-def query_data(instance: OmnistrateFleetInstance):
-
-    # Get instance host and port
-    db = instance.create_connection(ssl=args.tls)
+    # Check if data is still there
 
     graph = db.select_graph("test")
 
-    # Get info
-    result = graph.query("MATCH (n:Person) RETURN n.name")
+    result = graph.query("MATCH (n:Person) RETURN n")
 
     if len(result.result_set) == 0:
-        raise ValueError("No data found in the graph after upgrade")
+        raise Exception("Data lost after failover")
+
+    print("Data persisted after failover")
+
+    graph.delete()
+
+
+def test_stop_start(instance: OmnistrateFleetInstance):
+    """This function should stop the instance, check that it is stopped, then start it again and check that it is running"""
+
+    # Get instance host and port
+    db = instance.create_connection(
+        ssl=args.tls,
+    )
+
+    graph = db.select_graph("test")
+
+    # Write some data to the DB
+    graph.query("CREATE (n:Person {name: 'Alice'})")
+
+    print("Stopping instance")
+
+    instance.stop(wait_for_ready=True)
+
+    print("Instance stopped")
+
+    instance.start(wait_for_ready=True)
+
+    graph = db.select_graph("test")
+
+    result = graph.query("MATCH (n:Person) RETURN n")
+
+    if len(result.result_set) == 0:
+        raise Exception("Data lost after stop/start")
+
+    print("Instance started")
 
 
 if __name__ == "__main__":
-    test_update_memory()
+    test_standalone()

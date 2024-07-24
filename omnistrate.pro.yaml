@@ -33,7 +33,7 @@ x-omnistrate-integrations:
   - omnistrateLogging:
   - omnistrateMetrics:
       additionalMetrics:
-        node-s: 
+        node-s:
           prometheusEndpoint: "http://localhost:9121/metrics"
           metrics:
             redis_blocked_clients:
@@ -90,8 +90,6 @@ x-omnistrate-integrations:
             redis_unexpected_error_replies:
             redis_up:
             redis_uptime_in_seconds:
-
-        
 
 services:
   # Standalone
@@ -187,6 +185,90 @@ services:
           - "always"
         parameterDependencyMap:
           node-s: AOFPersistenceConfig
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        min: 0
+        max: 256
+        parameterDependencyMap:
+          node-s: falkorDBCacheSize
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        min: 256
+        max: 32768
+        parameterDependencyMap:
+          node-s: falkorDBNodeCreationBuffer
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        min: 0
+        max: 512
+        parameterDependencyMap:
+          node-s: falkorDBMaxQueuedQueries
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          node-s: falkorDBTimeoutMax
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          node-s: falkorDBTimeoutDefault
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        min: 0
+        max: 1000000
+        parameterDependencyMap:
+          node-s: falkorDBResultSetSize
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 2000000000
+        parameterDependencyMap:
+          node-s: falkorDBQueryMemCapacity
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -262,6 +344,76 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        min: 0
+        max: 256
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        min: 256
+        max: 32768
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        min: 0
+        max: 512
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        min: 0
+        max: 1000000
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 2000000000
     volumes:
       - source: ./data
         target: /data
@@ -287,13 +439,19 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
+      - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
+      - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
+      - FALKORDB_TIMEOUT_MAX=$var.falkorDBTimeoutMax
+      - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
+      - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
+      - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
     ports:
       - "6379:6379"
     x-omnistrate-capabilities:
       enableMultiZone: false
-      enableEndpointPerReplica: true    
+      enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
-      
 
   # Single Zone
 
@@ -400,6 +558,90 @@ services:
           - "always"
         parameterDependencyMap:
           node-sz: AOFPersistenceConfig
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        min: 0
+        max: 256
+        parameterDependencyMap:
+          node-sz: falkorDBCacheSize
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        min: 256
+        max: 32768
+        parameterDependencyMap:
+          node-sz: falkorDBNodeCreationBuffer
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        min: 0
+        max: 512
+        parameterDependencyMap:
+          node-sz: falkorDBMaxQueuedQueries
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          node-sz: falkorDBTimeoutMax
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          node-sz: falkorDBTimeoutDefault
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        min: 0
+        max: 1000000
+        parameterDependencyMap:
+          node-sz: falkorDBResultSetSize
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 2000000000
+        parameterDependencyMap:
+          node-sz: falkorDBQueryMemCapacity
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -489,6 +731,76 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        min: 0
+        max: 256
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        min: 256
+        max: 32768
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        min: 0
+        max: 512
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        min: 0
+        max: 1000000
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 2000000000
     volumes:
       - source: ./data
         target: /data
@@ -517,6 +829,13 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
+      - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
+      - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
+      - FALKORDB_TIMEOUT_MAX=$var.falkorDBTimeoutMax
+      - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
+      - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
+      - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -551,11 +870,11 @@ services:
           # Trigger failover before master is removed
 
           role=$(redis-cli -p $NODE_PORT info replication | grep role | cut -d ':' -f 2)
-        
+
           if [ "$role" == "master" ]; then
               redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL failover $MASTER_NAME
-          fi 
-  
+          fi
+
     depends_on:
       - sentinel-sz
 
@@ -712,6 +1031,90 @@ services:
           - "always"
         parameterDependencyMap:
           node-mz: AOFPersistenceConfig
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        min: 0
+        max: 256
+        parameterDependencyMap:
+          node-mz: falkorDBCacheSize
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        min: 256
+        max: 32768
+        parameterDependencyMap:
+          node-mz: falkorDBNodeCreationBuffer
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        min: 0
+        max: 512
+        parameterDependencyMap:
+          node-mz: falkorDBMaxQueuedQueries
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          node-mz: falkorDBTimeoutMax
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          node-mz: falkorDBTimeoutDefault
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        min: 0
+        max: 1000000
+        parameterDependencyMap:
+          node-mz: falkorDBResultSetSize
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 2000000000
+        parameterDependencyMap:
+          node-mz: falkorDBQueryMemCapacity
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -801,6 +1204,76 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        min: 0
+        max: 256
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        min: 256
+        max: 32768
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        min: 0
+        max: 512
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 1000000
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 2000000000
     volumes:
       - source: ./data
         target: /data
@@ -829,6 +1302,13 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
+      - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
+      - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
+      - FALKORDB_TIMEOUT_MAX=$var.falkorDBTimeoutMax
+      - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
+      - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
+      - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -836,7 +1316,6 @@ services:
       enableMultiZone: true
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
-      
       - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: >
@@ -864,7 +1343,7 @@ services:
           # Trigger failover before master is removed
 
           role=$(redis-cli -p $NODE_PORT info replication | grep role | cut -d ':' -f 2)
-        
+
           if [ "$role" == "master" ]; then
               redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL failover $MASTER_NAME
           fi

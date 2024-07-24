@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "tests"
+name = "omnistrate_tests"
 version = "0.1.0"
-description = "tests for"
+description = "tests for omnistrate"
 authors = ["FalkorDB <info@falkordb.com>"]
 package-mode = false
 
@@ -14,3 +14,4 @@ python = "^3.11.4"
 falkordb = "^1.0.4"
 redis = "^5.0.7"
 requests = "^2.32.3"
+setuptools = "^71.1.0"

@@ -4,6 +4,7 @@ import os
 import time
 import random
 import string
+from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
 
 
 def rand_range(a, b):
@@ -23,7 +24,7 @@ class OmnistrateFleetInstance:
 
     def __init__(
         self,
-        fleet_api: "OmnistrateFleetAPI",
+        fleet_api: OmnistrateFleetAPI,
         service_id: str = os.getenv("SERVICE_ID"),
         service_provider_id: str = os.getenv("SERVICE_PROVIDER_ID"),
         service_key: str = os.getenv("SERVICE_KEY"),
@@ -180,7 +181,7 @@ class OmnistrateFleetInstance:
 
         return response.json()["consumptionResourceInstanceResult"]
 
-    def get_resource_id(self, resource_key: str = None):
+    def get_resource_id(self, resource_key: str = None) -> str | None:
         """Get the resource ID of the instance."""
 
         network_topology = self._get_network_topology()
@@ -222,13 +223,18 @@ class OmnistrateFleetInstance:
             if e.args[0] == "Timeout":
                 raise Exception(f"Failed to delete instance {self.instance_id}")
 
-    def stop(self, wait_for_ready: bool):
+    def stop(self, wait_for_ready: bool, retry=5):
         """Stop the instance. Optionally wait for the instance to be ready."""
 
         response = self._fleet_api.client().post(
-            f"{self._fleet_api.base_url}/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}/{self.instance_id}/stop",
+            f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}/stop",
             timeout=15,
+            data=json.dumps({"resourceId": self.get_resource_id()}),
         )
+
+        if "another operation is already in progress" in response.text and retry > 0:
+            time.sleep(60)
+            return self.stop(wait_for_ready, retry - 1)
 
         self._fleet_api.handle_response(
             response, f"Failed to stop instance {self.instance_id}"
@@ -242,13 +248,18 @@ class OmnistrateFleetInstance:
             timeout_seconds=self.deployment_failover_timeout_seconds,
         )
 
-    def start(self, wait_for_ready: bool):
+    def start(self, wait_for_ready: bool, retry=5):
         """Start the instance. Optionally wait for the instance to be ready."""
 
         response = self._fleet_api.client().post(
-            f"{self._fleet_api.base_url}/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}/{self.instance_id}/start",
+            f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}/start",
             timeout=15,
+            data=json.dumps({"resourceId": self.get_resource_id()}),
         )
+
+        if "another operation is already in progress" in response.text and retry > 0:
+            time.sleep(60)
+            return self.start(wait_for_ready, retry - 1)
 
         self._fleet_api.handle_response(
             response, f"Failed to start instance {self.instance_id}"

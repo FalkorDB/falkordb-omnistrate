@@ -59,7 +59,7 @@ remove_master_from_group() {
         echo "Master is down"
         break
       fi
-      tries=$((tries-1))
+      tries=$((tries - 1))
       if [[ $tries -eq 0 ]]; then
         echo "Master did not failover"
         break
@@ -70,16 +70,16 @@ remove_master_from_group() {
 
 get_sentinels_list() {
   echo "Getting sentinels list"
-  
+
   sentinels_list=$(redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL sentinels $MASTER_NAME)
-  echo $sentinels_list > /tmp/sentinels_list.txt
-  sentinels_list=$(IFS=' ' read -r -a sentinels <<< $(cat /tmp/sentinels_list.txt))
+  echo $sentinels_list >/tmp/sentinels_list.txt
+  sentinels_list=$(IFS=' ' read -r -a sentinels <<<$(cat /tmp/sentinels_list.txt))
   sentinels_count=$(echo -n ${sentinels[@]} | grep -Fo name | wc -l)
   # Parse sentinels into an array of "{ip} {port}"
   sentinels_list=''
-  for ((i=0; i<$sentinels_count; i++)); do
-    sentinel_ip=${sentinels[i*28+3]}
-    sentinel_port=${sentinels[i*28+5]}
+  for ((i = 0; i < $sentinels_count; i++)); do
+    sentinel_ip=${sentinels[i * 28 + 3]}
+    sentinel_port=${sentinels[i * 28 + 5]}
     sentinels_list="$sentinels_list $sentinel_ip:$sentinel_port "
   done
   return $sentinels_list
@@ -87,7 +87,7 @@ get_sentinels_list() {
 
 send_reset_to_sentinels() {
   echo "Sending reset to sentinels"
-   
+
   sentinels_list=$1
   i=0
   for sentinel in $sentinels_list; do
@@ -110,7 +110,7 @@ handle_sigterm() {
 
   sentinels_list=$(get_sentinels_list)
 
-  if  [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
+  if [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
     remove_master_from_group
     kill -TERM $falkordb_pid
   fi
@@ -179,7 +179,7 @@ wait_until_sentinel_host_resolves() {
       sentinel_response=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters)
       sentinel_response_code=$?
       log "Sentinel Response: $sentinel_response_code - $sentinel_response"
-      if [[ $? -eq 0 ]] && [[ $sentinel_response != *"ERR"* ]]; then 
+      if [[ $? -eq 0 ]] && [[ $sentinel_response != *"ERR"* ]]; then
         echo "Sentinel host resolved"
         break
       fi
@@ -203,7 +203,7 @@ wait_until_node_host_resolves() {
       host_response=$(redis-cli -h $1 -p $2 -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING PING)
       host_response_code=$?
       log "Host Response: $host_response_code - $host_response"
-      if [[ $host_response_code -eq 0 ]] && [[ $host_response == "PONG" ]]; then 
+      if [[ $host_response_code -eq 0 ]] && [[ $host_response == "PONG" ]]; then
         echo "Node host resolved"
         sleep 10
         break
@@ -233,7 +233,7 @@ get_master() {
 
 is_replica() {
   get_master
-  
+
   # If NODE_HOST starts with node-X, where X > 0, wait until FALKORDB_MASTER_HOST is not empty
   if [[ $NODE_INDEX -gt 0 && -z $FALKORDB_MASTER_HOST ]]; then
     echo "Waiting for master to be available"
@@ -255,7 +255,7 @@ is_replica() {
   fi
 
   if [[ ($FALKORDB_MASTER_HOST == $NODE_HOST || $FALKORDB_MASTER_HOST == $NODE_HOST_IP) && $FALKORDB_MASTER_PORT_NUMBER == $NODE_PORT ]]; then
-    # This node is the master 
+    # This node is the master
     IS_REPLICA=0
     return
   else
@@ -273,11 +273,10 @@ set_persistence_config() {
     PERSISTENCE_RDB_CONFIG='21600 1 3600 100 300 10000'
   elif [[ $PERSISTENCE_RDB_CONFIG_INPUT == "high" ]]; then
     PERSISTENCE_RDB_CONFIG='3600 1 300 100 60 10000'
-  else 
+  else
     PERSISTENCE_RDB_CONFIG='86400 1 21600 100 3600 10000'
   fi
 }
-
 
 # If node.conf doesn't exist or $REPLACE_NODE_CONF=1, copy it from /falkordb
 if [ ! -f $NODE_CONF_FILE ] || [ "$REPLACE_NODE_CONF" -eq "1" ]; then
@@ -305,37 +304,37 @@ set_persistence_config
 get_self_host_ip
 
 if [ "$RUN_NODE" -eq "1" ]; then
- 
+
   # If TLS is enabled, use NODE_HOST; otherwise, use NODE_HOST_IP
   # if [[ $TLS == "true" ]]; then
-    sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_CONF_FILE
+  sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_CONF_FILE
   # else
   #   sed -i "s/\$NODE_HOST/$NODE_HOST_IP/g" $NODE_CONF_FILE
   # fi
-  
+
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" $NODE_CONF_FILE
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
-  echo "dir $DATA_DIR" >> $NODE_CONF_FILE
+  echo "dir $DATA_DIR" >>$NODE_CONF_FILE
 
   is_replica
   if [[ $IS_REPLICA -eq 1 ]]; then
-    echo "replicaof $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER" >> $NODE_CONF_FILE
+    echo "replicaof $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER" >>$NODE_CONF_FILE
     echo "Starting Replica"
   else
     echo "Starting Master"
   fi
 
   if [[ $TLS == "true" ]]; then
-    echo "port 0" >> $NODE_CONF_FILE
-    echo "tls-port $NODE_PORT" >> $NODE_CONF_FILE
-    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >> $NODE_CONF_FILE
-    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >> $NODE_CONF_FILE
-    echo "tls-ca-cert-file $ROOT_CA_PATH" >> $NODE_CONF_FILE
-    echo "tls-replication yes" >> $NODE_CONF_FILE
-    echo "tls-auth-clients no" >> $NODE_CONF_FILE
+    echo "port 0" >>$NODE_CONF_FILE
+    echo "tls-port $NODE_PORT" >>$NODE_CONF_FILE
+    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$NODE_CONF_FILE
+    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$NODE_CONF_FILE
+    echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
+    echo "tls-replication yes" >>$NODE_CONF_FILE
+    echo "tls-auth-clients no" >>$NODE_CONF_FILE
   else
-    echo "port $NODE_PORT" >> $NODE_CONF_FILE
+    echo "port $NODE_PORT" >>$NODE_CONF_FILE
   fi
 
   redis-server $NODE_CONF_FILE --logfile $FALKORDB_LOG_FILE_PATH &
@@ -343,7 +342,6 @@ if [ "$RUN_NODE" -eq "1" ]; then
   tail -F $FALKORDB_LOG_FILE_PATH &
 
   sleep 10
-
 
   # If node should be master, add it to sentinel
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
@@ -354,7 +352,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
     wait_until_node_host_resolves $NODE_HOST $NODE_PORT
     log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
     res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
-    if [[ $? -ne 0 || $res == *"ERR"* ]]; then
+    if [[ $? -ne 0 || ($res == *"ERR"* && $res != *"Duplicate master name"*) ]]; then
       echo "Could not add master to sentinel: $res"
       exit 1
     fi
@@ -386,19 +384,17 @@ if [ "$RUN_NODE" -eq "1" ]; then
   # Set persistence config
   echo "Setting persistence config: CONFIG SET save '$PERSISTENCE_RDB_CONFIG'"
   redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET save "$PERSISTENCE_RDB_CONFIG"
-  
+
   if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then
     echo "Setting AOF persistence: $PERSISTENCE_AOF_CONFIG"
     redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET appendonly yes
     redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET appendfsync $PERSISTENCE_AOF_CONFIG
   fi
 
-
   # Config rewrite
   echo "Rewriting config"
   redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
 fi
-
 
 if [ "$RUN_SENTINEL" -eq "1" ]; then
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
@@ -412,15 +408,15 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
   echo "Starting Sentinel"
 
   if [[ $TLS == "true" ]]; then
-    echo "port 0" >> $SENTINEL_CONF_FILE
-    echo "tls-port $SENTINEL_PORT" >> $SENTINEL_CONF_FILE
-    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >> $SENTINEL_CONF_FILE
-    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >> $SENTINEL_CONF_FILE
-    echo "tls-ca-cert-file $ROOT_CA_PATH" >> $SENTINEL_CONF_FILE
-    echo "tls-replication yes" >> $SENTINEL_CONF_FILE
-    echo "tls-auth-clients no" >> $SENTINEL_CONF_FILE
+    echo "port 0" >>$SENTINEL_CONF_FILE
+    echo "tls-port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
+    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$SENTINEL_CONF_FILE
+    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$SENTINEL_CONF_FILE
+    echo "tls-ca-cert-file $ROOT_CA_PATH" >>$SENTINEL_CONF_FILE
+    echo "tls-replication yes" >>$SENTINEL_CONF_FILE
+    echo "tls-auth-clients no" >>$SENTINEL_CONF_FILE
   else
-    echo "port $SENTINEL_PORT" >> $SENTINEL_CONF_FILE
+    echo "port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
   fi
 
   redis-server $SENTINEL_CONF_FILE --sentinel --logfile $SENTINEL_LOG_FILE_PATH &
@@ -440,9 +436,7 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
     redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
   fi
 
-  
 fi
-
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
@@ -461,7 +455,6 @@ if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
     echo "Healthcheck binary not found"
   fi
 fi
-
 
 while true; do
   sleep 1

@@ -1,13 +1,5 @@
 version: "3.9"
 
-x-omnistrate-service-plan:
-  name: "FalkorDB Pro"
-  tenancyType: "OMNISTRATE_DEDICATED_TENANCY"
-  deployment:
-    hostedDeployment:
-      GcpProjectId: "$GcpProjectId"
-      GcpProjectNumber: "$GcpProjectNumber"
-      GcpServiceAccountEmail: "$GcpServiceAccountEmail"
 
 x-omnistrate-load-balancer:
   tcp:
@@ -1147,7 +1139,7 @@ services:
         required: true
         export: false
 
-  Cluster Single-Zone:
+  Cluster-Single-Zone:
     x-omnistrate-mode-internal: false
     image: omnistrate/noop
     x-omnistrate-api-params:
@@ -1387,7 +1379,7 @@ services:
       enableMultiZone: false
       enableEndpointPerReplica: true
 
-  Cluster Multi-Zone:
+  Cluster-Multi-Zone:
     x-omnistrate-mode-internal: false
     image: omnistrate/noop
     x-omnistrate-api-params:

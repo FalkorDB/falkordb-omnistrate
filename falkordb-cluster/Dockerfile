@@ -22,13 +22,12 @@ RUN mkdir -p /falkordb
 
 WORKDIR /falkordb
 
-COPY falkordb-node/sentinel.conf .
-COPY falkordb-node/node.conf .
-COPY falkordb-node/node-entrypoint.sh /usr/local/bin/
+COPY falkordb-cluster/node.conf .
+COPY falkordb-cluster/cluster-entrypoint.sh /usr/local/bin/
 COPY --from=redis_exporter /redis_exporter /usr/local/bin/
 COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/local/bin/healthcheck
 
 RUN chown redis:redis /falkordb/* && \
-  chmod +x /usr/local/bin/node-entrypoint.sh
+  chmod +x /usr/local/bin/cluster-entrypoint.sh
 
-CMD ["node-entrypoint.sh"]
+CMD ["cluster-entrypoint.sh"]

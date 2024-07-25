@@ -1,5 +1,6 @@
 import sys
-from pathlib import Path # if you haven't already done so
+from pathlib import Path  # if you haven't already done so
+
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
@@ -7,7 +8,7 @@ sys.path.append(str(root))
 # Additionally remove the current file's directory from sys.path
 try:
     sys.path.remove(str(parent))
-except ValueError: # Already removed
+except ValueError:  # Already removed
     pass
 
 import time
@@ -301,11 +302,14 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     7. Delete the instance
     """
 
-    endpoint = instance.get_cluster_endpoint()
-
+    resources = instance.get_connection_endpoints()
+    sentinel_resource = next(
+        (resource for resource in resources if resource["id"].startswith("sentinel-")),
+        None,
+    )
     db = FalkorDB(
-        host=endpoint["endpoint"],
-        port=endpoint["ports"][0],
+        host=sentinel_resource["endpoint"],
+        port=sentinel_resource["ports"][0],
         username="falkordb",
         password="falkordb",
         ssl=args.tls,

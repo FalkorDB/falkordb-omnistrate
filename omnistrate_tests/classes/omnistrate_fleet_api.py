@@ -1,5 +1,5 @@
 import requests
-from .omnistrate_fleet_instance import OmnistrateFleetInstance
+import omnistrate_tests.classes.omnistrate_fleet_instance
 from .omnistrate_types import (
     ProductTier,
     Service,
@@ -132,19 +132,21 @@ class OmnistrateFleetAPI:
         deployment_delete_timeout_seconds: int = None,
         deployment_failover_timeout_seconds: int = None,
     ):
-        return OmnistrateFleetInstance(
-            self,
-            service_id,
-            service_provider_id,
-            service_key,
-            service_api_version,
-            service_environment_key,
-            service_environment_id,
-            service_model_key,
-            product_tier_key,
-            resource_key,
-            subscription_id,
-            deployment_create_timeout_seconds,
-            deployment_delete_timeout_seconds,
-            deployment_failover_timeout_seconds,
+        return (
+            omnistrate_tests.classes.omnistrate_fleet_instance.OmnistrateFleetInstance(
+                self,
+                service_id,
+                service_provider_id,
+                service_key,
+                service_api_version,
+                service_environment_key,
+                service_environment_id,
+                service_model_key,
+                product_tier_key,
+                resource_key,
+                subscription_id,
+                deployment_create_timeout_seconds,
+                deployment_delete_timeout_seconds,
+                deployment_failover_timeout_seconds,
+            )
         )

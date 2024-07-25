@@ -354,7 +354,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
     wait_until_node_host_resolves $NODE_HOST $NODE_PORT
     log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
     res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
-    if [[ $? -ne 0 || $res == *"ERR"* ]]; then
+    if [[ $? -ne 0 || ($res == *"ERR"* && $res != *"Duplicate master name"*) ]]; then
       echo "Could not add master to sentinel: $res"
       exit 1
     fi

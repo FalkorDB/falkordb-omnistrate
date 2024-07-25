@@ -20,11 +20,9 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - context: ./falkordb-node
-            dockerfile: ./falkordb-node/Dockerfile
+          - dockerfile: ./falkordb-node/Dockerfile
             image-name: falkordb-node
-          - context: ./falkordb-cluster
-            dockerfile: ./falkordb-cluster/Dockerfile
+          - dockerfile: ./falkordb-cluster/Dockerfile
             image-name: falkordb-cluster
     steps:
       - name: Checkout
@@ -43,7 +41,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: FALKORDB_VERSION=${{ env.FALKORDB_VERSION }}
-          context: ${{ matrix.context }}
+          context: .
           file: ${{ matrix.dockerfile }}
           push: true
           tags: falkordb/${{ matrix.image-name }}:dev-${{ github.event.head_commit.id }}

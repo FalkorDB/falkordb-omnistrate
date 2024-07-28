@@ -115,13 +115,18 @@ name = "falkordb"
 version = "1.0.6"
 description = "Python client for interacting with FalkorDB database"
 optional = false
-python-versions = "<4.0,>=3.8"
-files = [
-    {file = "falkordb-1.0.6.tar.gz", hash = "sha256:c83abf9a0ed95ce1f9285ba0912df295f32f95fbc1c82b8800861624503b60ed"},
-]
+python-versions = "^3.8"
+files = []
+develop = false
 
 [package.dependencies]
-redis = ">=5.0.1,<6.0.0"
+redis = "^5.0.1"
+
+[package.source]
+type = "git"
+url = "https://github.com/falkordb/falkordb-py.git"
+reference = "cluster"
+resolved_reference = "22957e09e12902de8e7d46aea31c0e443c15bc50"
 
 [[package]]
 name = "idna"
@@ -206,4 +211,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11.4"
-content-hash = "21bfb1482963377e0cfc29512b3828828bd5aa13e40006ef73a92a25faf26f30"
+content-hash = "83b50e5771e106fd758937c3c800d4ebd44fa8c678f9330534c1af3db5e0b48e"

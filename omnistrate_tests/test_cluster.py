@@ -1,14 +1,15 @@
 import sys
-from pathlib import Path # if you haven't already done so
+from pathlib import Path  # if you haven't already done so
+
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
 
 # Additionally remove the current file's directory from sys.path
-try:
+from contextlib import suppress
+
+with suppress(ValueError):
     sys.path.remove(str(parent))
-except ValueError: # Already removed
-    pass
 
 import time
 import os
@@ -29,6 +30,7 @@ parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
 parser.add_argument("--resource-key", required=True)
+parser.add_argument("--replica-id", required=True)
 
 
 parser.add_argument("--instance-name", required=True)
@@ -91,6 +93,8 @@ def test_standalone():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            hostCount=args.host_count,
+            clusterReplicas=args.cluster_replicas,
         )
 
         # Test failover and data loss

@@ -112,12 +112,12 @@ files = [
 
 [[package]]
 name = "falkordb"
-version = "1.0.6"
+version = "1.0.7"
 description = "Python client for interacting with FalkorDB database"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "falkordb-1.0.6.tar.gz", hash = "sha256:c83abf9a0ed95ce1f9285ba0912df295f32f95fbc1c82b8800861624503b60ed"},
+    {file = "falkordb-1.0.7.tar.gz", hash = "sha256:79d573e32260bb7bc0086586eeca227e1b49e81f99d28e0928f6a39a325802b3"},
 ]
 
 [package.dependencies]
@@ -206,4 +206,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11.4"
-content-hash = "21bfb1482963377e0cfc29512b3828828bd5aa13e40006ef73a92a25faf26f30"
+content-hash = "bc3eebb21f63835c4180249450b0149bf699bd5b688bd014c19f65d5f247e0ef"

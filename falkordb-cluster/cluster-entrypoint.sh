@@ -273,6 +273,11 @@ touch $FALKORDB_LOG_FILE_PATH
 run_node
 
 sleep 10
+
+create_user
+set_memory_limit
+set_rdb_persistence_config
+set_aof_persistence_config
 # Check if cluster exist on any other host.
 # If it doesn't exist, and it's node 0, create one. If not, wait for it to be created
 # If it does exist, join the cluster
@@ -291,11 +296,6 @@ elif [[ $cluster_exists -eq 0 && ! -f "/data/cluster_initialized" ]]; then
 else
   echo "Cluster does not exist. Waiting for it to be created"
 fi
-
-create_user
-set_memory_limit
-set_rdb_persistence_config
-set_aof_persistence_config
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"

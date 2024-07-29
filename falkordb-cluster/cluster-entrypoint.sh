@@ -17,7 +17,6 @@ CLUSTER_REPLICAS=${CLUSTER_REPLICAS:-1}
 NODE_HOST=${NODE_HOST:-localhost}
 NODE_PORT=${NODE_PORT:-6379}
 
-FALKORDB_MASTER_HOST=''
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
 DATA_DIR=${DATA_DIR:-/data}
@@ -148,8 +147,14 @@ create_user() {
 }
 
 set_memory_limit() {
-  memory_limit_instance_type_map="{\"e2-custom-small-1024\":\"100MB\",\"e2-custom-4-8192\":\"6GB\",\"e2-custom-8-16384\":\"13GB\",\"e2-custom-16-32768\":\"30GB\",\"e2-custom-32-65536\":\"62GB\"}"
-
+  declare -A memory_limit_instance_type_map
+  memory_limit_instance_type_map=(
+    ["e2-custom-small-1024"]="100MB"
+    ["e2-custom-4-8192"]="6GB"
+    ["e2-custom-8-16384"]="13GB"
+    ["e2-custom-16-32768"]="30GB"
+    ["e2-custom-32-65536"]="62GB"
+  )
   if [[ -z $INSTANCE_TYPE ]]; then
     echo "INSTANCE_TYPE is not set"
     return
@@ -233,7 +238,6 @@ join_cluster() {
 }
 
 run_node() {
-  local node_idx=$1
 
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
@@ -297,7 +301,6 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://$NODE_HOST:$NODE_PORT"; fi)
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -is-cluster &
-  redis_exporter_pid=$!
 fi
 
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
@@ -305,7 +308,6 @@ if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   if [ -f /usr/local/bin/healthcheck ]; then
     echo "Starting Healthcheck"
     healthcheck &
-    healthcheck_pid=$!
   else
     echo "Healthcheck binary not found"
   fi

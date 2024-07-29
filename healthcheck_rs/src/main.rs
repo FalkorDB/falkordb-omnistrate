@@ -66,7 +66,7 @@ fn health_check_handler() -> Result<bool, redis::RedisError> {
 
     let db_info: String = redis::cmd("INFO").query(&mut con)?;
 
-    let is_cluster = db_info.contains("cluster_enabled");
+    let is_cluster = db_info.contains("cluster_enabled:1");
 
     if is_cluster {
         return get_status_from_cluster_node(db_info, &mut con);
@@ -97,10 +97,6 @@ fn get_status_from_cluster_node(
     db_info: String,
     con: &mut redis::Connection,
 ) -> Result<bool, redis::RedisError> {
-    if !db_info.contains("cluster_enabled:1") {
-        return Ok(false);
-    }
-
     let cluster_info: String = redis::cmd("CLUSTER INFO").query(con)?;
 
     if !cluster_info.contains("cluster_state:ok") {

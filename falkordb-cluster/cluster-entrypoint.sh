@@ -32,6 +32,17 @@ DATE_NOW=$(date +"%Y%m%d%H%M%S")
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo ""; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 
+handle_sigterm() {
+  echo "Caught SIGTERM"
+  echo "Stopping FalkorDB"
+
+  if [[ ! -z $falkordb_pid ]]; then
+    kill -TERM $falkordb_pid
+  fi
+}
+
+trap handle_sigterm SIGTERM
+
 log() {
   if [[ $DEBUG -eq 1 ]]; then
     echo $1
@@ -59,7 +70,7 @@ wait_until_node_host_resolves() {
       host_response=$(redis-cli -h $host -p $port $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
       host_response_code=$?
       log "Host Response: $host_response_code - $host_response"
-      if [[ $host_response_code -eq 0 ]] && [[ $host_response == "PONG" ]]; then 
+      if [[ $host_response_code -eq 0 ]] && [[ $host_response == "PONG" ]]; then
         echo "Node host resolved"
         sleep 10
         break
@@ -108,7 +119,7 @@ check_if_cluster_exists() {
   local checked=0
 
   for i in $(seq 0 $(($HOST_COUNT - 1))); do
-    
+
     if [[ $i -eq $NODE_INDEX ]]; then
       log "Skipping self"
       continue
@@ -152,7 +163,6 @@ set_memory_limit() {
   fi
 }
 
-
 set_rdb_persistence_config() {
   if [[ $PERSISTENCE_RDB_CONFIG_INPUT == "low" ]]; then
     PERSISTENCE_RDB_CONFIG='86400 1 21600 100 3600 10000'
@@ -160,7 +170,7 @@ set_rdb_persistence_config() {
     PERSISTENCE_RDB_CONFIG='21600 1 3600 100 300 10000'
   elif [[ $PERSISTENCE_RDB_CONFIG_INPUT == "high" ]]; then
     PERSISTENCE_RDB_CONFIG='3600 1 300 100 60 10000'
-  else 
+  else
     PERSISTENCE_RDB_CONFIG='86400 1 21600 100 3600 10000'
   fi
   echo "Setting persistence config: CONFIG SET save '$PERSISTENCE_RDB_CONFIG'"
@@ -174,7 +184,6 @@ set_aof_persistence_config() {
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET appendfsync $PERSISTENCE_AOF_CONFIG
   fi
 }
-
 
 create_cluster() {
 
@@ -228,22 +237,23 @@ run_node() {
 
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
-  echo "dir $DATA_DIR/$i" >> $NODE_CONF_FILE
+  sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_CONF_FILE
+  echo "dir $DATA_DIR/$i" >>$NODE_CONF_FILE
 
   if [[ $TLS == "true" ]]; then
-    echo "port 0" >> $NODE_CONF_FILE
-    echo "tls-port $NODE_PORT" >> $NODE_CONF_FILE
-    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >> $NODE_CONF_FILE
-    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >> $NODE_CONF_FILE
-    echo "tls-ca-cert-file $ROOT_CA_PATH" >> $NODE_CONF_FILE
-    echo "tls-cluster yes" >> $NODE_CONF_FILE
-    echo "tls-auth-clients no" >> $NODE_CONF_FILE
+    echo "port 0" >>$NODE_CONF_FILE
+    echo "tls-port $NODE_PORT" >>$NODE_CONF_FILE
+    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$NODE_CONF_FILE
+    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$NODE_CONF_FILE
+    echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
+    echo "tls-cluster yes" >>$NODE_CONF_FILE
+    echo "tls-auth-clients no" >>$NODE_CONF_FILE
   else
-    echo "port $NODE_PORT" >> $NODE_CONF_FILE
+    echo "port $NODE_PORT" >>$NODE_CONF_FILE
   fi
 
   redis-server $NODE_CONF_FILE --logfile $FALKORDB_LOG_FILE_PATH &
-  falkordb_pids="$falkordb_pids $!"
+  falkordb_pid=$!
   tail -f $FALKORDB_LOG_FILE_PATH &
 }
 
@@ -259,11 +269,11 @@ touch $FALKORDB_LOG_FILE_PATH
 run_node
 
 sleep 10
-# Check if cluster exist on any other host. 
+# Check if cluster exist on any other host.
 # If it doesn't exist, and it's node 0, create one. If not, wait for it to be created
 # If it does exist, join the cluster
 
-check_if_cluster_exists 2 
+check_if_cluster_exists 2
 cluster_exists=$?
 
 if [[ $cluster_exists -eq 0 && $NODE_INDEX -eq 0 && ! -f "/data/cluster_initialized" ]]; then
@@ -278,17 +288,15 @@ else
   echo "Cluster does not exist. Waiting for it to be created"
 fi
 
-
 create_user
 set_memory_limit
 set_rdb_persistence_config
 set_aof_persistence_config
 
-
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://$NODE_HOST:$NODE_PORT"; fi)
-  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url &
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -is-cluster &
   redis_exporter_pid=$!
 fi
 
@@ -302,7 +310,6 @@ if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
     echo "Healthcheck binary not found"
   fi
 fi
-
 
 while true; do
   sleep 1

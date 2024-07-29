@@ -1,8 +1,8 @@
+use dns_lookup;
 use rouille::router;
 use rouille::Response;
 use rouille::Server;
 use std::env;
-use dns_lookup;
 
 fn main() {
     start_health_check_server();
@@ -66,6 +66,12 @@ fn health_check_handler() -> Result<bool, redis::RedisError> {
 
     let db_info: String = redis::cmd("INFO").query(&mut con)?;
 
+    let is_cluster = db_info.contains("cluster_enabled:1");
+
+    if is_cluster {
+        return get_status_from_cluster_node(db_info, &mut con);
+    }
+
     let role_regex = regex::Regex::new(r"role:(\w+)").unwrap();
     let role_matches = role_regex.captures(&db_info);
 
@@ -73,14 +79,38 @@ fn health_check_handler() -> Result<bool, redis::RedisError> {
         return Ok(false);
     }
 
-    let role = role_regex.captures(&db_info).unwrap().get(1).unwrap().as_str();
+    let role = role_regex
+        .captures(&db_info)
+        .unwrap()
+        .get(1)
+        .unwrap()
+        .as_str();
 
     if role == "master" {
-        return Ok(true);
+        return get_status_from_master(db_info);
     }
 
-    // If role:slave, check if master_sync_in_progress:0 and master_link_status:up
-    
+    return get_status_from_slave(db_info);
+}
+
+fn get_status_from_cluster_node(
+    db_info: String,
+    con: &mut redis::Connection,
+) -> Result<bool, redis::RedisError> {
+    let cluster_info: String = redis::cmd("CLUSTER INFO").query(con)?;
+
+    if !cluster_info.contains("cluster_state:ok") {
+        return Ok(false);
+    }
+
+    return Ok(true);
+}
+
+fn get_status_from_master(db_info: String) -> Result<bool, redis::RedisError> {
+    return Ok(true);
+}
+
+fn get_status_from_slave(db_info: String) -> Result<bool, redis::RedisError> {
     if !db_info.contains("master_link_status:up") {
         return Ok(false);
     }
@@ -89,9 +119,7 @@ fn health_check_handler() -> Result<bool, redis::RedisError> {
         return Ok(false);
     }
 
-
     return Ok(true);
-
 }
 
 fn resolve_host(host: &str) {

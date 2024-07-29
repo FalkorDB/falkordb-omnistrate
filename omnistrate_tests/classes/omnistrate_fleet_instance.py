@@ -1,64 +1,19 @@
-import requests
-import json
-import time
-import os
 from falkordb import FalkorDB
+import json
+import os
+import time
 import random
 import string
+import omnistrate_tests.classes.omnistrate_fleet_api
 
 
-class Service:
-
-    def __init__(
-        self,
-        id: str,
-        name: str,
-        key: str,
-        service_provider_id: str,
-        environments: list["Environment"],
-    ):
-        self.id = id
-        self.name = name
-        self.key = key
-        self.service_provider_id = service_provider_id
-        self.environments = environments
-
-    def get_environment(self, environment_id: str):
-        return next(env for env in self.environments if env.id == environment_id)
-
-    @staticmethod
-    def from_json(json: dict):
-        return Service(
-            json["id"],
-            json["name"],
-            json["key"],
-            json["serviceProviderID"],
-            [Environment.from_json(env) for env in json["serviceEnvironments"]],
-        )
+def rand_range(a, b):
+    return random.randint(a, b)
 
 
-class ServiceModel:
-
-    def __init__(self, id: str, name: str, key: str):
-        self.id = id
-        self.name = name
-        self.key = key
-
-    @staticmethod
-    def from_json(json: dict):
-        return ServiceModel(json["id"], json["name"], json["key"])
-
-
-class Environment:
-
-    def __init__(self, id: str, name: str, key: str):
-        self.id = id
-        self.name = name
-        self.key = key.lower()
-
-    @staticmethod
-    def from_json(json: dict):
-        return Environment(json["id"], json["name"], json["name"])
+def rand_string(l=12):
+    letters = string.ascii_letters
+    return "".join(random.choice(letters) for _ in range(l))
 
 
 class OmnistrateFleetInstance:
@@ -69,7 +24,7 @@ class OmnistrateFleetInstance:
 
     def __init__(
         self,
-        fleet_api: "OmnistrateFleetAPI",
+        fleet_api: omnistrate_tests.classes.omnistrate_fleet_api.OmnistrateFleetAPI,
         service_id: str = os.getenv("SERVICE_ID"),
         service_provider_id: str = os.getenv("SERVICE_PROVIDER_ID"),
         service_key: str = os.getenv("SERVICE_KEY"),
@@ -176,13 +131,15 @@ class OmnistrateFleetInstance:
             return
 
         try:
-            self.wait_for_instance_ready(
+            self.wait_for_instance_status(
                 timeout_seconds=self.deployment_create_timeout_seconds
             )
         except Exception:
             raise Exception(f"Failed to create instance {name}")
 
-    def wait_for_instance_ready(self, timeout_seconds: int = 1200):
+    def wait_for_instance_status(
+        self, requested_status="RUNNING", timeout_seconds: int = 1200
+    ):
         """Wait for the instance to be ready."""
         timeout_timer = time.time() + int(timeout_seconds or 1200)
 
@@ -191,8 +148,8 @@ class OmnistrateFleetInstance:
                 raise Exception("Timeout")
 
             status = self._get_instance_details()["status"]
-            if status == "RUNNING":
-                print("Instance is ready")
+            if status == requested_status:
+                print(f"Instance is {requested_status}")
                 break
             elif status == "FAILED":
                 print("Instance is in error state")
@@ -224,7 +181,7 @@ class OmnistrateFleetInstance:
 
         return response.json()["consumptionResourceInstanceResult"]
 
-    def get_resource_id(self, resource_key: str = None):
+    def get_resource_id(self, resource_key: str = None) -> str | None:
         """Get the resource ID of the instance."""
 
         network_topology = self._get_network_topology()
@@ -259,12 +216,61 @@ class OmnistrateFleetInstance:
             return
 
         try:
-            self.wait_for_instance_ready(
+            self.wait_for_instance_status(
                 timeout_seconds=self.deployment_delete_timeout_seconds
             )
         except Exception as e:
             if e.args[0] == "Timeout":
                 raise Exception(f"Failed to delete instance {self.instance_id}")
+
+    def stop(self, wait_for_ready: bool, retry=5):
+        """Stop the instance. Optionally wait for the instance to be ready."""
+
+        response = self._fleet_api.client().post(
+            f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}/stop",
+            timeout=15,
+            data=json.dumps({"resourceId": self.get_resource_id()}),
+        )
+
+        if "another operation is already in progress" in response.text and retry > 0:
+            time.sleep(60)
+            return self.stop(wait_for_ready, retry - 1)
+
+        self._fleet_api.handle_response(
+            response, f"Failed to stop instance {self.instance_id}"
+        )
+
+        if not wait_for_ready:
+            return
+
+        self.wait_for_instance_status(
+            requested_status="STOPPED",
+            timeout_seconds=self.deployment_failover_timeout_seconds,
+        )
+
+    def start(self, wait_for_ready: bool, retry=5):
+        """Start the instance. Optionally wait for the instance to be ready."""
+
+        response = self._fleet_api.client().post(
+            f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}/start",
+            timeout=15,
+            data=json.dumps({"resourceId": self.get_resource_id()}),
+        )
+
+        if "another operation is already in progress" in response.text and retry > 0:
+            time.sleep(60)
+            return self.start(wait_for_ready, retry - 1)
+
+        self._fleet_api.handle_response(
+            response, f"Failed to start instance {self.instance_id}"
+        )
+
+        if not wait_for_ready:
+            return
+
+        self.wait_for_instance_status(
+            timeout_seconds=self.deployment_failover_timeout_seconds
+        )
 
     def trigger_failover(
         self, replica_id: str, wait_for_ready: bool, resource_id: str = None, retry=5
@@ -296,7 +302,7 @@ class OmnistrateFleetInstance:
         if not wait_for_ready:
             return
 
-        self.wait_for_instance_ready(
+        self.wait_for_instance_status(
             timeout_seconds=self.deployment_failover_timeout_seconds
         )
 
@@ -305,7 +311,7 @@ class OmnistrateFleetInstance:
     ):
         """Update the instance type."""
 
-        self.wait_for_instance_ready()
+        self.wait_for_instance_status()
 
         data = {
             "nodeInstanceType": new_instance_type,
@@ -334,7 +340,7 @@ class OmnistrateFleetInstance:
         if not wait_until_ready:
             return
 
-        self.wait_for_instance_ready(
+        self.wait_for_instance_status(
             timeout_seconds=self.deployment_failover_timeout_seconds
         )
 
@@ -499,230 +505,3 @@ class OmnistrateFleetInstance:
                 {"node_count": node_count},
             )
         print("Data generated")
-
-
-def rand_range(a, b):
-    return random.randint(a, b)
-
-
-def rand_string(l=12):
-    letters = string.ascii_letters
-    return "".join(random.choice(letters) for _ in range(l))
-
-
-class ProductTier:
-
-    def __init__(
-        self,
-        product_tier_id: str,
-        product_tier_name: str,
-        product_tier_key: str,
-        latest_major_version: str,
-        service_model_id: str,
-        service_model_name: str,
-        service_environment_id: str,
-        service_api_id: str,
-    ):
-        self.product_tier_id = product_tier_id
-        self.product_tier_name = product_tier_name
-        self.product_tier_key = product_tier_key
-        self.latest_major_version = latest_major_version
-        self.service_model_id = service_model_id
-        self.service_model_name = service_model_name
-        self.service_environment_id = service_environment_id
-        self.service_api_id = service_api_id
-
-    @staticmethod
-    def from_json(json: dict):
-        return ProductTier(
-            json["productTierId"],
-            json["productTierName"],
-            json["productTierKey"],
-            json["latestMajorVersion"],
-            json["serviceModelId"],
-            json["serviceModelName"],
-            json["serviceEnvironmentId"],
-            json["serviceApiId"],
-        )
-
-
-class TierVersionStatus:
-    PREFERRED = "Preferred"
-    ACTIVE = "Active"
-    DEPRECATED = "Deprecated"
-
-    @staticmethod
-    def from_string(status: str):
-        if status == "Preferred":
-            return TierVersionStatus.PREFERRED
-        if status == "Active":
-            return TierVersionStatus.ACTIVE
-        if status == "Deprecated":
-            return TierVersionStatus.DEPRECATED
-        raise ValueError(f"Invalid status: {status}")
-
-
-class OmnistrateTierVersion:
-
-    def __init__(
-        self,
-        version: str,
-        service_id: str,
-        product_tier_id: str,
-        status: TierVersionStatus,
-    ):
-        self.version = version
-        self.service_id = service_id
-        self.product_tier_id = product_tier_id
-        self.status = status
-
-    @staticmethod
-    def from_json(json: dict):
-        return OmnistrateTierVersion(
-            json["version"],
-            json["serviceId"],
-            json["productTierId"],
-            TierVersionStatus.from_string(json["status"]),
-        )
-
-
-class OmnistrateFleetAPI:
-
-    base_url = "https://api.omnistrate.cloud/2022-09-01-00"
-    _token = None
-
-    def __init__(self, email: str, password: str):
-        self._email = email
-        self._password = password
-
-    def handle_response(self, response, message):
-        if response.status_code >= 300 or response.status_code < 200:
-            print(f"{message}: {response.text}")
-            raise Exception(f"{message}")
-
-    def get_token(self):
-
-        if self._token is not None:
-            return self._token
-
-        url = self.base_url + "/signin"
-        response = requests.post(
-            url, json={"email": self._email, "password": self._password}, timeout=10
-        )
-        self.handle_response(response, "Failed to get token")
-
-        self._token = response.json()["jwtToken"]
-
-        return self._token
-
-    def client(self):
-        session = requests.session()
-
-        session.headers.update(
-            {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + self.get_token(),
-            }
-        )
-
-        return session
-
-    def get_service(self, service_id: str) -> "Service":
-        """Get the service by ID."""
-
-        response = self.client().get(
-            f"{self.base_url}/service",
-            timeout=15,
-        )
-
-        self.handle_response(response, "Failed to get service")
-
-        return next(
-            Service.from_json(service)
-            for service in response.json()["services"]
-            if service["id"] == service_id
-        )
-
-    def get_service_model(self, service_id: str, service_model_id: str):
-        """Get the service model by ID."""
-
-        response = self.client().get(
-            f"{self.base_url}/service/{service_id}/model/{service_model_id}",
-            timeout=15,
-        )
-
-        self.handle_response(response, "Failed to get service model")
-
-        return ServiceModel.from_json(response.json())
-
-    def get_product_tier(
-        self, service_id: str, environment_id: str, tier_name: str
-    ) -> "ProductTier":
-        """Get the product tier by name."""
-
-        response = self.client().get(
-            f"{self.base_url}/service/{service_id}/environment/{environment_id}/service-plan",
-            timeout=15,
-        )
-
-        self.handle_response(response, "Failed to get product tier ID")
-
-        data = response.json()["servicePlans"]
-
-        return next(
-            (
-                ProductTier.from_json(tier)
-                for tier in data
-                if tier["productTierName"] == tier_name
-            ),
-            None,
-        )
-
-    def list_tier_versions(
-        self, service_id: str, tier_id: str
-    ) -> list[OmnistrateTierVersion]:
-        """List all versions of a tier."""
-
-        response = self.client().get(
-            f"{self.base_url}/service/{service_id}/productTier/{tier_id}/version-set",
-            timeout=15,
-        )
-
-        self.handle_response(response, "Failed to list tier versions")
-
-        data = response.json()["tierVersionSets"]
-
-        return [OmnistrateTierVersion.from_json(version) for version in data]
-
-    def instance(
-        self,
-        service_id: str = None,
-        service_provider_id: str = None,
-        service_key: str = None,
-        service_api_version: str = None,
-        service_environment_key: str = None,
-        service_environment_id: str = None,
-        service_model_key: str = None,
-        product_tier_key: str = None,
-        resource_key: str = None,
-        subscription_id: str = None,
-        deployment_create_timeout_seconds: int = None,
-        deployment_delete_timeout_seconds: int = None,
-        deployment_failover_timeout_seconds: int = None,
-    ):
-        return OmnistrateFleetInstance(
-            self,
-            service_id,
-            service_provider_id,
-            service_key,
-            service_api_version,
-            service_environment_key,
-            service_environment_id,
-            service_model_key,
-            product_tier_key,
-            resource_key,
-            subscription_id,
-            deployment_create_timeout_seconds,
-            deployment_delete_timeout_seconds,
-            deployment_failover_timeout_seconds,
-        )

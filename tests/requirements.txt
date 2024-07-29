@@ -1,4 +1,0 @@
-redis
-requests
-git+https://github.com/FalkorDB/falkordb-py
-pyjwt

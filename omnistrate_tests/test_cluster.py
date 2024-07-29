@@ -29,6 +29,7 @@ parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
 parser.add_argument("--resource-key", required=True)
+parser.add_argument("--replica-id", required=True)
 
 
 parser.add_argument("--instance-name", required=True)

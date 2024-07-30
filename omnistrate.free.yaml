@@ -140,6 +140,13 @@ services:
       - DATA_DIR=/data
       - INSTANCE_TYPE=e2-custom-small-1024
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - FALKORDB_CACHE_SIZE=25
+      - FALKORDB_NODE_CREATION_BUFFER=16384
+      - FALKORDB_MAX_QUEUED_QUERIES=50
+      - FALKORDB_TIMEOUT_MAX=0
+      - FALKORDB_TIMEOUT_DEFAULT=0
+      - FALKORDB_RESULT_SET_SIZE=10000
+      - FALKORDB_QUERY_MEM_CAPACITY=52428800
     ports:
       - "6379:6379"
       # - "9121:9121"

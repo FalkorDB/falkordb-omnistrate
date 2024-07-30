@@ -448,7 +448,7 @@ class OmnistrateFleetInstance:
             if (
                 "clusterEndpoint" in resources[key]
                 and len(resources[key]["clusterEndpoint"]) > 0
-                and "@streamer" not in resources[key]["clusterEndpoint"]
+                and "streamer." not in resources[key]["clusterEndpoint"]
             ):
                 return {
                     "endpoint": resources[key]["clusterEndpoint"],

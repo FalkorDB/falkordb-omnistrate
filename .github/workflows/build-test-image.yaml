@@ -192,7 +192,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-update-memory' --instance-description 'test-replication-update-memory' --instance-type 'e2-custom-4-8192' --new-instance-type 'e2-custom-8-16384' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Upgrade Version
-            if: ${{ github.event_name == 'push' && (contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main')) }}
+            if: "${{ github.event_name == 'push' && (contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main')) }}"
             testFile: test_upgrade_version.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -202,7 +202,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-upgrade' --instance-description 'test-standalone-upgrade' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Upgrade Version
-            if: ${{ github.event_name == 'push' && (contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main')) }}
+            if: "${{ github.event_name == 'push' && (contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main')) }}"
             testFile: test_upgrade_version.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -275,6 +275,8 @@ jobs:
 
       - name: Install Poetry
         if: steps.cache.outputs.cache-hit != true && ${{ matrix.instances.if == 'true' }}
+        env: 
+          if: matrix.instances.if
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
 

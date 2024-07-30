@@ -13,6 +13,13 @@ INSTANCE_TYPE=${INSTANCE_TYPE:-''}
 PERSISTENCE_RDB_CONFIG_INPUT=${PERSISTENCE_RDB_CONFIG_INPUT:-'low'}
 PERSISTENCE_RDB_CONFIG=${PERSISTENCE_RDB_CONFIG:-'86400 1 21600 100 3600 10000'}
 PERSISTENCE_AOF_CONFIG=${PERSISTENCE_AOF_CONFIG:-'everysec'}
+FALKORDB_CACHE_SIZE=${FALKORDB_CACHE_SIZE:-25}
+FALKORDB_NODE_CREATION_BUFFER=${FALKORDB_NODE_CREATION_BUFFER:-16384}
+FALKORDB_MAX_QUEUED_QUERIES=${FALKORDB_MAX_QUEUED_QUERIES:-50}
+FALKORDB_TIMEOUT_MAX=${FALKORDB_TIMEOUT_MAX:-0}
+FALKORDB_TIMEOUT_DEFAULT=${FALKORDB_TIMEOUT_DEFAULT:-0}
+FALKORDB_RESULT_SET_SIZE=${FALKORDB_RESULT_SET_SIZE:-10000}
+FALKORDB_QUERY_MEM_CAPACITY=${FALKORDB_QUERY_MEM_CAPACITY:-0}
 
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
@@ -244,11 +251,7 @@ is_replica() {
 
   # IF host is empty, then this node is the master
   if [[ -z $FALKORDB_MASTER_HOST ]]; then
-    # if [[ $TLS == "true" ]]; then
     FALKORDB_MASTER_HOST=$NODE_HOST
-    # else
-    #   FALKORDB_MASTER_HOST=$NODE_HOST_IP
-    # fi
     FALKORDB_MASTER_PORT_NUMBER=$NODE_PORT
     IS_REPLICA=0
     return
@@ -305,16 +308,17 @@ get_self_host_ip
 
 if [ "$RUN_NODE" -eq "1" ]; then
 
-  # If TLS is enabled, use NODE_HOST; otherwise, use NODE_HOST_IP
-  # if [[ $TLS == "true" ]]; then
   sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_CONF_FILE
-  # else
-  #   sed -i "s/\$NODE_HOST/$NODE_HOST_IP/g" $NODE_CONF_FILE
-  # fi
-
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" $NODE_CONF_FILE
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
+  sed -i "s/\$FALKORDB_CACHE_SIZE/$FALKORDB_CACHE_SIZE/g" $NODE_CONF_FILE
+  sed -i "s/\$FALKORDB_NODE_CREATION_BUFFER/$FALKORDB_NODE_CREATION_BUFFER/g" $NODE_CONF_FILE
+  sed -i "s/\$FALKORDB_MAX_QUEUED_QUERIES/$FALKORDB_MAX_QUEUED_QUERIES/g" $NODE_CONF_FILE
+  sed -i "s/\$FALKORDB_TIMEOUT_MAX/$FALKORDB_TIMEOUT_MAX/g" $NODE_CONF_FILE
+  sed -i "s/\$FALKORDB_TIMEOUT_DEFAULT/$FALKORDB_TIMEOUT_DEFAULT/g" $NODE_CONF_FILE
+  sed -i "s/\$FALKORDB_RESULT_SET_SIZE/$FALKORDB_RESULT_SET_SIZE/g" $NODE_CONF_FILE
+  sed -i "s/\$FALKORDB_QUERY_MEM_CAPACITY/$FALKORDB_QUERY_MEM_CAPACITY/g" $NODE_CONF_FILE
   echo "dir $DATA_DIR" >>$NODE_CONF_FILE
 
   is_replica
@@ -348,7 +352,6 @@ if [ "$RUN_NODE" -eq "1" ]; then
     echo "Adding master to sentinel"
     wait_until_sentinel_host_resolves
 
-    # if [[ $TLS == "true" ]]; then
     wait_until_node_host_resolves $NODE_HOST $NODE_PORT
     log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
     res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
@@ -356,14 +359,6 @@ if [ "$RUN_NODE" -eq "1" ]; then
       echo "Could not add master to sentinel: $res"
       exit 1
     fi
-    # else
-    #   log "Master Name: $MASTER_NAME\nNode IP: $NODE_HOST_IP\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
-    #   res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST_IP $NODE_PORT $SENTINEL_QUORUM)
-    #   if [[ $? -ne 0 || $res == *"ERR"* ]]; then
-    #     echo "Could not add master to sentinel: $res"
-    #     exit 1
-    #   fi
-    # fi
 
     redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
     redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER

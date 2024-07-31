@@ -9,42 +9,42 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE_NAME: falkordb-node
-  FALKORDB_VERSION: v4.0.8
+  NODE_IMAGE_NAME: falkordb-node
+  CLUSTER_IMAGE_NAME: falkordb-cluster
+  FALKORDB_VERSION: v4.0.11
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - dockerfile: ./falkordb-node/Dockerfile
+            image-name: falkordb-node
+          - dockerfile: ./falkordb-cluster/Dockerfile
+            image-name: falkordb-cluster
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           build-args: FALKORDB_VERSION=${{ env.FALKORDB_VERSION }}
-          context: ./falkordb-node
-          file: ./falkordb-node/Dockerfile
+          context: .
+          file: ${{ matrix.dockerfile }}
           push: true
-          tags: falkordb/${{ env.IMAGE_NAME }}:dev-${{ github.event.head_commit.id }}
-
-      - name: Notify Google Chat
-        id: test-action
-        if: failure() # only send notification in case of failure
-        uses: SimonScholz/google-chat-action@v1.1.0
-        with:
-          webhookUrl: "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}"
-          jobStatus: ${{ job.status }}
-          threadKey: ${{ github.job }}
+          tags: falkordb/${{ matrix.image-name }}:dev-${{ github.event.head_commit.id }}
 
   omnistrate-update-plans:
     needs: build-and-push
@@ -73,11 +73,12 @@ jobs:
           sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBNodeImage/falkordb\/falkordb-node:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
           sed -i 's/${{ matrix.plans.plan-name }}/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
 
       - name: Upload yaml as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.plans.file }}
           path: ${{ matrix.plans.file }}
@@ -91,6 +92,7 @@ jobs:
           file: ${{ matrix.plans.file }}
           service-name: ${{ matrix.plans.service-name }}
           environment: testing
+          environment-type: qa
 
   test:
     needs: omnistrate-update-plans
@@ -100,7 +102,7 @@ jobs:
       matrix:
         instances:
           - name: Free - GCP/us-central1 - Failover & Persistence
-            if: 'true'
+            if: "true"
             testFile: test_standalone.py
             tierName: free-${{ github.ref_name }}
             cloudProvider: gcp
@@ -110,7 +112,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'free' --replica-id 'node-f-0' --instance-name 'test-free-failover' --instance-description 'test-free-failover' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence
-            if: 'true'
+            if: "true"
             testFile: test_standalone.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -120,7 +122,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover' --instance-description 'test-standalone-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Failover & Persistence
-            if: 'true'
+            if: "true"
             testFile: test_replication.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -130,7 +132,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover' --instance-description 'test-sz-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence
-            if: 'true'
+            if: "true"
             testFile: test_replication.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -140,7 +142,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover' --instance-description 'test-mz-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence With TLS
-            if: 'true'
+            if: "true"
             testFile: test_standalone.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -150,7 +152,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover-tls' --instance-description 'test-standalone-failover-tls' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Failover & Persistence With TLS
-            if: 'true'
+            if: "true"
             testFile: test_replication.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -160,7 +162,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-tls' --instance-description 'test-sz-failover-tls' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
-            if: 'true'
+            if: "true"
             testFile: test_replication.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -170,7 +172,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-tls' --instance-description 'test-mz-failover-tls' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Update Memory
-            if: 'true'
+            if: "true"
             testFile: test_update_memory.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -180,7 +182,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-update-memory' --instance-description 'test-standalone-update-memory' --instance-type 'e2-custom-4-8192' --new-instance-type 'e2-custom-8-16384' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Update Memory
-            if: 'true'
+            if: "true"
             testFile: test_update_memory.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -190,7 +192,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-update-memory' --instance-description 'test-replication-update-memory' --instance-type 'e2-custom-4-8192' --new-instance-type 'e2-custom-8-16384' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Upgrade Version
-            if: ${{ github.event_name == 'push' && (contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main')) }}
+            if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
             testFile: test_upgrade_version.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -200,7 +202,7 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-upgrade' --instance-description 'test-standalone-upgrade' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Upgrade Version
-            if: ${{ github.event_name == 'push' && (contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main')) }}
+            if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
             testFile: test_upgrade_version.py
             tierName: pro-${{ github.ref_name }}
             cloudProvider: gcp
@@ -209,26 +211,83 @@ jobs:
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-upgrade' --instance-description 'test-replication-upgrade' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
-       
+          - name: PRO/ClusterSingleZone - GCP/us-central1 - Failover & Persistence
+            if: "true"
+            testFile: test_cluster.py
+            tierName: pro-${{ github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-0' --instance-name 'test-cluster-sz-failover' --instance-description 'test-cluster-sz-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
+          - name: PRO/ClusterMultiZone - GCP/us-central1 - Failover & Persistence
+            if: "true"
+            testFile: test_cluster.py
+            tierName: pro-${{ github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-0' --instance-name 'test-cluster-mz-failover' --instance-description 'test-cluster-mz-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
+          - name: PRO/ClusterSingleZone - GCP/us-central1 - Failover & Persistence With TLS
+            if: "true"
+            testFile: test_cluster.py
+            tierName: pro-${{ github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-0' --instance-name 'test-cluster-sz-failover-tls' --instance-description 'test-cluster-sz-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
+          - name: PRO/ClusterMultiZone - GCP/us-central1 - Failover & Persistence With TLS
+            if: "true"
+            testFile: test_cluster.py
+            tierName: pro-${{ github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-0' --instance-name 'test-cluster-mz-failover-tls' --instance-description 'test-cluster-mz-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
+
     steps:
       - name: Checkout
-        if: ${{ matrix.instances.if == 'true' }}
+        if: matrix.instances.if == 'true' || matrix.instances.if == true
         uses: actions/checkout@v3
 
       - name: Setup python
-        if: ${{ matrix.instances.if == 'true' }}
+        if: matrix.instances.if == 'true' || matrix.instances.if == true
         uses: actions/setup-python@v2
         with:
           python-version: "3.x"
 
-      - name: Install dependencies
-        if: ${{ matrix.instances.if == 'true' }}
+      - name: Cache Poetry virtualenv
+        if: matrix.instances.if == 'true' || matrix.instances.if == true
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.poetry/virtualenvs
+          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+
+      - name: Install Poetry
+        if: steps.cache.outputs.cache-hit != true && (matrix.instances.if == 'true' || matrix.instances.if == true)
+        env:
+          if: ${{ matrix.instances.if }}
+          if_equal_bool: ${{ matrix.instances.if == true }}
+          if_equal_str: ${{ matrix.instances.if == 'true' }}
         run: |
-          python -m pip install --upgrade pip
-          pip install -r ./tests/requirements.txt
+          curl -sSL https://install.python-poetry.org | python3 -
+
+      - name: Install dependencies
+        if: matrix.instances.if == 'true' || matrix.instances.if == true
+        run: poetry install
 
       - name: ${{ matrix.instances.name }}
-        if: ${{ matrix.instances.if == 'true' }}
+        if: matrix.instances.if == 'true' || matrix.instances.if == true
         env:
           SERVICE_ID: ${{ matrix.instances.serviceId }}
           ENVIRONMENT_ID: ${{ matrix.instances.environmentId }}
@@ -238,4 +297,4 @@ jobs:
           SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
           REF_NAME: ${{ matrix.instances.tierName }}
         run: |
-          python ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
+          poetry run python ./omnistrate_tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}

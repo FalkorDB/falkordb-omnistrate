@@ -18,7 +18,6 @@ FALKORDB_TIMEOUT_MAX=${FALKORDB_TIMEOUT_MAX:-0}
 FALKORDB_TIMEOUT_DEFAULT=${FALKORDB_TIMEOUT_DEFAULT:-0}
 FALKORDB_RESULT_SET_SIZE=${FALKORDB_RESULT_SET_SIZE:-10000}
 FALKORDB_QUERY_MEM_CAPACITY=${FALKORDB_QUERY_MEM_CAPACITY:-0}
-HOST_COUNT=${HOST_COUNT:-6}
 CLUSTER_REPLICAS=${CLUSTER_REPLICAS:-1}
 
 NODE_HOST=${NODE_HOST:-localhost}
@@ -78,7 +77,6 @@ wait_until_node_host_resolves() {
       log "Host Response: $host_response_code - $host_response"
       if [[ $host_response_code -eq 0 ]] && [[ $host_response == "PONG" ]]; then
         echo "Node host resolved"
-        sleep 10
         break
       fi
     fi
@@ -97,55 +95,6 @@ wait_for_hosts() {
     echo "Waiting for host $host:$port"
     wait_until_node_host_resolves $host $port
   done
-}
-
-check_if_cluster_exists_in_host() {
-  local host=$1
-  local port=$2
-
-  log "Checking if cluster exists on $host:$port"
-  wait_until_node_host_resolves $host $port
-
-  local cluster_info=$(redis-cli -h $host -p $port $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER INFO)
-  local cluster_info_code=$?
-
-  log "Cluster Info: $cluster_info_code - $cluster_info"
-
-  if [[ $cluster_info_code -eq 0 ]] && [[ $cluster_info =~ "cluster_known_nodes:" ]]; then
-    echo "Cluster exists on $host"
-    return 0
-  else
-    echo "Cluster does not exist on $host"
-    return 1
-  fi
-}
-
-check_if_cluster_exists() {
-  local checks=$1
-  local checked=0
-
-  for i in $(seq 0 $(($HOST_COUNT - 1))); do
-
-    if [[ $i -eq $NODE_INDEX ]]; then
-      log "Skipping self"
-      continue
-    fi
-
-    local host=$(get_host $i)
-    local port=$NODE_PORT
-    log "Checking if cluster exists on $host:$port"
-    check_if_cluster_exists_in_host $host $port
-    checked=$(($checked + 1))
-    if [[ $? -eq 0 ]]; then
-      return 0
-    fi
-    if [[ $checked -eq $checks ]]; then
-      break
-    fi
-  done
-
-  return 1
-
 }
 
 create_user() {
@@ -201,7 +150,7 @@ create_cluster() {
 
   local urls=""
 
-  for host in $(seq 0 $(($HOST_COUNT - 1))); do
+  for host in $(seq 0 5); do
     urls="$urls $(get_host $host):$NODE_PORT"
   done
 
@@ -221,24 +170,13 @@ create_cluster() {
 
 join_cluster() {
 
-  local node_idx=0
+  local cluster_host=$(get_host 0)
 
-  while true; do
-    local host=$(get_host $node_idx)
-    local port=$NODE_PORT
-    check_if_cluster_exists_in_host $host $port
-    if [[ $? -eq 0 ]]; then
-      break
-    fi
-    node_idx=$(($node_idx + 1))
-  done
+  wait_until_node_host_resolves $cluster_host $NODE_PORT
 
-  local host=$(get_host $node_idx)
-  local port=$(($START_PORT + $node_idx))
+  echo "Joining cluster on $cluster_host:$NODE_PORT"
 
-  echo "Joining cluster on $host:$port"
-
-  redis-cli --cluster add-node $NODE_HOST:$NODE_PORT $host:$port $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING
+  redis-cli --cluster add-node $NODE_HOST:$NODE_PORT $cluster_host:$NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING
 
   touch /data/cluster_initialized
 
@@ -272,7 +210,7 @@ run_node() {
 
   redis-server $NODE_CONF_FILE --logfile $FALKORDB_LOG_FILE_PATH &
   falkordb_pid=$!
-  tail -f $FALKORDB_LOG_FILE_PATH &
+  tail -F $FALKORDB_LOG_FILE_PATH &
 }
 
 # If node.conf doesn't exist or $REPLACE_NODE_CONF=1, copy it from /falkordb
@@ -292,18 +230,12 @@ create_user
 set_memory_limit
 set_rdb_persistence_config
 set_aof_persistence_config
-# Check if cluster exist on any other host.
-# If it doesn't exist, and it's node 0, create one. If not, wait for it to be created
-# If it does exist, join the cluster
 
-check_if_cluster_exists 2
-cluster_exists=$?
-
-if [[ $cluster_exists -eq 0 && $NODE_INDEX -eq 0 && ! -f "/data/cluster_initialized" ]]; then
+if [[ $NODE_INDEX -eq 0 && ! -f "/data/cluster_initialized" ]]; then
   # Create cluster
   echo "Creating cluster"
   create_cluster
-elif [[ $cluster_exists -eq 0 && ! -f "/data/cluster_initialized" ]]; then
+elif [[ $NODE_INDEX -gt $CLUSTER_REPLICAS && ! -f "/data/cluster_initialized" ]]; then
   # Join cluster
   echo "Joining cluster"
   join_cluster
@@ -311,17 +243,25 @@ else
   echo "Cluster does not exist. Waiting for it to be created"
 fi
 
+if [[ $NODE_INDEX -eq 0 ]]; then
+  wait_until_node_host_resolves $NODE_HOST $NODE_PORT
+  # Start rebalance job and output to the same log file
+  sleep 30
+  echo "Starting rebalance"
+  /falkordb/venv/bin/python3 /falkordb/rebalance/main.py | awk '{ print "**REBALANCE**: " $0 }' >>$FALKORDB_LOG_FILE_PATH &
+fi
+
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://$NODE_HOST:$NODE_PORT"; fi)
-  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -is-cluster &
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -is-cluster | awk '{ print "**EXPORTER**: " $0 }' >>$FALKORDB_LOG_FILE_PATH &
 fi
 
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   # Check if healthcheck binary exists
   if [ -f /usr/local/bin/healthcheck ]; then
     echo "Starting Healthcheck"
-    healthcheck &
+    healthcheck | awk '{ print "**HEALTHCHECK**: " $0 }' >>$FALKORDB_LOG_FILE_PATH &
   else
     echo "Healthcheck binary not found"
   fi

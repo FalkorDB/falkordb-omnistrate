@@ -1,4 +1,3 @@
-from redis.cluster import RedisCluster
 from time import sleep
 import os
 from falkordb_cluster import FalkorDBCluster, FalkorDBClusterNode
@@ -21,31 +20,17 @@ def _relocate_master(
     node: FalkorDBClusterNode,
 ):
     # Get the first node from the first group that does not have a master
-    suitable_relocation_node = None
 
     groups = cluster.groups(CLUSTER_REPLICAS)
 
-    i = 0
-    for group in groups:
+    for i, group in enumerate(groups):
         if node in group:
             print(f"Skipping group {i}. Node {node.id} is already in this group")
-            i += 1
             continue
-
-        has_master = False
-        for n in group:
-            if n.mode == "master":
-                print(f"Group {i} already has a master {n.id}")
-                has_master = True
-                break
-
-        if not has_master:
+        if not any(n.mode == "master" for n in group):
             suitable_relocation_node = group[0]
             break
-
-        i += 1
-
-    if suitable_relocation_node is None:
+    else:
         print(f"Cannot relocate master {node}, no suitable node found")
         return
 
@@ -160,6 +145,7 @@ def main():
             print(f"Group {s} has invalid number of slaves: {group_slaves}")
 
     print(f"Cluster after: {cluster}")
+
 
 while True:
     if not DEBUG:

@@ -97,7 +97,7 @@ fn get_status_from_cluster_node(
     db_info: String,
     con: &mut redis::Connection,
 ) -> Result<bool, redis::RedisError> {
-    let cluster_info: String = redis::cmd("CLUSTER INFO").query(con)?;
+    let cluster_info: String = redis::cmd("CLUSTER").arg("INFO").query(con)?;
 
     if !cluster_info.contains("cluster_state:ok") {
         return Ok(false);

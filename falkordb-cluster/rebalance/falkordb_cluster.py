@@ -25,7 +25,18 @@ class FalkorDBClusterNode:
         self.slots = slots
 
     def __repr__(self):
-        return f"FalkorDBClusterNode({self.idx}, {self.ip}, {self.port}, {self.id}, {self.hostname}, {self.mode}, {self.master_id}, {self.slots})"
+        return (
+            f"FalkorDBClusterNode(\n"
+            f"  idx={self.idx},\n"
+            f"  ip={self.ip},\n"
+            f"  port={self.port},\n"
+            f"  id={self.id},\n"
+            f"  hostname={self.hostname},\n"
+            f"  mode={self.mode},\n"
+            f"  master_id={self.master_id},\n"
+            f"  slots={self.slots}\n"
+            f")"
+        )
 
     def __hash__(self) -> int:
         return hash(self.id)
@@ -147,20 +158,12 @@ class FalkorDBCluster:
             f"{datetime.now()}: Replicate {new_master_node} to {old_master_node} at: {res}"
         )
 
-        now = time()
-        # Wait for the new master to become a slave
-        while (
-            new_master_node.mode != "slave"
-            and new_master_node.master_id != old_master_id
-        ):
-            if time() - now > timeout:
-                raise TimeoutError(
-                    "Timed out waiting for the new master to become a slave"
-                )
-            sleep(5)
-            self._refresh()
-            new_master_node = self.get_node_by_id(new_master_id)
-            old_master_node = self.get_node_by_id(old_master_id)
+        self._wait_for_condition(
+            lambda: self.get_node_by_id(new_master_id).mode == "slave"
+            and self.get_node_by_id(new_master_id).master_id == old_master_id,
+            timeout,
+            "Timed out waiting for the new master to become a slave",
+        )
 
         sleep(10)
 
@@ -168,20 +171,25 @@ class FalkorDBCluster:
 
         print(f"{datetime.now()}: Failover {old_master_node}: {res}")
 
+        self._wait_for_condition(
+            lambda: self.get_node_by_id(old_master_id).mode == "slave"
+            and self.get_node_by_id(old_master_id).master_id == new_master_id,
+            timeout,
+            "Timed out waiting for the old master to become a slave",
+        )
+
+    def _wait_for_condition(
+        self,
+        condition,
+        timeout: int = 180,
+        error_message: str = "Timed out waiting for condition",
+    ):
         now = time()
-        # Wait for the old master to become a slave
-        while (
-            old_master_node.mode == "master"
-            and old_master_node.master_id != new_master_id
-        ):
+        while not condition():
             if time() - now > timeout:
-                raise TimeoutError(
-                    "Timed out waiting for the old master to become a slave"
-                )
+                raise TimeoutError(error_message)
             sleep(5)
             self._refresh()
-            new_master_node = self.get_node_by_id(new_master_id)
-            old_master_node = self.get_node_by_id(old_master_id)
 
     def relocate_slave(self, slave_id: str, new_master_id: str):
         """
@@ -194,13 +202,12 @@ class FalkorDBCluster:
 
         print(f"{datetime.now()}: Replicate {slave_node} to {new_master_node}: {res}")
 
-        now = time()
-        # Wait for the slave to become a slave
-        while slave_node.mode != "slave" and slave_node.master_id != new_master_id:
-            if time() - now > 60:
-                raise TimeoutError("Timed out waiting for the slave to become a slave")
-            sleep(5)
-            self._refresh()
+        self._wait_for_condition(
+            lambda: self.get_node_by_id(slave_id).mode == "slave"
+            and self.get_node_by_id(slave_id).master_id == new_master_id,
+            180,
+            "Timed out waiting for the slave to become a slave",
+        )
 
     def rebalance_slots(self, new_node: FalkorDBClusterNode, shards: int):
 

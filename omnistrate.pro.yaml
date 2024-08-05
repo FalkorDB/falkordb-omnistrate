@@ -1983,7 +1983,7 @@ services:
         parameterDependencyMap:
           cluster-mz: AOFPersistenceConfig
       - key: hostCount
-        description: The number of hosts in the cluster. Must follow the formula: Host count = (1 + Cluster replicas) * Number of shards. Ex: 3 shards with 1 replica each = 6 hosts.
+        description: "The number of hosts in the cluster. Must follow the formula: Host count = (1 + Cluster replicas) * Number of shards. Ex: 3 shards with 1 replica each = 6 hosts."
         name: Host Count
         type: Float64
         modifiable: true

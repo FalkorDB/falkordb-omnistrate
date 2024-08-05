@@ -7,7 +7,7 @@ TLS = os.getenv("TLS", "false") == "true"
 CLUSTER_REPLICAS = int(os.getenv("CLUSTER_REPLICAS", "1"))
 NODE_HOST = os.getenv("NODE_HOST", "localhost")
 NODE_PORT = int(os.getenv("NODE_PORT", "6379"))
-DEBUG = os.getenv("DEBUG", "1") == "1"
+DEBUG = os.getenv("DEBUG", "0") == "1"
 
 
 MIN_HOST_COUNT = 6

@@ -229,7 +229,7 @@ class FalkorDBCluster:
                 "--cluster-to",
                 next(node.id for node in self.nodes if node.id != new_node.id),
                 "--cluster-slots",
-                slot_count,
+                f"{slot_count}",
                 "--cluster-yes",
             ]
         )

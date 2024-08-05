@@ -15,6 +15,28 @@ MIN_MASTER_COUNT = 3
 MIN_SLAVE_COUNT = 3
 
 
+def _handle_too_many_masters(cluster: FalkorDBCluster):
+    # Choose one master to become slave from another master that doesn't have enough slaves
+    extra_masters = [
+        master
+        for master in cluster.get_masters()
+        if len(cluster.get_slaves_from_master(master.id)) < CLUSTER_REPLICAS
+    ]
+
+    if len(extra_masters) == 0:
+        print("No extra masters to relocate")
+        return
+
+    if len(extra_masters) == 1:
+        print("Only one extra master to relocate. Skipping...")
+        return
+
+    if len(extra_masters) > 1:
+        print(f"{len(extra_masters)} extra masters to relocate.")
+        cluster.relocate_slave(extra_masters[1].id, extra_masters[0].id)
+        return main()
+
+
 def _relocate_master(
     cluster: FalkorDBCluster,
     node: FalkorDBClusterNode,
@@ -67,9 +89,6 @@ def main():
         ssl=TLS,
     )
     # slots = client.cluster_slots()
-
-    print(f"Cluster before: {cluster}")
-
     if len(cluster) < MIN_HOST_COUNT:
         print("Not enough hosts to rebalance")
         return
@@ -88,6 +107,12 @@ def main():
     invalid_slaves = cluster.get_slaves_with_invalid_masters()
     if len(invalid_slaves) > 0:
         print(f"Invalid slaves: {invalid_slaves}")
+
+    expected_masters = expected_shards
+
+    if len(cluster.get_masters()) > expected_masters:
+        print(f"Too many masters: {len(cluster.get_masters())}")
+        return _handle_too_many_masters(cluster)
 
     for s in range(0, int(expected_shards)):
         group_start_idx = s * (CLUSTER_REPLICAS + 1)

@@ -131,6 +131,9 @@ class FalkorDBCluster:
             if node.mode == "slave" and self.get_node_by_id(node.master_id) is None
         ]
 
+    def get_masters(self) -> list[FalkorDBClusterNode]:
+        return [node for node in self.nodes if node.mode == "master"]
+
     def groups(self, replicas) -> list[list[FalkorDBClusterNode]]:
         return [
             self.nodes[i : i + replicas + 1]

@@ -12,6 +12,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.dependencies]
 python = "^3.11.4"
 falkordb = "^1.0.7"
-redis = "^5.0.7"
+redis = { git = "https://github.com/dudizimber/redis-py.git", branch = "3342-add-hostname-to-parse-node-line" }
 requests = "^2.32.3"
 setuptools = "^71.1.0"

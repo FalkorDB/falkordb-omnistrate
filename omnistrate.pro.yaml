@@ -1851,6 +1851,7 @@ services:
       - RUN_NODE=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
+      - RUN_REBALANCE=0
       - BROWSER=0
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
@@ -1862,7 +1863,6 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
-      - HOST_COUNT=$var.hostCount
       - CLUSTER_REPLICAS=$var.clusterReplicas
     ports:
       - "6379"
@@ -1870,6 +1870,26 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: >
+          #!/bin/bash
+
+          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
+
+          call_health_check() {
+
+            echo "Health check URL: $HEALTH_CHECK_URL"
+            curl -sf $HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          call_health_check
 
   Cluster-Multi-Zone:
     x-omnistrate-mode-internal: false
@@ -2091,6 +2111,7 @@ services:
       - RUN_NODE=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
+      - RUN_REBALANCE=1
       - BROWSER=0
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
@@ -2102,7 +2123,6 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
-      - HOST_COUNT=$var.hostCount
       - CLUSTER_REPLICAS=$var.clusterReplicas
     ports:
       - "6379"
@@ -2110,3 +2130,23 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: true
       enableEndpointPerReplica: true
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: >
+          #!/bin/bash
+
+          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
+
+          call_health_check() {
+
+            echo "Health check URL: $HEALTH_CHECK_URL"
+            curl -sf $HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          call_health_check

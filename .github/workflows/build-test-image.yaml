@@ -12,6 +12,8 @@ env:
   NODE_IMAGE_NAME: falkordb-node
   CLUSTER_IMAGE_NAME: falkordb-cluster
   FALKORDB_VERSION: v4.0.11
+  FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+  PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
 
 jobs:
   build-and-push:
@@ -58,12 +60,12 @@ jobs:
             plan-name: FalkorDB Free
             file: omnistrate.free.yaml
             key: free
-            tier-name: free-${{ github.ref_name }}
+            tier-name: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
           - service-name: FalkorDB
             plan-name: FalkorDB Pro
             file: omnistrate.pro.yaml
             key: pro
-            tier-name: pro-${{ github.ref_name }}
+            tier-name: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -104,7 +106,7 @@ jobs:
           - name: Free - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_standalone.py
-            tierName: free-${{ github.ref_name }}
+            tierName: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -114,7 +116,7 @@ jobs:
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_standalone.py
-            tierName: pro-${{ github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -124,7 +126,7 @@ jobs:
           - name: PRO/SingleZone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
-            tierName: pro-${{ github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -134,7 +136,7 @@ jobs:
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
-            tierName: pro-${{ github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -144,7 +146,7 @@ jobs:
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_standalone.py
-            tierName: pro-${{ github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -154,7 +156,7 @@ jobs:
           - name: PRO/SingleZone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_replication.py
-            tierName: pro-${{ github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -164,7 +166,7 @@ jobs:
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_replication.py
-            tierName: pro-${{ github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -174,7 +176,7 @@ jobs:
           - name: PRO/Standalone - GCP/us-central1 - Update Memory
             if: "true"
             testFile: test_update_memory.py
-            tierName: pro-${{ github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -184,7 +186,7 @@ jobs:
           - name: PRO/SingleZone - GCP/us-central1 - Update Memory
             if: "true"
             testFile: test_update_memory.py
-            tierName: pro-${{ github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -194,7 +196,7 @@ jobs:
           - name: PRO/Standalone - GCP/us-central1 - Upgrade Version
             if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
             testFile: test_upgrade_version.py
-            tierName: pro-main
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -204,7 +206,7 @@ jobs:
           - name: PRO/SingleZone - GCP/us-central1 - Upgrade Version
             if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
             testFile: test_upgrade_version.py
-            tierName: pro-main
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -214,7 +216,7 @@ jobs:
           - name: PRO/ClusterSingleZone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py
-            tierName: pro-${{ github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -224,7 +226,7 @@ jobs:
           - name: PRO/ClusterMultiZone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py
-            tierName: pro-${{ github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -234,7 +236,7 @@ jobs:
           - name: PRO/ClusterSingleZone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_cluster.py
-            tierName: pro-${{ github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -244,7 +246,7 @@ jobs:
           - name: PRO/ClusterMultiZone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_cluster.py
-            tierName: pro-${{ github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0

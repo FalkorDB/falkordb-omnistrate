@@ -2181,30 +2181,30 @@ services:
 
           call_health_check
 
-    cluster-mz-rebalance:
-      x-omnistrate-mode-internal: true
-      image: $FalkorDBClusterRebalanceImage
-      x-omnistrate-compute:
-        replicaCount: 1
-        instanceTypes:
-          - cloudProvider: gcp
-            name: e2-small
-      x-omnistrate-api-params:
-        - key: clusterReplicas
-          description: The number of replicas per shard
-          name: Cluster Replicas
-          type: Float64
-          modifiable: true
-          required: true
-          export: true
-          defaultValue: "1"
-          min: 1
-          max: 3
-      environment:
-        - DISTRIBUTE_ACROSS_ZONES=1
-        - ADMIN_PASSWORD=$func.random(string, 16)
-        - TLS=$var.enableTLS
-        - CLUSTER_REPLICAS=$var.clusterReplicas
-        - NODE_HOST=$sys.network.node.externalEndpoint
-        - NODE_PORT=6379
-        - DEBUG=0
+  cluster-mz-rebalance:
+    x-omnistrate-mode-internal: true
+    image: $FalkorDBClusterRebalanceImage
+    x-omnistrate-compute:
+      replicaCount: 1
+      instanceTypes:
+        - cloudProvider: gcp
+          name: e2-small
+    x-omnistrate-api-params:
+      - key: clusterReplicas
+        description: The number of replicas per shard
+        name: Cluster Replicas
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "1"
+        min: 1
+        max: 3
+    environment:
+      - DISTRIBUTE_ACROSS_ZONES=1
+      - ADMIN_PASSWORD=$func.random(string, 16)
+      - TLS=$var.enableTLS
+      - CLUSTER_REPLICAS=$var.clusterReplicas
+      - NODE_HOST=$sys.network.node.externalEndpoint
+      - NODE_PORT=6379
+      - DEBUG=0

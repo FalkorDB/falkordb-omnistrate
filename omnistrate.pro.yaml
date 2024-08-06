@@ -1676,6 +1676,7 @@ services:
         defaultValue: "false"
         parameterDependencyMap:
           cluster-sz: enableTLS
+          cluster-sz-rebalance: enableTLS
       - key: falkordbUser
         description: Choose a default username for your database
         name: FalkorDB User
@@ -1911,6 +1912,14 @@ services:
         defaultValue: "1"
         min: 1
         max: 3
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "false"
     environment:
       - DISTRIBUTE_ACROSS_ZONES=0
       - ADMIN_PASSWORD=$func.random(string, 16)
@@ -1965,6 +1974,7 @@ services:
         defaultValue: "false"
         parameterDependencyMap:
           cluster-mz: enableTLS
+          cluster-mz-rebalance: enableTLS
       - key: falkordbUser
         description: Choose a default username for your database
         name: FalkorDB User
@@ -2200,6 +2210,14 @@ services:
         defaultValue: "1"
         min: 1
         max: 3
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "false"
     environment:
       - DISTRIBUTE_ACROSS_ZONES=1
       - ADMIN_PASSWORD=$func.random(string, 16)

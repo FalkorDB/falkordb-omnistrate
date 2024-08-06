@@ -1,0 +1,298 @@
+services:
+  Cluster-Multi-Zone:
+    x-omnistrate-mode-internal: false
+    image: omnistrate/noop
+    x-omnistrate-api-params:
+      - key: name
+        description: Name
+        name: Name
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: My favorite database
+        export: true
+      - key: description
+        description: Description
+        name: Description
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: Description
+        export: true
+      - key: nodeInstanceType
+        description: The size of the node instance. Check the documentation for more information.
+        name: Node Instance Type
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: e2-custom-4-8192
+        options:
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
+        parameterDependencyMap:
+          cluster-mz: nodeInstanceType
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "false"
+        parameterDependencyMap:
+          cluster-mz: enableTLS
+          cluster-mz-rebalance: enableTLS
+      - key: falkordbUser
+        description: Choose a default username for your database
+        name: FalkorDB User
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "falkordb"
+        parameterDependencyMap:
+          cluster-mz: falkordbUser
+      - key: falkordbPassword
+        description: Choose a default password for your database
+        name: FalkorDB Password
+        type: Password
+        modifiable: false
+        required: true
+        export: false
+        parameterDependencyMap:
+          cluster-mz: falkordbPassword
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+        parameterDependencyMap:
+          cluster-mz: RDBPersistenceConfig
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "everysec"
+        options:
+          - "everysec"
+          - "always"
+        parameterDependencyMap:
+          cluster-mz: AOFPersistenceConfig
+      - key: hostCount
+        description: "The number of hosts in the cluster. Must follow the formula: Host count = (1 + Cluster replicas) * Number of shards. Ex: 3 shards with 1 replica each = 6 hosts."
+        name: Host Count
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "6"
+        min: 6
+        parameterDependencyMap:
+          cluster-mz: hostCount
+      - key: clusterReplicas
+        description: The number of replicas per shard
+        name: Cluster Replicas
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "1"
+        min: 1
+        max: 3
+        parameterDependencyMap:
+          cluster-mz: clusterReplicas
+          cluster-mz-rebalance: clusterReplicas
+    x-omnistrate-capabilities:
+      backupConfiguration:
+        backupRetentionInDays: 7
+        backupPeriodInHours: 12
+    depends_on:
+      - cluster-mz
+      - cluster-mz-rebalance
+
+  cluster-mz:
+    x-omnistrate-mode-internal: true
+    image: falkordb-omnistrate/falkordb-cluster
+    x-omnistrate-compute:
+      replicaCountAPIParam: hostCount
+      instanceTypes:
+        - cloudProvider: gcp
+          apiParam: nodeInstanceType
+    x-omnistrate-api-params:
+      - key: hostCount
+        description: The number of hosts in the cluster
+        name: Host Count
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "6"
+        min: 6
+      - key: clusterReplicas
+        description: The number of replicas per shard
+        name: Cluster Replicas
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "1"
+        min: 1
+        max: 3
+      - key: nodeInstanceType
+        description: The size of the node instance. Check the documentation for more information.
+        name: Node Instance Type
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: e2-custom-4-8192
+        options:
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "false"
+      - key: falkordbUser
+        description: Choose a default username for your database
+        name: FalkorDB User
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "falkordb"
+      - key: falkordbPassword
+        description: Choose a default password for your database
+        name: FalkorDB Password
+        type: Password
+        modifiable: false
+        required: true
+        export: false
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "everysec"
+        options:
+          - "everysec"
+          - "always"
+    volumes:
+      - source: ./data
+        target: /data
+        type: bind
+        x-omnistrate-storage:
+          gcp:
+            instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 200
+    environment:
+      - RUN_NODE=1
+      - RUN_METRICS=1
+      - RUN_HEALTH_CHECK=1
+      - BROWSER=0
+      - NODE_HOST=$sys.network.node.externalEndpoint
+      - TLS=$var.enableTLS
+      - FALKORDB_USER=$var.falkordbUser
+      - FALKORDB_PASSWORD=$var.falkordbPassword
+      - ADMIN_PASSWORD=$func.random(string, 16)
+      - DATA_DIR=/data
+      - INSTANCE_TYPE=$var.nodeInstanceType
+      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
+      - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - CLUSTER_REPLICAS=$var.clusterReplicas
+    ports:
+      - "6379"
+      - "16379"
+    x-omnistrate-capabilities:
+      enableMultiZone: true
+      enableEndpointPerReplica: true
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: >
+          #!/bin/bash
+
+          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
+
+          call_health_check() {
+
+            echo "Health check URL: $HEALTH_CHECK_URL"
+            curl -sf $HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          call_health_check
+
+  cluster-mz-rebalance:
+    x-omnistrate-mode-internal: true
+    image: falkordb-omnistrate/falkordb-cluster-rebalance
+    x-omnistrate-compute:
+      replicaCount: 1
+      instanceTypes:
+        - cloudProvider: gcp
+          name: e2-small
+    x-omnistrate-api-params:
+      - key: clusterReplicas
+        description: The number of replicas per shard
+        name: Cluster Replicas
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "1"
+        min: 1
+        max: 3
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "false"
+    environment:
+      - DISTRIBUTE_ACROSS_ZONES=1
+      - ADMIN_PASSWORD=$func.random(string, 16)
+      - TLS=$var.enableTLS
+      - CLUSTER_REPLICAS=$var.clusterReplicas
+      - NODE_HOST=$sys.network.node.externalEndpoint
+      - NODE_PORT=6379
+      - DEBUG=0

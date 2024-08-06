@@ -15,6 +15,7 @@ class FalkorDBClusterNode:
         mode: str,
         master_id: str | None,
         slots: list[list[str]],
+        connected: bool,
     ):
         self.ip = ip
         self.port = port
@@ -23,6 +24,7 @@ class FalkorDBClusterNode:
         self.mode = mode
         self.master_id = master_id
         self.slots = slots
+        self.connected = connected
 
     def __repr__(self):
         return (
@@ -35,6 +37,7 @@ class FalkorDBClusterNode:
             f"  mode={self.mode},\n"
             f"  master_id={self.master_id},\n"
             f"  slots={self.slots}\n"
+            f"  connected={self.connected}\n"
             f")"
         )
 
@@ -65,6 +68,7 @@ class FalkorDBClusterNode:
             "master" if "master" in val["flags"] else "slave",
             val["master_id"] if "-" not in val["master_id"] else None,
             val["slots"],
+            val["connected"],
         )
 
     def to_cluster_node(self):
@@ -93,6 +97,9 @@ class FalkorDBCluster:
         print(f"{datetime.now()}: Cluster refreshed: {self}")
         return self
 
+    def is_connected(self) -> bool:
+        return all(node.connected for node in self.nodes)
+
     def sort(self) -> "FalkorDBCluster":
         self.nodes = sorted(self.nodes, key=lambda x: x.idx)
         return self
@@ -102,7 +109,7 @@ class FalkorDBCluster:
 
         for node in self.nodes:
             if node.mode == "master":
-                text += f"Master: {node.idx} - {node.id}\n"
+                text += f"Master: {node.idx} - {node.id} - {node.slots}\n"
                 text += "Slaves:\n" + "\n".join(
                     f"  {slave.idx} - {slave.id}"
                     for slave in self.nodes
@@ -133,6 +140,9 @@ class FalkorDBCluster:
 
     def get_masters(self) -> list[FalkorDBClusterNode]:
         return [node for node in self.nodes if node.mode == "master"]
+
+    def get_slaves_from_master(self, master_id: str) -> list[FalkorDBClusterNode]:
+        return [node for node in self.nodes if node.master_id == master_id]
 
     def groups(self, replicas) -> list[list[FalkorDBClusterNode]]:
         return [
@@ -223,14 +233,15 @@ class FalkorDBCluster:
                 "-h",
                 self.host,
                 "-p",
-                self.port,
+                f"{self.port}",
                 "--cluster",
                 "reshard",
-                f"{new_node.ip}:{new_node.port}",
+                f"{new_node.hostname}",
+                f"{new_node.port}",
                 "--cluster-from",
                 "all",
                 "--cluster-to",
-                next(node.id for node in self.nodes if node.id != new_node.id),
+                new_node.id,
                 "--cluster-slots",
                 f"{slot_count}",
                 "--cluster-yes",
@@ -238,3 +249,9 @@ class FalkorDBCluster:
         )
 
         print(f"Reshard result: {res}")
+
+        self._wait_for_condition(
+            lambda: all(len(node.slots) > 0 for node in self.get_masters()),
+            180,
+            "Timed out waiting for all nodes to have the correct number of slots",
+        )

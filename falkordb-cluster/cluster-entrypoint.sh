@@ -20,6 +20,7 @@ FALKORDB_TIMEOUT_DEFAULT=${FALKORDB_TIMEOUT_DEFAULT:-0}
 FALKORDB_RESULT_SET_SIZE=${FALKORDB_RESULT_SET_SIZE:-10000}
 FALKORDB_QUERY_MEM_CAPACITY=${FALKORDB_QUERY_MEM_CAPACITY:-0}
 CLUSTER_REPLICAS=${CLUSTER_REPLICAS:-1}
+IS_MULTI_ZONE=${IS_MULTI_ZONE:-0}
 
 NODE_HOST=${NODE_HOST:-localhost}
 NODE_PORT=${NODE_PORT:-6379}
@@ -33,6 +34,8 @@ TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT
 AUTH_CONNECTION_STRING="-a $ADMIN_PASSWORD --no-auth-warning"
 SAVE_LOGS_TO_FILE=${SAVE_LOGS_TO_FILE:-1}
 LOG_LEVEL=${LOG_LEVEL:-notice}
+RESOURCE_ALIAS=${RESOURCE_ALIAS:-""}
+EXTERNAL_DNS_SUFFIX=${EXTERNAL_DNS_SUFFIX:-""}
 
 DATE_NOW=$(date +"%Y%m%d%H%M%S")
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo ""; fi)
@@ -57,8 +60,7 @@ log() {
 
 get_host() {
   local host_idx=$1
-  # substitute -0 from NODE_HOST with host_idx
-  echo $NODE_HOST | sed "s/-$NODE_INDEX/-$host_idx/g"
+  echo "$RESOURCE_ALIAS-$host_idx.$EXTERNAL_DNS_SUFFIX"
 }
 
 wait_until_node_host_resolves() {
@@ -173,14 +175,13 @@ join_cluster() {
 
   local cluster_host=$(get_host 0)
 
-  wait_until_node_host_resolves $cluster_host $NODE_PORT
+  wait_for_hosts "$cluster_host:$NODE_PORT $NODE_HOST:$NODE_PORT"
 
   echo "Joining cluster on $cluster_host:$NODE_PORT"
 
   redis-cli --cluster add-node $NODE_HOST:$NODE_PORT $cluster_host:$NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING
 
   touch /data/cluster_initialized
-
 }
 
 run_node() {
@@ -244,14 +245,6 @@ else
   echo "Cluster does not exist. Waiting for it to be created"
 fi
 
-if [[ $RUN_REBALANCE -eq 1 && $NODE_INDEX -eq 0 ]]; then
-  wait_until_node_host_resolves $NODE_HOST $NODE_PORT
-  # Start rebalance job and output to the same log file
-  sleep 30
-  echo "Starting rebalance"
-  /falkordb/venv/bin/python3 /falkordb/rebalance/main.py | awk '{ print "**REBALANCE**: " $0 }' >>$FALKORDB_LOG_FILE_PATH &
-fi
-
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://$NODE_HOST:$NODE_PORT"; fi)
@@ -266,6 +259,14 @@ if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   else
     echo "Healthcheck binary not found"
   fi
+fi
+
+if [[ $RUN_REBALANCE -eq 1 && $NODE_INDEX -eq 0 ]]; then
+  wait_until_node_host_resolves $NODE_HOST $NODE_PORT
+  # Start rebalance job and output to the same log file
+  echo "Starting rebalance"
+  distribute_across_zones_args=$(if [[ $IS_MULTI_ZONE -eq 1 ]]; then echo "--distribute-across-zones"; else echo ""; fi)
+  /falkordb/venv/bin/python3 /falkordb/rebalance/main.py $distribute_across_zones_args | awk '{ print "**REBALANCE**: " $0 }' >>$FALKORDB_LOG_FILE_PATH &
 fi
 
 while true; do

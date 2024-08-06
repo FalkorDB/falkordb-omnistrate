@@ -9,7 +9,6 @@ x-omnistrate-service-plan:
       GcpProjectNumber: "$GcpProjectNumber"
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
 
-
 x-omnistrate-load-balancer:
   tcp:
     - name: Single Zone Sentinel LB
@@ -1746,12 +1745,14 @@ services:
         max: 3
         parameterDependencyMap:
           cluster-sz: clusterReplicas
+          cluster-sz-rebalance: clusterReplicas
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
         backupPeriodInHours: 12
     depends_on:
       - cluster-sz
+      - cluster-mz-rebalance
 
   cluster-sz:
     x-omnistrate-mode-internal: true
@@ -1852,7 +1853,6 @@ services:
       - RUN_NODE=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
-      - RUN_REBALANCE=1
       - BROWSER=0
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
@@ -1891,6 +1891,34 @@ services:
           }
 
           call_health_check
+
+  cluster-sz-rebalance:
+    x-omnistrate-mode-internal: true
+    image: $FalkorDBClusterRebalanceImage
+    x-omnistrate-compute:
+      replicaCount: 1
+      instanceTypes:
+        - cloudProvider: gcp
+          name: e2-small
+    x-omnistrate-api-params:
+      - key: clusterReplicas
+        description: The number of replicas per shard
+        name: Cluster Replicas
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "1"
+        min: 1
+        max: 3
+    environment:
+      - DISTRIBUTE_ACROSS_ZONES=0
+      - ADMIN_PASSWORD=$func.random(string, 16)
+      - TLS=$var.enableTLS
+      - CLUSTER_REPLICAS=$var.clusterReplicas
+      - NODE_HOST=$sys.network.node.externalEndpoint
+      - NODE_PORT=6379
+      - DEBUG=0
 
   Cluster-Multi-Zone:
     x-omnistrate-mode-internal: false
@@ -2006,12 +2034,14 @@ services:
         max: 3
         parameterDependencyMap:
           cluster-mz: clusterReplicas
+          cluster-mz-rebalance: clusterReplicas
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
         backupPeriodInHours: 12
     depends_on:
       - cluster-mz
+      - cluster-mz-rebalance
 
   cluster-mz:
     x-omnistrate-mode-internal: true
@@ -2112,7 +2142,6 @@ services:
       - RUN_NODE=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
-      - RUN_REBALANCE=1
       - BROWSER=0
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
@@ -2151,3 +2180,31 @@ services:
           }
 
           call_health_check
+
+    cluster-mz-rebalance:
+      x-omnistrate-mode-internal: true
+      image: $FalkorDBClusterRebalanceImage
+      x-omnistrate-compute:
+        replicaCount: 1
+        instanceTypes:
+          - cloudProvider: gcp
+            name: e2-small
+      x-omnistrate-api-params:
+        - key: clusterReplicas
+          description: The number of replicas per shard
+          name: Cluster Replicas
+          type: Float64
+          modifiable: true
+          required: true
+          export: true
+          defaultValue: "1"
+          min: 1
+          max: 3
+      environment:
+        - DISTRIBUTE_ACROSS_ZONES=1
+        - ADMIN_PASSWORD=$func.random(string, 16)
+        - TLS=$var.enableTLS
+        - CLUSTER_REPLICAS=$var.clusterReplicas
+        - NODE_HOST=$sys.network.node.externalEndpoint
+        - NODE_PORT=6379
+        - DEBUG=0

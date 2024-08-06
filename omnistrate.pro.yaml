@@ -1921,7 +1921,7 @@ services:
         export: true
         defaultValue: "false"
     environment:
-      - DISTRIBUTE_ACROSS_ZONES=0
+      - IS_MULTI_ZONE=0
       - ADMIN_PASSWORD=$func.random(string, 16)
       - TLS=$var.enableTLS
       - CLUSTER_REPLICAS=$var.clusterReplicas
@@ -2219,7 +2219,7 @@ services:
         export: true
         defaultValue: "false"
     environment:
-      - DISTRIBUTE_ACROSS_ZONES=1
+      - IS_MULTI_ZONE=1
       - ADMIN_PASSWORD=$func.random(string, 16)
       - TLS=$var.enableTLS
       - CLUSTER_REPLICAS=$var.clusterReplicas

@@ -122,6 +122,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
+    secrets:
+      - source: ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD_PATH
+      - source: FALKORDB_PASSWORD_PATH
+        target: /run/secrets/FALKORDB_PASSWORD_PATH
 
     environment:
       - RUN_NODE=1
@@ -135,8 +140,8 @@ services:
       # Disable TLS for free tier
       - TLS=false
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
+      #- FALKORDB_PASSWORD=$var.falkordbPassword
+      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=e2-custom-small-1024
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -162,3 +167,8 @@ services:
           cpus: '0.1'
           memory: 100M
 
+secrets:
+  ADMIN_PASSWORD_PATH:
+    file: ./ADMIN_PASSWORD_PATH
+  FALKORDB_PASSWORD_PATH:
+    file: ./FALKORDB_PASSWORD_PATH

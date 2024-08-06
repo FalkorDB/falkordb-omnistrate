@@ -89,8 +89,9 @@ jobs:
         run: |
           echo $PWD
           ls -lar
-          echo '{{ $var.falkordbPassword }}' > FALKORDB_PASSWORD
-          echo '{{ $func.random(string, 16) }}' > ADMIN_PASSWORD
+          mkdir secrets
+          echo '{{ $var.falkordbPassword }}' > ./secrets/FALKORDB_PASSWORD
+          echo '{{ $func.random(string, 16) }}' > ./secrets/ADMIN_PASSWORD
           cat FALKORDB_PASSWORD && cat ADMIN_PASSWORD
           ls -lar
       - name: Update Omnistrate plan

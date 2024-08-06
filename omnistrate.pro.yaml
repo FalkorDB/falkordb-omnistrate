@@ -1753,7 +1753,7 @@ services:
         backupPeriodInHours: 12
     depends_on:
       - cluster-sz
-      - cluster-mz-rebalance
+      - cluster-sz-rebalance
 
   cluster-sz:
     x-omnistrate-mode-internal: true

@@ -1,12 +1,8 @@
 from time import sleep
 import os
 from falkordb_cluster import FalkorDBCluster, FalkorDBClusterNode
-from argparse import ArgumentParser
-
-# Parse arguments
-parser = ArgumentParser()
-parser.add_argument("--distribute-across-zones", action="store_true")
-args = parser.parse_args()
+import socket
+import redis
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 TLS = os.getenv("TLS", "false") == "true"
@@ -14,7 +10,7 @@ CLUSTER_REPLICAS = int(os.getenv("CLUSTER_REPLICAS", "1"))
 NODE_HOST = os.getenv("NODE_HOST", "localhost")
 NODE_PORT = int(os.getenv("NODE_PORT", "6379"))
 DEBUG = os.getenv("DEBUG", "0") == "1"
-
+DISTRIBUTE_ACROSS_ZONES = os.getenv("DISTRIBUTE_ACROSS_ZONES", "0") == "1"
 
 MIN_HOST_COUNT = 6
 MIN_MASTER_COUNT = 3
@@ -157,7 +153,7 @@ def main():
                         print(f"Master {group_master} has no slots")
                         cluster.rebalance_slots(group_master, expected_shards)
                         return main()
-                elif args.distribute_across_zones:
+                elif DISTRIBUTE_ACROSS_ZONES:
                     print(f"Group {s} has more than 1 master: {group_master}, {node}")
                     return _relocate_master(cluster, node)
             else:
@@ -168,7 +164,7 @@ def main():
                     print(f"Slave {node} has invalid master: {slave_master}")
 
                 # Check if master belongs to the same group as slave
-                if args.distribute_across_zones and (
+                if DISTRIBUTE_ACROSS_ZONES and (
                     slave_master.idx < group_start_idx
                     or slave_master.idx >= group_end_idx
                 ):
@@ -176,15 +172,36 @@ def main():
                         cluster, node, slave_master, group_master, group_slaves
                     )
 
-        if args.distribute_across_zones and len(group_slaves) != CLUSTER_REPLICAS:
+        if DISTRIBUTE_ACROSS_ZONES and len(group_slaves) != CLUSTER_REPLICAS:
             print(f"Group {s} has invalid number of slaves: {group_slaves}")
 
     print(f"Cluster after: {cluster}")
 
 
+def _node_resolved():
+    print("Checking node connection...")
+    # Resolve hostnames to IPs
+    try:
+        socket.gethostbyname(NODE_HOST)
+    except Exception as e:
+        return False
+
+    # ping node
+    try:
+        client = redis.Redis(
+            host=NODE_HOST, port=NODE_PORT, password=ADMIN_PASSWORD, ssl=TLS
+        )
+        client.ping()
+    except Exception as e:
+        return False
+
+
 while True:
     if not DEBUG:
         sleep(10)
+
+    while not _node_resolved():
+        sleep(5)
 
     try:
         main()

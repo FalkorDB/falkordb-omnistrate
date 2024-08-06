@@ -5,7 +5,6 @@ FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
 ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
 RUN_METRICS=${RUN_METRICS:-1}
 RUN_HEALTH_CHECK=${RUN_HEALTH_CHECK:-1}
-RUN_REBALANCE=${RUN_REBALANCE:-1}
 TLS=${TLS:-false}
 NODE_INDEX=${NODE_INDEX:-0}
 INSTANCE_TYPE=${INSTANCE_TYPE:-''}
@@ -259,14 +258,6 @@ if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   else
     echo "Healthcheck binary not found"
   fi
-fi
-
-if [[ $RUN_REBALANCE -eq 1 && $NODE_INDEX -eq 0 ]]; then
-  wait_until_node_host_resolves $NODE_HOST $NODE_PORT
-  # Start rebalance job and output to the same log file
-  echo "Starting rebalance"
-  distribute_across_zones_args=$(if [[ $IS_MULTI_ZONE -eq 1 ]]; then echo "--distribute-across-zones"; else echo ""; fi)
-  /falkordb/venv/bin/python3 /falkordb/rebalance/main.py $distribute_across_zones_args | awk '{ print "**REBALANCE**: " $0 }' >>$FALKORDB_LOG_FILE_PATH &
 fi
 
 while true; do

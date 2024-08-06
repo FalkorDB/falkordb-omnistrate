@@ -657,9 +657,9 @@ services:
             instanceStorageSizeGi: 200
     secrets:
       - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD
       - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD_PATH
+        target: /run/secrets/FALKORDB_PASSWORD
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=0
@@ -1049,9 +1049,9 @@ services:
             instanceStorageSizeGi: 200
     secrets:
       - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD
       - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD_PATH
+        target: /run/secrets/FALKORDB_PASSWORD
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -1151,9 +1151,9 @@ services:
             instanceStorageSizeGi: 10
     secrets:
       - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD
       - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD_PATH
+        target: /run/secrets/FALKORDB_PASSWORD
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -1532,9 +1532,9 @@ services:
             instanceStorageSizeGi: 200
     secrets:
       - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD
       - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD_PATH
+        target: /run/secrets/FALKORDB_PASSWORD
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -1633,9 +1633,9 @@ services:
             instanceStorageSizeGi: 10
     secrets:
       - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD
       - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD_PATH
+        target: /run/secrets/FALKORDB_PASSWORD
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -1874,9 +1874,9 @@ services:
             instanceStorageSizeGi: 200
     secrets:
       - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD
       - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD_PATH
+        target: /run/secrets/FALKORDB_PASSWORD
     environment:
       - RUN_NODE=1
       - RUN_METRICS=1
@@ -2139,9 +2139,9 @@ services:
             instanceStorageSizeGi: 200
     secrets:
       - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD
       - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD_PATH
+        target: /run/secrets/FALKORDB_PASSWORD
     environment:
       - RUN_NODE=1
       - RUN_METRICS=1
@@ -2189,6 +2189,6 @@ services:
 
 secrets:
   ADMIN_PASSWORD_PATH:
-    file: ./ADMIN_PASSWORD_PATH
+    file: ./ADMIN_PASSWORD
   FALKORDB_PASSWORD_PATH:
-    file: ./FALKORDB_PASSWORD_PATH
+    file: ./FALKORDB_PASSWORD

@@ -16,4 +16,4 @@ RUN python3 -m venv /rebalance/venv && \
   pip install -r /rebalance/src/requirements.txt
 
 
-CMD ["venv/bin/python", "/rebalance/src/main.py"]
+CMD ["venv/bin/python", "-u", "/rebalance/src/main.py"]

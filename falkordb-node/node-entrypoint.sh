@@ -115,7 +115,7 @@ handle_sigterm() {
   echo "Caught SIGTERM"
   echo "Stopping FalkorDB"
 
-  sentinels_list=$(get_sentinels_list)
+  # sentinels_list=$(get_sentinels_list)
 
   if [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
     remove_master_from_group
@@ -134,7 +134,7 @@ handle_sigterm() {
     wait $sentinel_pid
   fi
 
-  send_reset_to_sentinels $sentinels_list
+  # send_reset_to_sentinels $sentinels_list
 
   if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
     kill -TERM $redis_exporter_pid

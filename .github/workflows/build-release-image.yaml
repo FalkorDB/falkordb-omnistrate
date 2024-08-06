@@ -86,8 +86,11 @@ jobs:
 
       - name: Create FALKORDB_PASSOWRD/ADMIN_PASSWORD files
         run: |
+          echo $PWD
+          ls -lar
           echo '{{ $var.falkordbPassword }}' > FALKORDB_PASSWORD
           echo '{{ $func.random(string, 16) }}' > ADMIN_PASSWORD
+          ls -lar
 
       - name: Update Omnistrate plan
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}

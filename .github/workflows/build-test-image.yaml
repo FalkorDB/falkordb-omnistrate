@@ -87,8 +87,11 @@ jobs:
 
       - name: Create FALKORDB_PASSOWRD/ADMIN_PASSWORD files
         run: |
+          echo $PWD
+          ls -lar
           echo '{{ $var.falkordbPassword }}' > FALKORDB_PASSWORD
           echo '{{ $func.random(string, 16) }}' > ADMIN_PASSWORD
+          ls -lar
       - name: Update Omnistrate plan
         uses: ./.github/actions/update-omnistrate-plan
         id: update_omnistrate_plan

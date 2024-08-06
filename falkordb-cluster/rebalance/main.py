@@ -1,6 +1,12 @@
 from time import sleep
 import os
 from falkordb_cluster import FalkorDBCluster, FalkorDBClusterNode
+from argparse import ArgumentParser
+
+# Parse arguments
+parser = ArgumentParser()
+parser.add_argument("--distribute-across-zones", action="store_true")
+args = parser.parse_args()
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 TLS = os.getenv("TLS", "false") == "true"
@@ -93,6 +99,10 @@ def main():
         print("Not enough hosts to rebalance")
         return
 
+    if not cluster.is_connected():
+        print("Cluster is not fully connected")
+        return
+
     expected_shards = len(cluster) / (CLUSTER_REPLICAS + 1)
     if expected_shards % 1 != 0:
         print(f"Cannot rebalance, expected shards is not an integer: {expected_shards}")
@@ -147,7 +157,7 @@ def main():
                         print(f"Master {group_master} has no slots")
                         cluster.rebalance_slots(group_master, expected_shards)
                         return main()
-                else:
+                elif args.distribute_across_zones:
                     print(f"Group {s} has more than 1 master: {group_master}, {node}")
                     return _relocate_master(cluster, node)
             else:
@@ -158,7 +168,7 @@ def main():
                     print(f"Slave {node} has invalid master: {slave_master}")
 
                 # Check if master belongs to the same group as slave
-                if (
+                if args.distribute_across_zones and (
                     slave_master.idx < group_start_idx
                     or slave_master.idx >= group_end_idx
                 ):
@@ -166,7 +176,7 @@ def main():
                         cluster, node, slave_master, group_master, group_slaves
                     )
 
-        if len(group_slaves) != CLUSTER_REPLICAS:
+        if args.distribute_across_zones and len(group_slaves) != CLUSTER_REPLICAS:
             print(f"Group {s} has invalid number of slaves: {group_slaves}")
 
     print(f"Cluster after: {cluster}")

@@ -169,6 +169,6 @@ services:
 
 secrets:
   ADMIN_PASSWORD_PATH:
-    file: ./ADMIN_PASSWORD
+    file: ./secrets/ADMIN_PASSWORD
   FALKORDB_PASSWORD_PATH:
-    file: ./FALKORDB_PASSWORD
+    file: ./secrets/FALKORDB_PASSWORD

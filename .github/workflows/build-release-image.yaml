@@ -84,6 +84,11 @@ jobs:
           name: ${{ matrix.plans.file }}
           path: ${{ matrix.plans.file }}
 
+      - name: Create FALKORDB_PASSOWRD/ADMIN_PASSWORD files
+        if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
+        run: |
+          echo '{{ $var.falkordbPassword }}' > FALKORDB_PASSWORD_PATH
+          echo '{{ $func.random(string, 16) }}' > ADMIN_PASSWORD_PATH
 
       - name: Update Omnistrate plan
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}

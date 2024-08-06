@@ -655,6 +655,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+    secrets:
+      - source: ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD_PATH
+      - source: FALKORDB_PASSWORD_PATH
+        target: /run/secrets/FALKORDB_PASSWORD_PATH
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=0
@@ -665,8 +670,8 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
+      #- FALKORDB_PASSWORD=$var.falkordbPassword
+      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1042,6 +1047,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+    secrets:
+      - source: ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD_PATH
+      - source: FALKORDB_PASSWORD_PATH
+        target: /run/secrets/FALKORDB_PASSWORD_PATH
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -1055,8 +1065,8 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
+      #- FALKORDB_PASSWORD=$var.falkordbPassword
+      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1125,8 +1135,8 @@ services:
       - RUN_METRICS=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
+      #- FALKORDB_PASSWORD=$var.falkordbPassword
+      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
@@ -1139,6 +1149,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
+    secrets:
+      - source: ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD_PATH
+      - source: FALKORDB_PASSWORD_PATH
+        target: /run/secrets/FALKORDB_PASSWORD_PATH
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -1515,6 +1530,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+    secrets:
+      - source: ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD_PATH
+      - source: FALKORDB_PASSWORD_PATH
+        target: /run/secrets/FALKORDB_PASSWORD_PATH
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -1528,8 +1548,8 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
+      #- FALKORDB_PASSWORD=$var.falkordbPassword
+      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1597,8 +1617,8 @@ services:
       - RUN_METRICS=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
+      #- FALKORDB_PASSWORD=$var.falkordbPassword
+      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
@@ -1611,6 +1631,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
+    secrets:
+      - source: ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD_PATH
+      - source: FALKORDB_PASSWORD
+        target: /run/secrets/FALKORDB_PASSWORD_PATH
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -1847,6 +1872,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+    secrets:
+      - source: ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD_PATH
+      - source: FALKORDB_PASSWORD_PATH
+        target: /run/secrets/FALKORDB_PASSWORD_PATH
     environment:
       - RUN_NODE=1
       - RUN_METRICS=1
@@ -1856,8 +1886,8 @@ services:
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
+      #- FALKORDB_PASSWORD=$var.falkordbPassword
+      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -2107,6 +2137,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+    secrets:
+      - source: ADMIN_PASSWORD_PATH
+        target: /run/secrets/ADMIN_PASSWORD_PATH
+      - source: FALKORDB_PASSWORD_PATH
+        target: /run/secrets/FALKORDB_PASSWORD_PATH
     environment:
       - RUN_NODE=1
       - RUN_METRICS=1
@@ -2116,8 +2151,8 @@ services:
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
+      #- FALKORDB_PASSWORD=$var.falkordbPassword
+      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -2150,3 +2185,10 @@ services:
           }
 
           call_health_check
+
+
+secrets:
+  ADMIN_PASSWORD_PATH:
+    file: ./ADMIN_PASSWORD_PATH
+  FALKORDB_PASSWORD_PATH:
+    file: ./FALKORDB_PASSWORD_PATH

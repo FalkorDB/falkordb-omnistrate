@@ -1634,7 +1634,7 @@ services:
     secrets:
       - source: ADMIN_PASSWORD_PATH
         target: /run/secrets/ADMIN_PASSWORD_PATH
-      - source: FALKORDB_PASSWORD
+      - source: FALKORDB_PASSWORD_PATH
         target: /run/secrets/FALKORDB_PASSWORD_PATH
     x-omnistrate-capabilities:
       enableMultiZone: false

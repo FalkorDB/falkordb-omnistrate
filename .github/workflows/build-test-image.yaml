@@ -91,6 +91,7 @@ jobs:
           ls -lar
           echo '{{ $var.falkordbPassword }}' > FALKORDB_PASSWORD
           echo '{{ $func.random(string, 16) }}' > ADMIN_PASSWORD
+          cat FALKORDB_PASSWORD && cat ADMIN_PASSWORD
           ls -lar
       - name: Update Omnistrate plan
         uses: ./.github/actions/update-omnistrate-plan

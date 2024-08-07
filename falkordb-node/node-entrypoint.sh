@@ -433,13 +433,6 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
 
 fi
 
-if [[ $RUN_METRICS -eq 1 ]]; then
-  echo "Starting Metrics"
-  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://$NODE_HOST_IP:$NODE_PORT"; fi)
-  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url &
-  redis_exporter_pid=$!
-fi
-
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   # Check if healthcheck binary exists
   if [ -f /usr/local/bin/healthcheck ]; then
@@ -449,6 +442,13 @@ if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   else
     echo "Healthcheck binary not found"
   fi
+fi
+
+if [[ $RUN_METRICS -eq 1 ]]; then
+  echo "Starting Metrics"
+  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format	json &
+  redis_exporter_pid=$!
 fi
 
 while true; do

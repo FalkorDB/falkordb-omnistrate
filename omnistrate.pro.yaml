@@ -656,10 +656,10 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
     secrets:
-      - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD
-      - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=0
@@ -1048,10 +1048,10 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
     secrets:
-      - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD
-      - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -1150,10 +1150,10 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
     secrets:
-      - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD
-      - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -1531,10 +1531,10 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
     secrets:
-      - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD
-      - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -1632,10 +1632,10 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
     secrets:
-      - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD
-      - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -1873,10 +1873,10 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
     secrets:
-      - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD
-      - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_METRICS=1
@@ -2138,10 +2138,10 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
     secrets:
-      - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD
-      - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_METRICS=1
@@ -2188,7 +2188,7 @@ services:
 
 
 secrets:
-  ADMIN_PASSWORD_PATH:
-    file: ./secrets/ADMIN_PASSWORD
-  FALKORDB_PASSWORD_PATH:
-    file: ./secrets/FALKORDB_PASSWORD
+  adminpasspath:
+    file: ./secrets/adminpassword
+  falkordbpasspath:
+    file: ./secrets/falkordbpassword

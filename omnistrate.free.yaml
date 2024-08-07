@@ -123,10 +123,10 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
     secrets:
-      - source: ADMIN_PASSWORD_PATH
-        target: /run/secrets/ADMIN_PASSWORD
-      - source: FALKORDB_PASSWORD_PATH
-        target: /run/secrets/FALKORDB_PASSWORD
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
 
     environment:
       - RUN_NODE=1
@@ -168,7 +168,7 @@ services:
           memory: 100M
 
 secrets:
-  ADMIN_PASSWORD_PATH:
-    file: ./secrets/ADMIN_PASSWORD
-  FALKORDB_PASSWORD_PATH:
-    file: ./secrets/FALKORDB_PASSWORD
+  adminpasspath:
+    file: ./secrets/adminpassword
+  falkordbpasspath:
+    file: ./secrets/falkordbpassword

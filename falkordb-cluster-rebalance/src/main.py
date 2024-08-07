@@ -188,10 +188,10 @@ def main():
 
 
 def _node_resolved():
-    print(f"Checking node connection: {host}:{NODE_PORT}")
+    print(f"Checking node connection: {NODE_0_HOST}:{NODE_PORT}")
     # Resolve hostnames to IPs
     try:
-        socket.gethostbyname(host)
+        socket.gethostbyname(NODE_0_HOST)
     except Exception as e:
         if DEBUG:
             print(f"Error resolving host: {e}")

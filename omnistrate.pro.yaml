@@ -1925,7 +1925,6 @@ services:
       - ADMIN_PASSWORD=$func.random(string, 16)
       - TLS=$var.enableTLS
       - CLUSTER_REPLICAS=$var.clusterReplicas
-      - NODE_HOST=$sys.network.node.externalEndpoint
       - NODE_PORT=6379
       - DEBUG=1
     x-omnistrate-actionhooks:
@@ -2243,7 +2242,6 @@ services:
       - ADMIN_PASSWORD=$func.random(string, 16)
       - TLS=$var.enableTLS
       - CLUSTER_REPLICAS=$var.clusterReplicas
-      - NODE_HOST=$sys.network.node.externalEndpoint
       - NODE_PORT=6379
       - DEBUG=1
     x-omnistrate-actionhooks:

@@ -212,8 +212,7 @@ def _node_resolved():
 def loop():
     global healthcheck_ok
     while True:
-        if not DEBUG:
-            sleep(10)
+        sleep(10)
 
         while not _node_resolved():
             healthcheck_ok = False
@@ -225,8 +224,6 @@ def loop():
         except Exception as e:
             print(f"Error: {e}")
             healthcheck_ok = False
-        if DEBUG:
-            break
 
 
 if __name__ == "__main__":

@@ -1927,7 +1927,7 @@ services:
       - CLUSTER_REPLICAS=$var.clusterReplicas
       - NODE_HOST=$sys.network.node.externalEndpoint
       - NODE_PORT=6379
-      - DEBUG=0
+      - DEBUG=1
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
@@ -2245,7 +2245,7 @@ services:
       - CLUSTER_REPLICAS=$var.clusterReplicas
       - NODE_HOST=$sys.network.node.externalEndpoint
       - NODE_PORT=6379
-      - DEBUG=0
+      - DEBUG=1
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK

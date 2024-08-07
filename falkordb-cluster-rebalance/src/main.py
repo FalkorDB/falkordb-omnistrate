@@ -202,6 +202,7 @@ def _node_resolved():
             host=host, port=NODE_PORT, password=ADMIN_PASSWORD, ssl=TLS
         )
         client.ping()
+        return True
     except Exception as e:
         if DEBUG:
             print(f"Error pinging node: {e}")

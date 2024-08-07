@@ -87,13 +87,16 @@ jobs:
 
       - name: Create FALKORDB_PASSOWRD/ADMIN_PASSWORD files
         run: |
-          echo $PWD
-          ls -lar
-          mkdir secrets
-          echo '{{ $var.falkordbPassword }}' > ./secrets/FALKORDB_PASSWORD
-          echo '{{ $func.random(string, 16) }}' > ./secrets/ADMIN_PASSWORD
-          cat FALKORDB_PASSWORD && cat ADMIN_PASSWORD
-          ls -lar
+          export sec=$(grep '^secrets:' omnistrate.*)
+          if [ -n $sec ];then
+            mkdir secrets
+            echo '{{ $var.falkordbPassword }}' > ./secrets/falkordbpassword
+            echo '{{ $func.random(string, 16) }}' > ./secrets/adminpassword
+          else
+            echo "secrets option was not used"
+            exit 0
+          fi
+
       - name: Update Omnistrate plan
         uses: ./.github/actions/update-omnistrate-plan
         id: update_omnistrate_plan

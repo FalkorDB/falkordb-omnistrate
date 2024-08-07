@@ -2,17 +2,23 @@
 
 FALKORDB_USER=${FALKORDB_USER:-falkordb}
 #FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
-if [[ -n "run/secrets/FALKORDB_PASSWORD" ]];then
-  FALKORDB_PASSWORD=$(cat "/run/secrets/FALKORDB_PASSWORD")
-  else
+if [[ -f "run/secrets/falkordbpassword" ]] && [[ -n "run/secrets/falkordbpassword" ]];then
+  FALKORDB_PASSWORD=$(cat "/run/secrets/falkordbpassword")
+elif [[ -n "$FALKORDB_PASSWORD" ]];then
+  FALKORDB_PASSWORD=$FALKORDB_PASSWORD
+else
   FALKORDB_PASSWORD=''
 fi
+
 #ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
-if [[ -n "run/secrets/ADMIN_PASSWORD" ]];then
-  ADMIN_PASSWORD=$(cat "/run/secrets/ADMIN_PASSWORD")
-  else
+if [[ -f "run/secrets/adminpassword" ]] && [[ -n "run/secrets/adminpassword" ]];then
+  ADMIN_PASSWORD=$(cat "/run/secrets/adminpassword")
+elif [[ -n "$ADMIN_PASSWORD" ]];then
+  ADMIN_PASSWORD=$ADMIN_PASSWORD
+else
   ADMIN_PASSWORD=''
 fi
+
 RUN_METRICS=${RUN_METRICS:-1}
 RUN_HEALTH_CHECK=${RUN_HEALTH_CHECK:-1}
 RUN_REBALANCE=${RUN_REBALANCE:-1}

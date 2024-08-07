@@ -190,7 +190,7 @@ def _node_resolved():
     print(f"Checking node connection: {host}:{NODE_PORT}")
     # Resolve hostnames to IPs
     try:
-        socket.gethostbyname(NODE_HOST)
+        socket.gethostbyname(host)
     except Exception as e:
         if DEBUG:
             print(f"Error resolving host: {e}")
@@ -199,7 +199,7 @@ def _node_resolved():
     # ping node
     try:
         client = redis.Redis(
-            host=NODE_HOST, port=NODE_PORT, password=ADMIN_PASSWORD, ssl=TLS
+            host=host, port=NODE_PORT, password=ADMIN_PASSWORD, ssl=TLS
         )
         client.ping()
     except Exception as e:

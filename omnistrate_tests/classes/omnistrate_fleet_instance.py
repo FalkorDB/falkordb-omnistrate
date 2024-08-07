@@ -276,7 +276,8 @@ class OmnistrateFleetInstance:
         self, replica_id: str, wait_for_ready: bool, resource_id: str = None, retry=5
     ):
         """Trigger failover for the instance. Optionally wait for the instance to be ready."""
-
+        print(f"Triggering failover for instance {self.instance_id}")
+        
         data = {
             "failedReplicaID": replica_id,
             "failedReplicaAction": "FAILOVER_AND_RESTART",

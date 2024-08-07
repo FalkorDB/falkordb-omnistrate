@@ -12,11 +12,11 @@ fi
 
 #ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
 if [[ -f "/run/secrets/adminpassword" ]] && [[ -n "/run/secrets/adminpassword" ]];then
-  ADMIN_PASSWORD=$(cat "/run/secrets/adminpassword")
+  export ADMIN_PASSWORD=$(cat "/run/secrets/adminpassword")
 elif [[ -n "$ADMIN_PASSWORD" ]];then
-  ADMIN_PASSWORD=$ADMIN_PASSWORD
+  export ADMIN_PASSWORD=$ADMIN_PASSWORD
 else
-  ADMIN_PASSWORD=''
+  export ADMIN_PASSWORD=''
 fi
 
 RUN_SENTINEL=${RUN_SENTINEL:-0}

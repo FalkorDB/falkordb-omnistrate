@@ -192,6 +192,8 @@ def _node_resolved():
     try:
         socket.gethostbyname(NODE_HOST)
     except Exception as e:
+        if DEBUG:
+            print(f"Error resolving host: {e}")
         return False
 
     # ping node
@@ -201,6 +203,8 @@ def _node_resolved():
         )
         client.ping()
     except Exception as e:
+        if DEBUG:
+            print(f"Error pinging node: {e}")
         return False
 
 

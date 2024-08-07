@@ -11,7 +11,6 @@ HEALTHCHECK_PORT = os.getenv("HEALTHCHECK_PORT", "8081")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 TLS = os.getenv("TLS", "false") == "true"
 CLUSTER_REPLICAS = int(os.getenv("CLUSTER_REPLICAS", "1"))
-NODE_HOST = os.getenv("NODE_HOST", "localhost")
 NODE_PORT = int(os.getenv("NODE_PORT", "6379"))
 DEBUG = os.getenv("DEBUG", "0") == "1"
 IS_MULTI_ZONE = os.getenv("IS_MULTI_ZONE", "0") == "1"
@@ -20,6 +19,9 @@ EXTERNAL_DNS_SUFFIX = os.getenv("EXTERNAL_DNS_SUFFIX")
 MIN_HOST_COUNT = 6
 MIN_MASTER_COUNT = 3
 MIN_SLAVE_COUNT = 3
+
+
+NODE_0_HOST = f"cluster-{'mz' if IS_MULTI_ZONE else 'sz'}-0.{EXTERNAL_DNS_SUFFIX}"
 
 healthcheck_ok = False
 
@@ -92,7 +94,7 @@ def _handle_slave_pointing_to_master_in_different_group(
 
 def main():
     cluster = FalkorDBCluster(
-        host=NODE_HOST,
+        host=NODE_0_HOST,
         port=NODE_PORT,
         password=ADMIN_PASSWORD,
         ssl=TLS,
@@ -186,7 +188,6 @@ def main():
 
 
 def _node_resolved():
-    host = f"cluster-{'mz' if IS_MULTI_ZONE else 'sz'}-0.{EXTERNAL_DNS_SUFFIX}"
     print(f"Checking node connection: {host}:{NODE_PORT}")
     # Resolve hostnames to IPs
     try:
@@ -199,7 +200,7 @@ def _node_resolved():
     # ping node
     try:
         client = redis.Redis(
-            host=host, port=NODE_PORT, password=ADMIN_PASSWORD, ssl=TLS
+            host=NODE_0_HOST, port=NODE_PORT, password=ADMIN_PASSWORD, ssl=TLS
         )
         client.ping()
         return True

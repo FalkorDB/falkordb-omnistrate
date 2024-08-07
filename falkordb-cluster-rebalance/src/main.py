@@ -3,7 +3,11 @@ import os
 from falkordb_cluster import FalkorDBCluster, FalkorDBClusterNode
 import socket
 import redis
+import threading
+from simple_http_server import route, server, HttpError
 
+
+HEALTHCHECK_PORT = os.getenv("HEALTHCHECK_PORT", "8081")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 TLS = os.getenv("TLS", "false") == "true"
 CLUSTER_REPLICAS = int(os.getenv("CLUSTER_REPLICAS", "1"))
@@ -16,6 +20,8 @@ EXTERNAL_DNS_SUFFIX = os.getenv("EXTERNAL_DNS_SUFFIX")
 MIN_HOST_COUNT = 6
 MIN_MASTER_COUNT = 3
 MIN_SLAVE_COUNT = 3
+
+healthcheck_ok = False
 
 
 def _handle_too_many_masters(cluster: FalkorDBCluster):
@@ -198,16 +204,36 @@ def _node_resolved():
         return False
 
 
-while True:
-    if not DEBUG:
-        sleep(10)
+def loop():
+    global healthcheck_ok
+    while True:
+        if not DEBUG:
+            sleep(10)
 
-    while not _node_resolved():
-        sleep(5)
+        while not _node_resolved():
+            healthcheck_ok = False
+            sleep(5)
 
-    try:
-        main()
-    except Exception as e:
-        print(f"Error: {e}")
-    if DEBUG:
-        break
+        try:
+            main()
+            healthcheck_ok = True
+        except Exception as e:
+            print(f"Error: {e}")
+            healthcheck_ok = False
+        if DEBUG:
+            break
+
+
+if __name__ == "__main__":
+
+    threading.Thread(target=loop, daemon=True).start()
+
+    @route("/healthcheck")
+    def healthcheck():
+        if healthcheck_ok:
+            return "OK"
+        raise HttpError(500, "Not ready")
+
+    server.start(port=int(HEALTHCHECK_PORT))
+
+    print("Server started")

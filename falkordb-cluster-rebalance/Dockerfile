@@ -8,7 +8,8 @@ COPY falkordb-cluster-rebalance/ /rebalance/
 
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
-  git
+  git \
+  redis
 
 RUN python3 -m venv /rebalance/venv && \
   . /rebalance/venv/bin/activate && \

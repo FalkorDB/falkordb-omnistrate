@@ -2,7 +2,7 @@
 
 FALKORDB_USER=${FALKORDB_USER:-falkordb}
 #FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
-if [[ -f "run/secrets/falkordbpassword" ]] && [[ -n "run/secrets/falkordbpassword" ]];then
+if [[ -f "/run/secrets/falkordbpassword" ]] && [[ -n "/run/secrets/falkordbpassword" ]];then
   FALKORDB_PASSWORD=$(cat "/run/secrets/falkordbpassword")
 elif [[ -n "$FALKORDB_PASSWORD" ]];then
   FALKORDB_PASSWORD=$FALKORDB_PASSWORD
@@ -11,7 +11,7 @@ else
 fi
 
 #ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
-if [[ -f "run/secrets/adminpassword" ]] && [[ -n "run/secrets/adminpassword" ]];then
+if [[ -f "/run/secrets/adminpassword" ]] && [[ -n "/run/secrets/adminpassword" ]];then
   ADMIN_PASSWORD=$(cat "/run/secrets/adminpassword")
 elif [[ -n "$ADMIN_PASSWORD" ]];then
   ADMIN_PASSWORD=$ADMIN_PASSWORD

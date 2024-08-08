@@ -670,8 +670,6 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      #- FALKORDB_PASSWORD=$var.falkordbPassword
-      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1065,8 +1063,6 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      #- FALKORDB_PASSWORD=$var.falkordbPassword
-      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1135,8 +1131,6 @@ services:
       - RUN_METRICS=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
-      #- FALKORDB_PASSWORD=$var.falkordbPassword
-      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
@@ -1548,8 +1542,6 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      #- FALKORDB_PASSWORD=$var.falkordbPassword
-      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1617,8 +1609,6 @@ services:
       - RUN_METRICS=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
-      #- FALKORDB_PASSWORD=$var.falkordbPassword
-      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
@@ -1886,8 +1876,6 @@ services:
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      #- FALKORDB_PASSWORD=$var.falkordbPassword
-      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -2151,8 +2139,6 @@ services:
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      #- FALKORDB_PASSWORD=$var.falkordbPassword
-      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem

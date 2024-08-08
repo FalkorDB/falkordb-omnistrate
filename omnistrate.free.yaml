@@ -140,8 +140,6 @@ services:
       # Disable TLS for free tier
       - TLS=false
       - FALKORDB_USER=$var.falkordbUser
-      #- FALKORDB_PASSWORD=$var.falkordbPassword
-      #- ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=e2-custom-small-1024
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem

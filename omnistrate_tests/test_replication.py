@@ -1,4 +1,5 @@
 import sys
+import signal
 from pathlib import Path  # if you haven't already done so
 
 file = Path(__file__).resolve()
@@ -51,8 +52,19 @@ parser.add_argument("--aof-config", required=False, default="always")
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
+instance: OmnistrateFleetInstance = None
+
+# Intercept exit signals so we can delete the instance before exiting
+def signal_handler(sig, frame):
+    if instance:
+        instance.delete(False)
+    sys.exit(0)
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
 
 def test_replication():
+    global instance
 
     omnistrate = OmnistrateFleetAPI(
         email=args.omnistrate_user,

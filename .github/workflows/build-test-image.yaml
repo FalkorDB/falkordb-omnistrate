@@ -11,6 +11,7 @@ concurrency:
 env:
   NODE_IMAGE_NAME: falkordb-node
   CLUSTER_IMAGE_NAME: falkordb-cluster
+  CLUSTER_REBALANCE_IMAGE_NAME: falkordb-cluster-rebalance
   FALKORDB_VERSION: v4.0.11
   FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
   PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
@@ -26,6 +27,8 @@ jobs:
             image-name: falkordb-node
           - dockerfile: ./falkordb-cluster/Dockerfile
             image-name: falkordb-cluster
+          - dockerfile: ./falkordb-cluster-rebalance/Dockerfile
+            image-name: falkordb-cluster-rebalance
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -77,6 +80,7 @@ jobs:
           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
           sed -i 's/${{ matrix.plans.plan-name }}/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
 
       - name: Upload yaml as artifact
@@ -232,7 +236,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-0' --instance-name 'test-cluster-mz-failover' --instance-description 'test-cluster-mz-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-0' --instance-name 'test-cluster-mz-failover' --instance-description 'test-cluster-mz-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
           - name: PRO/ClusterSingleZone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_cluster.py
@@ -252,7 +256,27 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-0' --instance-name 'test-cluster-mz-failover-tls' --instance-description 'test-cluster-mz-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-0' --instance-name 'test-cluster-mz-failover-tls' --instance-description 'test-cluster-mz-failover' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
+          - name: PRO/ClusterSingleZone - GCP/us-central1 - Add/Remove Shards
+            if: "true"
+            testFile: test_cluster_shards.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-0' --instance-name 'test-cluster-sz-shards' --instance-description 'test-cluster-sz-shards' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
+          - name: PRO/ClusterMultiZone - GCP/us-central1 - Add/Remove Shards
+            if: "true"
+            testFile: test_cluster_shards.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-0' --instance-name 'test-cluster-mz-shards' --instance-description 'test-cluster-mz-shards' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
 
     steps:
       - name: Checkout
@@ -299,4 +323,4 @@ jobs:
           SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
           REF_NAME: ${{ matrix.instances.tierName }}
         run: |
-          poetry run python ./omnistrate_tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
+          poetry run python -u ./omnistrate_tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}

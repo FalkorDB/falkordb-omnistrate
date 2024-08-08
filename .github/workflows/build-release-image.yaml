@@ -90,7 +90,7 @@ jobs:
           if [ -n "$sec" ];then
             mkdir secrets
             echo '{{ $var.falkordbPassword }}' > ./secrets/falkordbpassword
-            echo '{{ $func.random(string, 16) }}' > ./secrets/adminpassword
+            echo '{{ $func.random(string, 16, 12345) }}' > ./secrets/adminpassword
           else
             echo "secrets option was not used"
             exit 0

@@ -1,6 +1,6 @@
 import sys
 import signal
-from pathlib import Path  # if you haven't already done so
+from pathlib import Path
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -16,6 +16,7 @@ import time
 import os
 from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
 from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
+from omnistrate_tests.classes.falkordb_cluster import FalkorDBCluster
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -41,6 +42,10 @@ parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
+parser.add_argument("--host-count", required=False, default="6")
+parser.add_argument("--cluster-replicas", required=False, default="1")
+
+parser.add_argument("--ensure-mz-distribution", action="store_true")
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -55,7 +60,8 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
-def test_standalone():
+
+def test_cluster_shards():
     global instance
 
     omnistrate = OmnistrateFleetAPI(
@@ -102,13 +108,22 @@ def test_standalone():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            hostCount=args.host_count,
+            clusterReplicas=args.cluster_replicas,
         )
 
-        # Test failover and data loss
-        test_failover(instance)
+        add_data(instance)
 
-        # Test stop and start instance
-        test_stop_start(instance)
+        change_host_count(instance, int(args.host_count) + 2)
+
+        if args.ensure_mz_distribution:
+            test_ensure_mz_distribution(instance)
+
+        check_data(instance)
+
+        change_host_count(instance, int(args.host_count))
+
+        check_data(instance)
     except Exception as e:
         instance.delete(True)
         raise e
@@ -119,41 +134,90 @@ def test_standalone():
     print("Test passed")
 
 
-def test_failover(instance: OmnistrateFleetInstance):
-    """This function should retrieve the instance host and port for connection, write some data to the DB, then trigger a failover. After X seconds, the instance should be back online and data should have persisted"""
+def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):
 
-    # Get instance host and port
-    db = instance.create_connection(
-        ssl=args.tls,
-    )
-
-    graph = db.select_graph("test")
-
-    # Write some data to the DB
-    graph.query("CREATE (n:Person {name: 'Alice'})")
-
-    # Trigger failover
-    instance.trigger_failover(
-        replica_id=args.replica_id,
+    print(f"Changing host count to {new_host_count}")
+    instance.update_params(
+        hostCount=f"{new_host_count}",
         wait_for_ready=True,
     )
 
-    # Check if data is still there
 
-    graph = db.select_graph("test")
+def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
+    """This function should ensure that each shard is distributed across multiple availability zones"""
 
-    result = graph.query("MATCH (n:Person) RETURN n")
+    instance_details = instance.get_instance_details()
+    network_topology: dict = instance.get_network_topology()
 
-    if len(result.result_set) == 0:
-        raise Exception("Data lost after failover")
+    params = (
+        instance_details["result_params"]
+        if "result_params" in instance_details
+        else None
+    )
 
-    print("Data persisted after failover")
+    if not params:
+        raise Exception("No result_params found in instance details")
 
-    graph.delete()
+    host_count = int(params["hostCount"]) if "hostCount" in params else None
+
+    if not host_count:
+        raise Exception("No hostCount found in instance details")
+
+    cluster_replicas = (
+        int(params["clusterReplicas"]) if "clusterReplicas" in params else None
+    )
+
+    if not cluster_replicas:
+        raise Exception("No clusterReplicas found in instance details")
+
+    resource_key = next(
+        (k for [k, v] in network_topology.items() if v["resourceName"] == "cluster-mz"),
+        None,
+    )
+
+    resource = network_topology[resource_key]
+
+    nodes = resource["nodes"]
+
+    if len(nodes) == 0:
+        raise Exception("No nodes found in network topology")
+
+    if len(nodes) != host_count:
+        raise Exception("Host count does not match number of nodes")
+
+    cluster = FalkorDBCluster(
+        host=resource["clusterEndpoint"],
+        port=resource["clusterPorts"][0],
+        username="falkordb",
+        password="falkordb",
+        ssl=params["enableTLS"] == "true" if "enableTLS" in params else False,
+    )
+
+    groups = cluster.groups(cluster_replicas)
+
+    for group in groups:
+        group_azs = set()
+        for node in group:
+            omnistrateNode = next(
+                (n for n in nodes if n["endpoint"] == node.hostname), None
+            )
+            if not omnistrateNode:
+                raise Exception(f"Node {node.hostname} not found in network topology")
+
+            group_azs.add(omnistrateNode["availabilityZone"])
+
+        if len(group_azs) == 1:
+            raise Exception(
+                "Group is not distributed across multiple availability zones"
+            )
+
+        print(f"Group {group} is distributed across availability zones {group_azs}")
+
+    print("Shards are distributed across multiple availability zones")
 
 
-def test_stop_start(instance: OmnistrateFleetInstance):
-    """This function should stop the instance, check that it is stopped, then start it again and check that it is running"""
+def add_data(instance: OmnistrateFleetInstance):
+    """This function should retrieve the instance host and port for connection, write some data to the DB, then check that the data is there"""
 
     # Get instance host and port
     db = instance.create_connection(
@@ -165,23 +229,26 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     # Write some data to the DB
     graph.query("CREATE (n:Person {name: 'Alice'})")
 
-    print("Stopping instance")
+    result = graph.query("MATCH (n:Person) RETURN n")
 
-    instance.stop(wait_for_ready=True)
+    if len(result.result_set) == 0:
+        raise Exception("Data not found after write")
 
-    print("Instance stopped")
 
-    instance.start(wait_for_ready=True)
+def check_data(instance: OmnistrateFleetInstance):
+
+    # Get instance host and port
+    db = instance.create_connection(
+        ssl=args.tls,
+    )
 
     graph = db.select_graph("test")
 
     result = graph.query("MATCH (n:Person) RETURN n")
 
     if len(result.result_set) == 0:
-        raise Exception("Data lost after stop/start")
-
-    print("Instance started")
+        raise Exception("Data did not persist after host count change")
 
 
 if __name__ == "__main__":
-    test_standalone()
+    test_cluster_shards()

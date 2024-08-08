@@ -1,18 +1,51 @@
 from time import sleep
 import os
 from falkordb_cluster import FalkorDBCluster, FalkorDBClusterNode
+import socket
+import redis
+import threading
+from simple_http_server import route, server, HttpError
 
+
+HEALTHCHECK_PORT = os.getenv("HEALTHCHECK_PORT", "8081")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 TLS = os.getenv("TLS", "false") == "true"
 CLUSTER_REPLICAS = int(os.getenv("CLUSTER_REPLICAS", "1"))
-NODE_HOST = os.getenv("NODE_HOST", "localhost")
 NODE_PORT = int(os.getenv("NODE_PORT", "6379"))
-DEBUG = os.getenv("DEBUG", "1") == "1"
-
+DEBUG = os.getenv("DEBUG", "0") == "1"
+IS_MULTI_ZONE = os.getenv("IS_MULTI_ZONE", "0") == "1"
+EXTERNAL_DNS_SUFFIX = os.getenv("EXTERNAL_DNS_SUFFIX")
 
 MIN_HOST_COUNT = 6
 MIN_MASTER_COUNT = 3
 MIN_SLAVE_COUNT = 3
+
+
+NODE_0_HOST = f"cluster-{'mz' if IS_MULTI_ZONE else 'sz'}-0.{EXTERNAL_DNS_SUFFIX}"
+
+healthcheck_ok = False
+
+
+def _handle_too_many_masters(cluster: FalkorDBCluster):
+    # Choose one master to become slave from another master that doesn't have enough slaves
+    extra_masters = [
+        master
+        for master in cluster.get_masters()
+        if len(cluster.get_slaves_from_master(master.id)) < CLUSTER_REPLICAS
+    ]
+
+    if len(extra_masters) == 0:
+        print("No extra masters to relocate")
+        return
+
+    if len(extra_masters) == 1:
+        print("Only one extra master to relocate. Skipping...")
+        return
+
+    if len(extra_masters) > 1:
+        print(f"{len(extra_masters)} extra masters to relocate.")
+        cluster.relocate_slave(extra_masters[1].id, extra_masters[0].id)
+        return main()
 
 
 def _relocate_master(
@@ -61,17 +94,18 @@ def _handle_slave_pointing_to_master_in_different_group(
 
 def main():
     cluster = FalkorDBCluster(
-        host=NODE_HOST,
+        host=NODE_0_HOST,
         port=NODE_PORT,
         password=ADMIN_PASSWORD,
         ssl=TLS,
     )
     # slots = client.cluster_slots()
-
-    print(f"Cluster before: {cluster}")
-
     if len(cluster) < MIN_HOST_COUNT:
         print("Not enough hosts to rebalance")
+        return
+
+    if not cluster.is_connected():
+        print("Cluster is not fully connected")
         return
 
     expected_shards = len(cluster) / (CLUSTER_REPLICAS + 1)
@@ -88,6 +122,12 @@ def main():
     invalid_slaves = cluster.get_slaves_with_invalid_masters()
     if len(invalid_slaves) > 0:
         print(f"Invalid slaves: {invalid_slaves}")
+
+    expected_masters = expected_shards
+
+    if len(cluster.get_masters()) > expected_masters:
+        print(f"Too many masters: {len(cluster.get_masters())}")
+        return _handle_too_many_masters(cluster)
 
     for s in range(0, int(expected_shards)):
         group_start_idx = s * (CLUSTER_REPLICAS + 1)
@@ -122,7 +162,7 @@ def main():
                         print(f"Master {group_master} has no slots")
                         cluster.rebalance_slots(group_master, expected_shards)
                         return main()
-                else:
+                elif IS_MULTI_ZONE:
                     print(f"Group {s} has more than 1 master: {group_master}, {node}")
                     return _relocate_master(cluster, node)
             else:
@@ -133,7 +173,7 @@ def main():
                     print(f"Slave {node} has invalid master: {slave_master}")
 
                 # Check if master belongs to the same group as slave
-                if (
+                if IS_MULTI_ZONE and (
                     slave_master.idx < group_start_idx
                     or slave_master.idx >= group_end_idx
                 ):
@@ -141,19 +181,62 @@ def main():
                         cluster, node, slave_master, group_master, group_slaves
                     )
 
-        if len(group_slaves) != CLUSTER_REPLICAS:
+        if IS_MULTI_ZONE and len(group_slaves) != CLUSTER_REPLICAS:
             print(f"Group {s} has invalid number of slaves: {group_slaves}")
 
     print(f"Cluster after: {cluster}")
 
 
-while True:
-    if not DEBUG:
+def _node_resolved():
+    print(f"Checking node connection: {NODE_0_HOST}:{NODE_PORT}")
+    # Resolve hostnames to IPs
+    try:
+        socket.gethostbyname(NODE_0_HOST)
+    except Exception as e:
+        if DEBUG:
+            print(f"Error resolving host: {e}")
+        return False
+
+    # ping node
+    try:
+        client = redis.Redis(
+            host=NODE_0_HOST, port=NODE_PORT, password=ADMIN_PASSWORD, ssl=TLS
+        )
+        client.ping()
+        return True
+    except Exception as e:
+        if DEBUG:
+            print(f"Error pinging node: {e}")
+        return False
+
+
+def loop():
+    global healthcheck_ok
+    while True:
         sleep(10)
 
-    try:
-        main()
-    except Exception as e:
-        print(f"Error: {e}")
-    if DEBUG:
-        break
+        while not _node_resolved():
+            healthcheck_ok = False
+            sleep(5)
+
+        try:
+            main()
+            healthcheck_ok = True
+        except Exception as e:
+            print(f"Error: {e}")
+            healthcheck_ok = False
+
+
+if __name__ == "__main__":
+
+    threading.Thread(target=loop, daemon=True).start()
+
+    @route("/healthcheck")
+    def healthcheck():
+        if healthcheck_ok:
+            return "OK"
+        raise HttpError(500, "Not ready")
+
+    server.start(port=int(HEALTHCHECK_PORT))
+
+    print("Server started")

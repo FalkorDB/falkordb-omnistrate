@@ -2260,11 +2260,13 @@ services:
         defaultValue: "false"
     environment:
       - IS_MULTI_ZONE=1
-      - ADMIN_PASSWORD=$func.random(string, 16)
       - TLS=$var.enableTLS
       - CLUSTER_REPLICAS=$var.clusterReplicas
       - NODE_PORT=6379
       - DEBUG=1
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK

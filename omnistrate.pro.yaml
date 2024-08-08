@@ -9,7 +9,6 @@ x-omnistrate-service-plan:
       GcpProjectNumber: "$GcpProjectNumber"
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
 
-
 x-omnistrate-load-balancer:
   tcp:
     - name: Single Zone Sentinel LB
@@ -1521,6 +1520,7 @@ services:
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
       - BROWSER=0
+      - IS_MULTI_ZONE=1
       - SENTINEL_HOST=$sentinel-mz.sys.network.externalClusterEndpoint
       - SENTINEL_PORT=26379
       - MASTER_NAME=master
@@ -1676,6 +1676,7 @@ services:
         defaultValue: "false"
         parameterDependencyMap:
           cluster-sz: enableTLS
+          cluster-sz-rebalance: enableTLS
       - key: falkordbUser
         description: Choose a default username for your database
         name: FalkorDB User
@@ -1745,12 +1746,14 @@ services:
         max: 3
         parameterDependencyMap:
           cluster-sz: clusterReplicas
+          cluster-sz-rebalance: clusterReplicas
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
         backupPeriodInHours: 12
     depends_on:
       - cluster-sz
+      - cluster-sz-rebalance
 
   cluster-sz:
     x-omnistrate-mode-internal: true
@@ -1851,7 +1854,6 @@ services:
       - RUN_NODE=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
-      - RUN_REBALANCE=0
       - BROWSER=0
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
@@ -1870,6 +1872,61 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: >
+          #!/bin/bash
+
+          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
+
+          call_health_check() {
+
+            echo "Health check URL: $HEALTH_CHECK_URL"
+            curl -sf $HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          call_health_check
+
+  cluster-sz-rebalance:
+    x-omnistrate-mode-internal: true
+    image: $FalkorDBClusterRebalanceImage
+    x-omnistrate-compute:
+      replicaCount: 1
+      instanceTypes:
+        - cloudProvider: gcp
+          name: e2-small
+    x-omnistrate-api-params:
+      - key: clusterReplicas
+        description: The number of replicas per shard
+        name: Cluster Replicas
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "1"
+        min: 1
+        max: 3
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "false"
+    environment:
+      - IS_MULTI_ZONE=0
+      - ADMIN_PASSWORD=$func.random(string, 16)
+      - TLS=$var.enableTLS
+      - CLUSTER_REPLICAS=$var.clusterReplicas
+      - NODE_PORT=6379
+      - DEBUG=1
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
@@ -1936,6 +1993,7 @@ services:
         defaultValue: "false"
         parameterDependencyMap:
           cluster-mz: enableTLS
+          cluster-mz-rebalance: enableTLS
       - key: falkordbUser
         description: Choose a default username for your database
         name: FalkorDB User
@@ -1983,7 +2041,7 @@ services:
         parameterDependencyMap:
           cluster-mz: AOFPersistenceConfig
       - key: hostCount
-        description: The number of hosts in the cluster. Each shard contains one master and one replica, so 6 hosts will create 3 shards.
+        description: "The number of hosts in the cluster. Must follow the formula: Host count = (1 + Cluster replicas) * Number of shards. Ex: 3 shards with 1 replica each = 6 hosts."
         name: Host Count
         type: Float64
         modifiable: true
@@ -2005,12 +2063,14 @@ services:
         max: 3
         parameterDependencyMap:
           cluster-mz: clusterReplicas
+          cluster-mz-rebalance: clusterReplicas
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
         backupPeriodInHours: 12
     depends_on:
       - cluster-mz
+      - cluster-mz-rebalance
 
   cluster-mz:
     x-omnistrate-mode-internal: true
@@ -2111,7 +2171,6 @@ services:
       - RUN_NODE=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
-      - RUN_REBALANCE=1
       - BROWSER=0
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
@@ -2130,6 +2189,61 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: true
       enableEndpointPerReplica: true
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: >
+          #!/bin/bash
+
+          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
+
+          call_health_check() {
+
+            echo "Health check URL: $HEALTH_CHECK_URL"
+            curl -sf $HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          call_health_check
+
+  cluster-mz-rebalance:
+    x-omnistrate-mode-internal: true
+    image: $FalkorDBClusterRebalanceImage
+    x-omnistrate-compute:
+      replicaCount: 1
+      instanceTypes:
+        - cloudProvider: gcp
+          name: e2-small
+    x-omnistrate-api-params:
+      - key: clusterReplicas
+        description: The number of replicas per shard
+        name: Cluster Replicas
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "1"
+        min: 1
+        max: 3
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "false"
+    environment:
+      - IS_MULTI_ZONE=1
+      - ADMIN_PASSWORD=$func.random(string, 16)
+      - TLS=$var.enableTLS
+      - CLUSTER_REPLICAS=$var.clusterReplicas
+      - NODE_PORT=6379
+      - DEBUG=1
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK

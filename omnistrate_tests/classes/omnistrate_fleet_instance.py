@@ -4,6 +4,7 @@ import os
 import time
 import random
 import string
+from requests import exceptions
 import omnistrate_tests.classes.omnistrate_fleet_api
 
 
@@ -147,7 +148,7 @@ class OmnistrateFleetInstance:
             if time.time() > timeout_timer:
                 raise Exception("Timeout")
 
-            status = self._get_instance_details()["status"]
+            status = self.get_instance_details()["status"]
             if status == requested_status:
                 print(f"Instance is {requested_status}")
                 break
@@ -158,15 +159,22 @@ class OmnistrateFleetInstance:
                 print("Instance is in " + status + " state")
                 time.sleep(5)
 
-    def _get_instance_details(self, retries=5):
+    def get_instance_details(self, retries=5):
         """Get the details of the instance."""
 
         while retries > 0:
 
-            response = self._fleet_api.client().get(
-                f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
-                timeout=15,
-            )
+            try:
+
+                response = self._fleet_api.client().get(
+                    f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
+                    timeout=15,
+                )
+
+            except exceptions.ReadTimeout as e:
+                retries -= 1
+                time.sleep(3)
+                continue
 
             if response.status_code >= 500:
                 retries -= 1
@@ -184,7 +192,7 @@ class OmnistrateFleetInstance:
     def get_resource_id(self, resource_key: str = None) -> str | None:
         """Get the resource ID of the instance."""
 
-        network_topology = self._get_network_topology()
+        network_topology = self.get_network_topology()
 
         # find key for object with the correct resourceKey
 
@@ -276,6 +284,7 @@ class OmnistrateFleetInstance:
         self, replica_id: str, wait_for_ready: bool, resource_id: str = None, retry=5
     ):
         """Trigger failover for the instance. Optionally wait for the instance to be ready."""
+        print(f"Triggering failover for instance {self.instance_id}")
 
         data = {
             "failedReplicaID": replica_id,
@@ -311,11 +320,18 @@ class OmnistrateFleetInstance:
     ):
         """Update the instance type."""
 
-        self.wait_for_instance_status()
-
         data = {
             "nodeInstanceType": new_instance_type,
         }
+
+        return self.update_params(wait_until_ready, retry, **data)
+
+    def update_params(self, wait_until_ready: bool = True, retry=5, **kwargs):
+        """Update the instance parameters."""
+
+        self.wait_for_instance_status()
+
+        data = kwargs
 
         response = self._fleet_api.client().patch(
             f"{self._fleet_api.base_url}/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}/{self.instance_id}",
@@ -329,9 +345,7 @@ class OmnistrateFleetInstance:
                     f"Failed to update instance type {self.instance_id} after {retry} retries"
                 )
             time.sleep(60)
-            return self.update_instance_type(
-                new_instance_type, wait_until_ready, retry - 1
-            )
+            return self.update_params(wait_until_ready, retry - 1, **kwargs)
 
         self._fleet_api.handle_response(
             response, f"Failed to update instance type {self.instance_id}"
@@ -406,19 +420,19 @@ class OmnistrateFleetInstance:
             if time.time() - right_now > upgrade_timeout:
                 raise Exception("Upgrade timed out")
 
-    def _get_network_topology(self):
+    def get_network_topology(self):
 
         if self._network_topology is not None:
             return self._network_topology
 
-        self._network_topology = self._get_instance_details()["detailedNetworkTopology"]
+        self._network_topology = self.get_instance_details()["detailedNetworkTopology"]
 
         return self._network_topology
 
     def get_connection_endpoints(self):
         """Get the connection endpoints for the instance."""
 
-        resources = self._get_network_topology()
+        resources = self.get_network_topology()
 
         resources_keys = resources.keys()
 
@@ -440,7 +454,7 @@ class OmnistrateFleetInstance:
         return endpoints
 
     def get_cluster_endpoint(self):
-        resources = self._get_network_topology()
+        resources = self.get_network_topology()
 
         resources_keys = resources.keys()
 

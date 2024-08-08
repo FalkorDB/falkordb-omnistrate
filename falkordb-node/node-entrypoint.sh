@@ -115,7 +115,7 @@ handle_sigterm() {
   echo "Caught SIGTERM"
   echo "Stopping FalkorDB"
 
-  sentinels_list=$(get_sentinels_list)
+  # sentinels_list=$(get_sentinels_list)
 
   if [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
     remove_master_from_group
@@ -134,7 +134,7 @@ handle_sigterm() {
     wait $sentinel_pid
   fi
 
-  send_reset_to_sentinels $sentinels_list
+  # send_reset_to_sentinels $sentinels_list
 
   if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
     kill -TERM $redis_exporter_pid
@@ -433,13 +433,6 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
 
 fi
 
-if [[ $RUN_METRICS -eq 1 ]]; then
-  echo "Starting Metrics"
-  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://$NODE_HOST_IP:$NODE_PORT"; fi)
-  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url &
-  redis_exporter_pid=$!
-fi
-
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   # Check if healthcheck binary exists
   if [ -f /usr/local/bin/healthcheck ]; then
@@ -449,6 +442,13 @@ if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   else
     echo "Healthcheck binary not found"
   fi
+fi
+
+if [[ $RUN_METRICS -eq 1 ]]; then
+  echo "Starting Metrics"
+  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format	json &
+  redis_exporter_pid=$!
 fi
 
 while true; do

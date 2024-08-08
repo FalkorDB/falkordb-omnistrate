@@ -1,5 +1,6 @@
 import sys
-from pathlib import Path  # if you haven't already done so
+import signal
+from pathlib import Path
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -15,6 +16,7 @@ import time
 import os
 from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
 from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
+from omnistrate_tests.classes.falkordb_cluster import FalkorDBCluster
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -43,11 +45,24 @@ parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
 
+parser.add_argument("--ensure-mz-distribution", action="store_true")
+
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
+instance: OmnistrateFleetInstance = None
 
-def test_standalone():
+# Intercept exit signals so we can delete the instance before exiting
+def signal_handler(sig, frame):
+    if instance:
+        instance.delete(False)
+    sys.exit(0)
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
+
+def test_cluster():
+    global instance
 
     omnistrate = OmnistrateFleetAPI(
         email=args.omnistrate_user,
@@ -97,6 +112,9 @@ def test_standalone():
             clusterReplicas=args.cluster_replicas,
         )
 
+        if args.ensure_mz_distribution:
+            test_ensure_mz_distribution(instance)
+
         # Test failover and data loss
         test_failover(instance)
 
@@ -110,6 +128,79 @@ def test_standalone():
     instance.delete(True)
 
     print("Test passed")
+
+
+def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
+    """This function should ensure that each shard is distributed across multiple availability zones"""
+
+    instance_details = instance.get_instance_details()
+    network_topology: dict = instance.get_network_topology()
+
+    params = (
+        instance_details["result_params"]
+        if "result_params" in instance_details
+        else None
+    )
+
+    if not params:
+        raise Exception("No result_params found in instance details")
+
+    host_count = int(params["hostCount"]) if "hostCount" in params else None
+
+    if not host_count:
+        raise Exception("No hostCount found in instance details")
+
+    cluster_replicas = (
+        int(params["clusterReplicas"]) if "clusterReplicas" in params else None
+    )
+
+    if not cluster_replicas:
+        raise Exception("No clusterReplicas found in instance details")
+
+    resource_key = next(
+        (k for [k, v] in network_topology.items() if v["resourceName"] == "cluster-mz"),
+        None,
+    )
+
+    resource = network_topology[resource_key]
+
+    nodes = resource["nodes"]
+
+    if len(nodes) == 0:
+        raise Exception("No nodes found in network topology")
+
+    if len(nodes) != host_count:
+        raise Exception("Host count does not match number of nodes")
+
+    cluster = FalkorDBCluster(
+        host=resource["clusterEndpoint"],
+        port=resource["clusterPorts"][0],
+        username="falkordb",
+        password="falkordb",
+        ssl=params["enableTLS"] == "true" if "enableTLS" in params else False,
+    )
+
+    groups = cluster.groups(cluster_replicas)
+
+    for group in groups:
+        group_azs = set()
+        for node in group:
+            omnistrateNode = next(
+                (n for n in nodes if n["endpoint"] == node.hostname), None
+            )
+            if not omnistrateNode:
+                raise Exception(f"Node {node.hostname} not found in network topology")
+
+            group_azs.add(omnistrateNode["availabilityZone"])
+
+        if len(group_azs) == 1:
+            raise Exception(
+                "Group is not distributed across multiple availability zones"
+            )
+
+        print(f"Group {group} is distributed across availability zones {group_azs}")
+
+    print("Shards are distributed across multiple availability zones")
 
 
 def test_failover(instance: OmnistrateFleetInstance):
@@ -177,4 +268,4 @@ def test_stop_start(instance: OmnistrateFleetInstance):
 
 
 if __name__ == "__main__":
-    test_standalone()
+    test_cluster()

@@ -1,8 +1,25 @@
 #!/bin/bash
 
 FALKORDB_USER=${FALKORDB_USER:-falkordb}
-FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
-ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
+#FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
+if [[ -f "/run/secrets/falkordbpassword" ]] && [[ -s "/run/secrets/falkordbpassword" ]];then
+  FALKORDB_PASSWORD=$(cat "/run/secrets/falkordbpassword")
+elif [[ -n "$FALKORDB_PASSWORD" ]];then
+  FALKORDB_PASSWORD=$FALKORDB_PASSWORD
+else
+  FALKORDB_PASSWORD=''
+fi
+
+#ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
+if [[ -f "/run/secrets/adminpassword" ]] && [[ -s "/run/secrets/adminpassword" ]];then
+  ADMIN_PASSWORD=$(cat "/run/secrets/adminpassword")
+  export ADMIN_PASSWORD
+elif [[ -n "$ADMIN_PASSWORD" ]];then
+  export ADMIN_PASSWORD=$ADMIN_PASSWORD
+else
+  export ADMIN_PASSWORD=''
+fi
+
 RUN_METRICS=${RUN_METRICS:-1}
 RUN_HEALTH_CHECK=${RUN_HEALTH_CHECK:-1}
 TLS=${TLS:-false}

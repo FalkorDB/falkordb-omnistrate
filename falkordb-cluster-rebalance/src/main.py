@@ -15,7 +15,6 @@ def _get_admin_pass():
     admin_password = os.getenv('ADMIN_PASSWORD')
     if admin_password:
         return admin_password
-    print(admin_password)
     secret_path = '/run/secrets/adminpassword'
     try:
         with open(secret_path) as f:

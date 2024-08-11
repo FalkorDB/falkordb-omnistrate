@@ -455,9 +455,9 @@ class OmnistrateFleetInstance:
 
     def get_cluster_endpoint(self):
         resources = self.get_network_topology()
-
+        
         resources_keys = resources.keys()
-
+        print(f"resource-keys-print-\n{resources_keys}")
         for key in resources_keys:
             if (
                 "clusterEndpoint" in resources[key]

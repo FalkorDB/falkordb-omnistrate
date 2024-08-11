@@ -1,2 +1,3 @@
 redis@git+https://github.com/dudizimber/redis-py@3342-add-hostname-to-parse-node-line
 simple_http_server
+loguru

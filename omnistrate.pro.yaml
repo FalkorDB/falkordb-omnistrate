@@ -1914,6 +1914,8 @@ services:
   cluster-sz-rebalance:
     x-omnistrate-mode-internal: true
     image: $FalkorDBClusterRebalanceImage
+    x-omnistrate-capabilities:
+        networkType: INTERNAL
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:
@@ -1940,11 +1942,13 @@ services:
         defaultValue: "false"
     environment:
       - IS_MULTI_ZONE=0
-      - ADMIN_PASSWORD=$func.random(string, 16)
       - TLS=$var.enableTLS
       - CLUSTER_REPLICAS=$var.clusterReplicas
       - NODE_PORT=6379
       - DEBUG=1
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
@@ -2234,6 +2238,8 @@ services:
   cluster-mz-rebalance:
     x-omnistrate-mode-internal: true
     image: $FalkorDBClusterRebalanceImage
+    x-omnistrate-capabilities:
+        networkType: INTERNAL
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:

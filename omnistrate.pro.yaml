@@ -1915,7 +1915,7 @@ services:
     x-omnistrate-mode-internal: true
     image: $FalkorDBClusterRebalanceImage
     x-omnistrate-capabilities:
-        networkType: INTERNAL
+      networkType: INTERNAL
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:
@@ -2239,7 +2239,7 @@ services:
     x-omnistrate-mode-internal: true
     image: $FalkorDBClusterRebalanceImage
     x-omnistrate-capabilities:
-        networkType: INTERNAL
+      networkType: INTERNAL
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:

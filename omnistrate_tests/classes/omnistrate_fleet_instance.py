@@ -170,6 +170,7 @@ class OmnistrateFleetInstance:
                     f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
                     timeout=15,
                 )
+                print(f"response-in-get-instance-details\n{response}")
 
             except exceptions.ReadTimeout as e:
                 retries -= 1

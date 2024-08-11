@@ -5,7 +5,7 @@ import socket
 import redis
 import threading
 from simple_http_server import route, server, HttpError
-
+from loguru import logger
 
 
 def _get_admin_pass():
@@ -16,7 +16,7 @@ def _get_admin_pass():
     admin_password = os.getenv('ADMIN_PASSWORD')
     if admin_password:
         return admin_password
-    
+    logger.log(admin_password)
     secret_path = '/run/secrets/adminpassword'
     try:
         with open(secret_path) as f:
@@ -26,6 +26,7 @@ def _get_admin_pass():
 
 HEALTHCHECK_PORT = os.getenv("HEALTHCHECK_PORT", "8081")
 ADMIN_PASSWORD = _get_admin_pass()
+logger.log('outside the function',ADMIN_PASSWORD)
 TLS = os.getenv("TLS", "false") == "true"
 CLUSTER_REPLICAS = int(os.getenv("CLUSTER_REPLICAS", "1"))
 NODE_PORT = int(os.getenv("NODE_PORT", "6379"))

@@ -170,7 +170,6 @@ class OmnistrateFleetInstance:
                     f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
                     timeout=15,
                 )
-                print(f"response-in-get-instance-details\n{response}")
 
             except exceptions.ReadTimeout as e:
                 retries -= 1
@@ -456,14 +455,16 @@ class OmnistrateFleetInstance:
 
     def get_cluster_endpoint(self):
         resources = self.get_network_topology()
-        print(f"resource-print-\n{resources}")
+
         resources_keys = resources.keys()
-        print(f"resource-keys-print-\n{resources_keys}")
+
         for key in resources_keys:
             if (
                 "clusterEndpoint" in resources[key]
                 and len(resources[key]["clusterEndpoint"]) > 0
                 and "streamer." not in resources[key]["clusterEndpoint"]
+                and "clusterPorts" in resources[key]
+                and resources[key]['networkingType'] != "INTERNAL"
             ):
                 return {
                     "endpoint": resources[key]["clusterEndpoint"],

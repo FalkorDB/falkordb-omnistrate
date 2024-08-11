@@ -42,6 +42,7 @@ parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
+parser.add_argument("--shards", required=False, default="3")
 
 parser.add_argument("--ensure-mz-distribution", action="store_true")
 
@@ -61,8 +62,11 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
+current_host_count = int(args.host_count)
+current_replicas_count = int(args.cluster_replicas)
 
-def test_cluster_shards():
+
+def test_cluster_replicas():
     global instance
 
     omnistrate = OmnistrateFleetAPI(
@@ -115,17 +119,14 @@ def test_cluster_shards():
 
         add_data(instance)
 
-        change_host_count(instance, int(args.host_count) + 2)
+        change_replica_count(instance, int(args.cluster_replicas) + 1)
 
         if args.ensure_mz_distribution:
             test_ensure_mz_distribution(instance)
 
         check_data(instance)
 
-        change_host_count(instance, int(args.host_count))
-
-        if args.ensure_mz_distribution:
-            test_ensure_mz_distribution(instance)
+        change_replica_count(instance, int(args.cluster_replicas))
 
         check_data(instance)
     except Exception as e:
@@ -138,13 +139,23 @@ def test_cluster_shards():
     print("Test passed")
 
 
-def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):
+def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: int):
+    global current_replicas_count, current_host_count
 
-    print(f"Changing host count to {new_host_count}")
+    diff = new_replicas_count - current_replicas_count
+
+    new_host_count = int(current_host_count) + (diff * int(args.shards))
+
+    print(
+        f"Changing clusterReplicas to {new_replicas_count} and hostCount to {new_host_count}"
+    )
     instance.update_params(
         hostCount=f"{new_host_count}",
+        clusterReplicas=f"{new_replicas_count}",
         wait_for_ready=True,
     )
+    current_host_count = new_host_count
+    current_replicas_count = new_replicas_count
 
 
 def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
@@ -255,4 +266,4 @@ def check_data(instance: OmnistrateFleetInstance):
 
 
 if __name__ == "__main__":
-    test_cluster_shards()
+    test_cluster_replicas()

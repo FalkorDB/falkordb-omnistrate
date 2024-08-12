@@ -231,7 +231,7 @@ class OmnistrateFleetInstance:
             if e.args[0] == "Timeout":
                 raise Exception(f"Failed to delete instance {self.instance_id}")
 
-    def stop(self, wait_for_ready: bool, retry=5):
+    def stop(self, wait_for_ready: bool, retry=10):
         """Stop the instance. Optionally wait for the instance to be ready."""
 
         response = self._fleet_api.client().post(
@@ -241,7 +241,7 @@ class OmnistrateFleetInstance:
         )
 
         if "another operation is already in progress" in response.text and retry > 0:
-            time.sleep(60)
+            time.sleep(90)
             return self.stop(wait_for_ready, retry - 1)
 
         self._fleet_api.handle_response(
@@ -256,7 +256,7 @@ class OmnistrateFleetInstance:
             timeout_seconds=self.deployment_failover_timeout_seconds,
         )
 
-    def start(self, wait_for_ready: bool, retry=5):
+    def start(self, wait_for_ready: bool, retry=10):
         """Start the instance. Optionally wait for the instance to be ready."""
 
         response = self._fleet_api.client().post(
@@ -266,7 +266,7 @@ class OmnistrateFleetInstance:
         )
 
         if "another operation is already in progress" in response.text and retry > 0:
-            time.sleep(60)
+            time.sleep(90)
             return self.start(wait_for_ready, retry - 1)
 
         self._fleet_api.handle_response(
@@ -281,7 +281,7 @@ class OmnistrateFleetInstance:
         )
 
     def trigger_failover(
-        self, replica_id: str, wait_for_ready: bool, resource_id: str = None, retry=5
+        self, replica_id: str, wait_for_ready: bool, resource_id: str = None, retry=10
     ):
         """Trigger failover for the instance. Optionally wait for the instance to be ready."""
         print(f"Triggering failover for instance {self.instance_id}")
@@ -299,7 +299,7 @@ class OmnistrateFleetInstance:
         )
 
         if "another operation is already in progress" in response.text and retry > 0:
-            time.sleep(60)
+            time.sleep(90)
             return self.trigger_failover(
                 replica_id, wait_for_ready, resource_id, retry - 1
             )
@@ -326,7 +326,7 @@ class OmnistrateFleetInstance:
 
         return self.update_params(wait_until_ready, retry, **data)
 
-    def update_params(self, wait_until_ready: bool = True, retry=5, **kwargs):
+    def update_params(self, wait_until_ready: bool = True, retry=10, **kwargs):
         """Update the instance parameters."""
 
         self.wait_for_instance_status()
@@ -339,12 +339,8 @@ class OmnistrateFleetInstance:
             timeout=15,
         )
 
-        if "another operation is already in progress" in str(response.text):
-            if retry == 0:
-                raise Exception(
-                    f"Failed to update instance type {self.instance_id} after {retry} retries"
-                )
-            time.sleep(60)
+        if "another operation is already in progress" in response.text and retry > 0:
+            time.sleep(90)
             return self.update_params(wait_until_ready, retry - 1, **kwargs)
 
         self._fleet_api.handle_response(

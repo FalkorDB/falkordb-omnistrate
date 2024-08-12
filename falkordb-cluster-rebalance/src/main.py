@@ -24,7 +24,6 @@ def _get_admin_pass():
 
 HEALTHCHECK_PORT = os.getenv("HEALTHCHECK_PORT", "8081")
 ADMIN_PASSWORD = _get_admin_pass()
-print(ADMIN_PASSWORD)
 TLS = os.getenv("TLS", "false") == "true"
 CLUSTER_REPLICAS = int(os.getenv("CLUSTER_REPLICAS", "1"))
 NODE_PORT = int(os.getenv("NODE_PORT", "6379"))

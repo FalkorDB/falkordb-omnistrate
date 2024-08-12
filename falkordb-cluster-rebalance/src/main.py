@@ -26,25 +26,58 @@ NODE_0_HOST = f"cluster-{'mz' if IS_MULTI_ZONE else 'sz'}-0.{EXTERNAL_DNS_SUFFIX
 healthcheck_ok = False
 
 
-def _handle_too_many_masters(cluster: FalkorDBCluster):
+def _handle_too_many_masters(cluster: FalkorDBCluster, expected_masters: int):
     # Choose one master to become slave from another master that doesn't have enough slaves
-    extra_masters = [
-        master
-        for master in cluster.get_masters()
-        if len(cluster.get_slaves_from_master(master.id)) < CLUSTER_REPLICAS
+    sorted_masters: list[tuple[FalkorDBClusterNode, int]] = []
+    for extra_master in cluster.get_masters():
+        if len(extra_master.slots) > 0:
+            continue
+        sorted_masters.append(
+            (extra_master, cluster.get_slaves_from_master(extra_master.id))
+        )
+
+    sorted_masters = sorted(sorted_masters, key=lambda x: len(x[1]))
+
+    # Select the masters with the least slaves
+    extra_masters: list[tuple[FalkorDBClusterNode, int]] = sorted_masters[
+        : len(sorted_masters) - expected_masters
     ]
 
     if len(extra_masters) == 0:
-        print("No extra masters to relocate")
+        print("No extra masters to handle")
         return
 
     if len(extra_masters) == 1:
-        print("Only one extra master to relocate. Skipping...")
+        print("Only one extra master to handle. Skipping...")
         return
 
     if len(extra_masters) > 1:
-        print(f"{len(extra_masters)} extra masters to relocate.")
-        cluster.relocate_slave(extra_masters[1].id, extra_masters[0].id)
+        print(f"{len(extra_masters)} extra masters to handle.")
+        groups = cluster.groups(CLUSTER_REPLICAS)
+        extra_master = extra_masters[0][0]
+        print(f"Extra master: {extra_master}")
+        extra_master_group = next(
+            (group for group in groups if extra_master in group),
+            None,
+        )
+        group_master = next(
+            (node for node in extra_master_group if node.is_master),
+            None,
+        )
+        if group_master is None:
+            print(f"Group has no master. Finding another group...")
+            for group in groups:
+                if (
+                    len([node for node in group if node.is_slave]) < CLUSTER_REPLICAS
+                    and next((node for node in group if node.is_master), None)
+                    is not None
+                ):
+                    group_master = next(
+                        (node for node in group if node.is_master),
+                    )
+                    print(f"Found group master: {group_master}")
+                    break
+        cluster.relocate_slave(extra_master.id, group_master.id)
         return main()
 
 
@@ -60,7 +93,7 @@ def _relocate_master(
         if node in group:
             print(f"Skipping group {i}. Node {node.id} is already in this group")
             continue
-        if not any(n.mode == "master" for n in group):
+        if not any(n.is_master for n in group):
             suitable_relocation_node = group[0]
             break
     else:
@@ -127,7 +160,7 @@ def main():
 
     if len(cluster.get_masters()) > expected_masters:
         print(f"Too many masters: {len(cluster.get_masters())}")
-        return _handle_too_many_masters(cluster)
+        return _handle_too_many_masters(cluster, expected_masters)
 
     for s in range(0, int(expected_shards)):
         group_start_idx = s * (CLUSTER_REPLICAS + 1)
@@ -137,7 +170,7 @@ def main():
             (
                 node
                 for node in cluster.nodes[group_start_idx:group_end_idx]
-                if node.mode == "master"
+                if node.is_master
             ),
             None,
         )
@@ -149,13 +182,13 @@ def main():
         group_slaves: list[FalkorDBClusterNode] = [
             node
             for node in cluster.nodes[group_start_idx:group_end_idx]
-            if node.mode == "slave" and node.master_id == group_master.id
+            if node.is_slave and node.master_id == group_master.id
         ]
 
         for i in range(group_start_idx, group_end_idx):
             node = cluster.nodes[i]
 
-            if node.mode == "master":
+            if node.is_master:
                 if group_master is None or group_master == node:
                     group_master = node
                     if len(group_master.slots) == 0:

@@ -178,12 +178,18 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
     if not host_count:
         raise Exception("No hostCount found in instance details")
 
+    if host_count != current_host_count:
+        raise Exception("Host count does not match new host count")
+
     cluster_replicas = (
         int(params["clusterReplicas"]) if "clusterReplicas" in params else None
     )
 
     if not cluster_replicas:
         raise Exception("No clusterReplicas found in instance details")
+
+    if cluster_replicas != current_replicas_count:
+        raise Exception("Cluster replicas count does not match new replicas count")
 
     resource_key = next(
         (k for [k, v] in network_topology.items() if v["resourceName"] == "cluster-mz"),

@@ -50,6 +50,8 @@ args = parser.parse_args()
 
 instance: OmnistrateFleetInstance = None
 
+current_host_count = int(args.host_count)
+
 
 # Intercept exit signals so we can delete the instance before exiting
 def signal_handler(sig, frame):
@@ -139,12 +141,14 @@ def test_cluster_shards():
 
 
 def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):
+    global current_host_count
 
     print(f"Changing host count to {new_host_count}")
     instance.update_params(
         hostCount=f"{new_host_count}",
         wait_for_ready=True,
     )
+    current_host_count = new_host_count
 
 
 def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
@@ -166,6 +170,9 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
 
     if not host_count:
         raise Exception("No hostCount found in instance details")
+
+    if host_count != current_host_count:
+        raise Exception("Host count does not match new host count")
 
     cluster_replicas = (
         int(params["clusterReplicas"]) if "clusterReplicas" in params else None

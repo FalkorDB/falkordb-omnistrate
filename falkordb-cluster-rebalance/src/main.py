@@ -181,7 +181,7 @@ def main():
                         cluster, node, slave_master, group_master, group_slaves
                     )
 
-        if IS_MULTI_ZONE and len(group_slaves) != CLUSTER_REPLICAS:
+        if len(group_slaves) != CLUSTER_REPLICAS:
             print(f"Group {s} has invalid number of slaves: {group_slaves}")
 
     print(f"Cluster after: {cluster}")

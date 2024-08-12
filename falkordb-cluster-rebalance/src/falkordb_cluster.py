@@ -2,6 +2,7 @@ from redis.cluster import RedisCluster, ClusterNode
 from time import sleep, time
 import subprocess
 from datetime import datetime
+import logging
 
 
 class FalkorDBClusterNode:
@@ -102,7 +103,7 @@ class FalkorDBCluster:
             for key, val in self.client.cluster_nodes().items()
         ]
         self.sort()
-        print(f"{datetime.now()}: Cluster refreshed: {self}")
+        logging.info(f"{datetime.now()}: Cluster refreshed: {self}")
         return self
 
     def is_connected(self) -> bool:
@@ -175,7 +176,7 @@ class FalkorDBCluster:
             new_master_node.to_cluster_node(), old_master_id
         )
 
-        print(
+        logging.info(
             f"{datetime.now()}: Replicate {new_master_node} to {old_master_node} at: {res}"
         )
 
@@ -190,7 +191,7 @@ class FalkorDBCluster:
 
         res = self.client.cluster_failover(new_master_node.to_cluster_node())
 
-        print(f"{datetime.now()}: Failover {old_master_node}: {res}")
+        logging.info(f"{datetime.now()}: Failover {old_master_node}: {res}")
 
         self._wait_for_condition(
             lambda: self.get_node_by_id(old_master_id).is_slave
@@ -221,7 +222,7 @@ class FalkorDBCluster:
 
         res = self.client.cluster_replicate(slave_node.to_cluster_node(), new_master_id)
 
-        print(f"{datetime.now()}: Replicate {slave_node} to {new_master_node}: {res}")
+        logging.info(f"{datetime.now()}: Replicate {slave_node} to {new_master_node}: {res}")
 
         self._wait_for_condition(
             lambda: self.get_node_by_id(slave_id).is_slave
@@ -234,7 +235,7 @@ class FalkorDBCluster:
 
         slot_count = 16384 // shards
 
-        print(f"Reshard to {slot_count} slots. New node: {new_node.id}")
+        logging.info(f"Reshard to {slot_count} slots. New node: {new_node.id}")
         res = subprocess.call(
             [
                 "redis-cli",
@@ -256,7 +257,7 @@ class FalkorDBCluster:
             ]
         )
 
-        print(f"Reshard result: {res}")
+        logging.info(f"Reshard result: {res}")
 
         self._wait_for_condition(
             lambda: all(len(node.slots) > 0 for node in self.get_masters()),

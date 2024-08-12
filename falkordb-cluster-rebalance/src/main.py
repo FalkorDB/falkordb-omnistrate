@@ -5,6 +5,7 @@ import socket
 import redis
 import threading
 from simple_http_server import route, server, HttpError
+import logging
 
 
 HEALTHCHECK_PORT = os.getenv("HEALTHCHECK_PORT", "8081")
@@ -15,6 +16,8 @@ NODE_PORT = int(os.getenv("NODE_PORT", "6379"))
 DEBUG = os.getenv("DEBUG", "0") == "1"
 IS_MULTI_ZONE = os.getenv("IS_MULTI_ZONE", "0") == "1"
 EXTERNAL_DNS_SUFFIX = os.getenv("EXTERNAL_DNS_SUFFIX")
+
+logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO)
 
 MIN_HOST_COUNT = 6
 MIN_MASTER_COUNT = 3
@@ -44,18 +47,18 @@ def _handle_too_many_masters(cluster: FalkorDBCluster, expected_masters: int):
     ]
 
     if len(extra_masters) == 0:
-        print("No extra masters to handle")
+        logging.info("No extra masters to handle")
         return
 
     if len(extra_masters) == 1:
-        print("Only one extra master to handle. Skipping...")
+        logging.info("Only one extra master to handle. Skipping...")
         return
 
     if len(extra_masters) > 1:
-        print(f"{len(extra_masters)} extra masters to handle.")
+        logging.info(f"{len(extra_masters)} extra masters to handle.")
         groups = cluster.groups(CLUSTER_REPLICAS)
         extra_master = extra_masters[0][0]
-        print(f"Extra master: {extra_master}")
+        logging.info(f"Extra master: {extra_master}")
         extra_master_group = next(
             (group for group in groups if extra_master in group),
             None,
@@ -65,7 +68,7 @@ def _handle_too_many_masters(cluster: FalkorDBCluster, expected_masters: int):
             None,
         )
         if group_master is None:
-            print(f"Group has no master. Finding another group...")
+            logging.info(f"Group has no master. Finding another group...")
             for group in groups:
                 if (
                     len([node for node in group if node.is_slave]) < CLUSTER_REPLICAS
@@ -75,7 +78,7 @@ def _handle_too_many_masters(cluster: FalkorDBCluster, expected_masters: int):
                     group_master = next(
                         (node for node in group if node.is_master),
                     )
-                    print(f"Found group master: {group_master}")
+                    logging.info(f"Found group master: {group_master}")
                     break
         cluster.relocate_slave(extra_master.id, group_master.id)
         return main()
@@ -91,20 +94,20 @@ def _relocate_master(
 
     for i, group in enumerate(groups):
         if node in group:
-            print(f"Skipping group {i}. Node {node.id} is already in this group")
+            logging.info(f"Skipping group {i}. Node {node.id} is already in this group")
             continue
         if not any(n.is_master for n in group):
             suitable_relocation_node = group[0]
             break
     else:
-        print(f"Cannot relocate master {node}, no suitable node found")
+        logging.info(f"Cannot relocate master {node}, no suitable node found")
         return
 
-    print(f"Relocating master {node} to {suitable_relocation_node} in group {i}")
+    logging.info(f"Relocating master {node} to {suitable_relocation_node} in group {i}")
 
     cluster.relocate_master(node.id, suitable_relocation_node.id)
 
-    print(f"Master {node} relocated to {suitable_relocation_node}")
+    logging.info(f"Master {node} relocated to {suitable_relocation_node}")
 
     return main()
 
@@ -117,11 +120,11 @@ def _handle_slave_pointing_to_master_in_different_group(
     group_slaves: list[FalkorDBClusterNode],
 ):
 
-    print(f"Slave {slave} has master from different group: {slave_master}")
+    logging.info(f"Slave {slave} has master from different group: {slave_master}")
     # If there's a master in the same group with less replicas than expected, relocate the slave to that master
     if len(group_slaves) < CLUSTER_REPLICAS:
         cluster.relocate_slave(slave.id, group_master.id)
-        print(f"Slave {slave} relocated to {group_master}")
+        logging.info(f"Slave {slave} relocated to {group_master}")
         return main()
 
 
@@ -134,32 +137,32 @@ def main():
     )
     # slots = client.cluster_slots()
     if len(cluster) < MIN_HOST_COUNT:
-        print("Not enough hosts to rebalance")
+        logging.info("Not enough hosts to rebalance")
         return
 
     if not cluster.is_connected():
-        print("Cluster is not fully connected")
+        logging.info("Cluster is not fully connected")
         return
 
     expected_shards = len(cluster) / (CLUSTER_REPLICAS + 1)
     if expected_shards % 1 != 0:
-        print(f"Cannot rebalance, expected shards is not an integer: {expected_shards}")
+        logging.info(f"Cannot rebalance, expected shards is not an integer: {expected_shards}")
         return
 
     if len(cluster) % (CLUSTER_REPLICAS + 1) != 0:
-        print(
+        logging.info(
             f"Cannot rebalance, number of nodes does not match the shards. Nodes: {len(cluster)}, expected_shards: {expected_shards}"
         )
         return
 
     invalid_slaves = cluster.get_slaves_with_invalid_masters()
     if len(invalid_slaves) > 0:
-        print(f"Invalid slaves: {invalid_slaves}")
+        logging.info(f"Invalid slaves: {invalid_slaves}")
 
     expected_masters = expected_shards
 
     if len(cluster.get_masters()) > expected_masters:
-        print(f"Too many masters: {len(cluster.get_masters())}")
+        logging.info(f"Too many masters: {len(cluster.get_masters())}")
         return _handle_too_many_masters(cluster, expected_masters)
 
     for s in range(0, int(expected_shards)):
@@ -176,7 +179,7 @@ def main():
         )
 
         if group_master is None:
-            print(f"Group {s} has no master")
+            logging.info(f"Group {s} has no master")
             continue
 
         group_slaves: list[FalkorDBClusterNode] = [
@@ -192,18 +195,18 @@ def main():
                 if group_master is None or group_master == node:
                     group_master = node
                     if len(group_master.slots) == 0:
-                        print(f"Master {group_master} has no slots")
+                        logging.info(f"Master {group_master} has no slots")
                         cluster.rebalance_slots(group_master, expected_shards)
                         return main()
                 elif IS_MULTI_ZONE:
-                    print(f"Group {s} has more than 1 master: {group_master}, {node}")
+                    logging.info(f"Group {s} has more than 1 master: {group_master}, {node}")
                     return _relocate_master(cluster, node)
             else:
                 slave_master = cluster.get_node_by_id(node.master_id)
                 if slave_master is None:
-                    print(f"Slave {node} has no master")
+                    logging.info(f"Slave {node} has no master")
                 if slave_master.mode != "master":
-                    print(f"Slave {node} has invalid master: {slave_master}")
+                    logging.info(f"Slave {node} has invalid master: {slave_master}")
 
                 # Check if master belongs to the same group as slave
                 if IS_MULTI_ZONE and (
@@ -215,19 +218,19 @@ def main():
                     )
 
         if len(group_slaves) != CLUSTER_REPLICAS:
-            print(f"Group {s} has invalid number of slaves: {group_slaves}")
+            logging.info(f"Group {s} has invalid number of slaves: {group_slaves}")
 
-    print(f"Cluster after: {cluster}")
+    logging.info(f"Cluster after: {cluster}")
 
 
 def _node_resolved():
-    print(f"Checking node connection: {NODE_0_HOST}:{NODE_PORT}")
+    logging.info(f"Checking node connection: {NODE_0_HOST}:{NODE_PORT}")
     # Resolve hostnames to IPs
     try:
         socket.gethostbyname(NODE_0_HOST)
     except Exception as e:
         if DEBUG:
-            print(f"Error resolving host: {e}")
+            logging.error(f"Error resolving host: {e}")
         return False
 
     # ping node
@@ -239,7 +242,7 @@ def _node_resolved():
         return True
     except Exception as e:
         if DEBUG:
-            print(f"Error pinging node: {e}")
+            logging.error(f"Error pinging node: {e}")
         return False
 
 
@@ -256,7 +259,7 @@ def loop():
             main()
             healthcheck_ok = True
         except Exception as e:
-            print(f"Error: {e}")
+            logging.exception(f"Error: {e}")
             healthcheck_ok = False
 
 
@@ -272,4 +275,4 @@ if __name__ == "__main__":
 
     server.start(port=int(HEALTHCHECK_PORT))
 
-    print("Server started")
+    logging.info("Server started")

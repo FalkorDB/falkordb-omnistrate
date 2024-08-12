@@ -57,6 +57,14 @@ class FalkorDBClusterNode:
             if "-" in self.hostname and "." in self.hostname
             else None
         )
+    
+    @property
+    def is_master(self) -> bool:
+        return self.mode == "master"
+    
+    @property
+    def is_slave(self) -> bool:
+        return self.mode == "slave"
 
     @staticmethod
     def from_dict(key: str, val: dict) -> "FalkorDBClusterNode":
@@ -113,7 +121,7 @@ class FalkorDBCluster:
         text = "FalkorDBCluster:\n"
 
         for node in self.nodes:
-            if node.mode == "master":
+            if node.is_master:
                 text += f"Master: {node.idx} - {node.id} - {node.slots}\n"
                 text += "Slaves:\n" + "\n".join(
                     f"  {slave.idx} - {slave.id}"
@@ -140,11 +148,11 @@ class FalkorDBCluster:
         return [
             node
             for node in self.nodes
-            if node.mode == "slave" and self.get_node_by_id(node.master_id) is None
+            if node.is_slave and self.get_node_by_id(node.master_id) is None
         ]
 
     def get_masters(self) -> list[FalkorDBClusterNode]:
-        return [node for node in self.nodes if node.mode == "master"]
+        return [node for node in self.nodes if node.is_master]
 
     def get_slaves_from_master(self, master_id: str) -> list[FalkorDBClusterNode]:
         return [node for node in self.nodes if node.master_id == master_id]
@@ -177,7 +185,7 @@ class FalkorDBCluster:
         )
 
         self._wait_for_condition(
-            lambda: self.get_node_by_id(new_master_id).mode == "slave"
+            lambda: self.get_node_by_id(new_master_id).is_slave
             and self.get_node_by_id(new_master_id).master_id == old_master_id,
             timeout,
             "Timed out waiting for the new master to become a slave",
@@ -190,7 +198,7 @@ class FalkorDBCluster:
         print(f"{datetime.now()}: Failover {old_master_node}: {res}")
 
         self._wait_for_condition(
-            lambda: self.get_node_by_id(old_master_id).mode == "slave"
+            lambda: self.get_node_by_id(old_master_id).is_slave
             and self.get_node_by_id(old_master_id).master_id == new_master_id,
             timeout,
             "Timed out waiting for the old master to become a slave",
@@ -221,7 +229,7 @@ class FalkorDBCluster:
         print(f"{datetime.now()}: Replicate {slave_node} to {new_master_node}: {res}")
 
         self._wait_for_condition(
-            lambda: self.get_node_by_id(slave_id).mode == "slave"
+            lambda: self.get_node_by_id(slave_id).is_slave
             and self.get_node_by_id(slave_id).master_id == new_master_id,
             180,
             "Timed out waiting for the slave to become a slave",

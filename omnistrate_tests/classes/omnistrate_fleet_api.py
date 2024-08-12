@@ -7,6 +7,9 @@ from .omnistrate_types import (
     OmnistrateTierVersion,
 )
 
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
 class OmnistrateFleetAPI:
 
@@ -19,7 +22,7 @@ class OmnistrateFleetAPI:
 
     def handle_response(self, response, message):
         if response.status_code >= 300 or response.status_code < 200:
-            print(f"{message}: {response.text}")
+            logging.error(f"{message}: {response.text}")
             raise Exception(f"{message}")
 
     def get_token(self):

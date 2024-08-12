@@ -13,6 +13,7 @@ with suppress(ValueError):
     sys.path.remove(str(parent))
 
 import logging
+
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
@@ -161,12 +162,7 @@ def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: 
     current_host_count = new_host_count
     current_replicas_count = new_replicas_count
 
-
-def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
-    """This function should ensure that each shard is distributed across multiple availability zones"""
-
     instance_details = instance.get_instance_details()
-    network_topology: dict = instance.get_network_topology()
 
     params = (
         instance_details["result_params"]
@@ -195,6 +191,22 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
     if cluster_replicas != current_replicas_count:
         raise Exception("Cluster replicas count does not match new replicas count")
 
+
+def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
+    """This function should ensure that each shard is distributed across multiple availability zones"""
+
+    network_topology: dict = instance.get_network_topology()
+    instance_details = instance.get_instance_details()
+
+    params = (
+        instance_details["result_params"]
+        if "result_params" in instance_details
+        else None
+    )
+
+    if not params:
+        raise Exception("No result_params found in instance details")
+
     resource_key = next(
         (k for [k, v] in network_topology.items() if v["resourceName"] == "cluster-mz"),
         None,
@@ -207,7 +219,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
     if len(nodes) == 0:
         raise Exception("No nodes found in network topology")
 
-    if len(nodes) != host_count:
+    if len(nodes) != current_host_count:
         raise Exception("Host count does not match number of nodes")
 
     cluster = FalkorDBCluster(
@@ -218,7 +230,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
         ssl=params["enableTLS"] == "true" if "enableTLS" in params else False,
     )
 
-    groups = cluster.groups(cluster_replicas)
+    groups = cluster.groups(current_replicas_count)
 
     for group in groups:
         group_azs = set()
@@ -236,7 +248,9 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
                 "Group is not distributed across multiple availability zones"
             )
 
-        logging.info(f"Group {group} is distributed across availability zones {group_azs}")
+        logging.info(
+            f"Group {group} is distributed across availability zones {group_azs}"
+        )
 
     logging.info("Shards are distributed across multiple availability zones")
 

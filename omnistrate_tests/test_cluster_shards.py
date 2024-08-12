@@ -13,6 +13,7 @@ with suppress(ValueError):
     sys.path.remove(str(parent))
 
 import logging
+
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
@@ -154,12 +155,7 @@ def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):
     )
     current_host_count = new_host_count
 
-
-def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
-    """This function should ensure that each shard is distributed across multiple availability zones"""
-
     instance_details = instance.get_instance_details()
-    network_topology: dict = instance.get_network_topology()
 
     params = (
         instance_details["result_params"]
@@ -177,6 +173,22 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
 
     if host_count != current_host_count:
         raise Exception("Host count does not match new host count")
+
+
+def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
+    """This function should ensure that each shard is distributed across multiple availability zones"""
+
+    instance_details = instance.get_instance_details()
+    network_topology: dict = instance.get_network_topology()
+
+    params = (
+        instance_details["result_params"]
+        if "result_params" in instance_details
+        else None
+    )
+
+    if not params:
+        raise Exception("No result_params found in instance details")
 
     cluster_replicas = (
         int(params["clusterReplicas"]) if "clusterReplicas" in params else None
@@ -197,7 +209,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
     if len(nodes) == 0:
         raise Exception("No nodes found in network topology")
 
-    if len(nodes) != host_count:
+    if len(nodes) != current_host_count:
         raise Exception("Host count does not match number of nodes")
 
     cluster = FalkorDBCluster(
@@ -226,7 +238,9 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
                 "Group is not distributed across multiple availability zones"
             )
 
-        logging.info(f"Group {group} is distributed across availability zones {group_azs}")
+        logging.info(
+            f"Group {group} is distributed across availability zones {group_azs}"
+        )
 
     logging.info("Shards are distributed across multiple availability zones")
 

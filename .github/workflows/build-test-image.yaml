@@ -206,7 +206,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-update-memory' --instance-description 'test-cluster-update-memory' --instance-type 'e2-custom-4-8192' --new-instance-type 'e2-custom-8-16384' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-update-memory' --instance-description 'test-cluster-update-memory' --instance-type 'e2-custom-4-8192' --new-instance-type 'e2-custom-8-16384' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
           - name: PRO/Standalone - GCP/us-central1 - Upgrade Version
             if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
             testFile: test_upgrade_version.py

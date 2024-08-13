@@ -654,6 +654,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=0
@@ -664,8 +669,6 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1041,6 +1044,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -1054,8 +1062,6 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1124,8 +1130,6 @@ services:
       - RUN_METRICS=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
@@ -1138,6 +1142,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -1514,6 +1523,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -1528,8 +1542,6 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1597,8 +1609,6 @@ services:
       - RUN_METRICS=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
@@ -1611,6 +1621,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -1850,6 +1865,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_METRICS=1
@@ -1858,8 +1878,6 @@ services:
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1896,6 +1914,8 @@ services:
   cluster-sz-rebalance:
     x-omnistrate-mode-internal: true
     image: $FalkorDBClusterRebalanceImage
+    x-omnistrate-capabilities:
+      networkType: INTERNAL
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:
@@ -1922,11 +1942,13 @@ services:
         defaultValue: "false"
     environment:
       - IS_MULTI_ZONE=0
-      - ADMIN_PASSWORD=$func.random(string, 16)
       - TLS=$var.enableTLS
       - CLUSTER_REPLICAS=$var.clusterReplicas
       - NODE_PORT=6379
       - DEBUG=1
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
@@ -2167,6 +2189,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_METRICS=1
@@ -2175,8 +2202,6 @@ services:
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.random(string, 16)
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -2213,6 +2238,8 @@ services:
   cluster-mz-rebalance:
     x-omnistrate-mode-internal: true
     image: $FalkorDBClusterRebalanceImage
+    x-omnistrate-capabilities:
+      networkType: INTERNAL
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:
@@ -2239,11 +2266,13 @@ services:
         defaultValue: "false"
     environment:
       - IS_MULTI_ZONE=1
-      - ADMIN_PASSWORD=$func.random(string, 16)
       - TLS=$var.enableTLS
       - CLUSTER_REPLICAS=$var.clusterReplicas
       - NODE_PORT=6379
       - DEBUG=1
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
@@ -2264,3 +2293,8 @@ services:
           }
 
           call_health_check
+secrets:
+  adminpasspath:
+    file: ./secrets/adminpassword
+  falkordbpasspath:
+    file: ./secrets/falkordbpassword

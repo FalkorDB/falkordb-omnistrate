@@ -11,16 +11,21 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  IMAGE_NAME: falkordb-node
-  FALKORDB_VERSION: v4.0.8
+  NODE_IMAGE_NAME: falkordb-node
+  CLUSTER_IMAGE_NAME: falkordb-cluster
+  FALKORDB_VERSION: v4.0.11
 
 jobs:
   build-and-push:
-    runs-on: ${{ matrix.platform == 'linux/amd64' && 'ubuntu-latest' || 'ARM64' }}
+    runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
-        platform: [linux/amd64, linux/arm64]
+        include:
+          - dockerfile: ./falkordb-node/Dockerfile
+            image-name: falkordb-node
+          - dockerfile: ./falkordb-cluster/Dockerfile
+            image-name: falkordb-cluster
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,11 +43,10 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: FALKORDB_VERSION=${{ env.FALKORDB_VERSION }}
-          context: ./falkordb-node
-          file: ./falkordb-node/Dockerfile
-          platforms: ${{ matrix.platform }}
+          context: .
+          file: ${{ matrix.dockerfile }}
           push: true
-          tags: falkordb/${{ env.IMAGE_NAME }}:${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/v') && github.ref_name || 'edge'}}, falkordb/${{ env.IMAGE_NAME }}:latest
+          tags: falkordb/${{ matrix.image-name }}:${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/v') && github.ref_name || 'edge'}}, falkordb/${{ matrix.image-name }}:latest
 
   omnistrate-update-plans:
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags/v')
@@ -70,9 +74,8 @@ jobs:
           sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$AwsAccountId/${{ vars.AWS_ACCOUNT_ID }}/g' ${{ matrix.plans.file }}
-          sed -i 's|$AwsBootstrapRoleAccountArn|${{ vars.AWS_BOOTSTRAP_ROLE_ACCOUNT_ARN }}|g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBNodeImage/falkordb\/falkordb-node:${{ github.ref_name }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:${{ github.ref_name }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:${{ github.ref_name }}/g' ${{ matrix.plans.file }}
     
       - name: Upload yaml to artifacts
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
@@ -81,6 +84,17 @@ jobs:
           name: ${{ matrix.plans.file }}
           path: ${{ matrix.plans.file }}
 
+      - name: Create FALKORDB_PASSWORD/ADMIN_PASSWORD files
+        run: |
+          export sec=$(grep '^secrets' omnistrate.free.yaml)
+          if [[ -n "$sec" ]];then
+            mkdir -p secrets || { echo "Failed to create secrets directory"; exit 1; }
+            echo '{{ $var.falkordbPassword }}' > ./secrets/falkordbpassword || { echo "Failed to write falkordbpassword"; exit 1; }
+            echo '{{ $func.random(string, 16, $sys.deterministicSeedValue) }}' > ./secrets/adminpassword || { echo "Failed to write adminpassword"; exit 1; }
+          else
+            echo "secrets option was not used"
+            exit 0
+          fi
 
       - name: Update Omnistrate plan
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
@@ -91,3 +105,4 @@ jobs:
           file: ${{ matrix.plans.file }}
           service-name: ${{ matrix.plans.name }}
           environment: dev
+          environment-type: dev

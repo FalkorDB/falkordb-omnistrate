@@ -36,7 +36,7 @@ x-omnistrate-integrations:
         node-s:
           prometheusEndpoint: "http://localhost:9121/metrics"
           metrics:
-            redis_blocked_clients:
+            "Blocked Clients":
             redis_cluster_connections:
             redis_commands_duration_seconds_total:
             redis_commands_failed_calls_total:

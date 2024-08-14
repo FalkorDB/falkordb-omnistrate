@@ -112,12 +112,14 @@ def test_add_remove_replica():
             clusterReplicas=args.cluster_replicas,
         )
 
+        print('The code will now run the add_data function')
         add_data(instance)
 
+        print('The code will now run check_data function')
         check_data(instance)
-
+        print('The code will now run change_replica_count function')
         change_replica_count(instance, int(args.cluster_replicas) + 2)
-
+        print('The code will now run test_file_over function')
         test_fail_over(instance)
 
     except Exception as e:
@@ -160,13 +162,13 @@ def test_fail_over(instance: OmnistrateFleetInstance):
     )
 
     endpoint = [endpoint['id'] for endpoint in endpoints if id in endpoint.values()][0]
-
+    port = [endpoint['ports'][0] for endpoint in endpoints if id in endpoint.values()][0]
     client = Redis(
-    host=f"{endpoint}", port=6379,
+    host=f"{endpoint}", port=int(port),
     username="falkordb", # use your Redis user. More info https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/
     password="falkordb", # use your Redis password
     decode_responses=True,
-    ssl=True,
+    ssl=False,
     )
 
     print(client.acl_whoami())
@@ -185,7 +187,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
     
 def add_data(instance: OmnistrateFleetInstance):
     """This function should retrieve the instance host and port for connection, write some data to the DB, then check that the data is there"""
-
+    print('Added data ....')
     # Get instance host and port
     db = instance.create_connection(
         ssl=args.tls,
@@ -203,7 +205,7 @@ def add_data(instance: OmnistrateFleetInstance):
 
 
 def check_data(instance: OmnistrateFleetInstance):
-
+    print('Retrieving data ....')
     # Get instance host and port
     db = instance.create_connection(
         ssl=args.tls,

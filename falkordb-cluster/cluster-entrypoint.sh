@@ -2,19 +2,19 @@
 
 FALKORDB_USER=${FALKORDB_USER:-falkordb}
 #FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
-if [[ -f "/run/secrets/falkordbpassword" ]] && [[ -s "/run/secrets/falkordbpassword" ]];then
+if [[ -f "/run/secrets/falkordbpassword" ]] && [[ -s "/run/secrets/falkordbpassword" ]]; then
   FALKORDB_PASSWORD=$(cat "/run/secrets/falkordbpassword")
-elif [[ -n "$FALKORDB_PASSWORD" ]];then
+elif [[ -n "$FALKORDB_PASSWORD" ]]; then
   FALKORDB_PASSWORD=$FALKORDB_PASSWORD
 else
   FALKORDB_PASSWORD=''
 fi
 
 #ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
-if [[ -f "/run/secrets/adminpassword" ]] && [[ -s "/run/secrets/adminpassword" ]];then
+if [[ -f "/run/secrets/adminpassword" ]] && [[ -s "/run/secrets/adminpassword" ]]; then
   ADMIN_PASSWORD=$(cat "/run/secrets/adminpassword")
   export ADMIN_PASSWORD
-elif [[ -n "$ADMIN_PASSWORD" ]];then
+elif [[ -n "$ADMIN_PASSWORD" ]]; then
   export ADMIN_PASSWORD=$ADMIN_PASSWORD
 else
   export ADMIN_PASSWORD=''
@@ -129,18 +129,24 @@ set_memory_limit() {
     ["e2-custom-8-16384"]="13GB"
     ["e2-custom-16-32768"]="30GB"
     ["e2-custom-32-65536"]="62GB"
+    ["c6i.xlarge"]="6GB"
+    ["c6i.2xlarge"]="13GB"
+    ["c6i.4xlarge"]="30GB"
+    ["c6i.8xlarge"]="62GB"
   )
   if [[ -z $INSTANCE_TYPE ]]; then
     echo "INSTANCE_TYPE is not set"
     return
   fi
 
-  memory_limit=$(echo $memory_limit_instance_type_map | jq -r ".\"$INSTANCE_TYPE\"")
+  memory_limit=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
 
   if [[ ! -z $memory_limit ]]; then
-    echo "Setting maxmemory to $memory_limit"
-    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
+    memory_limit="100MB"
   fi
+  
+  echo "Setting maxmemory to $memory_limit"
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
 }
 
 set_rdb_persistence_config() {

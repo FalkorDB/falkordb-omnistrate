@@ -78,6 +78,8 @@ jobs:
           sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$AwsAccountId/${{ vars.AWS_ACCOUNT_ID }}/g' ${{ matrix.plans.file }}
+          sed -i 's|$AwsBootstrapRoleAccountArn|${{ vars.AWS_BOOTSTRAP_ROLE_ACCOUNT_ARN }}|g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}

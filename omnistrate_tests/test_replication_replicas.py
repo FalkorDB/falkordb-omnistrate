@@ -42,10 +42,8 @@ parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
-parser.add_argument("--host-count", required=False, default="6")
-parser.add_argument("--cluster-replicas", required=False, default="1")
+parser.add_argument("--replica-count", required=False, default="1")
 
-parser.add_argument("--ensure-mz-distribution", action="store_true")
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -108,8 +106,6 @@ def test_add_remove_replica():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
-            hostCount=args.host_count,
-            clusterReplicas=args.cluster_replicas,
         )
 
         print('The code will now run the add_data function')
@@ -118,7 +114,7 @@ def test_add_remove_replica():
         print('The code will now run check_data function')
         check_data(instance)
         print('The code will now run change_replica_count function')
-        change_replica_count(instance, int(args.cluster_replicas) + 2)
+        change_replica_count(instance, int(args.replica_count) + 2)
         print('The code will now run test_file_over function')
         test_fail_over(instance)
 
@@ -162,9 +158,8 @@ def test_fail_over(instance: OmnistrateFleetInstance):
     )
 
     endpoint = [endpoint['id'] for endpoint in endpoints if id in endpoint.values()][0]
-    port = [endpoint['ports'][0] for endpoint in endpoints if id in endpoint.values()][0]
     client = Redis(
-    host=f"{endpoint}", port=int(port),
+    host=f"{endpoint}", port=6379,
     username="falkordb", # use your Redis user. More info https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/
     password="falkordb", # use your Redis password
     decode_responses=True,

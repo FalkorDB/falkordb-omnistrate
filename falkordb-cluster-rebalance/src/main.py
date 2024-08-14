@@ -7,8 +7,23 @@ import threading
 from simple_http_server import route, server, HttpError
 
 
+def _get_admin_pass():
+    """
+    Check if the password exists in the adminpassword file,\n
+    if it does not, take the pass from the ADMIN_PASSWORD variable.
+    """
+    admin_password = os.getenv('ADMIN_PASSWORD')
+    if admin_password:
+        return admin_password
+    secret_path = '/run/secrets/adminpassword'
+    try:
+        with open(secret_path) as f:
+            return f.read().strip()  # Strip any extra whitespace or newlines
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Secret file '{secret_path}' does not exist.")
+
 HEALTHCHECK_PORT = os.getenv("HEALTHCHECK_PORT", "8081")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+ADMIN_PASSWORD = _get_admin_pass()
 TLS = os.getenv("TLS", "false") == "true"
 CLUSTER_REPLICAS = int(os.getenv("CLUSTER_REPLICAS", "1"))
 NODE_PORT = int(os.getenv("NODE_PORT", "6379"))

@@ -166,7 +166,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
     username="falkordb", # use your Redis user. More info https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/
     password="falkordb", # use your Redis password
     decode_responses=True,
-    #ssl=True,
+    ssl=True,
     )
 
     print(client.acl_whoami())

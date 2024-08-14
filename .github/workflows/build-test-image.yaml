@@ -290,8 +290,8 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-0' --instance-name 'test-cluster-mz-shards' --instance-description 'test-cluster-mz-shards' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
           - name: PRO/SingleZone - GCP/us-central1 - Test add/remove replica
-            if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
-            testFile: test_add_remove_replica.py
+            if: "true"
+            testFile: test_replication_replicas.py
             tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
@@ -300,8 +300,8 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'single-Zone' --replica-id 'node-sz-0' --instance-name 'test-sz-add-remove-replica' --instance-description 'test-replication-upgrade' --instance-type 'e2-custom-4-8192' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - GCP/us-central1 - Test add/remove replica
-            if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
-            testFile: test_add_remove_replica.py
+            if: "true"
+            testFile: test_replication_replicas.py
             tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1

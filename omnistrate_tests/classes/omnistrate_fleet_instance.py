@@ -463,6 +463,8 @@ class OmnistrateFleetInstance:
                 "clusterEndpoint" in resources[key]
                 and len(resources[key]["clusterEndpoint"]) > 0
                 and "streamer." not in resources[key]["clusterEndpoint"]
+                and "clusterPorts" in resources[key]
+                and resources[key]['networkingType'] != "INTERNAL"
             ):
                 return {
                     "endpoint": resources[key]["clusterEndpoint"],

@@ -89,6 +89,18 @@ jobs:
           name: ${{ matrix.plans.file }}
           path: ${{ matrix.plans.file }}
 
+      - name: Create FALKORDB_PASSWORD/ADMIN_PASSWORD files
+        run: |
+          export sec=$(grep '^secrets' omnistrate.free.yaml)
+          if [[ -n "$sec" ]];then
+            mkdir -p secrets || { echo "Failed to create secrets directory"; exit 1; }
+            echo '{{ $var.falkordbPassword }}' > ./secrets/falkordbpassword || { echo "Failed to write falkordbpassword"; exit 1; }
+            echo '{{ $func.random(string, 16, $sys.deterministicSeedValue) }}' > ./secrets/adminpassword || { echo "Failed to write adminpassword"; exit 1; }
+          else
+            echo "secrets option was not used"
+            exit 0
+          fi
+
       - name: Update Omnistrate plan
         uses: ./.github/actions/update-omnistrate-plan
         id: update_omnistrate_plan

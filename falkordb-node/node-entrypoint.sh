@@ -2,19 +2,19 @@
 
 FALKORDB_USER=${FALKORDB_USER:-falkordb}
 #FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
-if [[ -f "/run/secrets/falkordbpassword" ]] && [[ -s "/run/secrets/falkordbpassword" ]];then
+if [[ -f "/run/secrets/falkordbpassword" ]] && [[ -s "/run/secrets/falkordbpassword" ]]; then
   FALKORDB_PASSWORD=$(cat "/run/secrets/falkordbpassword")
-elif [[ -n "$FALKORDB_PASSWORD" ]];then
+elif [[ -n "$FALKORDB_PASSWORD" ]]; then
   FALKORDB_PASSWORD=$FALKORDB_PASSWORD
 else
   FALKORDB_PASSWORD=''
 fi
 
 #ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
-if [[ -f "/run/secrets/adminpassword" ]] && [[ -s "/run/secrets/adminpassword" ]];then
+if [[ -f "/run/secrets/adminpassword" ]] && [[ -s "/run/secrets/adminpassword" ]]; then
   ADMIN_PASSWORD=$(cat "/run/secrets/adminpassword")
   export ADMIN_PASSWORD
-elif [[ -n "$ADMIN_PASSWORD" ]];then
+elif [[ -n "$ADMIN_PASSWORD" ]]; then
   export ADMIN_PASSWORD=$ADMIN_PASSWORD
 else
   export ADMIN_PASSWORD=''
@@ -182,17 +182,23 @@ get_self_host_ip() {
 }
 
 get_memory_limit() {
-  memory_limit_instance_type_map="{\"e2-custom-small-1024\":\"100MB\",\"e2-custom-4-8192\":\"6GB\",\"e2-custom-8-16384\":\"13GB\",\"e2-custom-16-32768\":\"30GB\",\"e2-custom-32-65536\":\"62GB\",\"c6g.xlarge\":\"6GB\",\"c6g.2xlarge\":\"13GB\",\"c6g.4xlarge\":\"30GB\",\"c6g.8xlarge\":\"62GB\"}"
+  declare -A memory_limit_instance_type_map
+  memory_limit_instance_type_map=(
+    ["e2-custom-small-1024"]="100MB"
+    ["e2-custom-4-8192"]="6GB"
+    ["e2-custom-8-16384"]="13GB"
+    ["e2-custom-16-32768"]="30GB"
+    ["e2-custom-32-65536"]="62GB"
+    ["c6i.xlarge"]="6GB"
+    ["c6i.2xlarge"]="13GB"
+    ["c6i.4xlarge"]="30GB"
+    ["c6i.8xlarge"]="62GB"
+  )
 
-  if [[ -z $INSTANCE_TYPE ]]; then
+  MEMORY_LIMIT=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
+  if [[ -z $MEMORY_LIMIT ]]; then
     echo "INSTANCE_TYPE is not set. Setting 100MB"
     MEMORY_LIMIT="100MB"
-  elif
-    [[ $(echo $memory_limit_instance_type_map | jq -r ".\"$INSTANCE_TYPE\"") == "null" ]]; then
-    echo "INSTANCE_TYPE is not valid. Setting 100MB"
-    MEMORY_LIMIT="100MB"
-  else
-    MEMORY_LIMIT=$(echo $memory_limit_instance_type_map | jq -r ".\"$INSTANCE_TYPE\"")
   fi
 
   echo "Memory Limit: $MEMORY_LIMIT"
@@ -466,7 +472,7 @@ fi
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
-  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format	json &
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json &
   redis_exporter_pid=$!
 fi
 

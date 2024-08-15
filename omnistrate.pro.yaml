@@ -1848,8 +1848,6 @@ services:
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
-      - source: falkordbpasspath
-        target: /run/secrets/falkordbpassword
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK

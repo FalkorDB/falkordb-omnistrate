@@ -1757,7 +1757,7 @@ services:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
-      - *clusterparam
+      *clusterparam
     volumes:
       - source: ./data
         target: /data
@@ -1819,7 +1819,7 @@ services:
         - cloudProvider: gcp
           name: e2-small
     x-omnistrate-api-params:
-      - *rebalanceparam
+      *rebalanceparam
     environment:
       - IS_MULTI_ZONE=0
       - TLS=$var.enableTLS
@@ -1981,7 +1981,7 @@ services:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
-      - *clusterparam
+      *clusterparam
     volumes:
       - source: ./data
         target: /data
@@ -2043,7 +2043,7 @@ services:
         - cloudProvider: gcp
           name: e2-small
     x-omnistrate-api-params:
-      - *rebalanceparam
+      *rebalanceparam
     environment:
       - IS_MULTI_ZONE=1
       - TLS=$var.enableTLS

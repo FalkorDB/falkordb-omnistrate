@@ -175,7 +175,8 @@ x-omnistrate-integrations:
               "Last RDB Save Timestamp (Seconds)":
                 aggregationFunction: sum
             redis_rdb_saves_total:
-              "Total RDB Saves"
+              "Total RDB Saves":
+                aggregationFunction: sum
             redis_rejected_connections_total:
               "Total Rejected Connections":
                 aggregationFunction: sum
@@ -348,7 +349,7 @@ x-omnistrate-integrations:
               "Slow Log Last ID":
                 aggregationFunction: sum
             redis_slowlog_length:
-              "Slow Log Lenght":
+              "Slow Log Length":
                 aggregationFunction: sum
             redis_start_time_seconds:
               "Start Time (Seconds)":
@@ -362,6 +363,7 @@ x-omnistrate-integrations:
             redis_uptime_in_seconds:
               "Uptime (Seconds)":
                 aggregationFunction: sum
+                
         node-mz:
           prometheusEndpoint: "http://localhost:9121/metrics"
           metrics:

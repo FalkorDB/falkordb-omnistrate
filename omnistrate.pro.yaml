@@ -212,110 +212,105 @@ x-omnistrate-integrations:
 
 
 
-
+x-sec: &sec
+  secrets:
+    - source: adminpasspath
+      target: /run/secrets/adminpassword
+    - source: falkordbpasspath
+      target: /run/secrets/falkordbpassword
 
 x-rebalanceparam: &rebalanceparam
-  x-omnistrate-api-params:
-    - key: clusterReplicas
-      description: The number of replicas per shard
-      name: Cluster Replicas
-      type: Float64
-      modifiable: true
-      required: true
-      export: true
-      defaultValue: "1"
-      min: 1
-      max: 3
-    - key: enableTLS
-      description: Whether to enable TLS for the database
-      name: Enable TLS
-      type: Boolean
-      modifiable: false
-      required: true
-      export: true
-      defaultValue: "false"
+  - key: clusterReplicas
+    description: The number of replicas per shard
+    name: Cluster Replicas
+    type: Float64
+    modifiable: true
+    required: true
+    export: true
+    defaultValue: "1"
+    min: 1
+    max: 3
 
 
 x-clusterparam: &clusterparam
-  x-omnistrate-api-params:
-    - key: hostCount
-      description: The number of hosts in the cluster
-      name: Host Count
-      type: Float64
-      modifiable: true
-      required: true
-      export: true
-      defaultValue: "6"
-      min: 6
-    - key: clusterReplicas
-      description: The number of replicas per shard
-      name: Cluster Replicas
-      type: Float64
-      modifiable: true
-      required: true
-      export: true
-      defaultValue: "1"
-      min: 1
-      max: 3
-    - key: nodeInstanceType
-      description: The size of the node instance. Check the documentation for more information.
-      name: Node Instance Type
-      type: String
-      modifiable: false
-      required: true
-      export: true
-      defaultValue: e2-custom-4-8192
-      options:
-        - e2-custom-4-8192
-        - e2-custom-8-16384
-        - e2-custom-16-32768
-        - e2-custom-32-65536
-    - key: enableTLS
-      description: Whether to enable TLS for the database
-      name: Enable TLS
-      type: Boolean
-      modifiable: false
-      required: true
-      export: true
-      defaultValue: "false"
-    - key: falkordbUser
-      description: Choose a default username for your database
-      name: FalkorDB User
-      type: String
-      modifiable: false
-      required: true
-      export: true
-      defaultValue: "falkordb"
-    - key: falkordbPassword
-      description: Choose a default password for your database
-      name: FalkorDB Password
-      type: Password
-      modifiable: false
-      required: true
-      export: false
-    - key: RDBPersistenceConfig
-      description: How often to save the RDB file to disk. Check the documentation for more information.
-      name: RDB Persistence Config
-      type: String
-      modifiable: false
-      required: false
-      export: true
-      defaultValue: "low"
-      options:
-        - "low"
-        - "medium"
-        - "high"
-    - key: AOFPersistenceConfig
-      description: Whether to enable AOF persistence. Check the documentation for more information.
-      name: AOF Persistence Config
-      type: String
-      modifiable: false
-      required: false
-      export: true
-      defaultValue: "everysec"
-      options:
-        - "everysec"
-        - "always"
+  - key: hostCount
+    description: The number of hosts in the cluster
+    name: Host Count
+    type: Float64
+    modifiable: true
+    required: true
+    export: true
+    defaultValue: "6"
+    min: 6
+  - key: clusterReplicas
+    description: The number of replicas per shard
+    name: Cluster Replicas
+    type: Float64
+    modifiable: true
+    required: true
+    export: true
+    defaultValue: "1"
+    min: 1
+    max: 3
+  - key: nodeInstanceType
+    description: The size of the node instance. Check the documentation for more information.
+    name: Node Instance Type
+    type: String
+    modifiable: false
+    required: true
+    export: true
+    defaultValue: e2-custom-4-8192
+    options:
+      - e2-custom-4-8192
+      - e2-custom-8-16384
+      - e2-custom-16-32768
+      - e2-custom-32-65536
+  - key: enableTLS
+    description: Whether to enable TLS for the database
+    name: Enable TLS
+    type: Boolean
+    modifiable: false
+    required: true
+    export: true
+    defaultValue: "false"
+  - key: falkordbUser
+    description: Choose a default username for your database
+    name: FalkorDB User
+    type: String
+    modifiable: false
+    required: true
+    export: true
+    defaultValue: "falkordb"
+  - key: falkordbPassword
+    description: Choose a default password for your database
+    name: FalkorDB Password
+    type: Password
+    modifiable: false
+    required: true
+    export: false
+  - key: RDBPersistenceConfig
+    description: How often to save the RDB file to disk. Check the documentation for more information.
+    name: RDB Persistence Config
+    type: String
+    modifiable: false
+    required: false
+    export: true
+    defaultValue: "low"
+    options:
+      - "low"
+      - "medium"
+      - "high"
+  - key: AOFPersistenceConfig
+    description: Whether to enable AOF persistence. Check the documentation for more information.
+    name: AOF Persistence Config
+    type: String
+    modifiable: false
+    required: false
+    export: true
+    defaultValue: "everysec"
+    options:
+      - "everysec"
+      - "always"
 
 
 services:
@@ -649,11 +644,7 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
-    secrets:
-      - source: adminpasspath
-        target: /run/secrets/adminpassword
-      - source: falkordbpasspath
-        target: /run/secrets/falkordbpassword
+    <<: *sec
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=0
@@ -1039,11 +1030,7 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
-    secrets:
-      - source: adminpasspath
-        target: /run/secrets/adminpassword
-      - source: falkordbpasspath
-        target: /run/secrets/falkordbpassword
+    <<: *sec
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -1137,11 +1124,7 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
-    secrets:
-      - source: adminpasspath
-        target: /run/secrets/adminpassword
-      - source: falkordbpasspath
-        target: /run/secrets/falkordbpassword
+    <<: *sec
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -1518,11 +1501,7 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
-    secrets:
-    - source: adminpasspath
-      target: /run/secrets/adminpassword
-    - source: falkordbpasspath
-      target: /run/secrets/falkordbpassword
+    <<: *sec
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -1616,11 +1595,7 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
-    secrets:
-      - source: adminpasspath
-        target: /run/secrets/adminpassword
-      - source: falkordbpasspath
-        target: /run/secrets/falkordbpassword
+    <<: *sec
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -1773,7 +1748,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
-    <<: *clusterparam
+    x-omnistrate-api-params:
+      *clusterparam
     volumes:
       - source: ./data
         target: /data
@@ -1782,11 +1758,7 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
-    secrets:
-      - source: adminpasspath
-        target: /run/secrets/adminpassword
-      - source: falkordbpasspath
-        target: /run/secrets/falkordbpassword
+    <<: *sec
     environment:
       - RUN_NODE=1
       - RUN_METRICS=1
@@ -1838,7 +1810,16 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           name: e2-small
-    <<: *rebalanceparam
+    x-omnistrate-api-params:
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "false"
+      *rebalanceparam
     environment:
       - IS_MULTI_ZONE=0
       - TLS=$var.enableTLS
@@ -2001,7 +1982,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
-    <<: *clusterparam
+    x-omnistrate-api-params:
+      *clusterparam
     volumes:
       - source: ./data
         target: /data
@@ -2010,11 +1992,7 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
-    secrets:
-      - source: adminpasspath
-        target: /run/secrets/adminpassword
-      - source: falkordbpasspath
-        target: /run/secrets/falkordbpassword
+    <<: *sec
     environment:
       - RUN_NODE=1
       - RUN_METRICS=1
@@ -2066,7 +2044,16 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           name: e2-small
-    <<: *rebalanceparam
+    x-omnistrate-api-params:
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "false"
+      *rebalanceparam
     environment:
       - IS_MULTI_ZONE=1
       - TLS=$var.enableTLS

@@ -144,27 +144,39 @@ def test_fail_over(instance: OmnistrateFleetInstance):
 
     id_key = "sz" if args.resource_key == "single-Zone" else "mz"
 
+    #fail replica at index 0
     instance.trigger_failover(
         replica_id=f"node-{id_key}-0",
         wait_for_ready=False,
         resource_id=instance.get_resource_id(f"node-{id_key}"),
     )
 
-    #fail replica at index 2
+    #fail replica at index 1
     instance.trigger_failover(
         replica_id=f"node-{id_key}-1",
         wait_for_ready=False,
         resource_id=instance.get_resource_id(f"node-{id_key}"),
     )
 
-    endpoint = [endpoint['id'] for endpoint in endpoints if id in endpoint.values()][0]
-    client = Redis(
-    host=f"{endpoint}", port=6379,
-    username="falkordb", # use your Redis user. More info https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/
-    password="falkordb", # use your Redis password
-    decode_responses=True,
-    ssl=args.tls,
-    )
+    
+    try:
+        endpoint = [endpoint['id'] for endpoint in endpoints if f'node-{id_key}-2' in endpoint.values()][0]
+    except Exception as e:
+        print('Endpoint not found!')
+        print(e)
+
+    
+    try:
+        client = Redis(
+        host=f"{endpoint}", port=6379,
+        username="falkordb", # use your Redis user. More info https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/
+        password="falkordb", # use your Redis password
+        decode_responses=True,
+        ssl=args.tls,
+        )
+    except Exception as e:
+        print(f"Failed to connect to node{id_key}-2 !")
+        print(e)
 
     print(client.acl_whoami())
 

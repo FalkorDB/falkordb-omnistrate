@@ -139,11 +139,14 @@ def change_replica_count(instance: OmnistrateFleetInstance, new_replica_count: i
 def test_fail_over(instance: OmnistrateFleetInstance):
     print("Testing failover to the newly created replica")
     endpoints = instance.get_connection_endpoints()
-    # fail master
-    print(f"failing the master instance {args.replica_id}")
-
     id_key = "sz" if args.resource_key == "single-Zone" else "mz"
 
+    # fail master
+    print(f"failing the master instance node-{id_key}-2")
+
+    id_key = "sz" if args.resource_key == "single-Zone" else "mz"
+    print(endpoints)
+    
     #fail replica at index 0
     instance.trigger_failover(
         replica_id=f"node-{id_key}-0",
@@ -151,6 +154,9 @@ def test_fail_over(instance: OmnistrateFleetInstance):
         resource_id=instance.get_resource_id(f"node-{id_key}"),
     )
 
+    print(f"failed node-{id_key}-0")
+
+    
     #fail replica at index 1
     instance.trigger_failover(
         replica_id=f"node-{id_key}-1",
@@ -158,7 +164,12 @@ def test_fail_over(instance: OmnistrateFleetInstance):
         resource_id=instance.get_resource_id(f"node-{id_key}"),
     )
 
-    
+
+    print(f"failed node-{id_key}-0")
+    endpoints = instance.get_connection_endpoints()
+    print(endpoints)
+
+
     try:
         endpoint = [endpoint['id'] for endpoint in endpoints if f'node-{id_key}-2' in endpoint.values()][0]
     except Exception as e:
@@ -175,7 +186,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
         ssl=args.tls,
         )
     except Exception as e:
-        print(f"Failed to connect to node{id_key}-2 !")
+        print(f"Failed to connect to node-{id_key}-2 !")
         print(e)
 
     print(client.acl_whoami())

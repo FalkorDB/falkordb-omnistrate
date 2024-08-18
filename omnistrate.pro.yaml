@@ -909,8 +909,8 @@ services:
         required: false
         export: true
         defaultValue: "2"
-        options:
-          - "2"
+        # options:
+        #   - "2"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -1207,8 +1207,8 @@ services:
         required: false
         export: true
         defaultValue: "2"
-        options:
-          - "2"
+        # options:
+        #   - "2"
         parameterDependencyMap:
           node-mz: numReplicas
       - key: enableTLS

@@ -6,7 +6,7 @@ import random
 import string
 from requests import exceptions
 import omnistrate_tests.classes.omnistrate_fleet_api
-
+import curlify
 
 def rand_range(a, b):
     return random.randint(a, b)
@@ -339,6 +339,8 @@ class OmnistrateFleetInstance:
             timeout=15,
         )
 
+        print(curlify.to_curl(response.request))
+        
         if "another operation is already in progress" in str(response.text):
             if retry == 0:
                 raise Exception(
@@ -353,7 +355,7 @@ class OmnistrateFleetInstance:
 
         if not wait_until_ready:
             return
-
+        
         self.wait_for_instance_status(
             timeout_seconds=self.deployment_failover_timeout_seconds
         )

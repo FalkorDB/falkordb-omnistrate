@@ -132,7 +132,7 @@ def change_replica_count(instance: OmnistrateFleetInstance, new_replica_count: i
 
     print(f"Changing host count to {new_replica_count}")
     instance.update_params(
-        numReplicas=f"{new_replica_count}",
+        numReplicas=new_replica_count,
         wait_for_ready=True,
     )
 

@@ -168,7 +168,7 @@ class OmnistrateFleetInstance:
 
                 response = self._fleet_api.client().get(
                     f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
-                    timeout=15,
+                    timeout=60,
                 )
 
             except exceptions.ReadTimeout as e:

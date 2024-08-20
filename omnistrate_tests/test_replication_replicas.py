@@ -90,6 +90,7 @@ def test_add_remove_replica():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
+        deployment_create_timeout_seconds=1500,
     )
 
     try:
@@ -130,7 +131,7 @@ def test_add_remove_replica():
 
 def change_replica_count(instance: OmnistrateFleetInstance, new_replica_count: int):
 
-    print(f"Changing host count to {new_replica_count}")
+    print(f"Changing replica count to {new_replica_count}")
     instance.update_params(
         numReplicas=new_replica_count,
         wait_for_ready=True,
@@ -138,66 +139,36 @@ def change_replica_count(instance: OmnistrateFleetInstance, new_replica_count: i
 
 def test_fail_over(instance: OmnistrateFleetInstance):
     print("Testing failover to the newly created replica")
-    endpoints = instance.get_connection_endpoints()
-    id_key = "sz" if args.resource_key == "single-Zone" else "mz"
 
-    # fail master
-    print(f"failing the master instance node-{id_key}-2")
+    endpoint = instance.get_cluster_endpoint()
 
     id_key = "sz" if args.resource_key == "single-Zone" else "mz"
-    print(endpoints)
-    
-    #fail replica at index 0
-    instance.trigger_failover(
-        replica_id=f"node-{id_key}-0",
-        wait_for_ready=False,
-        resource_id=instance.get_resource_id(f"node-{id_key}"),
-    )
 
-    print(f"failed node-{id_key}-0")
-
-    
-    #fail replica at index 1
-    instance.trigger_failover(
-        replica_id=f"node-{id_key}-1",
-        wait_for_ready=False,
-        resource_id=instance.get_resource_id(f"node-{id_key}"),
-    )
-
-
-    print(f"failed node-{id_key}-0")
-    endpoints = instance.get_connection_endpoints()
-    print(endpoints)
-
-
-    try:
-        endpoint = [endpoint['id'] for endpoint in endpoints if f'node-{id_key}-2' in endpoint.values()][0]
-    except Exception as e:
-        print('Endpoint not found!')
-        print(e)
-
-    
     try:
         client = Redis(
-        host=f"{endpoint}", port=6379,
+        host=f"{endpoint["endpoint"]}", port=endpoint['ports'][0],
         username="falkordb", # use your Redis user. More info https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/
         password="falkordb", # use your Redis password
         decode_responses=True,
         ssl=args.tls,
         )
     except Exception as e:
-        print(f"Failed to connect to node-{id_key}-2 !")
+        print(f"Failed to connect to Sentinel!")
         print(e)
 
-    print(client.acl_whoami())
+    count = 0
+    while count <= 5 :
+        client.execute_command('SENTINEL FAILOVER master')
+        time.sleep(2)
+        master = client.execute_command('SENTINEL MASTER master')[3]
+        if master.startswith(f"node-{id_key}-2"):
+            break
+        if count == 6:
+            raise Exception(f"Failed to failover to node-{id_key}-2")
+        count += 1
 
-    role = client.info(section='replication').get('role')
+    check_data(instance)
 
-    if role == "master":
-        check_data(instance)
-    else:
-        raise Exception('New replica was not promoted as master')
-    
     # remove replica
     change_replica_count(instance,2)
     # check if data is still there

@@ -336,11 +336,9 @@ class OmnistrateFleetInstance:
         response = self._fleet_api.client().patch(
             f"{self._fleet_api.base_url}/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}/{self.instance_id}",
             data=json.dumps(data),
-            timeout=15,
+            timeout=60,
         )
-
-        print(curlify.to_curl(response.request))
-        
+                
         if "another operation is already in progress" in str(response.text):
             if retry == 0:
                 raise Exception(
@@ -435,7 +433,7 @@ class OmnistrateFleetInstance:
         """Get the connection endpoints for the instance."""
 
         resources = self.get_network_topology()
-
+        
         resources_keys = resources.keys()
 
         endpoints = []

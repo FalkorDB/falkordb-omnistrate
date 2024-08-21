@@ -335,7 +335,7 @@ class OmnistrateFleetInstance:
 
         self.wait_for_instance_status()
 
-        data = kwargs
+        data = {"requestParams": kwargs}
 
         response = self._fleet_api.client().patch(
             f"{self._fleet_api.base_url}/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}/{self.instance_id}",
@@ -464,7 +464,7 @@ class OmnistrateFleetInstance:
                 and len(resources[key]["clusterEndpoint"]) > 0
                 and "streamer." not in resources[key]["clusterEndpoint"]
                 and "clusterPorts" in resources[key]
-                and resources[key]['networkingType'] != "INTERNAL"
+                and resources[key]["networkingType"] != "INTERNAL"
             ):
                 return {
                     "endpoint": resources[key]["clusterEndpoint"],

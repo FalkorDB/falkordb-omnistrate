@@ -29,6 +29,12 @@ x-omnistrate-load-balancer:
           ingressPort: 26379
           backendPort: 26379
 
+x-internal-integrations:
+  logs:
+    provider: native
+  metrics:
+    provider: native
+
 x-omnistrate-integrations:
   - omnistrateLogging:
   - omnistrateMetrics:

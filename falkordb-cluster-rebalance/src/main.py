@@ -58,7 +58,7 @@ def _handle_too_many_masters(cluster: FalkorDBCluster, expected_masters: int):
 
     # Select the masters with the least slaves
     extra_masters: list[tuple[FalkorDBClusterNode, int]] = sorted_masters[
-        : len(sorted_masters) - expected_masters
+        : int(len(sorted_masters) - expected_masters)
     ]
 
     if len(extra_masters) == 0:
@@ -160,7 +160,7 @@ def main():
         return
 
     expected_shards = len(cluster) / (CLUSTER_REPLICAS + 1)
-    if expected_shards % 1 != 0:
+    if expected_shards % 1 != 0 or isinstance(expected_shards, float):
         logging.info(f"Cannot rebalance, expected shards is not an integer: {expected_shards}")
         return
 

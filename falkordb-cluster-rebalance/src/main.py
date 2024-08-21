@@ -160,9 +160,11 @@ def main():
         return
 
     expected_shards = len(cluster) / (CLUSTER_REPLICAS + 1)
-    if expected_shards % 1 != 0 or isinstance(expected_shards, float):
+    if expected_shards % 1 != 0:
         logging.info(f"Cannot rebalance, expected shards is not an integer: {expected_shards}")
         return
+    
+    expected_shards = int(expected_shards)
 
     if len(cluster) % (CLUSTER_REPLICAS + 1) != 0:
         logging.info(

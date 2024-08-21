@@ -41,7 +41,7 @@ class OmnistrateFleetInstance:
         resource_key: str = os.getenv("RESOURCE_KEY"),
         subscription_id: str = os.getenv("SUBSCRIPTION_ID"),
         deployment_create_timeout_seconds: int = int(
-            os.getenv("DEPLOYMENT_CREATE_TIMEOUT_SECONDS", "1200")
+            os.getenv("DEPLOYMENT_CREATE_TIMEOUT_SECONDS", "2400")
         ),
         deployment_delete_timeout_seconds: int = int(
             os.getenv("DEPLOYMENT_DELETE_TIMEOUT_SECONDS", "1200")

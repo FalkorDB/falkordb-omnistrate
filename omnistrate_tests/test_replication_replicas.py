@@ -16,7 +16,6 @@ import time
 import os
 from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
 from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
-from omnistrate_tests.classes.falkordb_cluster import FalkorDBCluster
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -153,7 +152,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
         ssl=args.tls,
         )
     except Exception as e:
-        print(f"Failed to connect to Sentinel!")
+        print("Failed to connect to Sentinel!")
         print(e)
 
     count = 0

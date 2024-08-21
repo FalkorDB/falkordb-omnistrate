@@ -116,7 +116,7 @@ def test_add_remove_replica():
         check_data(instance)
         print('The code will now run change_replica_count function')
         change_replica_count(instance, int(args.replica_count) + 2)
-        print('The code will now run test_file_over function')
+        print('The code will now run test_fail_over function')
         test_fail_over(instance)
 
     except Exception as e:

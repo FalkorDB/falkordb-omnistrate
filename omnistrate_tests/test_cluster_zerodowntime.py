@@ -16,7 +16,6 @@ with suppress(ValueError):
 import os
 from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
 from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
-from omnistrate_tests.classes.falkordb_cluster import FalkorDBCluster
 import argparse
 
 parser = argparse.ArgumentParser()

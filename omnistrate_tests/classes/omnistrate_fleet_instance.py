@@ -168,7 +168,7 @@ class OmnistrateFleetInstance:
 
                 response = self._fleet_api.client().get(
                     f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
-                    timeout=60,
+                    timeout=15,
                 )
 
             except exceptions.ReadTimeout as e:
@@ -336,7 +336,7 @@ class OmnistrateFleetInstance:
         response = self._fleet_api.client().patch(
             f"{self._fleet_api.base_url}/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}/{self.instance_id}",
             data=json.dumps(data),
-            timeout=60,
+            timeout=15,
         )
                 
         if "another operation is already in progress" in str(response.text):

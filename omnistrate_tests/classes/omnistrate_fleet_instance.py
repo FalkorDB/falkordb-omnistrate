@@ -49,6 +49,9 @@ class OmnistrateFleetInstance:
         deployment_failover_timeout_seconds: int = int(
             os.getenv("DEPLOYMENT_FAILOVER_TIMEOUT_SECONDS", "1500")
         ),
+        deployment_update_timeout_seconds: int = int(
+            os.getenv("DEPLOYMENT_UPDATE_TIMEOUT_SECONDS", "2400")
+        ),
     ):
         assert (
             service_provider_id is not None
@@ -90,6 +93,7 @@ class OmnistrateFleetInstance:
         self.deployment_create_timeout_seconds = deployment_create_timeout_seconds
         self.deployment_delete_timeout_seconds = deployment_delete_timeout_seconds
         self.deployment_failover_timeout_seconds = deployment_failover_timeout_seconds
+        self.deployment_update_timeout_seconds = deployment_update_timeout_seconds
 
     def create(
         self,
@@ -355,7 +359,7 @@ class OmnistrateFleetInstance:
             return
 
         self.wait_for_instance_status(
-            timeout_seconds=self.deployment_failover_timeout_seconds
+            timeout_seconds=self.deployment_update_timeout_seconds
         )
 
     def upgrade(

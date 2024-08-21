@@ -134,6 +134,7 @@ class OmnistrateFleetAPI:
         deployment_create_timeout_seconds: int = None,
         deployment_delete_timeout_seconds: int = None,
         deployment_failover_timeout_seconds: int = None,
+        deployment_update_timeout_seconds: int = None,
     ):
         return (
             omnistrate_tests.classes.omnistrate_fleet_instance.OmnistrateFleetInstance(
@@ -151,5 +152,6 @@ class OmnistrateFleetAPI:
                 deployment_create_timeout_seconds,
                 deployment_delete_timeout_seconds,
                 deployment_failover_timeout_seconds,
+                deployment_update_timeout_seconds
             )
         )

@@ -122,11 +122,11 @@ def test_replication():
         test_stop_start(instance)
     except Exception as e:
         logging.exception(e)
-        instance.delete(True)
+        instance.delete(False)
         raise e
 
     # Delete instance
-    instance.delete(True)
+    instance.delete(False)
 
     logging.info("Test passed")
 

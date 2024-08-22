@@ -151,11 +151,11 @@ def test_upgrade_version():
         query_data(instance)
     except Exception as e:
         logging.exception(e)
-        instance.delete(True)
+        instance.delete(False)
         raise e
 
     # 7. Delete the instance
-    instance.delete(True)
+    instance.delete(False)
 
     logging.info("Upgrade version test passed")
 

@@ -1,3 +1,8 @@
+import argparse
+from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
+from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
+import os
+from contextlib import suppress
 import sys
 import signal
 from pathlib import Path
@@ -7,16 +12,10 @@ parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
 
 # Additionally remove the current file's directory from sys.path
-from contextlib import suppress
 
 with suppress(ValueError):
     sys.path.remove(str(parent))
 
-
-import os
-from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
-from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
-import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("omnistrate_user")
@@ -27,7 +26,8 @@ parser.add_argument("region")
 parser.add_argument(
     "--subscription-id", required=False, default=os.getenv("SUBSCRIPTION_ID")
 )
-parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
+parser.add_argument("--ref-name", required=False,
+                    default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
 parser.add_argument("--resource-key", required=True)
@@ -35,7 +35,8 @@ parser.add_argument("--replica-id", required=True)
 
 
 parser.add_argument("--instance-name", required=True)
-parser.add_argument("--instance-description", required=False, default="test-standalone")
+parser.add_argument("--instance-description",
+                    required=False, default="test-standalone")
 parser.add_argument("--instance-type", required=True)
 parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
@@ -51,10 +52,14 @@ args = parser.parse_args()
 instance: OmnistrateFleetInstance = None
 
 # Intercept exit signals so we can delete the instance before exiting
+
+
 def signal_handler(sig, frame):
     if instance:
         instance.delete(False)
     sys.exit(0)
+
+
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
@@ -84,7 +89,8 @@ def test_cluster_zerodowntime():
         service_provider_id=service.service_provider_id,
         service_key=service.key,
         service_environment_id=args.environment_id,
-        service_environment_key=service.get_environment(args.environment_id).key,
+        service_environment_key=service.get_environment(
+            args.environment_id).key,
         service_model_key=service_model.key,
         service_api_version="v1",
         product_tier_key=product_tier.product_tier_key,
@@ -140,16 +146,22 @@ def test_failover(instance: OmnistrateFleetInstance):
         replica_id=args.replica_id,
         wait_for_ready=False,
     )
-    for i in range(20):
-        graph.query(f"CREATE (n:Person {{name: 'Alice{i}'}})")
-        result = graph.query(f"MATCH (n:Person {{name: 'Alice{i}'}}) RETURN n")
-        if len(result.result_set) == 0:
-            raise Exception("Data lost after failover")
-        
-    
+    count = 0
+    while True:
+        status = instance.get_instance_details()['status']
+        if status == "DEPLOYING":
+            graph.query(f"CREATE (n:Person {{name: 'Alice{str(count)}'}})")
+            result = graph.query(f"MATCH (n:Person {{name: 'Alice{str(count)}'}}) RETURN n")
+            if len(result.result_set) == 0:
+                raise Exception("Data lost after failover")
+        else:
+            break
+        count += 1
+
     print("Data persisted after failover")
 
     graph.delete()
+
 
 if __name__ == "__main__":
     test_cluster_zerodowntime()

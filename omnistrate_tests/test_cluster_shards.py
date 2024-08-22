@@ -179,7 +179,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
     """This function should ensure that each shard is distributed across multiple availability zones"""
 
     instance_details = instance.get_instance_details()
-    network_topology: dict = instance.get_network_topology()
+    network_topology: dict = instance.get_network_topology(force_refresh=True)
 
     params = (
         instance_details["result_params"]
@@ -210,7 +210,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
         raise Exception("No nodes found in network topology")
 
     if len(nodes) != current_host_count:
-        raise Exception("Host count does not match number of nodes")
+        raise Exception(f"Host count does not match number of nodes. Current host count: {current_host_count}; Number of nodes: {len(nodes)}")
 
     cluster = FalkorDBCluster(
         host=resource["clusterEndpoint"],

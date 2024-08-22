@@ -13,15 +13,16 @@ def _get_admin_pass():
     Check if the password exists in the adminpassword file,\n
     if it does not, take the pass from the ADMIN_PASSWORD variable.
     """
-    admin_password = os.getenv('ADMIN_PASSWORD')
+    admin_password = os.getenv("ADMIN_PASSWORD")
     if admin_password:
         return admin_password
-    secret_path = '/run/secrets/adminpassword'
+    secret_path = "/run/secrets/adminpassword"
     try:
         with open(secret_path) as f:
             return f.read().strip()  # Strip any extra whitespace or newlines
     except FileNotFoundError:
         raise FileNotFoundError(f"Secret file '{secret_path}' does not exist.")
+
 
 HEALTHCHECK_PORT = os.getenv("HEALTHCHECK_PORT", "8081")
 ADMIN_PASSWORD = _get_admin_pass()
@@ -54,6 +55,9 @@ def _handle_too_many_masters(cluster: FalkorDBCluster, expected_masters: int):
             (extra_master, cluster.get_slaves_from_master(extra_master.id))
         )
 
+    print(
+        f"Too many masters: expected_masters: {expected_masters}\nsorted_masters: {sorted_masters}"
+    )
     sorted_masters = sorted(sorted_masters, key=lambda x: len(x[1]))
 
     # Select the masters with the least slaves
@@ -161,9 +165,11 @@ def main():
 
     expected_shards = len(cluster) / (CLUSTER_REPLICAS + 1)
     if expected_shards % 1 != 0:
-        logging.info(f"Cannot rebalance, expected shards is not an integer: {expected_shards}")
+        logging.info(
+            f"Cannot rebalance, expected shards is not an integer: {expected_shards}"
+        )
         return
-    
+
     expected_shards = int(expected_shards)
 
     if len(cluster) % (CLUSTER_REPLICAS + 1) != 0:
@@ -216,7 +222,9 @@ def main():
                         cluster.rebalance_slots(group_master, expected_shards)
                         return main()
                 elif IS_MULTI_ZONE:
-                    logging.info(f"Group {s} has more than 1 master: {group_master}, {node}")
+                    logging.info(
+                        f"Group {s} has more than 1 master: {group_master}, {node}"
+                    )
                     return _relocate_master(cluster, node)
             else:
                 slave_master = cluster.get_node_by_id(node.master_id)

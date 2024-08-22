@@ -259,7 +259,7 @@ if [[ $NODE_INDEX -eq 0 && ! -f "/data/cluster_initialized" ]]; then
   # Create cluster
   echo "Creating cluster"
   create_cluster
-elif [[ $NODE_INDEX -gt $CLUSTER_REPLICAS ]]; then
+elif [[ $NODE_INDEX -gt 5 ]]; then
   # Join cluster
   echo "Joining cluster"
   join_cluster

@@ -431,9 +431,9 @@ class OmnistrateFleetInstance:
             if time.time() - right_now > upgrade_timeout:
                 raise Exception("Upgrade timed out")
 
-    def get_network_topology(self):
+    def get_network_topology(self, force_refresh=False):
 
-        if self._network_topology is not None:
+        if self._network_topology is not None and not force_refresh:
             return self._network_topology
 
         self._network_topology = self.get_instance_details()["detailedNetworkTopology"]

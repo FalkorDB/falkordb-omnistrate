@@ -197,7 +197,13 @@ join_cluster() {
 
   redis-cli --cluster add-node $NODE_HOST:$NODE_PORT $cluster_host:$NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING
 
-  touch /data/cluster_initialized
+  # If it was not successful, retry after 10 seconds
+  if [[ $? -ne 0 ]]; then
+    echo "Failed to join cluster. Retrying in 10 seconds"
+    sleep 10
+    join_cluster
+  fi
+
 }
 
 run_node() {
@@ -253,7 +259,7 @@ if [[ $NODE_INDEX -eq 0 && ! -f "/data/cluster_initialized" ]]; then
   # Create cluster
   echo "Creating cluster"
   create_cluster
-elif [[ $NODE_INDEX -gt $CLUSTER_REPLICAS && ! -f "/data/cluster_initialized" ]]; then
+elif [[ $NODE_INDEX -gt $CLUSTER_REPLICAS ]]; then
   # Join cluster
   echo "Joining cluster"
   join_cluster

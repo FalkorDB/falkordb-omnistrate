@@ -31,299 +31,298 @@ x-omnistrate-load-balancer:
           ingressPort: 26379
           backendPort: 26379
 
+x-redisMetrics: &metrics
+  prometheusEndpoint: "http://localhost:9121/metrics"
+  metrics:
+    redis_blocked_clients:
+      "Blocked Clients":
+        aggregationFunction: sum
+    redis_cluster_connections:
+      "Cluster Connections":
+        aggregationFunction: sum
+    redis_commands_duration_seconds_total:
+      "Total Command Duration (Seconds)":
+        aggregationFunction: sum
+    redis_commands_failed_calls_total:
+      "Failed Command Calls":
+        aggregationFunction: sum
+    redis_commands_latencies_usec_bucket:
+      "Command Latency (μs) Bucket":
+        aggregationFunction: sum
+    redis_commands_latencies_usec_sum:
+      "Total Command Latency (μs)":
+        aggregationFunction: sum
+    redis_commands_latencies_usec_count:
+      "Command Latency Count (μs)":
+        aggregationFunction: sum
+    redis_commands_processed_total:
+      "Total Processed Commands":
+        aggregationFunction: sum
+    redis_commands_rejected_calls_total:
+      "Rejected Command Calls":
+        aggregationFunction: sum
+    redis_commands_total:
+      "Total Commands":
+        aggregationFunction: sum
+    redis_config_maxclients:
+      "Max Clients Configured":
+        aggregationFunction: sum
+    redis_config_maxmemory:
+      "Max Memory Configured":
+        aggregationFunction: sum
+    redis_connected_clients:
+      "Connected Clients":
+        aggregationFunction: sum
+    redis_connections_received_total:
+      "Total Connections Received":
+        aggregationFunction: sum
+    redis_cpu_sys_children_seconds_total:
+      "CPU Sys Children Time (Seconds)":
+        aggregationFunction: sum
+    redis_cpu_sys_main_thread_seconds_total:
+      "Total CPU Sys Main Thread Time (Seconds)":
+        aggregationFunction: sum
+    redis_cpu_sys_seconds_total:
+      "Total CPU Sys Time (Seconds)":
+        aggregationFunction: sum
+    redis_cpu_user_children_seconds_total:
+      "Total CPU User Children Time (Seconds)":
+        aggregationFunction: sum
+    redis_cpu_user_main_thread_seconds_total:
+      "Total CPU User Main Thread Time (Seconds)":
+        aggregationFunction: sum
+    redis_cpu_user_seconds_total:
+      "Total CPU User Time (Seconds)":
+        aggregationFunction: sum
+    redis_db_keys:
+      "Database Keys":
+        aggregationFunction: sum
+    redis_errors_total:
+      "Total Errors":
+        aggregationFunction: sum
+    redis_exporter_scrapes_total:
+      "Total Exporter Scrapes":
+        aggregationFunction: sum
+    redis_io_threads_active:
+      "Active I/O Threads":
+        aggregationFunction: sum
+    redis_keyspace_hits_total:
+      "Total Keyspace Hits":
+        aggregationFunction: sum
+    redis_keyspace_misses_total:
+      "Total Keyspaces Misses":
+        aggregationFunction: sum
+    redis_last_slow_execution_duration_seconds:
+      "Last Slow Execution Duration (Seconds)":
+        aggregationFunction: sum
+    redis_latency_percentiles_usec:
+      "Latency Percentiles (μs)":
+        aggregationFunction: sum
+    redis_latency_percentiles_usec_sum:
+      "Total Latency Percentiles (μs)":
+        aggregationFunction: sum
+    redis_latency_percentiles_usec_count:
+      "Latency Percentiles Count":
+        aggregationFunction: sum
+    redis_latest_fork_seconds:
+      "Latest Fork Time (Seconds)":
+        aggregationFunction: sum
+    redis_loading_dump_file:
+      "Loading Fump File":
+        aggregationFunction: sum
+    redis_master_repl_offset:
+      "Master Replication Offset":
+        aggregationFunction: sum
+    redis_mem_clients_normal:
+      "Memory Used By Normal Clients":
+        aggregationFunction: sum
+    redis_mem_clients_slaves:
+      "Memory Used By Slave Clients":
+        aggregationFunction: sum
+    redis_memory_max_bytes:
+      "Max Memory (Bytes)":
+        aggregationFunction: sum
+    redis_memory_used_bytes:
+      "Memory Used (Bytes)":
+        aggregationFunction: sum
+    redis_memory_used_dataset_bytes:
+      "Memory Used By Dataset (Bytes)":
+        aggregationFunction: sum
+    redis_rdb_bgsave_in_progress:
+      "RDB BGSAVE In Progress":
+        aggregationFunction: sum
+    redis_rdb_changes_since_last_save:
+      "Changes Since Last RDB Save":
+        aggregationFunction: sum
+    redis_rdb_current_bgsave_duration_sec:
+      "Current RDB BGSAVE Duration (Seconds)":
+        aggregationFunction: sum
+    redis_rdb_last_bgsave_duration_sec:
+      "Last RDB BGSAVE Duration (Seconds)":
+        aggregationFunction: sum
+    redis_rdb_last_bgsave_status:
+      "Last RDB BGSAVE Status":
+        aggregationFunction: sum
+    redis_rdb_last_cow_size_bytes:
+      "Last RDB Copy-On-Write Size (Bytes)":
+        aggregationFunction: sum
+    redis_rdb_last_load_loaded_keys:
+      "Last RDB Load: Loaded Keys":
+        aggregationFunction: sum
+    redis_rdb_last_save_timestamp_seconds:
+      "Last RDB Save Timestamp (Seconds)":
+        aggregationFunction: sum
+    redis_rdb_saves_total:
+      "Total RDB Saves":
+        aggregationFunction: sum
+    redis_rejected_connections_total:
+      "Total Rejected Connections":
+        aggregationFunction: sum
+    redis_slowlog_last_id:
+      "Slow Log Last ID":
+        aggregationFunction: sum
+    redis_slowlog_length:
+      "Slow Log Length":
+        aggregationFunction: sum
+    redis_start_time_seconds:
+      "Start Time (Seconds)":
+        aggregationFunction: sum
+    redis_unexpected_error_replies:
+      "Unexpected Error Replies":
+        aggregationFunction: sum
+    redis_up:
+      "Redis Up":
+        aggregationFunction: sum
+    redis_uptime_in_seconds:
+      "Uptime (Seconds)":
+        aggregationFunction: sum
+
 x-omnistrate-integrations:
   - omnistrateLogging:
   - omnistrateMetrics:
       additionalMetrics:
         node-s:
-          prometheusEndpoint: "http://localhost:9121/metrics"
-          metrics:
-            redis_blocked_clients:
-            redis_cluster_connections:
-            redis_commands_duration_seconds_total:
-            redis_commands_failed_calls_total:
-            redis_commands_latencies_usec_bucket:
-            redis_commands_latencies_usec_sum:
-            redis_commands_latencies_usec_count:
-            redis_commands_processed_total:
-            redis_commands_rejected_calls_total:
-            redis_commands_total:
-            redis_config_maxclients:
-            redis_config_maxmemory:
-            redis_connected_clients:
-            redis_connections_received_total:
-            redis_cpu_sys_children_seconds_total:
-            redis_cpu_sys_main_thread_seconds_total:
-            redis_cpu_sys_seconds_total:
-            redis_cpu_user_children_seconds_total:
-            redis_cpu_user_main_thread_seconds_total:
-            redis_cpu_user_seconds_total:
-            redis_db_keys:
-            redis_errors_total:
-            redis_exporter_scrapes_total:
-            redis_io_threads_active:
-            redis_keyspace_hits_total:
-            redis_keyspace_misses_total:
-            redis_last_slow_execution_duration_seconds:
-            redis_latency_percentiles_usec:
-            redis_latency_percentiles_usec_sum:
-            redis_latency_percentiles_usec_count:
-            redis_latest_fork_seconds:
-            redis_loading_dump_file:
-            redis_master_repl_offset:
-            redis_mem_clients_normal:
-            redis_mem_clients_slaves:
-            redis_memory_max_bytes:
-            redis_memory_used_bytes:
-            redis_memory_used_dataset_bytes:
-            redis_rdb_bgsave_in_progress:
-            redis_rdb_changes_since_last_save:
-            redis_rdb_current_bgsave_duration_sec:
-            redis_rdb_last_bgsave_duration_sec:
-            redis_rdb_last_bgsave_status:
-            redis_rdb_last_cow_size_bytes:
-            redis_rdb_last_load_loaded_keys:
-            redis_rdb_last_save_timestamp_seconds:
-            redis_rdb_saves_total:
-            redis_rejected_connections_total:
-            redis_slowlog_last_id:
-            redis_slowlog_length:
-            redis_start_time_seconds:
-            redis_unexpected_error_replies:
-            redis_up:
-            redis_uptime_in_seconds:
-
+          <<: *metrics
         node-sz:
-          prometheusEndpoint: "http://localhost:9121/metrics"
-          metrics:
-            redis_blocked_clients:
-            redis_cluster_connections:
-            redis_commands_duration_seconds_total:
-            redis_commands_failed_calls_total:
-            redis_commands_latencies_usec_bucket:
-            redis_commands_latencies_usec_sum:
-            redis_commands_latencies_usec_count:
-            redis_commands_processed_total:
-            redis_commands_rejected_calls_total:
-            redis_commands_total:
-            redis_config_maxclients:
-            redis_config_maxmemory:
-            redis_connected_clients:
-            redis_connections_received_total:
-            redis_cpu_sys_children_seconds_total:
-            redis_cpu_sys_main_thread_seconds_total:
-            redis_cpu_sys_seconds_total:
-            redis_cpu_user_children_seconds_total:
-            redis_cpu_user_main_thread_seconds_total:
-            redis_cpu_user_seconds_total:
-            redis_db_keys:
-            redis_errors_total:
-            redis_exporter_scrapes_total:
-            redis_io_threads_active:
-            redis_keyspace_hits_total:
-            redis_keyspace_misses_total:
-            redis_last_slow_execution_duration_seconds:
-            redis_latency_percentiles_usec:
-            redis_latency_percentiles_usec_sum:
-            redis_latency_percentiles_usec_count:
-            redis_latest_fork_seconds:
-            redis_loading_dump_file:
-            redis_master_repl_offset:
-            redis_mem_clients_normal:
-            redis_mem_clients_slaves:
-            redis_memory_max_bytes:
-            redis_memory_used_bytes:
-            redis_memory_used_dataset_bytes:
-            redis_rdb_bgsave_in_progress:
-            redis_rdb_changes_since_last_save:
-            redis_rdb_current_bgsave_duration_sec:
-            redis_rdb_last_bgsave_duration_sec:
-            redis_rdb_last_bgsave_status:
-            redis_rdb_last_cow_size_bytes:
-            redis_rdb_last_load_loaded_keys:
-            redis_rdb_last_save_timestamp_seconds:
-            redis_rdb_saves_total:
-            redis_rejected_connections_total:
-            redis_slowlog_last_id:
-            redis_slowlog_length:
-            redis_start_time_seconds:
-            redis_unexpected_error_replies:
-            redis_up:
-            redis_uptime_in_seconds:
-
+          <<: *metrics
         node-mz:
-          prometheusEndpoint: "http://localhost:9121/metrics"
-          metrics:
-            redis_blocked_clients:
-            redis_cluster_connections:
-            redis_commands_duration_seconds_total:
-            redis_commands_failed_calls_total:
-            redis_commands_latencies_usec_bucket:
-            redis_commands_latencies_usec_sum:
-            redis_commands_latencies_usec_count:
-            redis_commands_processed_total:
-            redis_commands_rejected_calls_total:
-            redis_commands_total:
-            redis_config_maxclients:
-            redis_config_maxmemory:
-            redis_connected_clients:
-            redis_connections_received_total:
-            redis_cpu_sys_children_seconds_total:
-            redis_cpu_sys_main_thread_seconds_total:
-            redis_cpu_sys_seconds_total:
-            redis_cpu_user_children_seconds_total:
-            redis_cpu_user_main_thread_seconds_total:
-            redis_cpu_user_seconds_total:
-            redis_db_keys:
-            redis_errors_total:
-            redis_exporter_scrapes_total:
-            redis_io_threads_active:
-            redis_keyspace_hits_total:
-            redis_keyspace_misses_total:
-            redis_last_slow_execution_duration_seconds:
-            redis_latency_percentiles_usec:
-            redis_latency_percentiles_usec_sum:
-            redis_latency_percentiles_usec_count:
-            redis_latest_fork_seconds:
-            redis_loading_dump_file:
-            redis_master_repl_offset:
-            redis_mem_clients_normal:
-            redis_mem_clients_slaves:
-            redis_memory_max_bytes:
-            redis_memory_used_bytes:
-            redis_memory_used_dataset_bytes:
-            redis_rdb_bgsave_in_progress:
-            redis_rdb_changes_since_last_save:
-            redis_rdb_current_bgsave_duration_sec:
-            redis_rdb_last_bgsave_duration_sec:
-            redis_rdb_last_bgsave_status:
-            redis_rdb_last_cow_size_bytes:
-            redis_rdb_last_load_loaded_keys:
-            redis_rdb_last_save_timestamp_seconds:
-            redis_rdb_saves_total:
-            redis_rejected_connections_total:
-            redis_slowlog_last_id:
-            redis_slowlog_length:
-            redis_start_time_seconds:
-            redis_unexpected_error_replies:
-            redis_up:
-            redis_uptime_in_seconds:
-
+          <<: *metrics
         cluster-sz:
-          prometheusEndpoint: "http://localhost:9121/metrics"
-          metrics:
-            redis_blocked_clients:
-            redis_cluster_connections:
-            redis_commands_duration_seconds_total:
-            redis_commands_failed_calls_total:
-            redis_commands_latencies_usec_bucket:
-            redis_commands_latencies_usec_sum:
-            redis_commands_latencies_usec_count:
-            redis_commands_processed_total:
-            redis_commands_rejected_calls_total:
-            redis_commands_total:
-            redis_config_maxclients:
-            redis_config_maxmemory:
-            redis_connected_clients:
-            redis_connections_received_total:
-            redis_cpu_sys_children_seconds_total:
-            redis_cpu_sys_main_thread_seconds_total:
-            redis_cpu_sys_seconds_total:
-            redis_cpu_user_children_seconds_total:
-            redis_cpu_user_main_thread_seconds_total:
-            redis_cpu_user_seconds_total:
-            redis_db_keys:
-            redis_errors_total:
-            redis_exporter_scrapes_total:
-            redis_io_threads_active:
-            redis_keyspace_hits_total:
-            redis_keyspace_misses_total:
-            redis_last_slow_execution_duration_seconds:
-            redis_latency_percentiles_usec:
-            redis_latency_percentiles_usec_sum:
-            redis_latency_percentiles_usec_count:
-            redis_latest_fork_seconds:
-            redis_loading_dump_file:
-            redis_master_repl_offset:
-            redis_mem_clients_normal:
-            redis_mem_clients_slaves:
-            redis_memory_max_bytes:
-            redis_memory_used_bytes:
-            redis_memory_used_dataset_bytes:
-            redis_rdb_bgsave_in_progress:
-            redis_rdb_changes_since_last_save:
-            redis_rdb_current_bgsave_duration_sec:
-            redis_rdb_last_bgsave_duration_sec:
-            redis_rdb_last_bgsave_status:
-            redis_rdb_last_cow_size_bytes:
-            redis_rdb_last_load_loaded_keys:
-            redis_rdb_last_save_timestamp_seconds:
-            redis_rdb_saves_total:
-            redis_rejected_connections_total:
-            redis_slowlog_last_id:
-            redis_slowlog_length:
-            redis_start_time_seconds:
-            redis_unexpected_error_replies:
-            redis_up:
-            redis_uptime_in_seconds:
-
+          <<: *metrics
         cluster-mz:
-          prometheusEndpoint: "http://localhost:9121/metrics"
-          metrics:
-            redis_blocked_clients:
-            redis_cluster_connections:
-            redis_commands_duration_seconds_total:
-            redis_commands_failed_calls_total:
-            redis_commands_latencies_usec_bucket:
-            redis_commands_latencies_usec_sum:
-            redis_commands_latencies_usec_count:
-            redis_commands_processed_total:
-            redis_commands_rejected_calls_total:
-            redis_commands_total:
-            redis_config_maxclients:
-            redis_config_maxmemory:
-            redis_connected_clients:
-            redis_connections_received_total:
-            redis_cpu_sys_children_seconds_total:
-            redis_cpu_sys_main_thread_seconds_total:
-            redis_cpu_sys_seconds_total:
-            redis_cpu_user_children_seconds_total:
-            redis_cpu_user_main_thread_seconds_total:
-            redis_cpu_user_seconds_total:
-            redis_db_keys:
-            redis_errors_total:
-            redis_exporter_scrapes_total:
-            redis_io_threads_active:
-            redis_keyspace_hits_total:
-            redis_keyspace_misses_total:
-            redis_last_slow_execution_duration_seconds:
-            redis_latency_percentiles_usec:
-            redis_latency_percentiles_usec_sum:
-            redis_latency_percentiles_usec_count:
-            redis_latest_fork_seconds:
-            redis_loading_dump_file:
-            redis_master_repl_offset:
-            redis_mem_clients_normal:
-            redis_mem_clients_slaves:
-            redis_memory_max_bytes:
-            redis_memory_used_bytes:
-            redis_memory_used_dataset_bytes:
-            redis_rdb_bgsave_in_progress:
-            redis_rdb_changes_since_last_save:
-            redis_rdb_current_bgsave_duration_sec:
-            redis_rdb_last_bgsave_duration_sec:
-            redis_rdb_last_bgsave_status:
-            redis_rdb_last_cow_size_bytes:
-            redis_rdb_last_load_loaded_keys:
-            redis_rdb_last_save_timestamp_seconds:
-            redis_rdb_saves_total:
-            redis_rejected_connections_total:
-            redis_slowlog_last_id:
-            redis_slowlog_length:
-            redis_start_time_seconds:
-            redis_unexpected_error_replies:
-            redis_up:
-            redis_uptime_in_seconds:
+          <<: *metrics
+
+
+
+
+
+x-rebalanceparam: &rebalanceparam
+  x-omnistrate-api-params:
+    - key: clusterReplicas
+      description: The number of replicas per shard
+      name: Cluster Replicas
+      type: Float64
+      modifiable: true
+      required: true
+      export: true
+      defaultValue: "1"
+      min: 1
+      max: 3
+    - key: enableTLS
+      description: Whether to enable TLS for the database
+      name: Enable TLS
+      type: Boolean
+      modifiable: false
+      required: true
+      export: true
+      defaultValue: "false"
+
+
+x-clusterparam: &clusterparam
+  x-omnistrate-api-params:
+    - key: hostCount
+      description: The number of hosts in the cluster
+      name: Host Count
+      type: Float64
+      modifiable: true
+      required: true
+      export: true
+      defaultValue: "6"
+      min: 6
+    - key: clusterReplicas
+      description: The number of replicas per shard
+      name: Cluster Replicas
+      type: Float64
+      modifiable: true
+      required: true
+      export: true
+      defaultValue: "1"
+      min: 1
+      max: 3
+    - key: nodeInstanceType
+      description: The size of the node instance. Check the documentation for more information.
+      name: Node Instance Type
+      type: String
+      modifiable: false
+      required: true
+      export: true
+      defaultValue: e2-custom-4-8192
+      options:
+        - e2-custom-4-8192
+        - e2-custom-8-16384
+        - e2-custom-16-32768
+        - e2-custom-32-65536
+        - c6i.xlarge
+        - c6i.2xlarge
+        - c6i.4xlarge
+        - c6i.8xlarge
+    - key: enableTLS
+      description: Whether to enable TLS for the database
+      name: Enable TLS
+      type: Boolean
+      modifiable: false
+      required: true
+      export: true
+      defaultValue: "false"
+    - key: falkordbUser
+      description: Choose a default username for your database
+      name: FalkorDB User
+      type: String
+      modifiable: false
+      required: true
+      export: true
+      defaultValue: "falkordb"
+    - key: falkordbPassword
+      description: Choose a default password for your database
+      name: FalkorDB Password
+      type: Password
+      modifiable: false
+      required: true
+      export: false
+    - key: RDBPersistenceConfig
+      description: How often to save the RDB file to disk. Check the documentation for more information.
+      name: RDB Persistence Config
+      type: String
+      modifiable: false
+      required: false
+      export: true
+      defaultValue: "low"
+      options:
+        - "low"
+        - "medium"
+        - "high"
+    - key: AOFPersistenceConfig
+      description: Whether to enable AOF persistence. Check the documentation for more information.
+      name: AOF Persistence Config
+      type: String
+      modifiable: false
+      required: false
+      export: true
+      defaultValue: "everysec"
+      options:
+        - "everysec"
+        - "always"
+
 
 services:
   # Standalone
@@ -1562,10 +1561,10 @@ services:
             instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
     secrets:
-      - source: adminpasspath
-        target: /run/secrets/adminpassword
-      - source: falkordbpasspath
-        target: /run/secrets/falkordbpassword
+    - source: adminpasspath
+      target: /run/secrets/adminpassword
+    - source: falkordbpasspath
+      target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -1823,89 +1822,7 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
-    x-omnistrate-api-params:
-      - key: hostCount
-        description: The number of hosts in the cluster
-        name: Host Count
-        type: Float64
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: "6"
-        min: 6
-      - key: clusterReplicas
-        description: The number of replicas per shard
-        name: Cluster Replicas
-        type: Float64
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: "1"
-        min: 1
-        max: 3
-      - key: nodeInstanceType
-        description: The size of the node instance. Check the documentation for more information.
-        name: Node Instance Type
-        type: String
-        modifiable: false
-        required: true
-        export: true
-        defaultValue: e2-custom-4-8192
-        options:
-          - e2-custom-4-8192
-          - e2-custom-8-16384
-          - e2-custom-16-32768
-          - e2-custom-32-65536
-          - c6i.xlarge
-          - c6i.2xlarge
-          - c6i.4xlarge
-          - c6i.8xlarge
-      - key: enableTLS
-        description: Whether to enable TLS for the database
-        name: Enable TLS
-        type: Boolean
-        modifiable: false
-        required: true
-        export: true
-        defaultValue: "false"
-      - key: falkordbUser
-        description: Choose a default username for your database
-        name: FalkorDB User
-        type: String
-        modifiable: false
-        required: true
-        export: true
-        defaultValue: "falkordb"
-      - key: falkordbPassword
-        description: Choose a default password for your database
-        name: FalkorDB Password
-        type: Password
-        modifiable: false
-        required: true
-        export: false
-      - key: RDBPersistenceConfig
-        description: How often to save the RDB file to disk. Check the documentation for more information.
-        name: RDB Persistence Config
-        type: String
-        modifiable: false
-        required: false
-        export: true
-        defaultValue: "low"
-        options:
-          - "low"
-          - "medium"
-          - "high"
-      - key: AOFPersistenceConfig
-        description: Whether to enable AOF persistence. Check the documentation for more information.
-        name: AOF Persistence Config
-        type: String
-        modifiable: false
-        required: false
-        export: true
-        defaultValue: "everysec"
-        options:
-          - "everysec"
-          - "always"
+    <<: *clusterparam
     volumes:
       - source: ./data
         target: /data
@@ -1973,25 +1890,7 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           name: e2-small
-    x-omnistrate-api-params:
-      - key: clusterReplicas
-        description: The number of replicas per shard
-        name: Cluster Replicas
-        type: Float64
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: "1"
-        min: 1
-        max: 3
-      - key: enableTLS
-        description: Whether to enable TLS for the database
-        name: Enable TLS
-        type: Boolean
-        modifiable: false
-        required: true
-        export: true
-        defaultValue: "false"
+    <<: *rebalanceparam
     environment:
       - IS_MULTI_ZONE=0
       - TLS=$var.enableTLS
@@ -2158,89 +2057,7 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
-    x-omnistrate-api-params:
-      - key: hostCount
-        description: The number of hosts in the cluster
-        name: Host Count
-        type: Float64
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: "6"
-        min: 6
-      - key: clusterReplicas
-        description: The number of replicas per shard
-        name: Cluster Replicas
-        type: Float64
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: "1"
-        min: 1
-        max: 3
-      - key: nodeInstanceType
-        description: The size of the node instance. Check the documentation for more information.
-        name: Node Instance Type
-        type: String
-        modifiable: false
-        required: true
-        export: true
-        defaultValue: e2-custom-4-8192
-        options:
-          - e2-custom-4-8192
-          - e2-custom-8-16384
-          - e2-custom-16-32768
-          - e2-custom-32-65536
-          - c6i.xlarge
-          - c6i.2xlarge
-          - c6i.4xlarge
-          - c6i.8xlarge
-      - key: enableTLS
-        description: Whether to enable TLS for the database
-        name: Enable TLS
-        type: Boolean
-        modifiable: false
-        required: true
-        export: true
-        defaultValue: "false"
-      - key: falkordbUser
-        description: Choose a default username for your database
-        name: FalkorDB User
-        type: String
-        modifiable: false
-        required: true
-        export: true
-        defaultValue: "falkordb"
-      - key: falkordbPassword
-        description: Choose a default password for your database
-        name: FalkorDB Password
-        type: Password
-        modifiable: false
-        required: true
-        export: false
-      - key: RDBPersistenceConfig
-        description: How often to save the RDB file to disk. Check the documentation for more information.
-        name: RDB Persistence Config
-        type: String
-        modifiable: false
-        required: false
-        export: true
-        defaultValue: "low"
-        options:
-          - "low"
-          - "medium"
-          - "high"
-      - key: AOFPersistenceConfig
-        description: Whether to enable AOF persistence. Check the documentation for more information.
-        name: AOF Persistence Config
-        type: String
-        modifiable: false
-        required: false
-        export: true
-        defaultValue: "everysec"
-        options:
-          - "everysec"
-          - "always"
+    <<: *clusterparam
     volumes:
       - source: ./data
         target: /data
@@ -2308,25 +2125,7 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           name: e2-small
-    x-omnistrate-api-params:
-      - key: clusterReplicas
-        description: The number of replicas per shard
-        name: Cluster Replicas
-        type: Float64
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: "1"
-        min: 1
-        max: 3
-      - key: enableTLS
-        description: Whether to enable TLS for the database
-        name: Enable TLS
-        type: Boolean
-        modifiable: false
-        required: true
-        export: true
-        defaultValue: "false"
+    <<: *rebalanceparam
     environment:
       - IS_MULTI_ZONE=1
       - TLS=$var.enableTLS

@@ -30,6 +30,10 @@ class OmnistrateFleetInstance:
     def __init__(
         self,
         fleet_api: omnistrate_tests.classes.omnistrate_fleet_api.OmnistrateFleetAPI,
+        deployment_create_timeout_seconds: int | None,
+        deployment_delete_timeout_seconds: int | None,
+        deployment_failover_timeout_seconds: int | None,
+        deployment_update_timeout_seconds: int | None,
         service_id: str = os.getenv("SERVICE_ID"),
         service_provider_id: str = os.getenv("SERVICE_PROVIDER_ID"),
         service_key: str = os.getenv("SERVICE_KEY"),
@@ -40,18 +44,6 @@ class OmnistrateFleetInstance:
         product_tier_key: str = os.getenv("PRODUCT_TIER_KEY"),
         resource_key: str = os.getenv("RESOURCE_KEY"),
         subscription_id: str = os.getenv("SUBSCRIPTION_ID"),
-        deployment_create_timeout_seconds: int = int(
-            os.getenv("DEPLOYMENT_CREATE_TIMEOUT_SECONDS", "2400")
-        ),
-        deployment_delete_timeout_seconds: int = int(
-            os.getenv("DEPLOYMENT_DELETE_TIMEOUT_SECONDS", "1200")
-        ),
-        deployment_failover_timeout_seconds: int = int(
-            os.getenv("DEPLOYMENT_FAILOVER_TIMEOUT_SECONDS", "1500")
-        ),
-        deployment_update_timeout_seconds: int = int(
-            os.getenv("DEPLOYMENT_UPDATE_TIMEOUT_SECONDS", "2400")
-        ),
     ):
         assert (
             service_provider_id is not None
@@ -90,10 +82,22 @@ class OmnistrateFleetInstance:
         self.resource_key = resource_key
         self.subscription_id = subscription_id
 
-        self.deployment_create_timeout_seconds = deployment_create_timeout_seconds
-        self.deployment_delete_timeout_seconds = deployment_delete_timeout_seconds
-        self.deployment_failover_timeout_seconds = deployment_failover_timeout_seconds
-        self.deployment_update_timeout_seconds = deployment_update_timeout_seconds
+        self.deployment_create_timeout_seconds = (
+            deployment_create_timeout_seconds
+            or int(os.getenv("DEPLOYMENT_CREATE_TIMEOUT_SECONDS", "2400"))
+        )
+        self.deployment_delete_timeout_seconds = (
+            deployment_delete_timeout_seconds
+            or int(os.getenv("DEPLOYMENT_DELETE_TIMEOUT_SECONDS", "1200"))
+        )
+        self.deployment_failover_timeout_seconds = (
+            deployment_failover_timeout_seconds
+            or int(os.getenv("DEPLOYMENT_FAILOVER_TIMEOUT_SECONDS", "1500"))
+        )
+        self.deployment_update_timeout_seconds = (
+            deployment_update_timeout_seconds
+            or int(os.getenv("DEPLOYMENT_UPDATE_TIMEOUT_SECONDS", "2400"))
+        )
 
     def create(
         self,
@@ -147,9 +151,12 @@ class OmnistrateFleetInstance:
             raise Exception(f"Failed to create instance {name}")
 
     def wait_for_instance_status(
-        self, requested_status="RUNNING", timeout_seconds: int = 1200
+        self,
+        timeout_seconds: int,
+        requested_status="RUNNING",
     ):
         """Wait for the instance to be ready."""
+        print(f"Waiting for instance to be ready. Timeout: {timeout_seconds} seconds")
         timeout_timer = time.time() + int(timeout_seconds or 1200)
 
         while True:
@@ -337,7 +344,7 @@ class OmnistrateFleetInstance:
     def update_params(self, wait_until_ready: bool = True, retry=10, **kwargs):
         """Update the instance parameters."""
 
-        self.wait_for_instance_status()
+        self.wait_for_instance_status(timeout_seconds=1200)
 
         data = {"requestParams": kwargs}
 

@@ -273,5 +273,5 @@ class FalkorDBCluster:
             "Timed out waiting for all nodes to have the correct number of slots",
         )
 
-    def delete_node(self, node_id: str):
-        self.client.command("CLUSTER FORGET", node_id)
+    def forget_node(self, node_id: str):
+        self.client.execute_command("CLUSTER FORGET", node_id)

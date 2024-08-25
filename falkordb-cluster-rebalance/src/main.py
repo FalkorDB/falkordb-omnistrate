@@ -161,7 +161,7 @@ def _handle_cluster_not_fully_connected(cluster: FalkorDBCluster):
             and len(node.slots) == 0
         ):
             logging.info(f"Deleting master {node}")
-            cluster.delete_node(node.id)
+            cluster.forget_node(node.id)
 
     return main()
 

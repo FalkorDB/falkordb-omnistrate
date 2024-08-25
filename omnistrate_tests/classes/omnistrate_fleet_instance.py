@@ -408,6 +408,7 @@ class OmnistrateFleetInstance:
         upgrade_timeout: int = 1200,
     ):
         right_now = time.time()
+        skipped_running = False
         while True:
             response = self._fleet_api.client().get(
                 f"{self._fleet_api.base_url}/fleet/service/{service_id}/productTier/{product_tier_id}/upgrade-path/{upgrade_id}",
@@ -417,6 +418,17 @@ class OmnistrateFleetInstance:
             self._fleet_api.handle_response(response, "Failed to get upgrade status")
 
             status = response.json()["status"]
+
+            if (
+                status == "RUNNING"
+                and not skipped_running
+                and time.time() - right_now < upgrade_timeout
+            ):
+                logging.info("Skipping first running status")
+                time.sleep(5)
+                continue
+
+            skipped_running = True
 
             if status == "IN_PROGRESS":
                 logging.info("Upgrade in progress")

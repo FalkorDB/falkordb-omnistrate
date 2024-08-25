@@ -106,6 +106,12 @@ class FalkorDBCluster:
         logging.info(f"{datetime.now()}: Cluster refreshed: {self}")
         return self
 
+    def is_ready(self) -> bool:
+        # Check cluster status
+        cluster_state = self.client.cluster_info()["cluster_state"]
+        logging.info(f"{datetime.now()}: Cluster state: {cluster_state}")
+        return cluster_state == "ok"
+
     def is_connected(self) -> bool:
         return all(node.connected for node in self.nodes)
 
@@ -222,7 +228,9 @@ class FalkorDBCluster:
 
         res = self.client.cluster_replicate(slave_node.to_cluster_node(), new_master_id)
 
-        logging.info(f"{datetime.now()}: Replicate {slave_node} to {new_master_node}: {res}")
+        logging.info(
+            f"{datetime.now()}: Replicate {slave_node} to {new_master_node}: {res}"
+        )
 
         self._wait_for_condition(
             lambda: self.get_node_by_id(slave_id).is_slave
@@ -264,3 +272,6 @@ class FalkorDBCluster:
             180,
             "Timed out waiting for all nodes to have the correct number of slots",
         )
+
+    def delete_node(self, node_id: str):
+        self.client.command("CLUSTER FORGET", node_id)

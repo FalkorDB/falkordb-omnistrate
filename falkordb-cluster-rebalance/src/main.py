@@ -147,6 +147,31 @@ def _handle_slave_pointing_to_master_in_different_group(
         return main()
 
 
+def _handle_cluster_not_fully_connected(cluster: FalkorDBCluster):
+
+    # Check if cluster status is ready. If not, skip this function.
+    if not cluster.is_ready():
+        logging.info("Cluster is not ready")
+        return
+
+    # If:
+    # 1. the nodes that are not connected are all masters
+    # 2. they don't have slots assigned
+    # 3. and their index is > 6
+    # Then delete them
+    for node in cluster.nodes:
+        if (
+            not node.connected
+            and node.idx > 6
+            and node.is_master
+            and len(node.slots) == 0
+        ):
+            logging.info(f"Deleting master {node}")
+            cluster.delete_node(node.id)
+
+    return main()
+
+
 def main():
     cluster = FalkorDBCluster(
         host=NODE_0_HOST,
@@ -161,7 +186,7 @@ def main():
 
     if not cluster.is_connected():
         logging.info("Cluster is not fully connected")
-        return
+        return _handle_cluster_not_fully_connected(cluster)
 
     expected_shards = len(cluster) / (CLUSTER_REPLICAS + 1)
     if expected_shards % 1 != 0:

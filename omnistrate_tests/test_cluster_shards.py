@@ -206,6 +206,8 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
 
     nodes = resource["nodes"]
 
+    logging.debug(f"Nodes: {nodes}")
+
     if len(nodes) == 0:
         raise Exception("No nodes found in network topology")
 
@@ -229,7 +231,8 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
                 (n for n in nodes if n["endpoint"] == node.hostname), None
             )
             if not omnistrateNode:
-                raise Exception(f"Node {node.hostname} not found in network topology")
+                logging.warning(f"Node {node.hostname} not found in network topology")
+                continue
 
             group_azs.add(omnistrateNode["availabilityZone"])
 

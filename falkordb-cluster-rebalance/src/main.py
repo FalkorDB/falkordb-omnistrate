@@ -148,12 +148,6 @@ def _handle_slave_pointing_to_master_in_different_group(
 
 
 def _handle_cluster_not_fully_connected(cluster: FalkorDBCluster):
-
-    # Check if cluster status is ready. If not, skip this function.
-    if not cluster.is_ready():
-        logging.info("Cluster is not ready")
-        return
-
     # If:
     # 1. the nodes that are not connected are all masters
     # 2. they don't have slots assigned
@@ -184,7 +178,7 @@ def main():
         logging.info("Not enough hosts to rebalance")
         return
 
-    if not cluster.is_connected():
+    if not cluster.is_connected() and not cluster.is_ready():
         logging.info("Cluster is not fully connected")
         return _handle_cluster_not_fully_connected(cluster)
 

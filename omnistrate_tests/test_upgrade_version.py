@@ -12,6 +12,9 @@ from contextlib import suppress
 with suppress(ValueError):
     sys.path.remove(str(parent))
 
+import logging
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
+
 import time
 import os
 from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
@@ -76,7 +79,7 @@ def test_upgrade_version():
         args.service_id, product_tier.service_model_id
     )
 
-    print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
+    logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     # 1. List product tier versions
     tiers = omnistrate.list_tier_versions(
@@ -96,8 +99,8 @@ def test_upgrade_version():
     if last_tier is None:
         raise ValueError("No last tier found")
 
-    print(f"Preferred tier: {preferred_tier.version}")
-    print(f"Last tier: {last_tier.version}")
+    logging.info(f"Preferred tier: {preferred_tier.version}")
+    logging.info(f"Last tier: {last_tier.version}")
 
     # 2. Create omnistrate instance with previous version
     instance = omnistrate.instance(
@@ -145,19 +148,19 @@ def test_upgrade_version():
             wait_until_ready=True,
         )
 
-        print(f"Upgrade time: {(time.time() - upgrade_timer):.2f}s")
+        logging.info(f"Upgrade time: {(time.time() - upgrade_timer):.2f}s")
 
         # 6. Verify the upgrade was successful
         query_data(instance)
     except Exception as e:
-        print("Error " + str(e))
+        logging.exception(e)
         instance.delete(True)
         raise e
 
     # 7. Delete the instance
     instance.delete(True)
 
-    print("Upgrade version test passed")
+    logging.info("Upgrade version test passed")
 
 
 def add_data(instance: OmnistrateFleetInstance):

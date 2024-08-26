@@ -12,6 +12,10 @@ from contextlib import suppress
 with suppress(ValueError):
     sys.path.remove(str(parent))
 
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
+
 import time
 import os
 from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
@@ -32,8 +36,6 @@ parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
 parser.add_argument("--resource-key", required=True)
-parser.add_argument("--replica-id", required=True)
-
 
 parser.add_argument("--instance-name", required=True)
 parser.add_argument("--instance-description", required=False, default="test-standalone")
@@ -52,11 +54,16 @@ args = parser.parse_args()
 
 instance: OmnistrateFleetInstance = None
 
+current_host_count = int(args.host_count)
+
+
 # Intercept exit signals so we can delete the instance before exiting
 def signal_handler(sig, frame):
     if instance:
         instance.delete(False)
     sys.exit(0)
+
+
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
@@ -79,7 +86,7 @@ def test_cluster_shards():
         args.service_id, product_tier.service_model_id
     )
 
-    print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
+    logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     instance = omnistrate.instance(
         service_id=args.service_id,
@@ -126,24 +133,49 @@ def test_cluster_shards():
 
         change_host_count(instance, int(args.host_count))
 
+        if args.ensure_mz_distribution:
+            test_ensure_mz_distribution(instance)
+
         check_data(instance)
     except Exception as e:
+        logging.exception(e)
         instance.delete(True)
         raise e
 
     # Delete instance
     instance.delete(True)
 
-    print("Test passed")
+    logging.info("Test passed")
 
 
 def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):
+    global current_host_count
 
-    print(f"Changing host count to {new_host_count}")
+    logging.info(f"Changing host count to {new_host_count}")
     instance.update_params(
         hostCount=new_host_count,
         wait_for_ready=True,
     )
+    current_host_count = new_host_count
+
+    instance_details = instance.get_instance_details()
+
+    params = (
+        instance_details["result_params"]
+        if "result_params" in instance_details
+        else None
+    )
+
+    if not params:
+        raise Exception("No result_params found in instance details")
+
+    host_count = int(params["hostCount"]) if "hostCount" in params else None
+
+    if not host_count:
+        raise Exception("No hostCount found in instance details")
+
+    if host_count != current_host_count:
+        raise Exception("Host count does not match new host count")
 
 
 def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
@@ -160,11 +192,6 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
 
     if not params:
         raise Exception("No result_params found in instance details")
-
-    host_count = int(params["hostCount"]) if "hostCount" in params else None
-
-    if not host_count:
-        raise Exception("No hostCount found in instance details")
 
     cluster_replicas = (
         int(params["clusterReplicas"]) if "clusterReplicas" in params else None
@@ -185,7 +212,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
     if len(nodes) == 0:
         raise Exception("No nodes found in network topology")
 
-    if len(nodes) != host_count:
+    if len(nodes) != current_host_count:
         raise Exception("Host count does not match number of nodes")
 
     cluster = FalkorDBCluster(
@@ -214,9 +241,11 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
                 "Group is not distributed across multiple availability zones"
             )
 
-        print(f"Group {group} is distributed across availability zones {group_azs}")
+        logging.info(
+            f"Group {group} is distributed across availability zones {group_azs}"
+        )
 
-    print("Shards are distributed across multiple availability zones")
+    logging.info("Shards are distributed across multiple availability zones")
 
 
 def add_data(instance: OmnistrateFleetInstance):

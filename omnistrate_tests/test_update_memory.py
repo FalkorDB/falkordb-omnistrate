@@ -12,6 +12,9 @@ from contextlib import suppress
 with suppress(ValueError):
     sys.path.remove(str(parent))
 
+import logging
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
+
 import time
 import os
 from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
@@ -78,7 +81,7 @@ def test_update_memory():
         args.service_id, product_tier.service_model_id
     )
 
-    print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
+    logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     instance = omnistrate.instance(
         service_id=args.service_id,
@@ -122,13 +125,14 @@ def test_update_memory():
         query_data(instance)
 
     except Exception as e:
+        logging.exception(e)
         instance.delete(True)
         raise e
 
     # Delete instance
     instance.delete(True)
 
-    print("Update memory size test passed")
+    logging.info("Update memory size test passed")
 
 
 def add_data(instance: OmnistrateFleetInstance):

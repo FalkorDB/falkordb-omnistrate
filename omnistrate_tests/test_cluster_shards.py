@@ -83,7 +83,7 @@ def test_cluster_shards():
 
     instance = omnistrate.instance(
         service_id=args.service_id,
-        service_provider_id=service.service_provider_id,
+        service_provider_id="sp-JvkxkPhinN",
         service_key=service.key,
         service_environment_id=args.environment_id,
         service_environment_key=service.get_environment(args.environment_id).key,
@@ -143,7 +143,7 @@ def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):
 
     print(f"Changing host count to {new_host_count}")
     instance.update_params(
-        hostCount=f"{new_host_count}",
+        hostCount=new_host_count,
         wait_for_ready=True,
     )
 

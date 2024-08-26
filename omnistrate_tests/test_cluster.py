@@ -92,6 +92,7 @@ def test_cluster():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
+        deployment_create_timeout_seconds=2400
     )
 
     try:
@@ -118,6 +119,10 @@ def test_cluster():
         # Test failover and data loss
         test_failover(instance)
 
+        if 'cluster' in args.resource_key:
+            print("Testing zero downtime....")
+            test_zero_downtime(instance)
+    
         # Test stop and start instance
         test_stop_start(instance)
     except Exception as e:
@@ -266,6 +271,45 @@ def test_stop_start(instance: OmnistrateFleetInstance):
 
     print("Instance started")
 
+def test_zero_downtime(instance: OmnistrateFleetInstance):
+    """This function should test the ability to read and write while a failover is happening"""
 
+    id_key = "mz" if 'Multi' in args.resource_key else "sz"
+    # Get instance host and port
+    db = instance.create_connection(
+        ssl=args.tls,
+    )
+
+    graph = db.select_graph("test")
+
+    # Write some data to the DB
+    graph.query("CREATE (n:Person {name: 'Alice'})")
+
+    # Trigger failover
+    instance.trigger_failover(
+        replica_id=f"cluster-{id_key}-0",
+        wait_for_ready=False,
+    )
+    count = 0
+    time_out = time.time() + 1200
+
+    while True:
+        status = instance.get_instance_details()['status']
+
+        if time.time() > time_out:
+            raise Exception(f"Timeout occured after the instance state was in the {status} status for 20 minutes")
+        
+        if status == "DEPLOYING":
+            graph.query(f"CREATE (n:Person {{name: 'Alice{str(count)}'}})")
+            result = graph.query(f"MATCH (n:Person {{name: 'Alice{str(count)}'}}) RETURN n")
+            if len(result.result_set) == 0:
+                raise Exception("Data lost after failover")
+        else:
+            break
+        count += 1
+
+    print("Data persisted after failover")
+
+    graph.delete()
 if __name__ == "__main__":
     test_cluster()

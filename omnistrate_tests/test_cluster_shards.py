@@ -293,6 +293,6 @@ def test_zero_downtime(instance: OmnistrateFleetInstance):
 
     print("Data persisted after failover")
 
-    graph.delete()
+
 if __name__ == "__main__":
     test_cluster_shards()

@@ -29,6 +29,12 @@ x-omnistrate-load-balancer:
           ingressPort: 26379
           backendPort: 26379
 
+x-internal-integrations:
+  logs:
+    provider: native
+  metrics:
+    provider: native
+
 x-redisMetrics: &metrics
   prometheusEndpoint: "http://localhost:9121/metrics"
   metrics:
@@ -210,10 +216,6 @@ x-omnistrate-integrations:
         cluster-mz:
           <<: *metrics
 
-
-
-
-
 x-rebalanceparam: &rebalanceparam
   x-omnistrate-api-params:
     - key: clusterReplicas
@@ -234,7 +236,6 @@ x-rebalanceparam: &rebalanceparam
       required: true
       export: true
       defaultValue: "false"
-
 
 x-clusterparam: &clusterparam
   x-omnistrate-api-params:
@@ -316,7 +317,6 @@ x-clusterparam: &clusterparam
       options:
         - "everysec"
         - "always"
-
 
 services:
   # Standalone

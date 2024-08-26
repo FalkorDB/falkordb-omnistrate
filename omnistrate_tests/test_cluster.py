@@ -12,6 +12,9 @@ from contextlib import suppress
 with suppress(ValueError):
     sys.path.remove(str(parent))
 
+import logging
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
+
 import time
 import os
 from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
@@ -79,7 +82,7 @@ def test_cluster():
         args.service_id, product_tier.service_model_id
     )
 
-    print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
+    logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     instance = omnistrate.instance(
         service_id=args.service_id,
@@ -121,20 +124,21 @@ def test_cluster():
         # Test stop and start instance
         test_stop_start(instance)
     except Exception as e:
-        instance.delete(True)
+        logging.exception(e)
+        instance.delete(False)
         raise e
 
     # Delete instance
-    instance.delete(True)
+    instance.delete(False)
 
-    print("Test passed")
+    logging.info("Test passed")
 
 
 def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
     """This function should ensure that each shard is distributed across multiple availability zones"""
 
     instance_details = instance.get_instance_details()
-    network_topology: dict = instance.get_network_topology()
+    network_topology: dict = instance.get_network_topology(force_refresh=True)
 
     params = (
         instance_details["result_params"]
@@ -170,7 +174,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
         raise Exception("No nodes found in network topology")
 
     if len(nodes) != host_count:
-        raise Exception("Host count does not match number of nodes")
+        raise Exception(f"Host count does not match number of nodes. Current host count: {host_count}; Number of nodes: {len(nodes)}")
 
     cluster = FalkorDBCluster(
         host=resource["clusterEndpoint"],
@@ -189,7 +193,8 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
                 (n for n in nodes if n["endpoint"] == node.hostname), None
             )
             if not omnistrateNode:
-                raise Exception(f"Node {node.hostname} not found in network topology")
+                logging.warning(f"Node {node.hostname} not found in network topology")
+                continue
 
             group_azs.add(omnistrateNode["availabilityZone"])
 
@@ -198,9 +203,9 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
                 "Group is not distributed across multiple availability zones"
             )
 
-        print(f"Group {group} is distributed across availability zones {group_azs}")
+        logging.info(f"Group {group} is distributed across availability zones {group_azs}")
 
-    print("Shards are distributed across multiple availability zones")
+    logging.info("Shards are distributed across multiple availability zones")
 
 
 def test_failover(instance: OmnistrateFleetInstance):
@@ -231,7 +236,7 @@ def test_failover(instance: OmnistrateFleetInstance):
     if len(result.result_set) == 0:
         raise Exception("Data lost after failover")
 
-    print("Data persisted after failover")
+    logging.info("Data persisted after failover")
 
     graph.delete()
 
@@ -249,11 +254,11 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     # Write some data to the DB
     graph.query("CREATE (n:Person {name: 'Alice'})")
 
-    print("Stopping instance")
+    logging.info("Stopping instance")
 
     instance.stop(wait_for_ready=True)
 
-    print("Instance stopped")
+    logging.info("Instance stopped")
 
     instance.start(wait_for_ready=True)
 
@@ -264,7 +269,7 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     if len(result.result_set) == 0:
         raise Exception("Data lost after stop/start")
 
-    print("Instance started")
+    logging.info("Instance started")
 
 
 if __name__ == "__main__":

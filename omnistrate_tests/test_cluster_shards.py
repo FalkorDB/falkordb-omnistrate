@@ -141,7 +141,7 @@ def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):
 
     print(f"Changing host count to {new_host_count}")
     instance.update_params(
-        hostCount=f"{new_host_count}",
+        hostCount=new_host_count,
         wait_for_ready=True,
     )
 

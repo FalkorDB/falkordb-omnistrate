@@ -160,7 +160,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
     count = 0
     while count <= 5 :
         client.execute_command('SENTINEL FAILOVER master')
-        time.sleep(2)
+        time.sleep(5)
         master = client.execute_command('SENTINEL MASTER master')[3]
         if master.startswith(f"node-{id_key}-2"):
             break

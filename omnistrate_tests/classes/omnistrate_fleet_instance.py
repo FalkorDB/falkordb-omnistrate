@@ -1,6 +1,10 @@
 from falkordb import FalkorDB
 import json
 import os
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
+
 import time
 import random
 import string
@@ -114,7 +118,7 @@ class OmnistrateFleetInstance:
             "productTierVersion": product_tier_version,
         }
 
-        print(f"Creating instance {name}")
+        logging.info(f"Creating instance {name}")
 
         response = self._fleet_api.client().post(
             f"{self._fleet_api.base_url}/fleet/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}?subscriptionId={self.subscription_id}",
@@ -126,7 +130,7 @@ class OmnistrateFleetInstance:
 
         self.instance_id = response.json()["id"]
 
-        print(f"Instance {name} created: {self.instance_id}")
+        logging.info(f"Instance {name} created: {self.instance_id}")
 
         if not wait_for_ready:
             return
@@ -150,13 +154,13 @@ class OmnistrateFleetInstance:
 
             status = self.get_instance_details()["status"]
             if status == requested_status:
-                print(f"Instance is {requested_status}")
+                logging.info(f"Instance is {requested_status}")
                 break
             elif status == "FAILED":
-                print("Instance is in error state")
+                logging.info("Instance is in error state")
                 raise Exception("Instance is in error state")
             else:
-                print("Instance is in " + status + " state")
+                logging.info("Instance is in " + status + " state")
                 time.sleep(5)
 
     def get_instance_details(self, retries=5):
@@ -231,7 +235,7 @@ class OmnistrateFleetInstance:
             if e.args[0] == "Timeout":
                 raise Exception(f"Failed to delete instance {self.instance_id}")
 
-    def stop(self, wait_for_ready: bool, retry=5):
+    def stop(self, wait_for_ready: bool, retry=10):
         """Stop the instance. Optionally wait for the instance to be ready."""
 
         response = self._fleet_api.client().post(
@@ -241,7 +245,7 @@ class OmnistrateFleetInstance:
         )
 
         if "another operation is already in progress" in response.text and retry > 0:
-            time.sleep(60)
+            time.sleep(90)
             return self.stop(wait_for_ready, retry - 1)
 
         self._fleet_api.handle_response(
@@ -256,7 +260,7 @@ class OmnistrateFleetInstance:
             timeout_seconds=self.deployment_failover_timeout_seconds,
         )
 
-    def start(self, wait_for_ready: bool, retry=5):
+    def start(self, wait_for_ready: bool, retry=10):
         """Start the instance. Optionally wait for the instance to be ready."""
 
         response = self._fleet_api.client().post(
@@ -266,7 +270,7 @@ class OmnistrateFleetInstance:
         )
 
         if "another operation is already in progress" in response.text and retry > 0:
-            time.sleep(60)
+            time.sleep(90)
             return self.start(wait_for_ready, retry - 1)
 
         self._fleet_api.handle_response(
@@ -281,10 +285,10 @@ class OmnistrateFleetInstance:
         )
 
     def trigger_failover(
-        self, replica_id: str, wait_for_ready: bool, resource_id: str = None, retry=5
+        self, replica_id: str, wait_for_ready: bool, resource_id: str = None, retry=10
     ):
         """Trigger failover for the instance. Optionally wait for the instance to be ready."""
-        print(f"Triggering failover for instance {self.instance_id}")
+        logging.info(f"Triggering failover for instance {self.instance_id}")
 
         data = {
             "failedReplicaID": replica_id,
@@ -299,7 +303,7 @@ class OmnistrateFleetInstance:
         )
 
         if "another operation is already in progress" in response.text and retry > 0:
-            time.sleep(60)
+            time.sleep(90)
             return self.trigger_failover(
                 replica_id, wait_for_ready, resource_id, retry - 1
             )
@@ -326,7 +330,7 @@ class OmnistrateFleetInstance:
 
         return self.update_params(wait_until_ready, retry, **data)
 
-    def update_params(self, wait_until_ready: bool = True, retry=5, **kwargs):
+    def update_params(self, wait_until_ready: bool = True, retry=10, **kwargs):
         """Update the instance parameters."""
 
         self.wait_for_instance_status()
@@ -338,13 +342,9 @@ class OmnistrateFleetInstance:
             data=json.dumps(data),
             timeout=15,
         )
-                
-        if "another operation is already in progress" in str(response.text):
-            if retry == 0:
-                raise Exception(
-                    f"Failed to update instance type {self.instance_id} after {retry} retries"
-                )
-            time.sleep(60)
+
+        if "another operation is already in progress" in response.text and retry > 0:
+            time.sleep(90)
             return self.update_params(wait_until_ready, retry - 1, **kwargs)
 
         self._fleet_api.handle_response(
@@ -408,11 +408,11 @@ class OmnistrateFleetInstance:
             status = response.json()["status"]
 
             if status == "IN_PROGRESS":
-                print("Upgrade in progress")
+                logging.info("Upgrade in progress")
                 time.sleep(10)
-                print("Waiting for instance to be ready")
+                logging.info("Waiting for instance to be ready")
             elif status == "COMPLETE":
-                print("Upgrade completed")
+                logging.info("Upgrade completed")
                 break
             else:
                 raise Exception(f"Upgrade failed: {status}")
@@ -483,7 +483,9 @@ class OmnistrateFleetInstance:
         # Connect to the master node
         while retries > 0:
             try:
-                print(f"Connecting to {endpoint['endpoint']}:{endpoint['ports'][0]}")
+                logging.info(
+                    f"Connecting to {endpoint['endpoint']}:{endpoint['ports'][0]}"
+                )
                 self._connection = FalkorDB(
                     host=endpoint["endpoint"],
                     port=endpoint["ports"][0],
@@ -493,7 +495,7 @@ class OmnistrateFleetInstance:
                 )
                 break
             except Exception as e:
-                print(f"Failed to connect to the master node: {e}")
+                logging.error(f"Failed to connect to the master node: {e}")
                 retries -= 1
                 time.sleep(60)
 
@@ -507,7 +509,7 @@ class OmnistrateFleetInstance:
 
         db = self.create_connection()
 
-        print("Generating data")
+        logging.info("Generating data")
         for i in range(0, graph_count):
 
             name = rand_string()
@@ -520,4 +522,4 @@ class OmnistrateFleetInstance:
                     CREATE (a:L {v:x})-[:R]->(b:X {v: tostring(x)}), (a)-[:Z]->(:Y {v:tostring(x)})""",
                 {"node_count": node_count},
             )
-        print("Data generated")
+        logging.info("Data generated")

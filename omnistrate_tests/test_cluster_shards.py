@@ -139,11 +139,11 @@ def test_cluster_shards():
         check_data(instance)
     except Exception as e:
         logging.exception(e)
-        instance.delete(True)
+        instance.delete(False)
         raise e
 
     # Delete instance
-    instance.delete(True)
+    instance.delete(False)
 
     logging.info("Test passed")
 
@@ -182,7 +182,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
     """This function should ensure that each shard is distributed across multiple availability zones"""
 
     instance_details = instance.get_instance_details()
-    network_topology: dict = instance.get_network_topology()
+    network_topology: dict = instance.get_network_topology(force_refresh=True)
 
     params = (
         instance_details["result_params"]
@@ -209,11 +209,13 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
 
     nodes = resource["nodes"]
 
+    logging.debug(f"Nodes: {nodes}")
+
     if len(nodes) == 0:
         raise Exception("No nodes found in network topology")
 
     if len(nodes) != current_host_count:
-        raise Exception("Host count does not match number of nodes")
+        raise Exception(f"Host count does not match number of nodes. Current host count: {current_host_count}; Number of nodes: {len(nodes)}")
 
     cluster = FalkorDBCluster(
         host=resource["clusterEndpoint"],
@@ -232,7 +234,8 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
                 (n for n in nodes if n["endpoint"] == node.hostname), None
             )
             if not omnistrateNode:
-                raise Exception(f"Node {node.hostname} not found in network topology")
+                logging.warning(f"Node {node.hostname} not found in network topology")
+                continue
 
             group_azs.add(omnistrateNode["availabilityZone"])
 

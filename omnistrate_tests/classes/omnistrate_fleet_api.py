@@ -11,6 +11,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
+
 class OmnistrateFleetAPI:
 
     base_url = "https://api.omnistrate.cloud/2022-09-01-00"
@@ -134,10 +135,15 @@ class OmnistrateFleetAPI:
         deployment_create_timeout_seconds: int = None,
         deployment_delete_timeout_seconds: int = None,
         deployment_failover_timeout_seconds: int = None,
+        deployment_update_timeout_seconds: int = None,
     ):
         return (
             omnistrate_tests.classes.omnistrate_fleet_instance.OmnistrateFleetInstance(
                 self,
+                deployment_create_timeout_seconds,
+                deployment_delete_timeout_seconds,
+                deployment_failover_timeout_seconds,
+                deployment_update_timeout_seconds,
                 service_id,
                 service_provider_id,
                 service_key,
@@ -148,8 +154,5 @@ class OmnistrateFleetAPI:
                 product_tier_key,
                 resource_key,
                 subscription_id,
-                deployment_create_timeout_seconds,
-                deployment_delete_timeout_seconds,
-                deployment_failover_timeout_seconds,
             )
         )

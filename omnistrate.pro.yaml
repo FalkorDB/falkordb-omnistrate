@@ -29,6 +29,12 @@ x-omnistrate-load-balancer:
           ingressPort: 26379
           backendPort: 26379
 
+x-internal-integrations:
+  logs:
+    provider: native
+  metrics:
+    provider: native
+
 x-redisMetrics: &metrics
   prometheusEndpoint: "http://localhost:9121/metrics"
   metrics:
@@ -126,7 +132,7 @@ x-redisMetrics: &metrics
       "Latest Fork Time (Seconds)":
         aggregationFunction: sum
     redis_loading_dump_file:
-      "Loading Fump File":
+      "Loading Dump File":
         aggregationFunction: sum
     redis_master_repl_offset:
       "Master Replication Offset":
@@ -210,10 +216,6 @@ x-omnistrate-integrations:
         cluster-mz:
           <<: *metrics
 
-
-
-
-
 x-rebalanceparam: &rebalanceparam
   x-omnistrate-api-params:
     - key: clusterReplicas
@@ -234,7 +236,6 @@ x-rebalanceparam: &rebalanceparam
       required: true
       export: true
       defaultValue: "false"
-
 
 x-clusterparam: &clusterparam
   x-omnistrate-api-params:
@@ -316,7 +317,6 @@ x-clusterparam: &clusterparam
       options:
         - "everysec"
         - "always"
-
 
 services:
   # Standalone
@@ -1519,10 +1519,10 @@ services:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
     secrets:
-    - source: adminpasspath
-      target: /run/secrets/adminpassword
-    - source: falkordbpasspath
-      target: /run/secrets/falkordbpassword
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1

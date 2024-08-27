@@ -123,7 +123,7 @@ def test_cluster():
         test_failover(instance)
 
         if 'cluster' in args.resource_key:
-            print("Testing zero downtime....")
+            logging.info("Testing zero downtime....")
             test_zero_downtime(instance)
     
         # Test stop and start instance

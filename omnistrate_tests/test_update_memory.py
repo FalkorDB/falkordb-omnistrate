@@ -121,7 +121,7 @@ def test_update_memory():
         instance.update_instance_type(args.new_instance_type, wait_until_ready=True)
 
         if 'cluster' in args.resource_key:
-            print("Testing zero downtime....")
+            logging.info("Testing zero downtime....")
             test_zero_downtime(instance)
         
         query_data(instance)

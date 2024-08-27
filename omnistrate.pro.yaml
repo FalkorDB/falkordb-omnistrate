@@ -1050,6 +1050,7 @@ services:
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
       - BROWSER=0
+      - DEBUG=1
       - SENTINEL_HOST=$sentinel-sz.sys.network.externalClusterEndpoint
       - SENTINEL_PORT=26379
       - MASTER_NAME=master
@@ -1123,6 +1124,7 @@ services:
       - RUN_NODE=0
       - RUN_SENTINEL=1
       - RUN_METRICS=0
+      - DEBUG=1
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - DATA_DIR=/data
@@ -1529,6 +1531,7 @@ services:
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
       - BROWSER=0
+      - DEBUG=1
       - IS_MULTI_ZONE=1
       - SENTINEL_HOST=$sentinel-mz.sys.network.externalClusterEndpoint
       - SENTINEL_PORT=26379
@@ -1602,6 +1605,7 @@ services:
       - RUN_NODE=0
       - RUN_SENTINEL=1
       - RUN_METRICS=0
+      - DEBUG=1
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - DATA_DIR=/data

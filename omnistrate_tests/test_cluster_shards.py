@@ -130,7 +130,7 @@ def test_cluster_shards():
         check_data(instance)
 
         if 'cluster' in args.resource_key:
-            print("Testing zero downtime....")
+            logging.info("Testing zero downtime....")
             test_zero_downtime(instance)
 
         change_host_count(instance, int(args.host_count))

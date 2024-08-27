@@ -475,7 +475,7 @@ fi
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
-  export REDIS_EXPORTER_DEBUG=$(if [[ $DEBUG -eq 1 ]]; then echo "true"; else echo "false";)
+  export REDIS_EXPORTER_DEBUG=$(if [[ $DEBUG -eq 1 ]]; then echo "true"; else echo "false"; fi)
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -tls-server-min-version TLS1.3 &
   redis_exporter_pid=$!

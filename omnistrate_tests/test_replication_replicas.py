@@ -12,6 +12,7 @@ from contextlib import suppress
 with suppress(ValueError):
     sys.path.remove(str(parent))
 
+import logging
 import time
 import os
 from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
@@ -76,7 +77,7 @@ def test_add_remove_replica():
         args.service_id, product_tier.service_model_id
     )
 
-    print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
+    logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     instance = omnistrate.instance(
         service_id=args.service_id,
@@ -110,36 +111,40 @@ def test_add_remove_replica():
             AOFPersistenceConfig=args.aof_config,
         )
 
-        print('The code will now run the add_data function')
+        logging.info('The code will now run the add_data function')
         add_data(instance)
 
-        print('The code will now run check_data function')
+        logging.info('The code will now run check_data function')
         check_data(instance)
-        print('The code will now run change_replica_count function')
+
+        logging.info('The code will now run change_replica_count function')
+
         change_replica_count(instance, int(args.replica_count) + 2)
-        print('The code will now run test_fail_over function')
+
+        logging.info('The code will now run test_fail_over function')
         test_fail_over(instance)
 
     except Exception as e:
-        instance.delete(True)
+        logging.exception(e)
+        instance.delete(False)
         raise e
 
     # Delete instance
     instance.delete(True)
 
-    print("Test passed")
+    logging.info("Test passed")
 
 
 def change_replica_count(instance: OmnistrateFleetInstance, new_replica_count: int):
 
-    print(f"Changing replica count to {new_replica_count}")
+    logging.info(f"Changing replica count to {new_replica_count}")
     instance.update_params(
         numReplicas=new_replica_count,
         wait_for_ready=True,
     )
 
 def test_fail_over(instance: OmnistrateFleetInstance):
-    print("Testing failover to the newly created replica")
+    logging.info("Testing failover to the newly created replica")
 
     endpoint = instance.get_cluster_endpoint()
 
@@ -154,7 +159,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
         ssl=args.tls,
         )
     except Exception as e:
-        print("Failed to connect to Sentinel!")
+        logging.exception("Failed to connect to Sentinel!")
         print(e)
 
     count = 0
@@ -177,7 +182,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
     
 def add_data(instance: OmnistrateFleetInstance):
     """This function should retrieve the instance host and port for connection, write some data to the DB, then check that the data is there"""
-    print('Added data ....')
+    logging.info('Added data ....')
     # Get instance host and port
     db = instance.create_connection(
         ssl=args.tls,

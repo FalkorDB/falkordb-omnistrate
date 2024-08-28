@@ -10,7 +10,7 @@ import random
 import string
 from requests import exceptions
 import omnistrate_tests.classes.omnistrate_fleet_api
-import curlify
+
 
 def rand_range(a, b):
     return random.randint(a, b)

@@ -33,7 +33,7 @@ class OmnistrateFleetAPI:
 
         url = self.base_url + "/signin"
         response = requests.post(
-            url, json={"email": self._email, "password": self._password}, timeout=10
+            url, json={"email": self._email, "password": self._password}, timeout=60
         )
         self.handle_response(response, "Failed to get token")
 
@@ -58,7 +58,7 @@ class OmnistrateFleetAPI:
 
         response = self.client().get(
             f"{self.base_url}/service",
-            timeout=15,
+            timeout=60,
         )
 
         self.handle_response(response, "Failed to get service")
@@ -74,7 +74,7 @@ class OmnistrateFleetAPI:
 
         response = self.client().get(
             f"{self.base_url}/service/{service_id}/model/{service_model_id}",
-            timeout=15,
+            timeout=60,
         )
 
         self.handle_response(response, "Failed to get service model")
@@ -88,7 +88,7 @@ class OmnistrateFleetAPI:
 
         response = self.client().get(
             f"{self.base_url}/service/{service_id}/environment/{environment_id}/service-plan",
-            timeout=15,
+            timeout=60,
         )
 
         self.handle_response(response, "Failed to get product tier ID")
@@ -111,7 +111,7 @@ class OmnistrateFleetAPI:
 
         response = self.client().get(
             f"{self.base_url}/service/{service_id}/productTier/{tier_id}/version-set",
-            timeout=15,
+            timeout=60,
         )
 
         self.handle_response(response, "Failed to list tier versions")

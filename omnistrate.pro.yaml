@@ -262,7 +262,7 @@ x-clusterparam: &clusterparam
       description: The size of the node instance. Check the documentation for more information.
       name: Node Instance Type
       type: String
-      modifiable: false
+      modifiable: true
       required: true
       export: true
       defaultValue: e2-custom-4-8192
@@ -345,7 +345,7 @@ services:
         description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
-        modifiable: false
+        modifiable: true
         required: true
         export: true
         defaultValue: e2-custom-4-8192
@@ -516,7 +516,7 @@ services:
         description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
-        modifiable: false
+        modifiable: true
         required: true
         export: true
         defaultValue: e2-custom-4-8192
@@ -709,7 +709,7 @@ services:
         description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
-        modifiable: false
+        modifiable: true
         required: true
         export: true
         defaultValue: e2-custom-4-8192
@@ -893,7 +893,7 @@ services:
         description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
-        modifiable: false
+        modifiable: true
         required: true
         export: true
         defaultValue: e2-custom-4-8192
@@ -1190,7 +1190,7 @@ services:
         description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
-        modifiable: false
+        modifiable: true
         required: true
         export: true
         defaultValue: e2-custom-4-8192
@@ -1374,7 +1374,7 @@ services:
         description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
-        modifiable: false
+        modifiable: true
         required: true
         export: true
         defaultValue: e2-custom-4-8192
@@ -1669,7 +1669,7 @@ services:
         description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
-        modifiable: false
+        modifiable: true
         required: true
         export: true
         defaultValue: e2-custom-4-8192
@@ -1897,7 +1897,7 @@ services:
         description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
-        modifiable: false
+        modifiable: true
         required: true
         export: true
         defaultValue: e2-custom-4-8192

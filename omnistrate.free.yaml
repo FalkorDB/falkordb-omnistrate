@@ -1,20 +1,25 @@
 version: "3.9"
 
 x-omnistrate-service-plan:
-  name: 'FalkorDB Free'
-  tenancyType: 'OMNISTRATE_DEDICATED_TENANCY'
+  name: "FalkorDB Free"
+  tenancyType: "OMNISTRATE_MULTI_TENANCY"
   deployment:
     hostedDeployment:
-      GcpProjectId: '$GcpProjectId'
-      GcpProjectNumber: '$GcpProjectNumber'   
-      GcpServiceAccountEmail: '$GcpServiceAccountEmail'
+      GcpProjectId: "$GcpProjectId"
+      GcpProjectNumber: "$GcpProjectNumber"
+      GcpServiceAccountEmail: "$GcpServiceAccountEmail"
+
+x-internal-integrations:
+  logs:
+    provider: native
+  metrics:
+    provider: native
 
 x-omnistrate-integrations:
+  - omnistrateMetrics:
 
 services:
-
-# Free
-
+  # Free
   Free:
     x-omnistrate-mode-internal: false
     image: omnistrate/noop
@@ -33,7 +38,7 @@ services:
         type: String
         modifiable: true
         required: false
-        defaultValue: The best graph database in the world
+        defaultValue: Description
         export: true
       # - key: enableTLS
       #   description: Whether to enable TLS for the database
@@ -58,7 +63,7 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
@@ -90,7 +95,7 @@ services:
         type: String
         modifiable: true
         required: false
-        defaultValue: The best graph database in the world
+        defaultValue: Description
         export: true
       - key: falkordbUser
         description: Choose a default username for your database
@@ -103,7 +108,7 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
@@ -123,6 +128,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
 
     environment:
       - RUN_NODE=1
@@ -136,19 +146,33 @@ services:
       # Disable TLS for free tier
       - TLS=false
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.sha256($sys.id, 'bWQeQF72jMFPr')
       - DATA_DIR=/data
       - INSTANCE_TYPE=e2-custom-small-1024
-      - SECURITY_CONTEXT_USER_ID=0
-      - SECURITY_CONTEXT_GROUP_ID=0
-      - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - FALKORDB_CACHE_SIZE=25
+      - FALKORDB_NODE_CREATION_BUFFER=16384
+      - FALKORDB_MAX_QUEUED_QUERIES=50
+      - FALKORDB_TIMEOUT_MAX=0
+      - FALKORDB_TIMEOUT_DEFAULT=0
+      - FALKORDB_RESULT_SET_SIZE=10000
+      - FALKORDB_QUERY_MEM_CAPACITY=52428800
     ports:
       - "6379:6379"
       # - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
-    x-omnistrate-actionhooks:
-      
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 100M
+        reservations:
+          cpus: "0.1"
+          memory: 100M
+
+secrets:
+  adminpasspath:
+    file: ./secrets/adminpassword
+  falkordbpasspath:
+    file: ./secrets/falkordbpassword

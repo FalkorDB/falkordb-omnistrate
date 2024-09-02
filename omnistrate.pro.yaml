@@ -29,68 +29,294 @@ x-omnistrate-load-balancer:
           ingressPort: 26379
           backendPort: 26379
 
+x-internal-integrations:
+  logs:
+    provider: native
+  metrics:
+    provider: native
+
+x-redisMetrics: &metrics
+  prometheusEndpoint: "http://localhost:9121/metrics"
+  metrics:
+    redis_blocked_clients:
+      "Blocked Clients":
+        aggregationFunction: sum
+    redis_cluster_connections:
+      "Cluster Connections":
+        aggregationFunction: sum
+    redis_commands_duration_seconds_total:
+      "Total Command Duration (Seconds)":
+        aggregationFunction: sum
+    redis_commands_failed_calls_total:
+      "Failed Command Calls":
+        aggregationFunction: sum
+    redis_commands_latencies_usec_bucket:
+      "Command Latency (μs) Bucket":
+        aggregationFunction: sum
+    redis_commands_latencies_usec_sum:
+      "Total Command Latency (μs)":
+        aggregationFunction: sum
+    redis_commands_latencies_usec_count:
+      "Command Latency Count (μs)":
+        aggregationFunction: sum
+    redis_commands_processed_total:
+      "Total Processed Commands":
+        aggregationFunction: sum
+    redis_commands_rejected_calls_total:
+      "Rejected Command Calls":
+        aggregationFunction: sum
+    redis_commands_total:
+      "Total Commands":
+        aggregationFunction: sum
+    redis_config_maxclients:
+      "Max Clients Configured":
+        aggregationFunction: sum
+    redis_config_maxmemory:
+      "Max Memory Configured":
+        aggregationFunction: sum
+    redis_connected_clients:
+      "Connected Clients":
+        aggregationFunction: sum
+    redis_connections_received_total:
+      "Total Connections Received":
+        aggregationFunction: sum
+    redis_cpu_sys_children_seconds_total:
+      "CPU Sys Children Time (Seconds)":
+        aggregationFunction: sum
+    redis_cpu_sys_main_thread_seconds_total:
+      "Total CPU Sys Main Thread Time (Seconds)":
+        aggregationFunction: sum
+    redis_cpu_sys_seconds_total:
+      "Total CPU Sys Time (Seconds)":
+        aggregationFunction: sum
+    redis_cpu_user_children_seconds_total:
+      "Total CPU User Children Time (Seconds)":
+        aggregationFunction: sum
+    redis_cpu_user_main_thread_seconds_total:
+      "Total CPU User Main Thread Time (Seconds)":
+        aggregationFunction: sum
+    redis_cpu_user_seconds_total:
+      "Total CPU User Time (Seconds)":
+        aggregationFunction: sum
+    redis_db_keys:
+      "Database Keys":
+        aggregationFunction: sum
+    redis_errors_total:
+      "Total Errors":
+        aggregationFunction: sum
+    redis_exporter_scrapes_total:
+      "Total Exporter Scrapes":
+        aggregationFunction: sum
+    redis_io_threads_active:
+      "Active I/O Threads":
+        aggregationFunction: sum
+    redis_keyspace_hits_total:
+      "Total Keyspace Hits":
+        aggregationFunction: sum
+    redis_keyspace_misses_total:
+      "Total Keyspaces Misses":
+        aggregationFunction: sum
+    redis_last_slow_execution_duration_seconds:
+      "Last Slow Execution Duration (Seconds)":
+        aggregationFunction: sum
+    redis_latency_percentiles_usec:
+      "Latency Percentiles (μs)":
+        aggregationFunction: sum
+    redis_latency_percentiles_usec_sum:
+      "Total Latency Percentiles (μs)":
+        aggregationFunction: sum
+    redis_latency_percentiles_usec_count:
+      "Latency Percentiles Count":
+        aggregationFunction: sum
+    redis_latest_fork_seconds:
+      "Latest Fork Time (Seconds)":
+        aggregationFunction: sum
+    redis_loading_dump_file:
+      "Loading Dump File":
+        aggregationFunction: sum
+    redis_master_repl_offset:
+      "Master Replication Offset":
+        aggregationFunction: sum
+    redis_mem_clients_normal:
+      "Memory Used By Normal Clients":
+        aggregationFunction: sum
+    redis_mem_clients_slaves:
+      "Memory Used By Slave Clients":
+        aggregationFunction: sum
+    redis_memory_max_bytes:
+      "Max Memory (Bytes)":
+        aggregationFunction: sum
+    redis_memory_used_bytes:
+      "Memory Used (Bytes)":
+        aggregationFunction: sum
+    redis_memory_used_dataset_bytes:
+      "Memory Used By Dataset (Bytes)":
+        aggregationFunction: sum
+    redis_rdb_bgsave_in_progress:
+      "RDB BGSAVE In Progress":
+        aggregationFunction: sum
+    redis_rdb_changes_since_last_save:
+      "Changes Since Last RDB Save":
+        aggregationFunction: sum
+    redis_rdb_current_bgsave_duration_sec:
+      "Current RDB BGSAVE Duration (Seconds)":
+        aggregationFunction: sum
+    redis_rdb_last_bgsave_duration_sec:
+      "Last RDB BGSAVE Duration (Seconds)":
+        aggregationFunction: sum
+    redis_rdb_last_bgsave_status:
+      "Last RDB BGSAVE Status":
+        aggregationFunction: sum
+    redis_rdb_last_cow_size_bytes:
+      "Last RDB Copy-On-Write Size (Bytes)":
+        aggregationFunction: sum
+    redis_rdb_last_load_loaded_keys:
+      "Last RDB Load: Loaded Keys":
+        aggregationFunction: sum
+    redis_rdb_last_save_timestamp_seconds:
+      "Last RDB Save Timestamp (Seconds)":
+        aggregationFunction: sum
+    redis_rdb_saves_total:
+      "Total RDB Saves":
+        aggregationFunction: sum
+    redis_rejected_connections_total:
+      "Total Rejected Connections":
+        aggregationFunction: sum
+    redis_slowlog_last_id:
+      "Slow Log Last ID":
+        aggregationFunction: sum
+    redis_slowlog_length:
+      "Slow Log Length":
+        aggregationFunction: sum
+    redis_start_time_seconds:
+      "Start Time (Seconds)":
+        aggregationFunction: sum
+    redis_unexpected_error_replies:
+      "Unexpected Error Replies":
+        aggregationFunction: sum
+    redis_up:
+      "Redis Up":
+        aggregationFunction: sum
+    redis_uptime_in_seconds:
+      "Uptime (Seconds)":
+        aggregationFunction: sum
+
 x-omnistrate-integrations:
+  - omnistrateLogging:
   - omnistrateMetrics:
       additionalMetrics:
-        node-s: 
-          prometheusEndpoint: "http://localhost:9121/metrics"
-          metrics:
-            redis_blocked_clients:
-            redis_cluster_connections:
-            redis_commands_duration_seconds_total:
-            redis_commands_failed_calls_total:
-            redis_commands_latencies_usec_bucket:
-            redis_commands_latencies_usec_sum:
-            redis_commands_latencies_usec_count:
-            redis_commands_processed_total:
-            redis_commands_rejected_calls_total:
-            redis_commands_total:
-            redis_config_maxclients:
-            redis_config_maxmemory:
-            redis_connected_clients:
-            redis_connections_received_total:
-            redis_cpu_sys_children_seconds_total:
-            redis_cpu_sys_main_thread_seconds_total:
-            redis_cpu_sys_seconds_total:
-            redis_cpu_user_children_seconds_total:
-            redis_cpu_user_main_thread_seconds_total:
-            redis_cpu_user_seconds_total:
-            redis_db_keys:
-            redis_errors_total:
-            redis_exporter_scrapes_total:
-            redis_io_threads_active:
-            redis_keyspace_hits_total:
-            redis_keyspace_misses_total:
-            redis_last_slow_execution_duration_seconds:
-            redis_latency_percentiles_usec:
-            redis_latency_percentiles_usec_sum:
-            redis_latency_percentiles_usec_count:
-            redis_latest_fork_seconds:
-            redis_loading_dump_file:
-            redis_master_repl_offset:
-            redis_mem_clients_normal:
-            redis_mem_clients_slaves:
-            redis_memory_max_bytes:
-            redis_memory_used_bytes:
-            redis_memory_used_dataset_bytes:
-            redis_rdb_bgsave_in_progress:
-            redis_rdb_changes_since_last_save:
-            redis_rdb_current_bgsave_duration_sec:
-            redis_rdb_last_bgsave_duration_sec:
-            redis_rdb_last_bgsave_status:
-            redis_rdb_last_cow_size_bytes:
-            redis_rdb_last_load_loaded_keys:
-            redis_rdb_last_save_timestamp_seconds:
-            redis_rdb_saves_total:
-            redis_rejected_connections_total:
-            redis_slowlog_last_id:
-            redis_slowlog_length:
-            redis_start_time_seconds:
-            redis_unexpected_error_replies:
-            redis_up:
-            redis_uptime_in_seconds:
+        node-s:
+          <<: *metrics
+        node-sz:
+          <<: *metrics
+        node-mz:
+          <<: *metrics
+        cluster-sz:
+          <<: *metrics
+        cluster-mz:
+          <<: *metrics
 
-        
+x-rebalanceparam: &rebalanceparam
+  x-omnistrate-api-params:
+    - key: clusterReplicas
+      description: The number of replicas per shard
+      name: Cluster Replicas
+      type: Float64
+      modifiable: true
+      required: true
+      export: true
+      defaultValue: "1"
+      min: 1
+      max: 3
+    - key: enableTLS
+      description: Whether to enable TLS for the database
+      name: Enable TLS
+      type: Boolean
+      modifiable: false
+      required: true
+      export: true
+      defaultValue: "false"
+
+x-clusterparam: &clusterparam
+  x-omnistrate-api-params:
+    - key: hostCount
+      description: The number of hosts in the cluster
+      name: Host Count
+      type: Float64
+      modifiable: true
+      required: true
+      export: true
+      defaultValue: "6"
+      min: 6
+    - key: clusterReplicas
+      description: The number of replicas per shard
+      name: Cluster Replicas
+      type: Float64
+      modifiable: true
+      required: true
+      export: true
+      defaultValue: "1"
+      min: 1
+      max: 3
+    - key: nodeInstanceType
+      description: The size of the node instance. Check the documentation for more information.
+      name: Node Instance Type
+      type: String
+      modifiable: true
+      required: true
+      export: true
+      defaultValue: e2-custom-4-8192
+      options:
+        - e2-custom-4-8192
+        - e2-custom-8-16384
+        - e2-custom-16-32768
+        - e2-custom-32-65536
+    - key: enableTLS
+      description: Whether to enable TLS for the database
+      name: Enable TLS
+      type: Boolean
+      modifiable: false
+      required: true
+      export: true
+      defaultValue: "false"
+    - key: falkordbUser
+      description: Choose a default username for your database
+      name: FalkorDB User
+      type: String
+      modifiable: false
+      required: true
+      export: true
+      defaultValue: "falkordb"
+    - key: falkordbPassword
+      description: Choose a default password for your database
+      name: FalkorDB Password
+      type: Password
+      modifiable: false
+      required: true
+      export: false
+    - key: RDBPersistenceConfig
+      description: How often to save the RDB file to disk. Check the documentation for more information.
+      name: RDB Persistence Config
+      type: String
+      modifiable: false
+      required: false
+      export: true
+      defaultValue: "low"
+      options:
+        - "low"
+        - "medium"
+        - "high"
+    - key: AOFPersistenceConfig
+      description: Whether to enable AOF persistence. Check the documentation for more information.
+      name: AOF Persistence Config
+      type: String
+      modifiable: false
+      required: false
+      export: true
+      defaultValue: "everysec"
+      options:
+        - "everysec"
+        - "always"
 
 services:
   # Standalone
@@ -113,21 +339,21 @@ services:
         type: String
         modifiable: true
         required: false
-        defaultValue: The best graph database in the world
+        defaultValue: Description
         export: true
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
-        modifiable: false
+        modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-10240
+        defaultValue: e2-custom-4-8192
         options:
-          - e2-custom-4-10240
-          - e2-custom-8-18432
-          - e2-custom-16-34816
-          - e2-custom-32-69632
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
         parameterDependencyMap:
           node-s: nodeInstanceType
       - key: enableTLS
@@ -153,45 +379,12 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
         parameterDependencyMap:
           node-s: falkordbPassword
-      - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
-        name: Disk Size (in Gi)
-        type: String
-        defaultValue: "30"
-        modifiable: false
-        required: true
-        export: true
-        options:
-          - "30"
-          - "40"
-          - "50"
-          - "60"
-          - "70"
-          - "80"
-          - "90"
-          - "100"
-          - "120"
-          - "140"
-          - "160"
-          - "180"
-          - "200"
-          - "220"
-          - "240"
-          - "260"
-          - "280"
-          - "300"
-          - "350"
-          - "400"
-          - "450"
-          - "500"
-        parameterDependencyMap:
-          node-s: storageSize
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -219,6 +412,90 @@ services:
           - "always"
         parameterDependencyMap:
           node-s: AOFPersistenceConfig
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        min: 0
+        max: 256
+        parameterDependencyMap:
+          node-s: falkorDBCacheSize
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        min: 256
+        max: 32768
+        parameterDependencyMap:
+          node-s: falkorDBNodeCreationBuffer
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        min: 0
+        max: 512
+        parameterDependencyMap:
+          node-s: falkorDBMaxQueuedQueries
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          node-s: falkorDBTimeoutMax
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          node-s: falkorDBTimeoutDefault
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        min: 0
+        max: 1000000
+        parameterDependencyMap:
+          node-s: falkorDBResultSetSize
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 2000000000
+        parameterDependencyMap:
+          node-s: falkorDBQueryMemCapacity
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -239,15 +516,15 @@ services:
         description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
-        modifiable: false
+        modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-10240
+        defaultValue: e2-custom-4-8192
         options:
-          - e2-custom-4-10240
-          - e2-custom-8-18432
-          - e2-custom-16-34816
-          - e2-custom-32-69632
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -267,41 +544,10 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
-      - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
-        name: Disk Size (in Gi)
-        type: String
-        defaultValue: "30"
-        modifiable: false
-        required: true
-        export: true
-        options:
-          - "30"
-          - "40"
-          - "50"
-          - "60"
-          - "70"
-          - "80"
-          - "90"
-          - "100"
-          - "120"
-          - "140"
-          - "160"
-          - "180"
-          - "200"
-          - "220"
-          - "240"
-          - "260"
-          - "280"
-          - "300"
-          - "350"
-          - "400"
-          - "450"
-          - "500"
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -325,6 +571,76 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        min: 0
+        max: 256
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        min: 256
+        max: 32768
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        min: 0
+        max: 512
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        min: 0
+        max: 1000000
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 2000000000
     volumes:
       - source: ./data
         target: /data
@@ -332,7 +648,12 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
-            instanceStorageSizeGiAPIParam: storageSize
+            instanceStorageSizeGi: 200
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=0
@@ -343,23 +664,24 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.sha256($sys.id, 'bWQeQF72jMFPr')
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
-      - SECURITY_CONTEXT_USER_ID=0
-      - SECURITY_CONTEXT_GROUP_ID=0
-      - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
+      - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
+      - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
+      - FALKORDB_TIMEOUT_MAX=$var.falkorDBTimeoutMax
+      - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
+      - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
+      - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
     ports:
       - "6379:6379"
     x-omnistrate-capabilities:
       enableMultiZone: false
-      enableEndpointPerReplica: true    
+      enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
-      
 
   # Single Zone
 
@@ -387,15 +709,15 @@ services:
         description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
-        modifiable: false
+        modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-10240
+        defaultValue: e2-custom-4-8192
         options:
-          - e2-custom-4-10240
-          - e2-custom-8-18432
-          - e2-custom-16-34816
-          - e2-custom-32-69632
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
         parameterDependencyMap:
           node-sz: nodeInstanceType
       - key: numReplicas
@@ -433,45 +755,12 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
         parameterDependencyMap:
           node-sz: falkordbPassword
-      - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
-        name: Disk Size (in Gi)
-        type: String
-        defaultValue: "30"
-        modifiable: false
-        required: true
-        export: true
-        options:
-          - "30"
-          - "40"
-          - "50"
-          - "60"
-          - "70"
-          - "80"
-          - "90"
-          - "100"
-          - "120"
-          - "140"
-          - "160"
-          - "180"
-          - "200"
-          - "220"
-          - "240"
-          - "260"
-          - "280"
-          - "300"
-          - "350"
-          - "400"
-          - "450"
-          - "500"
-        parameterDependencyMap:
-          node-sz: storageSize
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -499,6 +788,90 @@ services:
           - "always"
         parameterDependencyMap:
           node-sz: AOFPersistenceConfig
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        min: 0
+        max: 256
+        parameterDependencyMap:
+          node-sz: falkorDBCacheSize
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        min: 256
+        max: 32768
+        parameterDependencyMap:
+          node-sz: falkorDBNodeCreationBuffer
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        min: 0
+        max: 512
+        parameterDependencyMap:
+          node-sz: falkorDBMaxQueuedQueries
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          node-sz: falkorDBTimeoutMax
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          node-sz: falkorDBTimeoutDefault
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        min: 0
+        max: 1000000
+        parameterDependencyMap:
+          node-sz: falkorDBResultSetSize
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 2000000000
+        parameterDependencyMap:
+          node-sz: falkorDBQueryMemCapacity
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -519,15 +892,15 @@ services:
         description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
-        modifiable: false
+        modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-10240
+        defaultValue: e2-custom-4-8192
         options:
-          - e2-custom-4-10240
-          - e2-custom-8-18432
-          - e2-custom-16-34816
-          - e2-custom-32-69632
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -559,43 +932,12 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
         parameterDependencyMap:
           sentinel-sz: falkordbPassword
-      - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
-        name: Disk Size (in Gi)
-        type: String
-        defaultValue: "30"
-        modifiable: false
-        required: true
-        export: true
-        options:
-          - "30"
-          - "40"
-          - "50"
-          - "60"
-          - "70"
-          - "80"
-          - "90"
-          - "100"
-          - "120"
-          - "140"
-          - "160"
-          - "180"
-          - "200"
-          - "220"
-          - "240"
-          - "260"
-          - "280"
-          - "300"
-          - "350"
-          - "400"
-          - "450"
-          - "500"
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -619,6 +961,76 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        min: 0
+        max: 256
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        min: 256
+        max: 32768
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        min: 0
+        max: 512
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        min: 0
+        max: 1000000
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 2000000000
     volumes:
       - source: ./data
         target: /data
@@ -626,7 +1038,12 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
-            instanceStorageSizeGiAPIParam: storageSize
+            instanceStorageSizeGi: 200
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -640,16 +1057,18 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.sha256($sys.id, 'bWQeQF72jMFPr')
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
-      - SECURITY_CONTEXT_USER_ID=0
-      - SECURITY_CONTEXT_GROUP_ID=0
-      - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
+      - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
+      - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
+      - FALKORDB_TIMEOUT_MAX=$var.falkorDBTimeoutMax
+      - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
+      - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
+      - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -684,11 +1103,11 @@ services:
           # Trigger failover before master is removed
 
           role=$(redis-cli -p $NODE_PORT info replication | grep role | cut -d ':' -f 2)
-        
+
           if [ "$role" == "master" ]; then
               redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL failover $MASTER_NAME
-          fi 
-  
+          fi
+
     depends_on:
       - sentinel-sz
 
@@ -706,12 +1125,7 @@ services:
       - RUN_METRICS=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.sha256($sys.id, 'bWQeQF72jMFPr')
       - DATA_DIR=/data
-      - SECURITY_CONTEXT_USER_ID=0
-      - SECURITY_CONTEXT_GROUP_ID=0
-      - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
       - "26379:26379"
@@ -723,6 +1137,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -738,7 +1157,7 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
@@ -769,15 +1188,15 @@ services:
         description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
-        modifiable: false
+        modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-10240
+        defaultValue: e2-custom-4-8192
         options:
-          - e2-custom-4-10240
-          - e2-custom-8-18432
-          - e2-custom-16-34816
-          - e2-custom-32-69632
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
         parameterDependencyMap:
           node-mz: nodeInstanceType
       - key: numReplicas
@@ -815,45 +1234,12 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
         parameterDependencyMap:
           node-mz: falkordbPassword
-      - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
-        name: Disk Size (in Gi)
-        type: String
-        defaultValue: "30"
-        modifiable: false
-        required: true
-        export: true
-        options:
-          - "30"
-          - "40"
-          - "50"
-          - "60"
-          - "70"
-          - "80"
-          - "90"
-          - "100"
-          - "120"
-          - "140"
-          - "160"
-          - "180"
-          - "200"
-          - "220"
-          - "240"
-          - "260"
-          - "280"
-          - "300"
-          - "350"
-          - "400"
-          - "450"
-          - "500"
-        parameterDependencyMap:
-          node-mz: storageSize
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -881,6 +1267,90 @@ services:
           - "always"
         parameterDependencyMap:
           node-mz: AOFPersistenceConfig
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        min: 0
+        max: 256
+        parameterDependencyMap:
+          node-mz: falkorDBCacheSize
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        min: 256
+        max: 32768
+        parameterDependencyMap:
+          node-mz: falkorDBNodeCreationBuffer
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        min: 0
+        max: 512
+        parameterDependencyMap:
+          node-mz: falkorDBMaxQueuedQueries
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          node-mz: falkorDBTimeoutMax
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          node-mz: falkorDBTimeoutDefault
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        min: 0
+        max: 1000000
+        parameterDependencyMap:
+          node-mz: falkorDBResultSetSize
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 2000000000
+        parameterDependencyMap:
+          node-mz: falkorDBQueryMemCapacity
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -901,15 +1371,15 @@ services:
         description: The size of the node instance. Check the documentation for more information.
         name: Node Instance Type
         type: String
-        modifiable: false
+        modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-10240
+        defaultValue: e2-custom-4-8192
         options:
-          - e2-custom-4-10240
-          - e2-custom-8-18432
-          - e2-custom-16-34816
-          - e2-custom-32-69632
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -941,43 +1411,12 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
         parameterDependencyMap:
           sentinel-mz: falkordbPassword
-      - key: storageSize
-        description: Minimum 10Gi (10). Recommended to be at least 3x the size of the data set. Check the documentation for more information.
-        name: Disk Size (in Gi)
-        type: String
-        defaultValue: "30"
-        modifiable: false
-        required: true
-        export: true
-        options:
-          - "30"
-          - "40"
-          - "50"
-          - "60"
-          - "70"
-          - "80"
-          - "90"
-          - "100"
-          - "120"
-          - "140"
-          - "160"
-          - "180"
-          - "200"
-          - "220"
-          - "240"
-          - "260"
-          - "280"
-          - "300"
-          - "350"
-          - "400"
-          - "450"
-          - "500"
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -1001,6 +1440,76 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        min: 0
+        max: 256
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        min: 256
+        max: 32768
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        min: 0
+        max: 512
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 1000000
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 2000000000
     volumes:
       - source: ./data
         target: /data
@@ -1008,13 +1517,19 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
-            instanceStorageSizeGiAPIParam: storageSize
+            instanceStorageSizeGi: 200
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
       - BROWSER=0
+      - IS_MULTI_ZONE=1
       - SENTINEL_HOST=$sentinel-mz.sys.network.externalClusterEndpoint
       - SENTINEL_PORT=26379
       - MASTER_NAME=master
@@ -1022,16 +1537,18 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.sha256($sys.id, 'bWQeQF72jMFPr')
       - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
-      - SECURITY_CONTEXT_USER_ID=0
-      - SECURITY_CONTEXT_GROUP_ID=0
-      - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
+      - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
+      - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
+      - FALKORDB_TIMEOUT_MAX=$var.falkorDBTimeoutMax
+      - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
+      - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
+      - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1039,7 +1556,6 @@ services:
       enableMultiZone: true
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
-      
       - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: >
@@ -1067,7 +1583,7 @@ services:
           # Trigger failover before master is removed
 
           role=$(redis-cli -p $NODE_PORT info replication | grep role | cut -d ':' -f 2)
-        
+
           if [ "$role" == "master" ]; then
               redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL failover $MASTER_NAME
           fi
@@ -1088,12 +1604,7 @@ services:
       - RUN_METRICS=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
-      - FALKORDB_PASSWORD=$var.falkordbPassword
-      - ADMIN_PASSWORD=$func.sha256($sys.id, 'bWQeQF72jMFPr')
       - DATA_DIR=/data
-      - SECURITY_CONTEXT_USER_ID=0
-      - SECURITY_CONTEXT_GROUP_ID=0
-      - SECURITY_CONTEXT_FS_GROUP=0
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
     ports:
       - "26379:26379"
@@ -1105,6 +1616,11 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -1120,7 +1636,468 @@ services:
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
-        type: String
+        type: Password
         modifiable: false
         required: true
         export: false
+
+  Cluster-Single-Zone:
+    x-omnistrate-mode-internal: false
+    image: omnistrate/noop
+    x-omnistrate-api-params:
+      - key: name
+        description: Name
+        name: Name
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: My favorite database
+        export: true
+      - key: description
+        description: Description
+        name: Description
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: Description
+        export: true
+      - key: nodeInstanceType
+        description: The size of the node instance. Check the documentation for more information.
+        name: Node Instance Type
+        type: String
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: e2-custom-4-8192
+        options:
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
+        parameterDependencyMap:
+          cluster-sz: nodeInstanceType
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "false"
+        parameterDependencyMap:
+          cluster-sz: enableTLS
+          cluster-sz-rebalance: enableTLS
+      - key: falkordbUser
+        description: Choose a default username for your database
+        name: FalkorDB User
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "falkordb"
+        parameterDependencyMap:
+          cluster-sz: falkordbUser
+      - key: falkordbPassword
+        description: Choose a default password for your database
+        name: FalkorDB Password
+        type: Password
+        modifiable: false
+        required: true
+        export: false
+        parameterDependencyMap:
+          cluster-sz: falkordbPassword
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+        parameterDependencyMap:
+          cluster-sz: RDBPersistenceConfig
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "everysec"
+        options:
+          - "everysec"
+          - "always"
+        parameterDependencyMap:
+          cluster-sz: AOFPersistenceConfig
+      - key: hostCount
+        description: The number of hosts in the cluster. Each shard contains one master and one replica, so 6 hosts will create 3 shards.
+        name: Host Count
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "6"
+        min: 6
+        parameterDependencyMap:
+          cluster-sz: hostCount
+      - key: clusterReplicas
+        description: The number of replicas per shard
+        name: Cluster Replicas
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "1"
+        min: 1
+        max: 3
+        parameterDependencyMap:
+          cluster-sz: clusterReplicas
+          cluster-sz-rebalance: clusterReplicas
+    x-omnistrate-capabilities:
+      backupConfiguration:
+        backupRetentionInDays: 7
+        backupPeriodInHours: 12
+    depends_on:
+      - cluster-sz
+      - cluster-sz-rebalance
+
+  cluster-sz:
+    x-omnistrate-mode-internal: true
+    image: $FalkorDBClusterImage
+    x-omnistrate-compute:
+      replicaCountAPIParam: hostCount
+      instanceTypes:
+        - cloudProvider: gcp
+          apiParam: nodeInstanceType
+    <<: *clusterparam
+    volumes:
+      - source: ./data
+        target: /data
+        type: bind
+        x-omnistrate-storage:
+          gcp:
+            instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 200
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
+    environment:
+      - RUN_NODE=1
+      - RUN_METRICS=1
+      - RUN_HEALTH_CHECK=1
+      - BROWSER=0
+      - NODE_HOST=$sys.network.node.externalEndpoint
+      - TLS=$var.enableTLS
+      - FALKORDB_USER=$var.falkordbUser
+      - DATA_DIR=/data
+      - INSTANCE_TYPE=$var.nodeInstanceType
+      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
+      - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - CLUSTER_REPLICAS=$var.clusterReplicas
+    ports:
+      - "6379"
+      - "16379"
+    x-omnistrate-capabilities:
+      enableMultiZone: false
+      enableEndpointPerReplica: true
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: >
+          #!/bin/bash
+
+          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
+
+          call_health_check() {
+
+            echo "Health check URL: $HEALTH_CHECK_URL"
+            curl -sf $HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          call_health_check
+
+  cluster-sz-rebalance:
+    x-omnistrate-mode-internal: true
+    image: $FalkorDBClusterRebalanceImage
+    x-omnistrate-capabilities:
+      networkType: INTERNAL
+    x-omnistrate-compute:
+      replicaCount: 1
+      instanceTypes:
+        - cloudProvider: gcp
+          name: e2-small
+    <<: *rebalanceparam
+    environment:
+      - IS_MULTI_ZONE=0
+      - TLS=$var.enableTLS
+      - CLUSTER_REPLICAS=$var.clusterReplicas
+      - NODE_PORT=6379
+      - DEBUG=1
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: >
+          #!/bin/bash
+
+          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
+
+          call_health_check() {
+
+            echo "Health check URL: $HEALTH_CHECK_URL"
+            curl -sf $HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          call_health_check
+
+  Cluster-Multi-Zone:
+    x-omnistrate-mode-internal: false
+    image: omnistrate/noop
+    x-omnistrate-api-params:
+      - key: name
+        description: Name
+        name: Name
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: My favorite database
+        export: true
+      - key: description
+        description: Description
+        name: Description
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: Description
+        export: true
+      - key: nodeInstanceType
+        description: The size of the node instance. Check the documentation for more information.
+        name: Node Instance Type
+        type: String
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: e2-custom-4-8192
+        options:
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
+        parameterDependencyMap:
+          cluster-mz: nodeInstanceType
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "false"
+        parameterDependencyMap:
+          cluster-mz: enableTLS
+          cluster-mz-rebalance: enableTLS
+      - key: falkordbUser
+        description: Choose a default username for your database
+        name: FalkorDB User
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "falkordb"
+        parameterDependencyMap:
+          cluster-mz: falkordbUser
+      - key: falkordbPassword
+        description: Choose a default password for your database
+        name: FalkorDB Password
+        type: Password
+        modifiable: false
+        required: true
+        export: false
+        parameterDependencyMap:
+          cluster-mz: falkordbPassword
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+        parameterDependencyMap:
+          cluster-mz: RDBPersistenceConfig
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "everysec"
+        options:
+          - "everysec"
+          - "always"
+        parameterDependencyMap:
+          cluster-mz: AOFPersistenceConfig
+      - key: hostCount
+        description: "The number of hosts in the cluster. Must follow the formula: Host count = (1 + Cluster replicas) * Number of shards. Ex: 3 shards with 1 replica each = 6 hosts."
+        name: Host Count
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "6"
+        min: 6
+        parameterDependencyMap:
+          cluster-mz: hostCount
+      - key: clusterReplicas
+        description: The number of replicas per shard
+        name: Cluster Replicas
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "1"
+        min: 1
+        max: 3
+        parameterDependencyMap:
+          cluster-mz: clusterReplicas
+          cluster-mz-rebalance: clusterReplicas
+    x-omnistrate-capabilities:
+      backupConfiguration:
+        backupRetentionInDays: 7
+        backupPeriodInHours: 12
+    depends_on:
+      - cluster-mz
+      - cluster-mz-rebalance
+
+  cluster-mz:
+    x-omnistrate-mode-internal: true
+    image: $FalkorDBClusterImage
+    x-omnistrate-compute:
+      replicaCountAPIParam: hostCount
+      instanceTypes:
+        - cloudProvider: gcp
+          apiParam: nodeInstanceType
+    <<: *clusterparam
+    volumes:
+      - source: ./data
+        target: /data
+        type: bind
+        x-omnistrate-storage:
+          gcp:
+            instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 200
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
+    environment:
+      - RUN_NODE=1
+      - RUN_METRICS=1
+      - RUN_HEALTH_CHECK=1
+      - BROWSER=0
+      - NODE_HOST=$sys.network.node.externalEndpoint
+      - TLS=$var.enableTLS
+      - FALKORDB_USER=$var.falkordbUser
+      - DATA_DIR=/data
+      - INSTANCE_TYPE=$var.nodeInstanceType
+      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
+      - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - CLUSTER_REPLICAS=$var.clusterReplicas
+    ports:
+      - "6379"
+      - "16379"
+    x-omnistrate-capabilities:
+      enableMultiZone: true
+      enableEndpointPerReplica: true
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: >
+          #!/bin/bash
+
+          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
+
+          call_health_check() {
+
+            echo "Health check URL: $HEALTH_CHECK_URL"
+            curl -sf $HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          call_health_check
+
+  cluster-mz-rebalance:
+    x-omnistrate-mode-internal: true
+    image: $FalkorDBClusterRebalanceImage
+    x-omnistrate-capabilities:
+      networkType: INTERNAL
+    x-omnistrate-compute:
+      replicaCount: 1
+      instanceTypes:
+        - cloudProvider: gcp
+          name: e2-small
+    <<: *rebalanceparam
+    environment:
+      - IS_MULTI_ZONE=1
+      - TLS=$var.enableTLS
+      - CLUSTER_REPLICAS=$var.clusterReplicas
+      - NODE_PORT=6379
+      - DEBUG=1
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: >
+          #!/bin/bash
+
+          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
+
+          call_health_check() {
+
+            echo "Health check URL: $HEALTH_CHECK_URL"
+            curl -sf $HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          call_health_check
+secrets:
+  adminpasspath:
+    file: ./secrets/adminpassword
+  falkordbpasspath:
+    file: ./secrets/falkordbpassword

@@ -27,6 +27,8 @@ jobs:
             image-name: falkordb-node
           - dockerfile: ./falkordb-cluster/Dockerfile
             image-name: falkordb-cluster
+          - dockerfile: ./falkordb-cluster-rebalance/Dockerfile
+            image-name: falkordb-cluster-rebalance
     steps:
       - name: Checkout
         uses: actions/checkout@v3

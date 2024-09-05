@@ -14,6 +14,7 @@ env:
   NODE_IMAGE_NAME: falkordb-node
   CLUSTER_IMAGE_NAME: falkordb-cluster
   FALKORDB_VERSION: v4.2.1
+  CLUSTER_REBALANCE_IMAGE_NAME: falkordb-cluster-rebalance
 
 jobs:
   build-and-push:
@@ -26,6 +27,8 @@ jobs:
             image-name: falkordb-node
           - dockerfile: ./falkordb-cluster/Dockerfile
             image-name: falkordb-cluster
+          - dockerfile: ./falkordb-cluster-rebalance/Dockerfile
+            image-name: falkordb-cluster-rebalance
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -76,7 +79,8 @@ jobs:
           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:${{ github.ref_name }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:${{ github.ref_name }}/g' ${{ matrix.plans.file }}
-    
+          sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
+
       - name: Upload yaml to artifacts
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
         uses: actions/upload-artifact@v2

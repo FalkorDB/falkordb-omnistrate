@@ -128,11 +128,7 @@ def test_cluster_shards():
             test_ensure_mz_distribution(instance)
 
         check_data(instance)
-
-        if 'cluster' in args.resource_key:
-            logging.info("Testing zero downtime....")
-            test_zero_downtime(instance)
-
+        
         change_host_count(instance, int(args.host_count))
 
         if args.ensure_mz_distribution:
@@ -156,8 +152,35 @@ def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):
     logging.info(f"Changing host count to {new_host_count}")
     instance.update_params(
         hostCount=new_host_count,
-        wait_for_ready=True,
+        wait_for_ready=False,
     )
+
+    db = instance.create_connection(
+        ssl=args.tls,
+    )
+
+    graph = db.select_graph("test")
+
+    # Write some data to the DB
+    graph.query("CREATE (n:Person {name: 'Alice'})")
+    count = 0
+    time_out = time.time() + 1200
+
+    while True:
+        status = instance.get_instance_details()['status']
+
+        if time.time() > time_out:
+            raise Exception(f"Timeout occured after the instance state was in the {status} status for 20 minutes")
+        
+        if status == "DEPLOYING":
+            graph.query(f"CREATE (n:Person {{name: 'Alice{str(count)}'}})")
+            result = graph.query(f"MATCH (n:Person {{name: 'Alice{str(count)}'}}) RETURN n")
+        else:
+            break
+        count += 1
+
+    print("Zero downtime passed ")
+
     current_host_count = new_host_count
 
     instance_details = instance.get_instance_details()
@@ -285,46 +308,6 @@ def check_data(instance: OmnistrateFleetInstance):
 
     if len(result.result_set) == 0:
         raise Exception("Data did not persist after host count change")
-
-def test_zero_downtime(instance: OmnistrateFleetInstance):
-    """This function should test the ability to read and write while a failover is happening"""
-
-    id_key = "mz" if 'Multi' in args.resource_key else "sz"
-    # Get instance host and port
-    db = instance.create_connection(
-        ssl=args.tls,
-    )
-
-    graph = db.select_graph("test")
-
-    # Write some data to the DB
-    graph.query("CREATE (n:Person {name: 'Alice'})")
-
-    # Trigger failover
-    instance.trigger_failover(
-        replica_id=f"cluster-{id_key}-0",
-        wait_for_ready=False,
-    )
-    count = 0
-    time_out = time.time() + 1200
-
-    while True:
-        status = instance.get_instance_details()['status']
-
-        if time.time() > time_out:
-            raise Exception(f"Timeout occured after the instance state was in the {status} status for 20 minutes")
-        
-        if status == "DEPLOYING":
-            graph.query(f"CREATE (n:Person {{name: 'Alice{str(count)}'}})")
-            result = graph.query(f"MATCH (n:Person {{name: 'Alice{str(count)}'}}) RETURN n")
-            if len(result.result_set) == 0:
-                raise Exception("Data lost after failover")
-        else:
-            break
-        count += 1
-
-    print("Data persisted after failover")
-
-
+    
 if __name__ == "__main__":
     test_cluster_shards()

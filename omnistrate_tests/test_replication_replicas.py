@@ -120,9 +120,6 @@ def test_add_remove_replica():
         logging.info('The code will now run change_replica_count function')
         change_replica_count(instance, int(args.replica_count) + 2)
 
-        logging.info('The code will now sleep for 15 seconds to all DNS prpagation')
-        time.sleep(15)
-
         logging.info('The code will now run test_fail_over function')
         test_fail_over(instance)
 
@@ -165,10 +162,9 @@ def test_fail_over(instance: OmnistrateFleetInstance):
         print(e)
 
     count = 0
-    while count <= 10:
-        logging.info("inside the loop")
+    while count <= 5:
         client.execute_command('SENTINEL FAILOVER master')
-        time.sleep(10)
+        time.sleep(5)
         master = client.execute_command('SENTINEL MASTER master')[3]
         if master.startswith(f"node-{id_key}-2"):
             break

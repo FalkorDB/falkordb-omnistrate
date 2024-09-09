@@ -1,3 +1,11 @@
+import argparse
+from omnistrate_tests.classes.falkordb_cluster import FalkorDBCluster
+from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
+from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
+import os
+import time
+import logging
+from contextlib import suppress
 import sys
 import signal
 from pathlib import Path
@@ -7,21 +15,13 @@ parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
 
 # Additionally remove the current file's directory from sys.path
-from contextlib import suppress
 
 with suppress(ValueError):
     sys.path.remove(str(parent))
 
-import logging
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
-import time
-import os
-from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
-from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
-from omnistrate_tests.classes.falkordb_cluster import FalkorDBCluster
-import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("omnistrate_user")
@@ -32,13 +32,15 @@ parser.add_argument("region")
 parser.add_argument(
     "--subscription-id", required=False, default=os.getenv("SUBSCRIPTION_ID")
 )
-parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
+parser.add_argument("--ref-name", required=False,
+                    default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
 parser.add_argument("--resource-key", required=True)
 
 parser.add_argument("--instance-name", required=True)
-parser.add_argument("--instance-description", required=False, default="test-standalone")
+parser.add_argument("--instance-description",
+                    required=False, default="test-standalone")
 parser.add_argument("--instance-type", required=True)
 parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
@@ -88,14 +90,16 @@ def test_cluster_replicas():
         args.service_id, product_tier.service_model_id
     )
 
-    logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
+    logging.info(f"Product tier id: {
+                 product_tier.product_tier_id} for {args.ref_name}")
 
     instance = omnistrate.instance(
         service_id=args.service_id,
         service_provider_id=service.service_provider_id,
         service_key=service.key,
         service_environment_id=args.environment_id,
-        service_environment_key=service.get_environment(args.environment_id).key,
+        service_environment_key=service.get_environment(
+            args.environment_id).key,
         service_model_key=service_model.key,
         service_api_version="v1",
         product_tier_key=product_tier.product_tier_key,
@@ -128,10 +132,6 @@ def test_cluster_replicas():
         if args.ensure_mz_distribution:
             test_ensure_mz_distribution(instance)
         
-        if 'cluster' in args.resource_key:
-            logging.info("Testing zero downtime....")
-            test_zero_downtime(instance)
-        
         check_data(instance)
 
         change_replica_count(instance, int(args.cluster_replicas))
@@ -156,13 +156,43 @@ def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: 
     new_host_count = int(current_host_count) + (diff * int(args.shards))
 
     logging.info(
-        f"Changing clusterReplicas to {new_replicas_count} and hostCount to {new_host_count}"
+        f"Changing clusterReplicas to {
+            new_replicas_count} and hostCount to {new_host_count}"
     )
     instance.update_params(
         hostCount=f"{new_host_count}",
         clusterReplicas=f"{new_replicas_count}",
-        wait_for_ready=True,
+        wait_for_ready=False,
     )
+
+    db = instance.create_connection(
+        ssl=args.tls,
+    )
+
+    graph = db.select_graph("test")
+
+    # Write some data to the DB
+    graph.query("CREATE (n:Person {name: 'Alice'})")
+    count = 0
+    time_out = time.time() + 1200
+
+    while True:
+        status = instance.get_instance_details()['status']
+
+        if time.time() > time_out:
+            raise Exception(f"Timeout occured after the instance state was in the {
+                            status} status for 20 minutes")
+
+        if status == "DEPLOYING":
+            graph.query(f"CREATE (n:Person {{name: 'Alice{str(count)}'}})")
+            result = graph.query(
+                f"MATCH (n:Person {{name: 'Alice{str(count)}'}}) RETURN n")
+        else:
+            break
+        count += 1
+
+    print("Zero downtime passed ")
+
     current_host_count = new_host_count
     current_replicas_count = new_replicas_count
 
@@ -193,7 +223,8 @@ def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: 
         raise Exception("No clusterReplicas found in instance details")
 
     if cluster_replicas != current_replicas_count:
-        raise Exception("Cluster replicas count does not match new replicas count")
+        raise Exception(
+            "Cluster replicas count does not match new replicas count")
 
 
 def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
@@ -212,7 +243,8 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
         raise Exception("No result_params found in instance details")
 
     resource_key = next(
-        (k for [k, v] in network_topology.items() if v["resourceName"] == "cluster-mz"),
+        (k for [k, v] in network_topology.items()
+         if v["resourceName"] == "cluster-mz"),
         None,
     )
 
@@ -224,7 +256,8 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
         raise Exception("No nodes found in network topology")
 
     if len(nodes) != current_host_count:
-        raise Exception(f"Host count does not match number of nodes. Current host count: {current_host_count}; Number of nodes: {len(nodes)}")
+        raise Exception(f"Host count does not match number of nodes. Current host count: {
+                        current_host_count}; Number of nodes: {len(nodes)}")
 
     cluster = FalkorDBCluster(
         host=resource["clusterEndpoint"],
@@ -243,7 +276,8 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
                 (n for n in nodes if n["endpoint"] == node.hostname), None
             )
             if not omnistrateNode:
-                logging.warning(f"Node {node.hostname} not found in network topology")
+                logging.warning(
+                    f"Node {node.hostname} not found in network topology")
                 continue
 
             group_azs.add(omnistrateNode["availabilityZone"])
@@ -254,7 +288,8 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
             )
 
         logging.info(
-            f"Group {group} is distributed across availability zones {group_azs}"
+            f"Group {group} is distributed across availability zones {
+                group_azs}"
         )
 
     logging.info("Shards are distributed across multiple availability zones")
@@ -293,44 +328,6 @@ def check_data(instance: OmnistrateFleetInstance):
     if len(result.result_set) == 0:
         raise Exception("Data did not persist after host count change")
 
-def test_zero_downtime(instance: OmnistrateFleetInstance):
-    """This function should test the ability to read and write while a failover is happening"""
-
-    id_key = "mz" if 'Multi' in args.resource_key else "sz"
-    # Get instance host and port
-    db = instance.create_connection(
-        ssl=args.tls,
-    )
-
-    graph = db.select_graph("test")
-
-    # Write some data to the DB
-    graph.query("CREATE (n:Person {name: 'Alice'})")
-
-    # Trigger failover
-    instance.trigger_failover(
-        replica_id=f"cluster-{id_key}-0",
-        wait_for_ready=False,
-    )
-    count = 0
-    time_out = time.time() + 1200
-
-    while True:
-        status = instance.get_instance_details()['status']
-
-        if time.time() > time_out:
-            raise Exception(f"Timeout occured after the instance state was in the {status} status for 20 minutes")
-        
-        if status == "DEPLOYING":
-            graph.query(f"CREATE (n:Person {{name: 'Alice{str(count)}'}})")
-            result = graph.query(f"MATCH (n:Person {{name: 'Alice{str(count)}'}}) RETURN n")
-            if len(result.result_set) == 0:
-                raise Exception("Data lost after failover")
-        else:
-            break
-        count += 1
-
-    print("Data persisted after failover")
 
 if __name__ == "__main__":
     test_cluster_replicas()

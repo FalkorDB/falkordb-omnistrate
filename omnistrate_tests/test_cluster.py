@@ -298,9 +298,11 @@ def test_zero_downtime(instance: OmnistrateFleetInstance):
     count = 0
     time_out = time.time() + 1200
 
+    logging.info(db.execute_command("CLUSTER KEYSLOT test"))
+    logging.info(db.execute_command("CLUSTER NODES"))
+
     while True:
         status = instance.get_instance_details()['status']
-
         if time.time() > time_out:
             raise Exception(f"Timeout occured after the instance state was in the {status} status for 20 minutes")
         

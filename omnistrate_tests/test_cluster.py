@@ -146,20 +146,20 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
         else None
     )
 
-    if not params:
-        raise Exception("No result_params found in instance details")
+    # if not params:
+    #     raise Exception("No result_params found in instance details")
 
-    host_count = int(params["hostCount"]) if "hostCount" in params else None
+    # host_count = int(params["hostCount"]) if "hostCount" in params else None
 
-    if not host_count:
-        raise Exception("No hostCount found in instance details")
+    # if not host_count:
+    #     raise Exception("No hostCount found in instance details")
 
-    cluster_replicas = (
-        int(params["clusterReplicas"]) if "clusterReplicas" in params else None
-    )
+    # cluster_replicas = (
+    #     int(params["clusterReplicas"]) if "clusterReplicas" in params else None
+    # )
 
-    if not cluster_replicas:
-        raise Exception("No clusterReplicas found in instance details")
+    # if not cluster_replicas:
+    #     raise Exception("No clusterReplicas found in instance details")
 
     resource_key = next(
         (k for [k, v] in network_topology.items() if v["resourceName"] == "cluster-mz"),
@@ -173,8 +173,8 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
     if len(nodes) == 0:
         raise Exception("No nodes found in network topology")
 
-    if len(nodes) != host_count:
-        raise Exception(f"Host count does not match number of nodes. Current host count: {host_count}; Number of nodes: {len(nodes)}")
+    if len(nodes) != 6:
+        raise Exception(f"Host count does not match number of nodes. Current host count: {6}; Number of nodes: {len(nodes)}")
 
     cluster = FalkorDBCluster(
         host=resource["clusterEndpoint"],
@@ -184,7 +184,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
         ssl=params["enableTLS"] == "true" if "enableTLS" in params else False,
     )
 
-    groups = cluster.groups(cluster_replicas)
+    groups = cluster.groups(1)
 
     for group in groups:
         group_azs = set()

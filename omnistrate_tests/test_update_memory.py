@@ -13,6 +13,7 @@ with suppress(ValueError):
     sys.path.remove(str(parent))
 
 import logging
+
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
@@ -54,11 +55,14 @@ args = parser.parse_args()
 
 instance: OmnistrateFleetInstance = None
 
+
 # Intercept exit signals so we can delete the instance before exiting
 def signal_handler(sig, frame):
     if instance:
         instance.delete(False)
     sys.exit(0)
+
+
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
@@ -151,7 +155,7 @@ def add_data(instance: OmnistrateFleetInstance):
 def query_data(instance: OmnistrateFleetInstance):
 
     # Get instance host and port
-    db = instance.create_connection(ssl=args.tls)
+    db = instance.create_connection(ssl=args.tls, force_reconnect=True)
 
     graph = db.select_graph("test")
 

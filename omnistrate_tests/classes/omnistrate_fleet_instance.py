@@ -255,7 +255,7 @@ class OmnistrateFleetInstance:
             data=json.dumps({"resourceId": self.get_resource_id()}),
         )
 
-        if "another operation is already in progress" in response.text and retry > 0:
+        if "operation is already in progress" in response.text and retry > 0:
             time.sleep(90)
             return self.stop(wait_for_ready, retry - 1)
 
@@ -280,7 +280,7 @@ class OmnistrateFleetInstance:
             data=json.dumps({"resourceId": self.get_resource_id()}),
         )
 
-        if "another operation is already in progress" in response.text and retry > 0:
+        if "operation is already in progress" in response.text and retry > 0:
             time.sleep(90)
             return self.start(wait_for_ready, retry - 1)
 
@@ -313,7 +313,7 @@ class OmnistrateFleetInstance:
             timeout=60,
         )
 
-        if "another operation is already in progress" in response.text and retry > 0:
+        if "operation is already in progress" in response.text and retry > 0:
             time.sleep(90)
             return self.trigger_failover(
                 replica_id, wait_for_ready, resource_id, retry - 1
@@ -354,7 +354,7 @@ class OmnistrateFleetInstance:
             timeout=60,
         )
 
-        if "another operation is already in progress" in response.text and retry > 0:
+        if "operation is already in progress" in response.text and retry > 0:
             time.sleep(90)
             return self.update_params(wait_until_ready, retry - 1, **kwargs)
 

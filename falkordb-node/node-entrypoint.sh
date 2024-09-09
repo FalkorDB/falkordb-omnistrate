@@ -2,19 +2,19 @@
 
 FALKORDB_USER=${FALKORDB_USER:-falkordb}
 #FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
-if [[ -f "/run/secrets/falkordbpassword" ]] && [[ -s "/run/secrets/falkordbpassword" ]];then
+if [[ -f "/run/secrets/falkordbpassword" ]] && [[ -s "/run/secrets/falkordbpassword" ]]; then
   FALKORDB_PASSWORD=$(cat "/run/secrets/falkordbpassword")
-elif [[ -n "$FALKORDB_PASSWORD" ]];then
+elif [[ -n "$FALKORDB_PASSWORD" ]]; then
   FALKORDB_PASSWORD=$FALKORDB_PASSWORD
 else
   FALKORDB_PASSWORD=''
 fi
 
 #ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
-if [[ -f "/run/secrets/adminpassword" ]] && [[ -s "/run/secrets/adminpassword" ]];then
+if [[ -f "/run/secrets/adminpassword" ]] && [[ -s "/run/secrets/adminpassword" ]]; then
   ADMIN_PASSWORD=$(cat "/run/secrets/adminpassword")
   export ADMIN_PASSWORD
-elif [[ -n "$ADMIN_PASSWORD" ]];then
+elif [[ -n "$ADMIN_PASSWORD" ]]; then
   export ADMIN_PASSWORD=$ADMIN_PASSWORD
 else
   export ADMIN_PASSWORD=''
@@ -67,6 +67,18 @@ FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/
 SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
+
+dump_conf_files() {
+  echo "Dumping configuration files"
+
+  if [ -f $NODE_CONF_FILE ]; then
+    cat $NODE_CONF_FILE
+  fi
+
+  if [ -f $SENTINEL_CONF_FILE ]; then
+    cat $SENTINEL_CONF_FILE
+  fi
+}
 
 remove_master_from_group() {
   # If it's master and sentinel is running, trigger and wait for failover
@@ -463,9 +475,28 @@ fi
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
+  export REDIS_EXPORTER_DEBUG=$(if [[ $DEBUG -eq 1 ]]; then echo "true"; else echo "false"; fi)
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
-  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format	json &
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -tls-server-min-version TLS1.3 &
   redis_exporter_pid=$!
+fi
+
+if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]]; then
+  # Check for crossed namespace
+  echo "Checking for crossed namespace"
+  while true; do
+    sentinels=$(redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL sentinels $MASTER_NAME)
+    # Check if the hostname contains`instance-X` where is not equal to INSTANCE_ID
+    for text in $sentinels; do
+      if [[ $text == *"instance-"* && $text != *"$INSTANCE_ID"* ]]; then
+        echo "Crossed namespace detected"
+        # Dump config files
+        echo "Sentinels: $sentinels"
+        dump_conf_files
+      fi
+    done
+    sleep 5
+  done
 fi
 
 while true; do

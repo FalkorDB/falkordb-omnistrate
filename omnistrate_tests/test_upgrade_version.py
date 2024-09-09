@@ -46,6 +46,9 @@ parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
+parser.add_argument("--host-count", required=False, default="6")
+parser.add_argument("--cluster-replicas", required=False, default="1")
+
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -129,6 +132,8 @@ def test_upgrade_version():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            hostCount=args.host_count,
+            clusterReplicas=args.cluster_replicas,
             product_tier_version=last_tier.version,
         )
 

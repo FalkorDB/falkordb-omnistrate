@@ -298,8 +298,8 @@ def test_zero_downtime(instance: OmnistrateFleetInstance):
     count = 0
     time_out = time.time() + 1200
 
-    logging.info(db.execute_command("CLUSTER KEYSLOT test"))
-    logging.info(db.execute_command("CLUSTER NODES"))
+    logging.info(db.connection.execute_command("CLUSTER KEYSLOT test"))
+    logging.info(db.connection.execute_command("CLUSTER NODES"))
 
     while True:
         status = instance.get_instance_details()['status']

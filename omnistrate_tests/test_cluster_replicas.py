@@ -1,11 +1,3 @@
-import argparse
-from omnistrate_tests.classes.falkordb_cluster import FalkorDBCluster
-from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
-from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
-import os
-import time
-import logging
-from contextlib import suppress
 import sys
 import signal
 from pathlib import Path
@@ -15,13 +7,21 @@ parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
 
 # Additionally remove the current file's directory from sys.path
+from contextlib import suppress
 
 with suppress(ValueError):
     sys.path.remove(str(parent))
 
+import logging
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
+import time
+import os
+from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
+from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
+from omnistrate_tests.classes.falkordb_cluster import FalkorDBCluster
+import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("omnistrate_user")
@@ -180,8 +180,7 @@ def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: 
         status = instance.get_instance_details()['status']
 
         if time.time() > time_out:
-            raise Exception(f"Timeout occured after the instance state was in the {
-                            status} status for 20 minutes")
+            raise Exception(f"Timeout occured after the instance state was in the {status} status for 20 minutes")
 
         if status == "DEPLOYING":
             graph.query(f"CREATE (n:Person {{name: 'Alice{str(count)}'}})")
@@ -256,8 +255,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
         raise Exception("No nodes found in network topology")
 
     if len(nodes) != current_host_count:
-        raise Exception(f"Host count does not match number of nodes. Current host count: {
-                        current_host_count}; Number of nodes: {len(nodes)}")
+        raise Exception(f"Host count does not match number of nodes. Current host count: {current_host_count}; Number of nodes: {len(nodes)}")
 
     cluster = FalkorDBCluster(
         host=resource["clusterEndpoint"],

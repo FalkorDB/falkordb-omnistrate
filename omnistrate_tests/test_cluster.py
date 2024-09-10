@@ -1,5 +1,6 @@
 import sys
 import signal
+from random import randbytes
 from pathlib import Path
 
 file = Path(__file__).resolve()
@@ -105,7 +106,7 @@ def test_cluster():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password="falkordb",
+            falkordb_password=randbytes(16).hex(),
             nodeInstanceType=args.instance_type,
             storageSize=args.storage_size,
             enableTLS=args.tls,

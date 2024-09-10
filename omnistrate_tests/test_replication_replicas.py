@@ -118,7 +118,7 @@ def test_add_remove_replica():
         change_replica_count(instance, int(args.replica_count) + 1)
 
         test_fail_over(instance)
-        
+
         change_replica_count(instance,int(args.replica_count))
     
         check_data(instance)
@@ -161,16 +161,20 @@ def test_fail_over(instance: OmnistrateFleetInstance):
         logging.exception("Failed to connect to Sentinel!")
         print(e)
 
-    count = 0
-    while count <= 5:
-        client.execute_command('SENTINEL FAILOVER master')
-        time.sleep(5)
-        master = client.execute_command('SENTINEL MASTER master')[3]
-        if master.startswith(f"node-{id_key}-2"):
-            break
-        if count == 5:
+    tout = time.time() + 60
+    while True:
+        if time.time() > tout:
             raise Exception(f"Failed to failover to node-{id_key}-2")
-        count += 1
+        try:
+            client.execute_command('SENTINEL FAILOVER master')
+            time.sleep(5)
+            master = client.execute_command('SENTINEL MASTER master')[3]
+            if master.startswith(f"node-{id_key}-2"):
+                break
+        except Exception as e:
+            logging.info("Executed command too fast")
+            logging.exception(e)
+            continue
 
     check_data(instance)
     

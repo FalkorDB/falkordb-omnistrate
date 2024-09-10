@@ -230,10 +230,10 @@ def test_failover(instance: OmnistrateFleetInstance):
     
     count = 0
     time_out = time.time() + 1200
-
+    print(db.connection.cluster_keyslot("test"))
+    print(db.connection.cluster_slots())
     while True:
         status = instance.get_instance_details()['status']
-
         if time.time() > time_out:
             raise Exception(f"Timeout occured after the instance state was in the {status} status for 20 minutes")
         

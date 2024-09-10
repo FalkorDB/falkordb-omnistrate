@@ -99,6 +99,7 @@ def test_cluster():
     )
 
     try:
+        password = randbytes(16).hex()
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
@@ -117,7 +118,7 @@ def test_cluster():
         )
 
         if args.ensure_mz_distribution:
-            test_ensure_mz_distribution(instance)
+            test_ensure_mz_distribution(instance, password)
 
         # Test failover and data loss
         test_failover(instance)
@@ -135,7 +136,7 @@ def test_cluster():
     logging.info("Test passed")
 
 
-def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
+def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str):
     """This function should ensure that each shard is distributed across multiple availability zones"""
 
     instance_details = instance.get_instance_details()
@@ -181,7 +182,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
         host=resource["clusterEndpoint"],
         port=resource["clusterPorts"][0],
         username="falkordb",
-        password="falkordb",
+        password=password,
         ssl=params["enableTLS"] == "true" if "enableTLS" in params else False,
     )
 

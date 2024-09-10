@@ -101,6 +101,7 @@ def test_replication():
     )
 
     try:
+        password = randbytes(16).hex()
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
@@ -108,7 +109,7 @@ def test_replication():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password=randbytes(16).hex(),
+            falkordb_password=password,
             nodeInstanceType=args.instance_type,
             storageSize=args.storage_size,
             enableTLS=args.tls,
@@ -117,10 +118,10 @@ def test_replication():
         )
 
         # Test failover and data loss
-        test_failover(instance)
+        test_failover(instance, password)
 
         # Test stop and start instance
-        test_stop_start(instance)
+        test_stop_start(instance, password)
     except Exception as e:
         logging.exception(e)
         instance.delete(False)
@@ -132,7 +133,7 @@ def test_replication():
     logging.info("Test passed")
 
 
-def test_failover(instance: OmnistrateFleetInstance):
+def test_failover(instance: OmnistrateFleetInstance, password: str):
     """
     Single Zone tests are the following:
     1. Create a single zone instance
@@ -162,14 +163,14 @@ def test_failover(instance: OmnistrateFleetInstance):
         host=db_resource[0]["endpoint"],
         port=db_resource[0]["ports"][0],
         username="falkordb",
-        password="falkordb",
+        password=password,
         ssl=args.tls,
     )
     db_1 = FalkorDB(
         host=db_resource[1]["endpoint"],
         port=db_resource[1]["ports"][0],
         username="falkordb",
-        password="falkordb",
+        password=password,
         ssl=args.tls,
     )
     sentinels = Sentinel(
@@ -307,7 +308,7 @@ def test_failover(instance: OmnistrateFleetInstance):
     logging.info("Data persisted after third failover")
 
 
-def test_stop_start(instance: OmnistrateFleetInstance):
+def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     """
     Single Zone tests are the following:
     1. Create a single zone instance
@@ -328,7 +329,7 @@ def test_stop_start(instance: OmnistrateFleetInstance):
         host=sentinel_resource["endpoint"],
         port=sentinel_resource["ports"][0],
         username="falkordb",
-        password="falkordb",
+        password=password,
         ssl=args.tls,
     )
 

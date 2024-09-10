@@ -42,7 +42,7 @@ parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
-parser.add_argument("--replica-count", required=False, default="1")
+parser.add_argument("--replica-count", required=False, default="2")
 
 
 parser.set_defaults(tls=False)
@@ -111,16 +111,12 @@ def test_add_remove_replica():
             AOFPersistenceConfig=args.aof_config,
         )
 
-        logging.info('The code will now run the add_data function')
         add_data(instance)
 
-        logging.info('The code will now run check_data function')
         check_data(instance)
 
-        logging.info('The code will now run change_replica_count function')
-        change_replica_count(instance, int(args.replica_count) + 2)
+        change_replica_count(instance, int(args.replica_count) + 1)
 
-        logging.info('The code will now run test_fail_over function')
         test_fail_over(instance)
 
     except Exception as e:
@@ -152,8 +148,8 @@ def test_fail_over(instance: OmnistrateFleetInstance):
     try:
         client = Redis(
         host=f"{endpoint["endpoint"]}", port=endpoint['ports'][0],
-        username="falkordb", # use your Redis user. More info https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/
-        password="falkordb", # use your Redis password
+        username="falkordb", 
+        password="falkordb",
         decode_responses=True,
         ssl=args.tls,
         )
@@ -175,7 +171,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
     check_data(instance)
 
     # remove replica
-    change_replica_count(instance,2)
+    change_replica_count(instance,int(args.replica_count))
     # check if data is still there
     check_data(instance)
     

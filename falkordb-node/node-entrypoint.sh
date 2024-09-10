@@ -408,8 +408,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
 fi
 
-if [ "$RUN_SENTINEL" -eq "1" ]; then
-  if [[ "$NODE_INDEX" == "0" || "$NODE_INDEX" == "1" ]];then
+if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" == "1" ]]); then
     sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
     sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
     sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
@@ -448,7 +447,6 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
       redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
       redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
     fi
-  fi
 fi
 
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then

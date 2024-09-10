@@ -118,6 +118,10 @@ def test_add_remove_replica():
         change_replica_count(instance, int(args.replica_count) + 1)
 
         test_fail_over(instance)
+        
+        change_replica_count(instance,int(args.replica_count))
+    
+        check_data(instance)
 
     except Exception as e:
         logging.exception(e)
@@ -168,11 +172,6 @@ def test_fail_over(instance: OmnistrateFleetInstance):
             raise Exception(f"Failed to failover to node-{id_key}-2")
         count += 1
 
-    check_data(instance)
-
-    # remove replica
-    change_replica_count(instance,int(args.replica_count))
-    # check if data is still there
     check_data(instance)
     
 def add_data(instance: OmnistrateFleetInstance):

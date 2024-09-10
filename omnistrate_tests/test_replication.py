@@ -181,12 +181,12 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
         ],
         sentinel_kwargs={
             "username": "falkordb",
-            "password": "falkordb",
+            "password": password,
             "ssl": args.tls,
         },
         connection_kwargs={
             "username": "falkordb",
-            "password": "falkordb",
+            "password": password,
             "ssl": args.tls,
         },
     )

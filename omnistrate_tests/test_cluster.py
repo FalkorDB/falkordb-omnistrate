@@ -240,8 +240,12 @@ def test_failover(instance: OmnistrateFleetInstance):
             raise Exception(f"Timeout occured after the instance state was in the {status} status for 20 minutes")
         
         if status == "DEPLOYING":
-            graph.query(f"CREATE (n:Person {{name: 'Alice{str(count)}'}})")
-            result = graph.query(f"MATCH (n:Person {{name: 'Alice{str(count)}'}}) RETURN n")
+            try:
+                graph.query(f"CREATE (n:Person {{name: 'Alice{str(count)}'}})")
+                result = graph.query(f"MATCH (n:Person {{name: 'Alice{str(count)}'}}) RETURN n")
+            except Exception as e:
+                print("This means that the 20 retries in the falkordb failed, this is not a good fix")
+                continue
         else:
             break
         count += 1

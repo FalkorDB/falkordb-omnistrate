@@ -120,13 +120,13 @@ files = []
 develop = false
 
 [package.dependencies]
-redis = {git = "https://github.com/dudizimber/redis-py", rev = "3342-add-hostname-to-parse-node-line"}
+redis = {git = "https://github.com/MuhammadQadora/redis-py", rev = "master"}
 
 [package.source]
 type = "git"
 url = "https://github.com/FalkorDB/falkordb-py"
 reference = "57-changing-the-cluster_conn-function-to-use-domain-nameshostnames-instead-of-ips"
-resolved_reference = "3fd5c14f787c1c82c577a75cfc95906a9478dd25"
+resolved_reference = "0e79477de00e77557113a52d05a15a920f5b80af"
 
 [[package]]
 name = "idna"
@@ -154,9 +154,9 @@ ocsp = ["cryptography (>=36.0.1)", "pyopenssl (==23.2.1)", "requests (>=2.31.0)"
 
 [package.source]
 type = "git"
-url = "https://github.com/dudizimber/redis-py"
-reference = "3342-add-hostname-to-parse-node-line"
-resolved_reference = "1bbdcc87ff2708b828554b01f7377735098bb1b4"
+url = "https://github.com/MuhammadQadora/redis-py"
+reference = "master"
+resolved_reference = "2b98f76ac5e952e05dcddc5b806b4a2dbcdb8ba2"
 
 [[package]]
 name = "requests"
@@ -215,4 +215,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11.4"
-content-hash = "96874ff12090604f5292d77776aa8aecbc85d77014155094c010d77f3f971c57"
+content-hash = "fb2dce3efd5e45b4d4befe1436a193279aa78c15211a49be1f318107b487455e"

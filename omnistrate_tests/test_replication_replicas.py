@@ -175,7 +175,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
             logging.info("Executed command too fast")
             logging.exception(e)
             continue
-
+    time.sleep(60)
     check_data(instance)
     
 def add_data(instance: OmnistrateFleetInstance):

@@ -35,6 +35,13 @@ x-internal-integrations:
   metrics:
     provider: native
 
+x-machineOptions: &machineOptions
+  - e2-medium
+  - e2-custom-4-8192
+  - e2-custom-8-16384
+  - e2-custom-16-32768
+  - e2-custom-32-65536
+
 x-redisMetrics: &metrics
   prometheusEndpoint: "http://localhost:9121/metrics"
   metrics:
@@ -237,11 +244,7 @@ x-clusterparam: &clusterparam
       required: true
       export: true
       defaultValue: e2-custom-4-8192
-      options:
-        - e2-custom-4-8192
-        - e2-custom-8-16384
-        - e2-custom-16-32768
-        - e2-custom-32-65536
+      options: *machineOptions
     - key: enableTLS
       description: Whether to enable TLS for the database
       name: Enable TLS
@@ -320,11 +323,7 @@ services:
         required: true
         export: true
         defaultValue: e2-custom-4-8192
-        options:
-          - e2-custom-4-8192
-          - e2-custom-8-16384
-          - e2-custom-16-32768
-          - e2-custom-32-65536
+        options: *machineOptions
         parameterDependencyMap:
           node-s: nodeInstanceType
       - key: enableTLS
@@ -491,11 +490,7 @@ services:
         required: true
         export: true
         defaultValue: e2-custom-4-8192
-        options:
-          - e2-custom-4-8192
-          - e2-custom-8-16384
-          - e2-custom-16-32768
-          - e2-custom-32-65536
+        options: *machineOptions
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -684,11 +679,7 @@ services:
         required: true
         export: true
         defaultValue: e2-custom-4-8192
-        options:
-          - e2-custom-4-8192
-          - e2-custom-8-16384
-          - e2-custom-16-32768
-          - e2-custom-32-65536
+        options: *machineOptions
         parameterDependencyMap:
           node-sz: nodeInstanceType
       - key: numReplicas
@@ -867,11 +858,7 @@ services:
         required: true
         export: true
         defaultValue: e2-custom-4-8192
-        options:
-          - e2-custom-4-8192
-          - e2-custom-8-16384
-          - e2-custom-16-32768
-          - e2-custom-32-65536
+        options: *machineOptions
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1165,11 +1152,7 @@ services:
         required: true
         export: true
         defaultValue: e2-custom-4-8192
-        options:
-          - e2-custom-4-8192
-          - e2-custom-8-16384
-          - e2-custom-16-32768
-          - e2-custom-32-65536
+        options: *machineOptions
         parameterDependencyMap:
           node-mz: nodeInstanceType
       - key: numReplicas
@@ -1348,11 +1331,7 @@ services:
         required: true
         export: true
         defaultValue: e2-custom-4-8192
-        options:
-          - e2-custom-4-8192
-          - e2-custom-8-16384
-          - e2-custom-16-32768
-          - e2-custom-32-65536
+        options: *machineOptions
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1644,11 +1623,7 @@ services:
         required: true
         export: true
         defaultValue: e2-custom-4-8192
-        options:
-          - e2-custom-4-8192
-          - e2-custom-8-16384
-          - e2-custom-16-32768
-          - e2-custom-32-65536
+        options: *machineOptions
         parameterDependencyMap:
           cluster-sz: nodeInstanceType
       - key: enableTLS
@@ -1848,11 +1823,7 @@ services:
         required: true
         export: true
         defaultValue: e2-custom-4-8192
-        options:
-          - e2-custom-4-8192
-          - e2-custom-8-16384
-          - e2-custom-16-32768
-          - e2-custom-32-65536
+        options: *machineOptions
         parameterDependencyMap:
           cluster-mz: nodeInstanceType
       - key: enableTLS

@@ -12,6 +12,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.dependencies]
 python = "^3.11.4"
 falkordb = {git = "https://github.com/FalkorDB/falkordb-py", rev = "57-changing-the-cluster_conn-function-to-use-domain-nameshostnames-instead-of-ips"}
-redis = {git = "https://github.com/dudizimber/redis-py", rev = "3342-add-hostname-to-parse-node-line"}
+redis = {git = "https://github.com/MuhammadQadora/redis-py", rev = "master"}
 requests = "^2.32.3"
 setuptools = "^71.1.0"

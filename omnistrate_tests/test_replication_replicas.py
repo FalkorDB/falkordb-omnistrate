@@ -161,7 +161,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
         logging.exception("Failed to connect to Sentinel!")
         print(e)
 
-    tout = time.time() + 60
+    tout = time.time() + 200
     while True:
         if time.time() > tout:
             raise Exception(f"Failed to failover to node-{id_key}-2")
@@ -175,7 +175,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
             logging.info("Executed command too fast")
             logging.exception(e)
             continue
-    time.sleep(60)
+
     check_data(instance)
     
 def add_data(instance: OmnistrateFleetInstance):

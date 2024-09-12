@@ -178,10 +178,9 @@ def test_zero_downtime(instance: OmnistrateFleetInstance):
     graph.query("CREATE (n:Person {name: 'Alice'})")
     count = 0
     time_out = time.time() + 1200
-    print(db.connection.cluster_info())
+    
     while True:
         status = instance.get_instance_details()['status']
-        print(db.connection.cluster_info())
         if time.time() > time_out:
             raise Exception(f"Timeout occured after the instance state was in the {status} status for 20 minutes")
         

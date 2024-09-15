@@ -238,6 +238,7 @@ x-clusterparam: &clusterparam
       export: true
       defaultValue: e2-custom-4-8192
       options:
+        - e2-medium
         - e2-custom-4-8192
         - e2-custom-8-16384
         - e2-custom-16-32768
@@ -321,6 +322,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -492,6 +494,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -685,6 +688,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -868,6 +872,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -1166,6 +1171,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -1349,6 +1355,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -1645,6 +1652,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -1849,6 +1857,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768

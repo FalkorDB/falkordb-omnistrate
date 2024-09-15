@@ -1,9 +1,11 @@
 name: Build and release image
 
 on:
-  push:
-    tags:
-      - v*
+  workflow_run:
+    workflows: ["Build and test image"]
+    types:
+      - completed
+    branches: ["v*.*.*"]
   workflow_dispatch:
 
 concurrency:

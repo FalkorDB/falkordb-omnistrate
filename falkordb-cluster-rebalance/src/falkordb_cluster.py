@@ -159,7 +159,7 @@ class FalkorDBCluster:
     def get_slaves_from_master(self, master_id: str) -> list[FalkorDBClusterNode]:
         return [node for node in self.nodes if node.master_id == master_id]
 
-    def groups(self, replicas) -> list[list[FalkorDBClusterNode]]:
+    def groups(self, replicas: int) -> list[list[FalkorDBClusterNode]]:
         return [
             self.nodes[i : i + replicas + 1]
             for i in range(0, len(self.nodes), replicas + 1)
@@ -223,6 +223,7 @@ class FalkorDBCluster:
         """
         Relocate a slave to a new node
         """
+        logging.info(f"Relocate slave {slave_id} to {new_master_id}")
         slave_node = self.get_node_by_id(slave_id)
         new_master_node = self.get_node_by_id(new_master_id)
 
@@ -251,6 +252,9 @@ class FalkorDBCluster:
                 self.host,
                 "-p",
                 f"{self.port}",
+                "-a",
+                self.password,
+                "--no-auth-warning",
                 "--cluster",
                 "reshard",
                 f"{new_node.hostname}",

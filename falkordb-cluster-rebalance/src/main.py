@@ -47,23 +47,23 @@ healthcheck_ok = False
 
 def _handle_too_many_masters(cluster: FalkorDBCluster, expected_masters: int):
     # Choose one master to become slave from another master that doesn't have enough slaves
+    masters_with_slots = 0
     sorted_masters: list[tuple[FalkorDBClusterNode, int]] = []
     for extra_master in cluster.get_masters():
         if len(extra_master.slots) > 0:
+            masters_with_slots += 1
             continue
         sorted_masters.append(
             (extra_master, cluster.get_slaves_from_master(extra_master.id))
         )
 
+    sorted_masters = sorted(sorted_masters, key=lambda x: x[1])
     print(
-        f"Too many masters: expected_masters: {expected_masters}\nsorted_masters: {sorted_masters}"
+        f"Too many masters: expected_masters: {expected_masters}\nmasters_with_slots: {masters_with_slots}\nsorted_masters: {sorted_masters}"
     )
-    sorted_masters = sorted(sorted_masters, key=lambda x: len(x[1]))
 
     # Select the masters with the least slaves
-    extra_masters: list[tuple[FalkorDBClusterNode, int]] = sorted_masters[
-        : int(len(sorted_masters) - expected_masters)
-    ]
+    extra_masters: list[tuple[FalkorDBClusterNode, int]] = sorted_masters
 
     if len(extra_masters) == 0:
         logging.info("No extra masters to handle")
@@ -83,7 +83,11 @@ def _handle_too_many_masters(cluster: FalkorDBCluster, expected_masters: int):
             None,
         )
         group_master = next(
-            (node for node in extra_master_group if node.is_master),
+            (
+                node
+                for node in extra_master_group
+                if node.is_master and node != extra_master
+            ),
             None,
         )
         if group_master is None:
@@ -207,31 +211,22 @@ def main():
         logging.info(f"Too many masters: {len(cluster.get_masters())}")
         return _handle_too_many_masters(cluster, expected_masters)
 
-    for s in range(0, int(expected_shards)):
-        group_start_idx = s * (CLUSTER_REPLICAS + 1)
-        group_end_idx = group_start_idx + (CLUSTER_REPLICAS + 1)
-
+    groups = cluster.groups(CLUSTER_REPLICAS)
+    s = -1
+    for node_group in groups:
+        s += 1
         group_master: FalkorDBClusterNode | None = next(
-            (
-                node
-                for node in cluster.nodes[group_start_idx:group_end_idx]
-                if node.is_master
-            ),
+            (node for node in node_group if node.is_master),
             None,
         )
 
         if group_master is None:
             logging.info(f"Group {s} has no master")
-            continue
+            return _relocate_master(
+                cluster, cluster.get_node_by_id(node_group[0].master_id)
+            )
 
-        group_slaves: list[FalkorDBClusterNode] = [
-            node
-            for node in cluster.nodes[group_start_idx:group_end_idx]
-            if node.is_slave and node.master_id == group_master.id
-        ]
-
-        for i in range(group_start_idx, group_end_idx):
-            node = cluster.nodes[i]
+        for node in node_group:
 
             if node.is_master:
                 if group_master is None or group_master == node:
@@ -253,16 +248,17 @@ def main():
                     logging.info(f"Slave {node} has invalid master: {slave_master}")
 
                 # Check if master belongs to the same group as slave
-                if IS_MULTI_ZONE and (
-                    slave_master.idx < group_start_idx
-                    or slave_master.idx >= group_end_idx
-                ):
+                if IS_MULTI_ZONE and (slave_master not in node_group):
+
+                    group_slaves: list[FalkorDBClusterNode] = [
+                        node
+                        for node in node_group
+                        if node.is_slave and node.master_id == group_master.id
+                    ]
+
                     return _handle_slave_pointing_to_master_in_different_group(
                         cluster, node, slave_master, group_master, group_slaves
                     )
-
-        if len(group_slaves) != CLUSTER_REPLICAS:
-            logging.info(f"Group {s} has invalid number of slaves: {group_slaves}")
 
     logging.info(f"Cluster after: {cluster}")
 

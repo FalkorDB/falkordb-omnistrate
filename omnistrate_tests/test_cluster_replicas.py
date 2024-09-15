@@ -1,5 +1,6 @@
 import sys
 import signal
+from random import randbytes
 from pathlib import Path
 
 file = Path(__file__).resolve()
@@ -104,6 +105,7 @@ def test_cluster_replicas():
     )
 
     try:
+        password = randbytes(16).hex()
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
@@ -111,7 +113,7 @@ def test_cluster_replicas():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password="falkordb",
+            falkordb_password=password,
             nodeInstanceType=args.instance_type,
             storageSize=args.storage_size,
             enableTLS=args.tls,
@@ -126,7 +128,7 @@ def test_cluster_replicas():
         change_replica_count(instance, int(args.cluster_replicas) + 1)
 
         if args.ensure_mz_distribution:
-            test_ensure_mz_distribution(instance)
+            test_ensure_mz_distribution(instance, password)
 
         check_data(instance)
 
@@ -192,7 +194,7 @@ def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: 
         raise Exception("Cluster replicas count does not match new replicas count")
 
 
-def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
+def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str):
     """This function should ensure that each shard is distributed across multiple availability zones"""
 
     network_topology: dict = instance.get_network_topology(force_refresh=True)
@@ -226,7 +228,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
         host=resource["clusterEndpoint"],
         port=resource["clusterPorts"][0],
         username="falkordb",
-        password="falkordb",
+        password=password,
         ssl=params["enableTLS"] == "true" if "enableTLS" in params else False,
     )
 

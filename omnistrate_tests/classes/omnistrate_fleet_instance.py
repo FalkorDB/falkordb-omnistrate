@@ -27,6 +27,8 @@ class OmnistrateFleetInstance:
     _network_topology = None
     _connection: FalkorDB = None
 
+    falkordb_password: str = None
+
     def __init__(
         self,
         fleet_api: omnistrate_tests.classes.omnistrate_fleet_api.OmnistrateFleetAPI,
@@ -112,6 +114,8 @@ class OmnistrateFleetInstance:
         **kwargs,
     ) -> str:
         """Create an instance with the specified parameters. Optionally wait for the instance to be ready."""
+
+        self.falkordb_password = falkordb_password
 
         data = {
             "cloud_provider": deployment_cloud_provider,
@@ -513,7 +517,7 @@ class OmnistrateFleetInstance:
                     host=endpoint["endpoint"],
                     port=endpoint["ports"][0],
                     username="falkordb",
-                    password="falkordb",
+                    password=self.falkordb_password,
                     ssl=ssl,
                 )
                 break

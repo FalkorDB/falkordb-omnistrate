@@ -33,13 +33,13 @@ jobs:
             image-name: falkordb-cluster-rebalance
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
@@ -71,7 +71,7 @@ jobs:
     steps:
       - name: Checkout
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Replace Variables
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
@@ -84,13 +84,13 @@ jobs:
           sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
 
       - name: Remove e2-machine from pro
-        if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) && matrix.plans.key == 'pro' }}
+        if: ${{ contains( vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) && matrix.plans.key == 'pro' }}
         run: |
           sed -i 's/- e2-medium//g' ${{ matrix.plans.file }}
 
       - name: Upload yaml to artifacts
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4 
         with:
           name: ${{ matrix.plans.file }}
           path: ${{ matrix.plans.file }}

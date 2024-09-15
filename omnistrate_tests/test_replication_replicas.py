@@ -202,6 +202,7 @@ def check_data(instance: OmnistrateFleetInstance):
     # Get instance host and port
     db = instance.create_connection(
         ssl=args.tls,
+        force_reconnect=True,
     )
 
     graph = db.select_graph("test")

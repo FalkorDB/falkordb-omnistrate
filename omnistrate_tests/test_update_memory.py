@@ -186,8 +186,10 @@ def test_zero_downtime(instance: OmnistrateFleetInstance):
             raise Exception(f"Timeout occured after the instance state was in the {status} status for 20 minutes")
         
         if status == "DEPLOYING":
+            logging.info("DOING A CREATE OPERATION")
             graph.query(f"CREATE (n:Person {{name: 'Alice{str(count)}'}})")
-            result = graph.query(f"MATCH (n:Person {{name: 'Alice{str(count)}'}}) RETURN n")
+            logging.info("DOING A READ OPERATION")
+            result = graph.ro_query(f"MATCH (n:Person {{name: 'Alice{str(count)}'}}) RETURN n")
         else:
             break
         count += 1

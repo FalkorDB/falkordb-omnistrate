@@ -1,5 +1,6 @@
 import sys
 import signal
+from random import randbytes
 from pathlib import Path  # if you haven't already done so
 
 file = Path(__file__).resolve()
@@ -46,6 +47,9 @@ parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
+parser.add_argument("--host-count", required=False, default="6")
+parser.add_argument("--cluster-replicas", required=False, default="1")
+
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -126,12 +130,14 @@ def test_upgrade_version():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password="falkordb",
+            falkordb_password=randbytes(16).hex(),
             nodeInstanceType=args.instance_type,
             storageSize=args.storage_size,
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            hostCount=args.host_count,
+            clusterReplicas=args.cluster_replicas,
             product_tier_version=last_tier.version,
         )
 

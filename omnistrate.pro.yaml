@@ -218,16 +218,6 @@ x-omnistrate-integrations:
 
 x-rebalanceparam: &rebalanceparam
   x-omnistrate-api-params:
-    - key: clusterReplicas
-      description: The number of replicas per shard
-      name: Cluster Replicas
-      type: Float64
-      modifiable: true
-      required: true
-      export: true
-      defaultValue: "1"
-      min: 1
-      max: 3
     - key: enableTLS
       description: Whether to enable TLS for the database
       name: Enable TLS
@@ -239,25 +229,6 @@ x-rebalanceparam: &rebalanceparam
 
 x-clusterparam: &clusterparam
   x-omnistrate-api-params:
-    - key: hostCount
-      description: The number of hosts in the cluster
-      name: Host Count
-      type: Float64
-      modifiable: true
-      required: true
-      export: true
-      defaultValue: "6"
-      min: 6
-    - key: clusterReplicas
-      description: The number of replicas per shard
-      name: Cluster Replicas
-      type: Float64
-      modifiable: true
-      required: true
-      export: true
-      defaultValue: "1"
-      min: 1
-      max: 3
     - key: nodeInstanceType
       description: The size of the node instance. Check the documentation for more information.
       name: Node Instance Type
@@ -267,6 +238,7 @@ x-clusterparam: &clusterparam
       export: true
       defaultValue: e2-custom-4-8192
       options:
+        - e2-medium
         - e2-custom-4-8192
         - e2-custom-8-16384
         - e2-custom-16-32768
@@ -350,6 +322,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -521,6 +494,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -714,6 +688,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -897,6 +872,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -1050,6 +1026,7 @@ services:
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
       - BROWSER=0
+      - DEBUG=0
       - SENTINEL_HOST=$sentinel-sz.sys.network.externalClusterEndpoint
       - SENTINEL_PORT=26379
       - MASTER_NAME=master
@@ -1123,6 +1100,7 @@ services:
       - RUN_NODE=0
       - RUN_SENTINEL=1
       - RUN_METRICS=0
+      - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - DATA_DIR=/data
@@ -1193,6 +1171,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -1376,6 +1355,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -1529,6 +1509,7 @@ services:
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
       - BROWSER=0
+      - DEBUG=0
       - IS_MULTI_ZONE=1
       - SENTINEL_HOST=$sentinel-mz.sys.network.externalClusterEndpoint
       - SENTINEL_PORT=26379
@@ -1602,6 +1583,7 @@ services:
       - RUN_NODE=0
       - RUN_SENTINEL=1
       - RUN_METRICS=0
+      - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - DATA_DIR=/data
@@ -1670,6 +1652,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -1733,30 +1716,6 @@ services:
           - "always"
         parameterDependencyMap:
           cluster-sz: AOFPersistenceConfig
-      - key: hostCount
-        description: The number of hosts in the cluster. Each shard contains one master and one replica, so 6 hosts will create 3 shards.
-        name: Host Count
-        type: Float64
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: "6"
-        min: 6
-        parameterDependencyMap:
-          cluster-sz: hostCount
-      - key: clusterReplicas
-        description: The number of replicas per shard
-        name: Cluster Replicas
-        type: Float64
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: "1"
-        min: 1
-        max: 3
-        parameterDependencyMap:
-          cluster-sz: clusterReplicas
-          cluster-sz-rebalance: clusterReplicas
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -1769,7 +1728,7 @@ services:
     x-omnistrate-mode-internal: true
     image: $FalkorDBClusterImage
     x-omnistrate-compute:
-      replicaCountAPIParam: hostCount
+      replicaCount: 6
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
@@ -1800,7 +1759,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
-      - CLUSTER_REPLICAS=$var.clusterReplicas
+      - CLUSTER_REPLICAS=1
     ports:
       - "6379"
       - "16379"
@@ -1842,9 +1801,9 @@ services:
     environment:
       - IS_MULTI_ZONE=0
       - TLS=$var.enableTLS
-      - CLUSTER_REPLICAS=$var.clusterReplicas
+      - CLUSTER_REPLICAS=1
       - NODE_PORT=6379
-      - DEBUG=1
+      - DEBUG=0
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -1898,6 +1857,7 @@ services:
         export: true
         defaultValue: e2-custom-4-8192
         options:
+          - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
@@ -1961,30 +1921,6 @@ services:
           - "always"
         parameterDependencyMap:
           cluster-mz: AOFPersistenceConfig
-      - key: hostCount
-        description: "The number of hosts in the cluster. Must follow the formula: Host count = (1 + Cluster replicas) * Number of shards. Ex: 3 shards with 1 replica each = 6 hosts."
-        name: Host Count
-        type: Float64
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: "6"
-        min: 6
-        parameterDependencyMap:
-          cluster-mz: hostCount
-      - key: clusterReplicas
-        description: The number of replicas per shard
-        name: Cluster Replicas
-        type: Float64
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: "1"
-        min: 1
-        max: 3
-        parameterDependencyMap:
-          cluster-mz: clusterReplicas
-          cluster-mz-rebalance: clusterReplicas
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -1997,7 +1933,7 @@ services:
     x-omnistrate-mode-internal: true
     image: $FalkorDBClusterImage
     x-omnistrate-compute:
-      replicaCountAPIParam: hostCount
+      replicaCount: 6
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
@@ -2028,7 +1964,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
-      - CLUSTER_REPLICAS=$var.clusterReplicas
+      - CLUSTER_REPLICAS=1
     ports:
       - "6379"
       - "16379"
@@ -2070,9 +2006,9 @@ services:
     environment:
       - IS_MULTI_ZONE=1
       - TLS=$var.enableTLS
-      - CLUSTER_REPLICAS=$var.clusterReplicas
+      - CLUSTER_REPLICAS=1
       - NODE_PORT=6379
-      - DEBUG=1
+      - DEBUG=0
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword

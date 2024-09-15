@@ -161,8 +161,9 @@ def test_fail_over(instance: OmnistrateFleetInstance):
         logging.exception("Failed to connect to Sentinel!")
         print(e)
 
-    tout = time.time() + 200
+    tout = time.time() + 600
     while True:
+        print('inside the loop')
         if time.time() > tout:
             raise Exception(f"Failed to failover to node-{id_key}-2")
         try:

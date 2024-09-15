@@ -1,5 +1,6 @@
 import sys
 import signal
+from random import randbytes
 from pathlib import Path
 
 file = Path(__file__).resolve()
@@ -103,6 +104,7 @@ def test_cluster_shards():
     )
 
     try:
+        password = randbytes(16).hex()
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
@@ -110,7 +112,7 @@ def test_cluster_shards():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password="falkordb",
+            falkordb_password=password,
             nodeInstanceType=args.instance_type,
             storageSize=args.storage_size,
             enableTLS=args.tls,
@@ -125,14 +127,14 @@ def test_cluster_shards():
         change_host_count(instance, int(args.host_count) + 2)
 
         if args.ensure_mz_distribution:
-            test_ensure_mz_distribution(instance)
+            test_ensure_mz_distribution(instance, password)
 
         check_data(instance)
         
         change_host_count(instance, int(args.host_count))
 
         if args.ensure_mz_distribution:
-            test_ensure_mz_distribution(instance)
+            test_ensure_mz_distribution(instance, password)
 
         check_data(instance)
     except Exception as e:
@@ -203,7 +205,7 @@ def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):
         raise Exception("Host count does not match new host count")
 
 
-def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
+def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str):
     """This function should ensure that each shard is distributed across multiple availability zones"""
 
     instance_details = instance.get_instance_details()
@@ -246,7 +248,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
         host=resource["clusterEndpoint"],
         port=resource["clusterPorts"][0],
         username="falkordb",
-        password="falkordb",
+        password=password,
         ssl=params["enableTLS"] == "true" if "enableTLS" in params else False,
     )
 

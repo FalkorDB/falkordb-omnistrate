@@ -169,6 +169,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
             raise Exception(f"Failed to failover to node-{id_key}-2")
         try:
             f = client.execute_command('SENTINEL FAILOVER master')
+            print(f)
             time.sleep(10)
             master = client.execute_command('SENTINEL MASTER master')[3]
             if master.startswith(f"node-{id_key}-2"):

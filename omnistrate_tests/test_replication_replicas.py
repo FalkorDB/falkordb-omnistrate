@@ -1,6 +1,7 @@
 import sys
 import signal
 from pathlib import Path
+from random import randbytes
 from redis import Redis
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -96,6 +97,7 @@ def test_add_remove_replica():
     )
 
     try:
+        password = randbytes(16).hex()
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
@@ -103,7 +105,7 @@ def test_add_remove_replica():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password="falkordb",
+            falkordb_password=password,
             nodeInstanceType=args.instance_type,
             storageSize=args.storage_size,
             enableTLS=args.tls,

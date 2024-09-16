@@ -148,14 +148,14 @@ def test_fail_over(instance: OmnistrateFleetInstance):
     logging.info("Testing failover to the newly created replica")
 
     endpoint = instance.get_cluster_endpoint()
-
+    password = instance.falkordb_password
     id_key = "sz" if args.resource_key == "single-Zone" else "mz"
 
     try:
         client = Redis(
         host=f"{endpoint["endpoint"]}", port=endpoint['ports'][0],
         username="falkordb", 
-        password="falkordb",
+        password=password,
         decode_responses=True,
         ssl=args.tls,
         )
@@ -165,12 +165,10 @@ def test_fail_over(instance: OmnistrateFleetInstance):
 
     tout = time.time() + 600
     while True:
-        print('inside the loop')
         if time.time() > tout:
             raise Exception(f"Failed to failover to node-{id_key}-2")
         try:
             f = client.execute_command('SENTINEL FAILOVER master')
-            print(f)
             time.sleep(10)
             master = client.execute_command('SENTINEL MASTER master')[3]
             if master.startswith(f"node-{id_key}-2"):

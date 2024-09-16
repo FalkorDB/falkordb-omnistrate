@@ -170,9 +170,9 @@ def test_fail_over(instance: OmnistrateFleetInstance):
         try:
             time.sleep(5)
             try:
-                f = client.execute_command('SENTINEL FAILOVER master')
+                print(client.execute_command('SENTINEL FAILOVER master'))
             except:
-                print(f)
+                print("failed failover command")
             time.sleep(5)
             master = client.execute_command('SENTINEL MASTER master')[3]
             if master.startswith(f"node-{id_key}-2"):

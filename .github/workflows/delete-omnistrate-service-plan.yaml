@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
   pull_request:
     types: [closed]
-  delete:
 
 jobs:
   delete-service-plan:
@@ -14,8 +13,8 @@ jobs:
       max-parallel: 1
       matrix:
         plans:
-          - tier-name: free-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-          - tier-name: pro-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - tier-name: free-${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
+          - tier-name: pro-${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
     steps:
 
       - name: Checkout

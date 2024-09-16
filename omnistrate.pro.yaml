@@ -289,6 +289,76 @@ x-clusterparam: &clusterparam
       options:
         - "everysec"
         - "always"
+    - key: falkorDBCacheSize
+      description: Choose the cache size for your database
+      name: FalkorDB Cache Size
+      type: Float64
+      modifiable: false
+      required: false
+      export: true
+      defaultValue: "25"
+      min: 0
+      max: 256
+    - key: falkorDBNodeCreationBuffer
+      description: Choose the buffer size for your database
+      name: FalkorDB Node Creation Buffer
+      type: Float64
+      modifiable: false
+      required: false
+      export: true
+      defaultValue: "16384"
+      min: 256
+      max: 32768
+    - key: falkorDBMaxQueuedQueries
+      description: Choose the max queued queries for your database
+      name: FalkorDB Max Queued Queries
+      type: Float64
+      modifiable: false
+      required: false
+      export: true
+      defaultValue: "50"
+      min: 0
+      max: 512
+    - key: falkorDBTimeoutMax
+      description: Choose the timeout max for your database
+      name: FalkorDB Timeout Max
+      type: Float64
+      modifiable: false
+      required: false
+      export: true
+      defaultValue: "0"
+      min: 0
+      max: 45000
+    - key: falkorDBTimeoutDefault
+      description: Choose the timeout default for your database
+      name: FalkorDB Timeout Default
+      type: Float64
+      modifiable: false
+      required: false
+      export: true
+      defaultValue: "0"
+      min: 0
+      max: 45000
+    - key: falkorDBResultSetSize
+      description: Choose the result set size for your database
+      name: FalkorDB Result Set Size
+      type: Float64
+      modifiable: false
+      required: false
+      export: true
+      defaultValue: "0"
+      min: 0
+      max: 1000000
+    - key: falkorDBQueryMemCapacity
+      description: Choose the query mem capacity for your database
+      name: FalkorDB Query Mem Capacity
+      type: Float64
+      modifiable: false
+      required: false
+      export: true
+      defaultValue: "0"
+      min: 0
+      max: 2000000000
 
 services:
   # Standalone
@@ -1720,6 +1790,90 @@ services:
           - "always"
         parameterDependencyMap:
           cluster-sz: AOFPersistenceConfig
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        min: 0
+        max: 256
+        parameterDependencyMap:
+          cluster-sz: falkorDBCacheSize
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        min: 256
+        max: 32768
+        parameterDependencyMap:
+          cluster-sz: falkorDBNodeCreationBuffer
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        min: 0
+        max: 512
+        parameterDependencyMap:
+          cluster-sz: falkorDBMaxQueuedQueries
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          cluster-sz: falkorDBTimeoutMax
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          cluster-sz: falkorDBTimeoutDefault
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        min: 0
+        max: 1000000
+        parameterDependencyMap:
+          cluster-sz: falkorDBResultSetSize
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 2000000000
+        parameterDependencyMap:
+          cluster-sz: falkorDBQueryMemCapacity
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -1763,6 +1917,13 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
+      - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
+      - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
+      - FALKORDB_TIMEOUT_MAX=$var.falkorDBTimeoutMax
+      - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
+      - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
+      - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - CLUSTER_REPLICAS=1
     ports:
       - "6379"
@@ -1925,6 +2086,90 @@ services:
           - "always"
         parameterDependencyMap:
           cluster-mz: AOFPersistenceConfig
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        min: 0
+        max: 256
+        parameterDependencyMap:
+          cluster-mz: falkorDBCacheSize
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        min: 256
+        max: 32768
+        parameterDependencyMap:
+          cluster-mz: falkorDBNodeCreationBuffer
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        min: 0
+        max: 512
+        parameterDependencyMap:
+          cluster-mz: falkorDBMaxQueuedQueries
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          cluster-mz: falkorDBTimeoutMax
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 45000
+        parameterDependencyMap:
+          cluster-mz: falkorDBTimeoutDefault
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        min: 0
+        max: 1000000
+        parameterDependencyMap:
+          cluster-mz: falkorDBResultSetSize
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        min: 0
+        max: 2000000000
+        parameterDependencyMap:
+          cluster-mz: falkorDBQueryMemCapacity
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -1968,6 +2213,13 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
+      - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
+      - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
+      - FALKORDB_TIMEOUT_MAX=$var.falkorDBTimeoutMax
+      - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
+      - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
+      - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - CLUSTER_REPLICAS=1
     ports:
       - "6379"

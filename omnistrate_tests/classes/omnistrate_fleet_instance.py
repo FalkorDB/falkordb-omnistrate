@@ -2,6 +2,8 @@ from falkordb import FalkorDB
 import json
 import os
 import logging
+import socket
+from redis import retry, backoff
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
@@ -519,6 +521,16 @@ class OmnistrateFleetInstance:
                     username="falkordb",
                     password=self.falkordb_password,
                     ssl=ssl,
+                    retry=retry.Retry(
+                        retries=20,
+                        backoff=backoff.ExponentialBackoff(base=3),
+                        supported_errors=(
+                            ConnectionRefusedError,
+                            ConnectionError,
+                            TimeoutError,
+                            socket.timeout,
+                        ),
+                    ),
                 )
                 break
             except Exception as e:

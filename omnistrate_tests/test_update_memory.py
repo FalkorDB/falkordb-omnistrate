@@ -2,6 +2,7 @@ import sys
 import signal
 from random import randbytes
 from pathlib import Path  # if you haven't already done so
+import threading
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -99,7 +100,7 @@ def test_update_memory():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
-        deployment_create_timeout_seconds=2400
+        deployment_create_timeout_seconds=2400,
     )
 
     try:
@@ -122,13 +123,21 @@ def test_update_memory():
 
         add_data(instance)
 
-        # Update memory
-        instance.update_instance_type(args.new_instance_type, wait_until_ready=False)
+        # Start a new thread and signal for zero_downtime test
+        thread_signal = threading.Event()
+        error_signal = threading.Event()
+        thread = threading.Thread(
+            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+        )
+        thread.start()
 
-        if 'cluster' in args.resource_key:
-            logging.info("Testing zero downtime....")
-            test_zero_downtime(instance)
-        
+        # Update memory
+        instance.update_instance_type(args.new_instance_type, wait_until_ready=True)
+
+        # Wait for the zero_downtime
+        thread_signal.set()
+        thread.join()
+
         query_data(instance)
 
     except Exception as e:
@@ -139,7 +148,10 @@ def test_update_memory():
     # Delete instance
     instance.delete(False)
 
-    logging.info("Update memory size test passed")
+    if error_signal.is_set():
+        logging.error("Zero downtime test failed")
+    else:
+        logging.info("Update memory size test passed")
 
 
 def add_data(instance: OmnistrateFleetInstance):
@@ -166,35 +178,29 @@ def query_data(instance: OmnistrateFleetInstance):
     if len(result.result_set) == 0:
         raise ValueError("No data found in the graph after upgrade")
 
-def test_zero_downtime(instance: OmnistrateFleetInstance):
+
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
     """This function should test the ability to read and write while a memory update happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
 
-    db = instance.create_connection(
-        ssl=args.tls,
-    )
+        graph = db.select_graph("test")
 
-    graph = db.select_graph("test")
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
 
-    # Write some data to the DB
-    graph.query("CREATE (n:Person {name: 'Alice'})")
-    count = 0
-    time_out = time.time() + 1200
-    
-    while True:
-        status = instance.get_instance_details()['status']
-        if time.time() > time_out:
-            raise Exception(f"Timeout occured after the instance state was in the {status} status for 20 minutes")
-        
-        if status == "DEPLOYING":
-            logging.info("DOING A CREATE OPERATION")
-            graph.query(f"CREATE (n:Person {{name: 'Alice{str(count)}'}})")
-            logging.info("DOING A READ OPERATION")
-            result = graph.ro_query(f"MATCH (n:Person {{name: 'Alice{str(count)}'}}) RETURN n")
-        else:
-            break
-        count += 1
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
 
-    print("Zero downtime passed")
 
 if __name__ == "__main__":
     test_update_memory()

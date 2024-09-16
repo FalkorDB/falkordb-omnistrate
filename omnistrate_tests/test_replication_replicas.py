@@ -169,14 +169,16 @@ def test_fail_over(instance: OmnistrateFleetInstance):
             raise Exception(f"Failed to failover to node-{id_key}-2")
         try:
             time.sleep(5)
-            f = client.execute_command('SENTINEL FAILOVER master')
-            print(f)
+            try:
+                f = client.execute_command('SENTINEL FAILOVER master')
+            except:
+                print(f)
             time.sleep(5)
             master = client.execute_command('SENTINEL MASTER master')[3]
             if master.startswith(f"node-{id_key}-2"):
                 break
-        except:
-            logging.info("Executed command too fast")
+        except Exception as e:
+            logging.info(e)
             continue
 
     check_data(instance)

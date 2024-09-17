@@ -2,7 +2,7 @@ import sys
 import signal
 from random import randbytes
 from pathlib import Path
-
+import threading
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
@@ -129,6 +129,14 @@ def test_cluster_replicas():
 
         add_data(instance)
 
+        # Start a new thread and signal for zero_downtime test
+        thread_signal = threading.Event()
+        error_signal = threading.Event()
+        thread = threading.Thread(
+            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+        )
+        thread.start()
+
         change_replica_count(instance, int(args.cluster_replicas) + 1)
 
         if args.ensure_mz_distribution:
@@ -138,7 +146,12 @@ def test_cluster_replicas():
 
         change_replica_count(instance, int(args.cluster_replicas))
 
+         # Wait for the zero_downtime
+        thread_signal.set()
+        thread.join()
+        
         check_data(instance)
+
     except Exception as e:
         logging.exception(e)
         instance.delete(False)
@@ -164,35 +177,9 @@ def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: 
     instance.update_params(
         hostCount=f"{new_host_count}",
         clusterReplicas=f"{new_replicas_count}",
-        wait_for_ready=False,
+        wait_for_ready=True,
     )
 
-    db = instance.create_connection(
-        ssl=args.tls,
-    )
-
-    graph = db.select_graph("test")
-
-    # Write some data to the DB
-    graph.query("CREATE (n:Person {name: 'Alice'})")
-    count = 0
-    time_out = time.time() + 1200
-
-    while True:
-        status = instance.get_instance_details()['status']
-
-        if time.time() > time_out:
-            raise Exception(f"Timeout occured after the instance state was in the {status} status for 20 minutes")
-
-        if status == "DEPLOYING":
-            graph.query(f"CREATE (n:Person {{name: 'Alice{str(count)}'}})")
-            result = graph.query(
-                f"MATCH (n:Person {{name: 'Alice{str(count)}'}}) RETURN n")
-        else:
-            break
-        count += 1
-
-    print("Zero downtime passed ")
 
     current_host_count = new_host_count
     current_replicas_count = new_replicas_count
@@ -328,6 +315,29 @@ def check_data(instance: OmnistrateFleetInstance):
     if len(result.result_set) == 0:
         raise Exception("Data did not persist after host count change")
 
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a memory update happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+
+        graph = db.select_graph("test")
+
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
+    
 
 if __name__ == "__main__":
     test_cluster_replicas()

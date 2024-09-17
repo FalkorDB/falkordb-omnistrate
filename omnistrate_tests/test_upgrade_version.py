@@ -2,6 +2,7 @@ import sys
 import signal
 from random import randbytes
 from pathlib import Path  # if you haven't already done so
+import threading
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -142,6 +143,13 @@ def test_upgrade_version():
         # 3. Add data to the instance
         add_data(instance)
 
+        thread_signal = threading.Event()
+        error_signal = threading.Event()
+        thread = threading.Thread(
+            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+        )
+        thread.start()
+
         # 4. Upgrade version for the omnistrate instance
         upgrade_timer = time.time()
         instance.upgrade(
@@ -149,13 +157,12 @@ def test_upgrade_version():
             product_tier_id=product_tier.product_tier_id,
             source_version=last_tier.version,
             target_version=preferred_tier.version,
-            wait_until_ready=False,
+            wait_until_ready=True,
         )
         
-        if 'cluster' in args.resource_key:
-            logging.info("Testing zero downtime....")
-            test_zero_downtime(instance)
-            
+        thread_signal.set()
+        thread.join()
+
         logging.info(f"Upgrade time: {(time.time() - upgrade_timer):.2f}s")
 
         # 6. Verify the upgrade was successful
@@ -195,34 +202,27 @@ def query_data(instance: OmnistrateFleetInstance):
     if len(result.result_set) == 0:
         raise ValueError("No data found in the graph after upgrade")
 
-def test_zero_downtime(instance: OmnistrateFleetInstance):
-    """This function should test the ability to read and write while a upgrade is happening"""
-    # Get instance host and port
-    db = instance.create_connection(
-        ssl=args.tls,
-    )
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a memory update happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
 
-    graph = db.select_graph("test")
+        graph = db.select_graph("test")
 
-    # Write some data to the DB
-    graph.query("CREATE (n:Person {name: 'Alice'})")
-    count = 0
-    time_out = time.time() + 1200
-
-    while True:
-        status = instance.get_instance_details()['status']
-
-        if time.time() > time_out:
-            raise Exception(f"Timeout occured after the instance state was in the {status} status for 20 minutes")
-        
-        if status == "DEPLOYING":
-            graph.query(f"CREATE (n:Person {{name: 'Alice{str(count)}'}})")
-            result = graph.query(f"MATCH (n:Person {{name: 'Alice{str(count)}'}}) RETURN n")
-        else:
-            break
-        count += 1
-
-    print("Zero downtime passed")
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
 
 
 if __name__ == "__main__":

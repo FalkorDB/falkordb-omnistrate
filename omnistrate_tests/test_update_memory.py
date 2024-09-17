@@ -194,6 +194,7 @@ def test_zero_downtime(
         while not thread_signal.is_set():
             # Write some data to the DB
             graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
 
             time.sleep(3)
     except Exception as e:

@@ -2,6 +2,8 @@ import sys
 import signal
 from random import randbytes
 from pathlib import Path
+import threading
+
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -117,12 +119,24 @@ def test_cluster():
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
         )
+        
+
+        thread_signal = threading.Event()
+        error_signal = threading.Event()
+        thread = threading.Thread(
+            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+        )
+        thread.start()
 
         if args.ensure_mz_distribution:
             test_ensure_mz_distribution(instance, password)
 
         # Test failover and data loss
         test_failover(instance)
+
+        # Wait for the zero_downtime
+        thread_signal.set()
+        thread.join()
         
         # Test stop and start instance
         test_stop_start(instance)
@@ -227,32 +241,9 @@ def test_failover(instance: OmnistrateFleetInstance):
     # Trigger failover
     instance.trigger_failover(
         replica_id=args.replica_id,
-        wait_for_ready=False,
+        wait_for_ready=True,
     )
     
-    count = 0
-    time_out = time.time() + 1200
-    
-    while True:
-        print("inside the loop")
-        status = instance.get_instance_details()['status']
-        if time.time() > time_out:
-            raise Exception(f"Timeout occured after the instance state was in the {status} status for 20 minutes")
-        
-        if status == "DEPLOYING":
-            try:
-                graph.query(f"CREATE (n:Person {{name: 'Alice{str(count)}'}})")
-                result = graph.query(f"MATCH (n:Person {{name: 'Alice{str(count)}'}}) RETURN n")
-            except Exception as e:
-                print("This means that the 20 retries in the falkordb failed, this is not a good fix")
-                continue
-        else:
-            break
-        count += 1
-
-    print("Zero downtime passed ")
-    # Check if data is still there
-
     graph = db.select_graph("test")
 
     result = graph.query("MATCH (n:Person) RETURN n")
@@ -261,8 +252,6 @@ def test_failover(instance: OmnistrateFleetInstance):
         raise Exception("Data lost after failover")
 
     logging.info("Data persisted after failover")
-
-    graph.delete()
 
 
 def test_stop_start(instance: OmnistrateFleetInstance):
@@ -294,6 +283,32 @@ def test_stop_start(instance: OmnistrateFleetInstance):
         raise Exception("Data lost after stop/start")
 
     logging.info("Instance started")
+
+
+
+
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a memory update happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+
+        graph = db.select_graph("test")
+
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
 
 if __name__ == "__main__":
     test_cluster()

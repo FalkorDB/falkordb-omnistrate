@@ -531,7 +531,6 @@ class OmnistrateFleetInstance:
                             socket.timeout,
                         ),
                     ),
-                    reinitialize_steps=5,
                 )
                 break
             except Exception as e:

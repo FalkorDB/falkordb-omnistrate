@@ -3,6 +3,15 @@ import signal
 from pathlib import Path
 from random import randbytes
 from redis import Redis
+from redis.backoff import ExponentialBackoff
+from redis.retry import Retry
+from redis.exceptions import (
+   BusyLoadingError,
+   ConnectionError,
+   TimeoutError
+)
+
+
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
@@ -150,7 +159,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
     endpoint = instance.get_cluster_endpoint()
     password = instance.falkordb_password
     id_key = "sz" if args.resource_key == "single-Zone" else "mz"
-
+    retry = Retry(ExponentialBackoff(base=3), retries=20)
     try:
         client = Redis(
         host=f"{endpoint["endpoint"]}", port=endpoint['ports'][0],
@@ -158,12 +167,13 @@ def test_fail_over(instance: OmnistrateFleetInstance):
         password=password,
         decode_responses=True,
         ssl=args.tls,
+        retry=retry,
+        retry_on_error=[TimeoutError,BusyLoadingError,ConnectionError,ConnectionRefusedError]
         )
     except Exception as e:
         logging.exception("Failed to connect to Sentinel!")
         print(e)
-    print("I WILL SLEEP HERE JUST TO SEE IF IT IS A DELAY ISSUE")
-    time.sleep(60)
+
     print(client.execute_command('SENTINEL MASTER master'))
     
     tout = time.time() + 600
@@ -172,10 +182,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
             raise Exception(f"Failed to failover to node-{id_key}-2")
         try:
             time.sleep(5)
-            try:
-                print(client.execute_command('SENTINEL FAILOVER master'))
-            except:
-                print("failed failover command")
+            print(client.execute_command('SENTINEL FAILOVER master'))
             time.sleep(5)
             master = client.execute_command('SENTINEL MASTER master')[3]
             if master.startswith(f"node-{id_key}-2"):

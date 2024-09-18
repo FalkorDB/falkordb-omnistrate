@@ -3,7 +3,7 @@ import json
 import os
 import logging
 import socket
-from redis import retry, backoff
+from redis import retry, backoff, exceptions
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
@@ -529,6 +529,7 @@ class OmnistrateFleetInstance:
                             ConnectionError,
                             TimeoutError,
                             socket.timeout,
+                            exceptions.ConnectionError
                         ),
                     ),
                 )

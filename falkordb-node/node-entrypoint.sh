@@ -149,7 +149,7 @@ handle_sigterm() {
   # sentinels_list=$(get_sentinels_list)
 
   if [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
-    remove_master_from_group
+    # remove_master_from_group
     kill -TERM $falkordb_pid
   fi
 
@@ -399,7 +399,6 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
   echo "Creating falkordb user"
   redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG
-  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING ACL SAVE
 
   # Set maxmemory based on instance type
   get_memory_limit

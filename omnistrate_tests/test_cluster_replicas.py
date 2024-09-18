@@ -91,8 +91,7 @@ def test_cluster_replicas():
         args.service_id, product_tier.service_model_id
     )
 
-    logging.info(f"Product tier id: {
-                 product_tier.product_tier_id} for {args.ref_name}")
+    logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     instance = omnistrate.instance(
         service_id=args.service_id,
@@ -160,7 +159,10 @@ def test_cluster_replicas():
     # Delete instance
     instance.delete(False)
 
-    logging.info("Test passed")
+    if error_signal.is_set():
+        raise ValueError("Test failed")
+    else:
+        logging.info("Test passed")
 
 
 def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: int):
@@ -171,8 +173,7 @@ def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: 
     new_host_count = int(current_host_count) + (diff * int(args.shards))
 
     logging.info(
-        f"Changing clusterReplicas to {
-            new_replicas_count} and hostCount to {new_host_count}"
+        f"Changing clusterReplicas to {new_replicas_count} and hostCount to {new_host_count}"
     )
     instance.update_params(
         hostCount=f"{new_host_count}",
@@ -275,8 +276,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str
             )
 
         logging.info(
-            f"Group {group} is distributed across availability zones {
-                group_azs}"
+            f"Group {group} is distributed across availability zones {group_azs}"
         )
 
     logging.info("Shards are distributed across multiple availability zones")

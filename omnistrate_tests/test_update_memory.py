@@ -123,20 +123,26 @@ def test_update_memory():
 
         add_data(instance)
 
-        # Start a new thread and signal for zero_downtime test
-        thread_signal = threading.Event()
-        error_signal = threading.Event()
-        thread = threading.Thread(
-            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
-        )
-        thread.start()
+        thread_signal = None
+        error_signal = None
+        thread = None
+        if "standalone" not in args.instance_name:
+            # Start a new thread and signal for zero_downtime test
+            thread_signal = threading.Event()
+            error_signal = threading.Event()
+            thread = threading.Thread(
+                target=test_zero_downtime,
+                args=(thread_signal, error_signal, instance, args.tls),
+            )
+            thread.start()
 
         # Update memory
         instance.update_instance_type(args.new_instance_type, wait_until_ready=True)
 
-        # Wait for the zero_downtime
-        thread_signal.set()
-        thread.join()
+        if "standalone" not in args.instance_name:
+            # Wait for the zero_downtime
+            thread_signal.set()
+            thread.join()
 
         query_data(instance)
 
@@ -148,10 +154,10 @@ def test_update_memory():
     # Delete instance
     instance.delete(False)
 
-    if error_signal.is_set():
-        logging.error("Zero downtime test failed")
+    if "standalone" not in args.instance_name and error_signal.is_set():
+        raise ValueError("Test failed")
     else:
-        logging.info("Update memory size test passed")
+        logging.info("Test passed")
 
 
 def add_data(instance: OmnistrateFleetInstance):

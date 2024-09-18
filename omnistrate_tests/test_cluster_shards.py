@@ -159,7 +159,10 @@ def test_cluster_shards():
     # Delete instance
     instance.delete(False)
 
-    logging.info("Test passed")
+    if error_signal.is_set():
+        raise ValueError("Test failed")
+    else:
+        logging.info("Test passed")
 
 
 def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):

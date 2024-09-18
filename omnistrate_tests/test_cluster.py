@@ -148,7 +148,10 @@ def test_cluster():
     # Delete instance
     instance.delete(False)
 
-    logging.info("Test passed")
+    if error_signal.is_set():
+        raise ValueError("Test failed")
+    else:
+        logging.info("Test passed")
 
 
 def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str):

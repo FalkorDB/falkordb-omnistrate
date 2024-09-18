@@ -53,6 +53,8 @@ parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 
+parser.add_argument("--enable-custom-network", action="store_true")
+
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
@@ -87,6 +89,16 @@ def test_replication():
 
     logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
+    network = None
+    if args.enable_custom_network:
+        network = omnistrate.network()
+        network.create(
+            name=args.instance_name,
+            cidr="10.0.0.0/20",
+            cloudProviderName=args.cloud_provider,
+            cloudProviderRegion=args.region,
+        )
+
     instance = omnistrate.instance(
         service_id=args.service_id,
         service_provider_id=service.service_provider_id,
@@ -115,6 +127,7 @@ def test_replication():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            custom_network_id=network.network_id if network else None,
         )
 
         # Test failover and data loss
@@ -124,11 +137,15 @@ def test_replication():
         test_stop_start(instance, password)
     except Exception as e:
         logging.exception(e)
-        instance.delete(False)
+        instance.delete(network is not None)
+        if network:
+            network.delete()
         raise e
 
     # Delete instance
-    instance.delete(False)
+    instance.delete(network is not None)
+    if network:
+        network.delete()
 
     logging.info("Test passed")
 

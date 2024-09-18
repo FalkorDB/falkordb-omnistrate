@@ -172,8 +172,6 @@ def test_fail_over(instance: OmnistrateFleetInstance):
     except Exception as e:
         logging.exception("Failed to connect to Sentinel!")
         logging.info(e)
-
-    print(client.execute_command('SENTINEL MASTER master'))
     
     tout = time.time() + 600
     while True:
@@ -189,7 +187,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
         except Exception as e:
             logging.info(e)
             continue
-    
+    time.sleep(15)
     check_data(instance)
     
 def add_data(instance: OmnistrateFleetInstance):

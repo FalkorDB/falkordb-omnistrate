@@ -149,7 +149,7 @@ handle_sigterm() {
   # sentinels_list=$(get_sentinels_list)
 
   if [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
-    # remove_master_from_group
+    remove_master_from_group
     kill -TERM $falkordb_pid
   fi
 

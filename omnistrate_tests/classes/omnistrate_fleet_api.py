@@ -1,5 +1,6 @@
 import requests
 import omnistrate_tests.classes.omnistrate_fleet_instance
+import omnistrate_tests.classes.omnistrate_fleet_network
 from .omnistrate_types import (
     ProductTier,
     Service,
@@ -155,4 +156,11 @@ class OmnistrateFleetAPI:
                 resource_key,
                 subscription_id,
             )
+        )
+
+    def network(
+        self,
+    ):
+        return omnistrate_tests.classes.omnistrate_fleet_network.OmnistrateFleetNetwork(
+            self
         )

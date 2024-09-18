@@ -111,6 +111,7 @@ class OmnistrateFleetInstance:
         falkordb_user: str,
         falkordb_password: str,
         product_tier_version: str | None = None,
+        custom_network_id: str | None = None,
         **kwargs,
     ) -> str:
         """Create an instance with the specified parameters. Optionally wait for the instance to be ready."""
@@ -129,6 +130,9 @@ class OmnistrateFleetInstance:
             },
             "productTierVersion": product_tier_version,
         }
+
+        if custom_network_id:
+            data["custom_network_id"] = custom_network_id
 
         logging.info(f"Creating instance {name}")
 

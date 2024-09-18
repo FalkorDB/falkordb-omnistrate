@@ -1,7 +1,8 @@
 import sys
 import signal
 from random import randbytes
-from pathlib import Path  # if you haven't already done so
+from pathlib import Path
+import threading
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -118,8 +119,19 @@ def test_replication():
             AOFPersistenceConfig=args.aof_config,
         )
 
+        thread_signal = threading.Event()
+        error_signal = threading.Event()
+        thread = threading.Thread(
+            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+        )
+        thread.start()
+
         # Test failover and data loss
         test_failover(instance, password)
+
+        # Wait for the zero_downtime
+        thread_signal.set()
+        thread.join()
 
         # Test stop and start instance
         test_stop_start(instance, password)
@@ -355,6 +367,30 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
         raise Exception("Data lost after stop/start")
 
     logging.info("Instance started")
+
+
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a memory update happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+
+        graph = db.select_graph("test_zero_downtime")
+
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
 
 
 if __name__ == "__main__":

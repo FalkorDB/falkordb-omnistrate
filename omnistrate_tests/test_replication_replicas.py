@@ -6,7 +6,6 @@ from redis import Redis
 from redis.backoff import ExponentialBackoff
 from redis.retry import Retry
 from redis.exceptions import (
-   BusyLoadingError,
    ConnectionError,
    TimeoutError
 )
@@ -91,7 +90,7 @@ def test_add_remove_replica():
 
     instance = omnistrate.instance(
         service_id=args.service_id,
-        service_provider_id=service.service_provider_id,
+        service_provider_id="sp-JvkxkPhinN",
         service_key=service.key,
         service_environment_id=args.environment_id,
         service_environment_key=service.get_environment(args.environment_id).key,
@@ -114,7 +113,7 @@ def test_add_remove_replica():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password=password,
+            falkordb_password="falkordb",
             nodeInstanceType=args.instance_type,
             storageSize=args.storage_size,
             enableTLS=args.tls,
@@ -168,11 +167,11 @@ def test_fail_over(instance: OmnistrateFleetInstance):
         decode_responses=True,
         ssl=args.tls,
         retry=retry,
-        retry_on_error=[TimeoutError,BusyLoadingError,ConnectionError,ConnectionRefusedError]
+        retry_on_error=[TimeoutError,ConnectionError,ConnectionRefusedError]
         )
     except Exception as e:
         logging.exception("Failed to connect to Sentinel!")
-        print(e)
+        logging.info(e)
 
     print(client.execute_command('SENTINEL MASTER master'))
     
@@ -190,7 +189,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
         except Exception as e:
             logging.info(e)
             continue
-
+    
     check_data(instance)
     
 def add_data(instance: OmnistrateFleetInstance):
@@ -218,6 +217,7 @@ def check_data(instance: OmnistrateFleetInstance):
     db = instance.create_connection(
         ssl=args.tls,
         force_reconnect=True,
+        retries=10
     )
 
     graph = db.select_graph("test")

@@ -125,8 +125,8 @@ redis = "^5.0.1"
 [package.source]
 type = "git"
 url = "https://github.com/FalkorDB/falkordb-py"
-reference = "fix-default-cluster-params"
-resolved_reference = "3d86622b0a1dead04c1f6721aca6808828acd7ed"
+reference = "main"
+resolved_reference = "dbdc7128bc4661a94ce7875df2ddb5e701e03d4f"
 
 [[package]]
 name = "idna"
@@ -158,8 +158,8 @@ ocsp = ["cryptography (>=36.0.1)", "pyopenssl (==23.2.1)", "requests (>=2.31.0)"
 [package.source]
 type = "git"
 url = "https://github.com/dudizimber/redis-py"
-reference = "debug"
-resolved_reference = "776376637acd74a55c14af72af1dfa8c4c7eea0c"
+reference = "master"
+resolved_reference = "7d73d742d6df4b3d6f6a1f0ec73e72d4a02add74"
 
 [[package]]
 name = "requests"
@@ -218,4 +218,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11.4"
-content-hash = "298ad3cdc6f90ccbbefc9ccba350ed2c74ec56ae7dad8b7137953f8fe10c678d"
+content-hash = "cbebbc4f94f433b773f8b8f3406a75071e974a60cbf1d4664ecde78455f8f48b"

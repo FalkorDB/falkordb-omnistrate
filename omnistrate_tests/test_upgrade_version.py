@@ -2,6 +2,7 @@ import sys
 import signal
 from random import randbytes
 from pathlib import Path  # if you haven't already done so
+import threading
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -14,6 +15,7 @@ with suppress(ValueError):
     sys.path.remove(str(parent))
 
 import logging
+
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
@@ -56,11 +58,14 @@ args = parser.parse_args()
 
 instance: OmnistrateFleetInstance = None
 
+
 # Intercept exit signals so we can delete the instance before exiting
 def signal_handler(sig, frame):
     if instance:
         instance.delete(False)
     sys.exit(0)
+
+
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
@@ -144,6 +149,18 @@ def test_upgrade_version():
         # 3. Add data to the instance
         add_data(instance)
 
+        thread_signal = None
+        error_signal = None
+        thread = None
+        if "standalone" not in args.instance_name:
+            thread_signal = threading.Event()
+            error_signal = threading.Event()
+            thread = threading.Thread(
+                target=test_zero_downtime,
+                args=(thread_signal, error_signal, instance, args.tls),
+            )
+            thread.start()
+
         # 4. Upgrade version for the omnistrate instance
         upgrade_timer = time.time()
         instance.upgrade(
@@ -153,6 +170,10 @@ def test_upgrade_version():
             target_version=preferred_tier.version,
             wait_until_ready=True,
         )
+
+        if "standalone" not in args.instance_name:
+            thread_signal.set()
+            thread.join()
 
         logging.info(f"Upgrade time: {(time.time() - upgrade_timer):.2f}s")
 
@@ -166,7 +187,10 @@ def test_upgrade_version():
     # 7. Delete the instance
     instance.delete(False)
 
-    logging.info("Upgrade version test passed")
+    if "standalone" not in args.instance_name and error_signal.is_set():
+        raise ValueError("Test failed")
+    else:
+        logging.info("Test passed")
 
 
 def add_data(instance: OmnistrateFleetInstance):
@@ -192,6 +216,29 @@ def query_data(instance: OmnistrateFleetInstance):
 
     if len(result.result_set) == 0:
         raise ValueError("No data found in the graph after upgrade")
+
+
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a memory update happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+
+        graph = db.select_graph("test")
+
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
 
 
 if __name__ == "__main__":

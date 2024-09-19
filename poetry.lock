@@ -126,7 +126,7 @@ redis = "^5.0.1"
 type = "git"
 url = "https://github.com/FalkorDB/falkordb-py"
 reference = "main"
-resolved_reference = "dbdc7128bc4661a94ce7875df2ddb5e701e03d4f"
+resolved_reference = "1544d89c69f1a29e577715d859acfb7423fe078f"
 
 [[package]]
 name = "idna"

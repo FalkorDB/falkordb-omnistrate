@@ -11,7 +11,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
 python = "^3.11.4"
-falkordb = {git = "https://github.com/FalkorDB/falkordb-py", rev = "fix-default-cluster-params"}
-redis = {git = "https://github.com/dudizimber/redis-py", rev = "debug"}
+falkordb = {git = "https://github.com/FalkorDB/falkordb-py", rev = "main"}
+redis = {git = "https://github.com/dudizimber/redis-py", rev = "master"}
 requests = "^2.32.3"
 setuptools = "^71.1.0"

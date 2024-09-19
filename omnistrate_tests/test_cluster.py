@@ -2,6 +2,8 @@ import sys
 import signal
 from random import randbytes
 from pathlib import Path
+import threading
+
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -111,6 +113,7 @@ def test_cluster():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
+        deployment_create_timeout_seconds=2400
     )
 
     try:
@@ -132,6 +135,14 @@ def test_cluster():
             clusterReplicas=args.cluster_replicas,
             custom_network_id=network.network_id if network else None,
         )
+        
+
+        thread_signal = threading.Event()
+        error_signal = threading.Event()
+        thread = threading.Thread(
+            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+        )
+        thread.start()
 
         if args.ensure_mz_distribution:
             test_ensure_mz_distribution(instance, password)
@@ -139,6 +150,10 @@ def test_cluster():
         # Test failover and data loss
         test_failover(instance)
 
+        # Wait for the zero_downtime
+        thread_signal.set()
+        thread.join()
+        
         # Test stop and start instance
         test_stop_start(instance)
     except Exception as e:
@@ -153,7 +168,10 @@ def test_cluster():
     if network:
         network.delete()
 
-    logging.info("Test passed")
+    if error_signal.is_set():
+        raise ValueError("Test failed")
+    else:
+        logging.info("Test passed")
 
 
 def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str):
@@ -252,9 +270,7 @@ def test_failover(instance: OmnistrateFleetInstance):
         replica_id=args.replica_id,
         wait_for_ready=True,
     )
-
-    # Check if data is still there
-
+    
     graph = db.select_graph("test")
 
     result = graph.query("MATCH (n:Person) RETURN n")
@@ -263,8 +279,6 @@ def test_failover(instance: OmnistrateFleetInstance):
         raise Exception("Data lost after failover")
 
     logging.info("Data persisted after failover")
-
-    graph.delete()
 
 
 def test_stop_start(instance: OmnistrateFleetInstance):
@@ -298,5 +312,31 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     logging.info("Instance started")
 
 
+
+
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a memory update happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+
+        graph = db.select_graph("test")
+
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
+
 if __name__ == "__main__":
     test_cluster()
+

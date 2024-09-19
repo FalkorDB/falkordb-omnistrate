@@ -2,6 +2,8 @@ import sys
 import signal
 from random import randbytes
 from pathlib import Path
+import threading
+
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -100,6 +102,7 @@ def test_cluster_shards():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
+        deployment_create_timeout_seconds=2400
     )
 
     try:
@@ -123,18 +126,30 @@ def test_cluster_shards():
 
         add_data(instance)
 
+        # Start a new thread and signal for zero_downtime test
+        thread_signal = threading.Event()
+        error_signal = threading.Event()
+        thread = threading.Thread(
+            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+        )
+        thread.start()
+
         change_host_count(instance, int(args.host_count) + 2)
 
         if args.ensure_mz_distribution:
             test_ensure_mz_distribution(instance, password)
 
         check_data(instance)
-
+        
         change_host_count(instance, int(args.host_count))
 
         if args.ensure_mz_distribution:
             test_ensure_mz_distribution(instance, password)
 
+        # Wait for the zero_downtime
+        thread_signal.set()
+        thread.join()
+        
         check_data(instance)
     except Exception as e:
         logging.exception(e)
@@ -144,7 +159,10 @@ def test_cluster_shards():
     # Delete instance
     instance.delete(False)
 
-    logging.info("Test passed")
+    if error_signal.is_set():
+        raise ValueError("Test failed")
+    else:
+        logging.info("Test passed")
 
 
 def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):
@@ -152,9 +170,10 @@ def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):
 
     logging.info(f"Changing host count to {new_host_count}")
     instance.update_params(
-        hostCount=f"{new_host_count}",
+        hostCount=new_host_count,
         wait_for_ready=True,
     )
+
     current_host_count = new_host_count
 
     instance_details = instance.get_instance_details()
@@ -282,7 +301,31 @@ def check_data(instance: OmnistrateFleetInstance):
 
     if len(result.result_set) == 0:
         raise Exception("Data did not persist after host count change")
+    
 
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a memory update happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
 
+        graph = db.select_graph("test")
+
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
+
+    
 if __name__ == "__main__":
     test_cluster_shards()

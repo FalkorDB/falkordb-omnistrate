@@ -2,7 +2,7 @@ import sys
 import signal
 from random import randbytes
 from pathlib import Path
-
+import threading
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
@@ -33,13 +33,15 @@ parser.add_argument("region")
 parser.add_argument(
     "--subscription-id", required=False, default=os.getenv("SUBSCRIPTION_ID")
 )
-parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
+parser.add_argument("--ref-name", required=False,
+                    default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
 parser.add_argument("--resource-key", required=True)
 
 parser.add_argument("--instance-name", required=True)
-parser.add_argument("--instance-description", required=False, default="test-standalone")
+parser.add_argument("--instance-description",
+                    required=False, default="test-standalone")
 parser.add_argument("--instance-type", required=True)
 parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
@@ -96,7 +98,8 @@ def test_cluster_replicas():
         service_provider_id=service.service_provider_id,
         service_key=service.key,
         service_environment_id=args.environment_id,
-        service_environment_key=service.get_environment(args.environment_id).key,
+        service_environment_key=service.get_environment(
+            args.environment_id).key,
         service_model_key=service_model.key,
         service_api_version="v1",
         product_tier_key=product_tier.product_tier_key,
@@ -128,6 +131,14 @@ def test_cluster_replicas():
 
         add_data(instance)
 
+        # Start a new thread and signal for zero_downtime test
+        thread_signal = threading.Event()
+        error_signal = threading.Event()
+        thread = threading.Thread(
+            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+        )
+        thread.start()
+
         change_replica_count(instance, int(args.cluster_replicas) + 1)
 
         if args.ensure_mz_distribution:
@@ -137,7 +148,12 @@ def test_cluster_replicas():
 
         change_replica_count(instance, int(args.cluster_replicas))
 
+         # Wait for the zero_downtime
+        thread_signal.set()
+        thread.join()
+        
         check_data(instance)
+
     except Exception as e:
         logging.exception(e)
         instance.delete(False)
@@ -146,7 +162,10 @@ def test_cluster_replicas():
     # Delete instance
     instance.delete(False)
 
-    logging.info("Test passed")
+    if error_signal.is_set():
+        raise ValueError("Test failed")
+    else:
+        logging.info("Test passed")
 
 
 def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: int):
@@ -164,6 +183,8 @@ def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: 
         clusterReplicas=f"{new_replicas_count}",
         wait_for_ready=True,
     )
+
+
     current_host_count = new_host_count
     current_replicas_count = new_replicas_count
 
@@ -194,7 +215,8 @@ def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: 
         raise Exception("No clusterReplicas found in instance details")
 
     if cluster_replicas != current_replicas_count:
-        raise Exception("Cluster replicas count does not match new replicas count")
+        raise Exception(
+            "Cluster replicas count does not match new replicas count")
 
 
 def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str):
@@ -213,7 +235,8 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str
         raise Exception("No result_params found in instance details")
 
     resource_key = next(
-        (k for [k, v] in network_topology.items() if v["resourceName"] == "cluster-mz"),
+        (k for [k, v] in network_topology.items()
+         if v["resourceName"] == "cluster-mz"),
         None,
     )
 
@@ -244,7 +267,8 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str
                 (n for n in nodes if n["endpoint"] == node.hostname), None
             )
             if not omnistrateNode:
-                logging.warning(f"Node {node.hostname} not found in network topology")
+                logging.warning(
+                    f"Node {node.hostname} not found in network topology")
                 continue
 
             group_azs.add(omnistrateNode["availabilityZone"])
@@ -294,6 +318,29 @@ def check_data(instance: OmnistrateFleetInstance):
     if len(result.result_set) == 0:
         raise Exception("Data did not persist after host count change")
 
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a memory update happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+
+        graph = db.select_graph("test")
+
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
+    
 
 if __name__ == "__main__":
     test_cluster_replicas()

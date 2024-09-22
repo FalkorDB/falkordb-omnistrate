@@ -52,7 +52,12 @@ fn start_health_check_server(is_sentinel: bool) {
 fn health_check_handler(is_sentinel: bool) -> Result<bool, redis::RedisError> {
     let password = match env::var("ADMIN_PASSWORD") {
         Ok(password) => password,
-        Err(_) => "".to_string(),
+        Err(_) => {
+            // Read from /run/secrets/adminpassword
+            let path = "/run/secrets/adminpassword";
+            let password = std::fs::read_to_string(path).unwrap();
+            password.trim().to_string()
+        },
     };
 
     if is_sentinel {

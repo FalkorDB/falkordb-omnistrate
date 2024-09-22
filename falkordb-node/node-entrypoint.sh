@@ -156,6 +156,10 @@ handle_sigterm() {
   if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $healthcheck_pid ]]; then
     kill -TERM $healthcheck_pid
   fi
+
+  if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $sentinel_healthcheck_pid ]]; then
+    kill -TERM $sentinel_healthcheck_pid
+  fi
 }
 
 trap handle_sigterm SIGTERM
@@ -448,10 +452,22 @@ fi
 
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   # Check if healthcheck binary exists
+
   if [ -f /usr/local/bin/healthcheck ]; then
     echo "Starting Healthcheck"
     healthcheck &
     healthcheck_pid=$!
+  else
+    echo "Healthcheck binary not found"
+  fi
+fi
+
+if [[ $RUN_HEALTH_CHECK -eq 1 ]] && [[ $RUN_SENTINEL -eq 1 ]]; then
+  # Check if healthcheck binary exists
+  if [ -f /usr/local/bin/healthcheck ]; then
+    echo "Starting Sentinel Healthcheck"
+    healthcheck sentinel &
+    sentinel_healthcheck_pid=$!
   else
     echo "Healthcheck binary not found"
   fi

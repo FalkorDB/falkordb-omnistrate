@@ -9,6 +9,8 @@ from redis.exceptions import (
    ConnectionError,
    TimeoutError
 )
+import threading
+
 
 
 file = Path(__file__).resolve()
@@ -123,6 +125,14 @@ def test_add_remove_replica():
 
         add_data(instance)
 
+        thread_signal = threading.Event()
+        error_signal = threading.Event()
+        thread = threading.Thread(
+            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+        )
+        
+        thread.start()
+
         check_data(instance)
 
         change_replica_count(instance, int(args.replica_count) + 1)
@@ -133,15 +143,21 @@ def test_add_remove_replica():
     
         check_data(instance)
 
+        thread_signal.set()
+        thread.join()
+
     except Exception as e:
         logging.exception(e)
         instance.delete(False)
         raise e
 
     # Delete instance
-    instance.delete(True)
+    instance.delete(False)
 
-    logging.info("Test passed")
+    if error_signal.is_set():
+        raise ValueError("Test failed")
+    else:
+        logging.info("Test passed")
 
 
 def change_replica_count(instance: OmnistrateFleetInstance, new_replica_count: int):
@@ -225,6 +241,28 @@ def check_data(instance: OmnistrateFleetInstance):
     if len(result.result_set) == 0:
         raise Exception("Data did not persist after host count change")
 
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a memory update happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+
+        graph = db.select_graph("test")
+
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
 
 if __name__ == "__main__":
     test_add_remove_replica()

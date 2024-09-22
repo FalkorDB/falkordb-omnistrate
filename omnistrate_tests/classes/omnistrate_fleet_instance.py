@@ -137,7 +137,7 @@ class OmnistrateFleetInstance:
         response = self._fleet_api.client().post(
             f"{self._fleet_api.base_url}/fleet/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}?subscriptionId={self.subscription_id}",
             data=json.dumps(data),
-            timeout=15,
+            timeout=60,
         )
 
         self._fleet_api.handle_response(response, f"Failed to create instance {name}")
@@ -189,7 +189,7 @@ class OmnistrateFleetInstance:
 
                 response = self._fleet_api.client().get(
                     f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
-                    timeout=15,
+                    timeout=60,
                 )
 
             except exceptions.ReadTimeout as e:
@@ -233,7 +233,7 @@ class OmnistrateFleetInstance:
 
         response = self._fleet_api.client().delete(
             f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
-            timeout=15,
+            timeout=60,
             data=json.dumps({"resourceId": resource_id}),
         )
 
@@ -257,7 +257,7 @@ class OmnistrateFleetInstance:
 
         response = self._fleet_api.client().post(
             f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}/stop",
-            timeout=15,
+            timeout=60,
             data=json.dumps({"resourceId": self.get_resource_id()}),
         )
 
@@ -282,7 +282,7 @@ class OmnistrateFleetInstance:
 
         response = self._fleet_api.client().post(
             f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}/start",
-            timeout=15,
+            timeout=60,
             data=json.dumps({"resourceId": self.get_resource_id()}),
         )
 
@@ -316,7 +316,7 @@ class OmnistrateFleetInstance:
         response = self._fleet_api.client().post(
             f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}/failover",
             data=json.dumps(data),
-            timeout=15,
+            timeout=60,
         )
 
         if "operation is already in progress" in response.text and retry > 0:
@@ -357,7 +357,7 @@ class OmnistrateFleetInstance:
         response = self._fleet_api.client().patch(
             f"{self._fleet_api.base_url}/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}/{self.instance_id}",
             data=json.dumps(data),
-            timeout=15,
+            timeout=60,
         )
 
         if "operation is already in progress" in response.text and retry > 0:
@@ -370,7 +370,7 @@ class OmnistrateFleetInstance:
 
         if not wait_until_ready:
             return
-
+        
         self.wait_for_instance_status(
             timeout_seconds=self.deployment_update_timeout_seconds
         )
@@ -394,7 +394,7 @@ class OmnistrateFleetInstance:
         response = self._fleet_api.client().post(
             f"{self._fleet_api.base_url}/fleet/service/{service_id}/productTier/{product_tier_id}/upgrade-path",
             json=data,
-            timeout=15,
+            timeout=60,
         )
 
         self._fleet_api.handle_response(response, "Failed to upgrade instance")
@@ -418,7 +418,7 @@ class OmnistrateFleetInstance:
         while True:
             response = self._fleet_api.client().get(
                 f"{self._fleet_api.base_url}/fleet/service/{service_id}/productTier/{product_tier_id}/upgrade-path/{upgrade_id}",
-                timeout=15,
+                timeout=60,
             )
 
             self._fleet_api.handle_response(response, "Failed to get upgrade status")
@@ -462,7 +462,7 @@ class OmnistrateFleetInstance:
         """Get the connection endpoints for the instance."""
 
         resources = self.get_network_topology()
-
+        
         resources_keys = resources.keys()
 
         endpoints = []

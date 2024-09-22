@@ -6,12 +6,17 @@ use std::env;
 use std::env::args;
 
 fn main() {
-    start_health_check_server();
+    let args: Vec<String> = args().collect();
+
+    if args.len() > 1 && args[1] == "sentinel" {
+        start_health_check_server(true);
+    } else {
+        start_health_check_server(false);
+    }
 }
 
-fn start_health_check_server() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() > 1 && args[1] == "sentinel" {
+fn start_health_check_server(is_sentinel: bool) {
+    if is_sentinel {
         let port = match env::var("HEALTH_CHECK_PORT_SENTINEL") {
             Ok(port) => port,
             Err(_) => "8082".to_string(),
@@ -28,7 +33,7 @@ fn start_health_check_server() {
     let server = Server::new(addr, |request| {
         router!(request,
             (GET) (/healthcheck) => {
-              let health = health_check_handler().unwrap();
+              let health = health_check_handler(is_sentinel).unwrap();
 
                 if health.eq(&true) {
                     Response::text("OK")
@@ -44,12 +49,13 @@ fn start_health_check_server() {
     server.run();
 }
 
-fn health_check_handler() -> Result<bool, redis::RedisError> {
+fn health_check_handler(is_sentinel: bool) -> Result<bool, redis::RedisError> {
     let password = match env::var("ADMIN_PASSWORD") {
         Ok(password) => password,
         Err(_) => "".to_string(),
     };
-    if args.len() > 1 && args[1] == "sentinel" {
+
+    if is_sentinel {
         let node_port = match env::var("SENTINEL_PORT") {
             Ok(port) => port,
             Err(_) => "26379".to_string(),
@@ -78,7 +84,13 @@ fn health_check_handler() -> Result<bool, redis::RedisError> {
     let mut con = client.get_connection()?;
 
     // Get persistence info
-
+    if is_sentinel{
+        let sentinel_info: String = redis::cmd("SENTINEL").arg("MASTERS").query(&mut con)?;
+        if sentinel_info.is_empty() {
+            return Ok(false);
+        }
+        return Ok(true);
+    }
     let db_info: String = redis::cmd("INFO").query(&mut con)?;
 
     let is_cluster = db_info.contains("cluster_enabled:1");

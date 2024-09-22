@@ -3,16 +3,26 @@ use rouille::router;
 use rouille::Response;
 use rouille::Server;
 use std::env;
+use std::env::args;
 
 fn main() {
     start_health_check_server();
 }
 
 fn start_health_check_server() {
-    let port = match env::var("HEALTH_CHECK_PORT") {
-        Ok(port) => port,
-        Err(_) => "8081".to_string(),
-    };
+    let args: Vec<String> = env::args().collect();
+    if args.len() > 1 && args[1] == "sentinel" {
+        let port = match env::var("HEALTH_CHECK_PORT_SENTINEL") {
+            Ok(port) => port,
+            Err(_) => "8082".to_string(),
+        };
+    } else {
+        let port = match env::var("HEALTH_CHECK_PORT") {
+            Ok(port) => port,
+            Err(_) => "8081".to_string(),
+        };
+    }
+
     let addr = format!("localhost:{}", port);
 
     let server = Server::new(addr, |request| {
@@ -39,12 +49,17 @@ fn health_check_handler() -> Result<bool, redis::RedisError> {
         Ok(password) => password,
         Err(_) => "".to_string(),
     };
-
-    let node_port = match env::var("NODE_PORT") {
-        Ok(port) => port,
-        Err(_) => "6379".to_string(),
-    };
-
+    if args.len() > 1 && args[1] == "sentinel" {
+        let node_port = match env::var("SENTINEL_PORT") {
+            Ok(port) => port,
+            Err(_) => "26379".to_string(),
+        };
+    } else {
+        let node_port = match env::var("NODE_PORT") {
+            Ok(port) => port,
+            Err(_) => "6379".to_string(),
+        };
+    }
     let redis_url = match env::var("TLS") {
         Ok(tls) => {
             if tls == "true" {

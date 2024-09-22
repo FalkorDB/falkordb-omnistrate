@@ -2,19 +2,19 @@
 
 FALKORDB_USER=${FALKORDB_USER:-falkordb}
 #FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
-if [[ -f "/run/secrets/falkordbpassword" ]] && [[ -s "/run/secrets/falkordbpassword" ]];then
+if [[ -f "/run/secrets/falkordbpassword" ]] && [[ -s "/run/secrets/falkordbpassword" ]]; then
   FALKORDB_PASSWORD=$(cat "/run/secrets/falkordbpassword")
-elif [[ -n "$FALKORDB_PASSWORD" ]];then
+elif [[ -n "$FALKORDB_PASSWORD" ]]; then
   FALKORDB_PASSWORD=$FALKORDB_PASSWORD
 else
   FALKORDB_PASSWORD=''
 fi
 
 #ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
-if [[ -f "/run/secrets/adminpassword" ]] && [[ -s "/run/secrets/adminpassword" ]];then
+if [[ -f "/run/secrets/adminpassword" ]] && [[ -s "/run/secrets/adminpassword" ]]; then
   ADMIN_PASSWORD=$(cat "/run/secrets/adminpassword")
   export ADMIN_PASSWORD
-elif [[ -n "$ADMIN_PASSWORD" ]];then
+elif [[ -n "$ADMIN_PASSWORD" ]]; then
   export ADMIN_PASSWORD=$ADMIN_PASSWORD
 else
   export ADMIN_PASSWORD=''
@@ -166,6 +166,11 @@ set_aof_persistence_config() {
   fi
 }
 
+config_rewrite() {
+  echo "Rewriting configuration"
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG REWRITE
+}
+
 create_cluster() {
 
   local urls=""
@@ -255,6 +260,8 @@ create_user
 set_memory_limit
 set_rdb_persistence_config
 set_aof_persistence_config
+
+config_rewrite
 
 if [[ $NODE_INDEX -eq 0 && ! -f "/data/cluster_initialized" ]]; then
   # Create cluster

@@ -90,7 +90,7 @@ def test_add_remove_replica():
 
     instance = omnistrate.instance(
         service_id=args.service_id,
-        service_provider_id="sp-JvkxkPhinN",
+        service_provider_id=service.service_provider_id,
         service_key=service.key,
         service_environment_id=args.environment_id,
         service_environment_key=service.get_environment(args.environment_id).key,
@@ -113,7 +113,7 @@ def test_add_remove_replica():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password="falkordb",
+            falkordb_password=password,
             nodeInstanceType=args.instance_type,
             storageSize=args.storage_size,
             enableTLS=args.tls,

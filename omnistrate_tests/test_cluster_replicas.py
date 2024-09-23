@@ -3,8 +3,6 @@ import signal
 from random import randbytes
 from pathlib import Path
 import threading
-
-
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
@@ -35,13 +33,15 @@ parser.add_argument("region")
 parser.add_argument(
     "--subscription-id", required=False, default=os.getenv("SUBSCRIPTION_ID")
 )
-parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
+parser.add_argument("--ref-name", required=False,
+                    default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
 parser.add_argument("--resource-key", required=True)
 
 parser.add_argument("--instance-name", required=True)
-parser.add_argument("--instance-description", required=False, default="test-standalone")
+parser.add_argument("--instance-description",
+                    required=False, default="test-standalone")
 parser.add_argument("--instance-type", required=True)
 parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
@@ -49,6 +49,7 @@ parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
+parser.add_argument("--shards", required=False, default="3")
 
 parser.add_argument("--ensure-mz-distribution", action="store_true")
 
@@ -56,8 +57,6 @@ parser.set_defaults(tls=False)
 args = parser.parse_args()
 
 instance: OmnistrateFleetInstance = None
-
-current_host_count = int(args.host_count)
 
 
 # Intercept exit signals so we can delete the instance before exiting
@@ -70,8 +69,11 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
+current_host_count = int(args.host_count)
+current_replicas_count = int(args.cluster_replicas)
 
-def test_cluster_shards():
+
+def test_cluster_replicas():
     global instance
 
     omnistrate = OmnistrateFleetAPI(
@@ -96,7 +98,8 @@ def test_cluster_shards():
         service_provider_id=service.service_provider_id,
         service_key=service.key,
         service_environment_id=args.environment_id,
-        service_environment_key=service.get_environment(args.environment_id).key,
+        service_environment_key=service.get_environment(
+            args.environment_id).key,
         service_model_key=service_model.key,
         service_api_version="v1",
         product_tier_key=product_tier.product_tier_key,
@@ -136,23 +139,21 @@ def test_cluster_shards():
         )
         thread.start()
 
-        change_host_count(instance, int(args.host_count) + 2)
+        change_replica_count(instance, int(args.cluster_replicas) + 1)
 
         if args.ensure_mz_distribution:
             test_ensure_mz_distribution(instance, password)
 
         check_data(instance)
-        
-        change_host_count(instance, int(args.host_count))
 
-        if args.ensure_mz_distribution:
-            test_ensure_mz_distribution(instance, password)
+        change_replica_count(instance, int(args.cluster_replicas))
 
-        # Wait for the zero_downtime
+         # Wait for the zero_downtime
         thread_signal.set()
         thread.join()
         
         check_data(instance)
+
     except Exception as e:
         logging.exception(e)
         instance.delete(False)
@@ -167,16 +168,25 @@ def test_cluster_shards():
         logging.info("Test passed")
 
 
-def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):
-    global current_host_count
+def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: int):
+    global current_replicas_count, current_host_count
 
-    logging.info(f"Changing host count to {new_host_count}")
+    diff = new_replicas_count - current_replicas_count
+
+    new_host_count = int(current_host_count) + (diff * int(args.shards))
+
+    logging.info(
+        f"Changing clusterReplicas to {new_replicas_count} and hostCount to {new_host_count}"
+    )
     instance.update_params(
-        hostCount=new_host_count,
+        hostCount=f"{new_host_count}",
+        clusterReplicas=f"{new_replicas_count}",
         wait_for_ready=True,
     )
 
+
     current_host_count = new_host_count
+    current_replicas_count = new_replicas_count
 
     instance_details = instance.get_instance_details()
 
@@ -197,12 +207,23 @@ def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):
     if host_count != current_host_count:
         raise Exception("Host count does not match new host count")
 
+    cluster_replicas = (
+        int(params["clusterReplicas"]) if "clusterReplicas" in params else None
+    )
+
+    if not cluster_replicas:
+        raise Exception("No clusterReplicas found in instance details")
+
+    if cluster_replicas != current_replicas_count:
+        raise Exception(
+            "Cluster replicas count does not match new replicas count")
+
 
 def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str):
     """This function should ensure that each shard is distributed across multiple availability zones"""
 
-    instance_details = instance.get_instance_details()
     network_topology: dict = instance.get_network_topology(force_refresh=True)
+    instance_details = instance.get_instance_details()
 
     params = (
         instance_details["result_params"]
@@ -213,23 +234,15 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str
     if not params:
         raise Exception("No result_params found in instance details")
 
-    cluster_replicas = (
-        int(params["clusterReplicas"]) if "clusterReplicas" in params else None
-    )
-
-    if not cluster_replicas:
-        raise Exception("No clusterReplicas found in instance details")
-
     resource_key = next(
-        (k for [k, v] in network_topology.items() if v["resourceName"] == "cluster-mz"),
+        (k for [k, v] in network_topology.items()
+         if v["resourceName"] == "cluster-mz"),
         None,
     )
 
     resource = network_topology[resource_key]
 
     nodes = resource["nodes"]
-
-    logging.debug(f"Nodes: {nodes}")
 
     if len(nodes) == 0:
         raise Exception("No nodes found in network topology")
@@ -245,7 +258,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str
         ssl=params["enableTLS"] == "true" if "enableTLS" in params else False,
     )
 
-    groups = cluster.groups(cluster_replicas)
+    groups = cluster.groups(current_replicas_count)
 
     for group in groups:
         group_azs = set()
@@ -254,7 +267,8 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str
                 (n for n in nodes if n["endpoint"] == node.hostname), None
             )
             if not omnistrateNode:
-                logging.warning(f"Node {node.hostname} not found in network topology")
+                logging.warning(
+                    f"Node {node.hostname} not found in network topology")
                 continue
 
             group_azs.add(omnistrateNode["availabilityZone"])
@@ -303,7 +317,6 @@ def check_data(instance: OmnistrateFleetInstance):
 
     if len(result.result_set) == 0:
         raise Exception("Data did not persist after host count change")
-    
 
 def test_zero_downtime(
     thread_signal: threading.Event,
@@ -327,7 +340,7 @@ def test_zero_downtime(
         logging.exception(e)
         error_signal.set()
         raise e
-
     
+
 if __name__ == "__main__":
-    test_cluster_shards()
+    test_cluster_replicas()

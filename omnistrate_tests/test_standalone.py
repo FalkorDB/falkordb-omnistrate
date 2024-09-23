@@ -1,5 +1,6 @@
 import sys
 import signal
+from random import randbytes
 from pathlib import Path  # if you haven't already done so
 
 file = Path(__file__).resolve()
@@ -11,6 +12,9 @@ from contextlib import suppress
 
 with suppress(ValueError):
     sys.path.remove(str(parent))
+
+import logging
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
 import os
@@ -73,7 +77,7 @@ def test_standalone():
         args.service_id, product_tier.service_model_id
     )
 
-    print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
+    logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     instance = omnistrate.instance(
         service_id=args.service_id,
@@ -86,6 +90,9 @@ def test_standalone():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
+        deployment_create_timeout_seconds=2400,
+        deployment_delete_timeout_seconds=2400,
+        deployment_failover_timeout_seconds=2400
     )
 
     try:
@@ -96,7 +103,7 @@ def test_standalone():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password="falkordb",
+            falkordb_password=randbytes(16).hex(),
             nodeInstanceType=args.instance_type,
             storageSize=args.storage_size,
             enableTLS=args.tls,
@@ -110,13 +117,14 @@ def test_standalone():
         # Test stop and start instance
         test_stop_start(instance)
     except Exception as e:
-        instance.delete(True)
+        logging.exception(e)
+        instance.delete(False)
         raise e
 
     # Delete instance
-    instance.delete(True)
+    instance.delete(False)
 
-    print("Test passed")
+    logging.info("Test passed")
 
 
 def test_failover(instance: OmnistrateFleetInstance):
@@ -147,7 +155,7 @@ def test_failover(instance: OmnistrateFleetInstance):
     if len(result.result_set) == 0:
         raise Exception("Data lost after failover")
 
-    print("Data persisted after failover")
+    logging.info("Data persisted after failover")
 
     graph.delete()
 
@@ -165,11 +173,11 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     # Write some data to the DB
     graph.query("CREATE (n:Person {name: 'Alice'})")
 
-    print("Stopping instance")
+    logging.info("Stopping instance")
 
     instance.stop(wait_for_ready=True)
 
-    print("Instance stopped")
+    logging.info("Instance stopped")
 
     instance.start(wait_for_ready=True)
 
@@ -180,7 +188,7 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     if len(result.result_set) == 0:
         raise Exception("Data lost after stop/start")
 
-    print("Instance started")
+    logging.info("Instance started")
 
 
 if __name__ == "__main__":

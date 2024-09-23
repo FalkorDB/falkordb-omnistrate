@@ -7,6 +7,10 @@ from .omnistrate_types import (
     OmnistrateTierVersion,
 )
 
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+
 
 class OmnistrateFleetAPI:
 
@@ -19,7 +23,7 @@ class OmnistrateFleetAPI:
 
     def handle_response(self, response, message):
         if response.status_code >= 300 or response.status_code < 200:
-            print(f"{message}: {response.text}")
+            logging.error(f"{message}: {response.text}")
             raise Exception(f"{message}")
 
     def get_token(self):
@@ -29,7 +33,7 @@ class OmnistrateFleetAPI:
 
         url = self.base_url + "/signin"
         response = requests.post(
-            url, json={"email": self._email, "password": self._password}, timeout=10
+            url, json={"email": self._email, "password": self._password}, timeout=60
         )
         self.handle_response(response, "Failed to get token")
 
@@ -54,7 +58,7 @@ class OmnistrateFleetAPI:
 
         response = self.client().get(
             f"{self.base_url}/service",
-            timeout=15,
+            timeout=60,
         )
 
         self.handle_response(response, "Failed to get service")
@@ -70,7 +74,7 @@ class OmnistrateFleetAPI:
 
         response = self.client().get(
             f"{self.base_url}/service/{service_id}/model/{service_model_id}",
-            timeout=15,
+            timeout=60,
         )
 
         self.handle_response(response, "Failed to get service model")
@@ -84,7 +88,7 @@ class OmnistrateFleetAPI:
 
         response = self.client().get(
             f"{self.base_url}/service/{service_id}/environment/{environment_id}/service-plan",
-            timeout=15,
+            timeout=60,
         )
 
         self.handle_response(response, "Failed to get product tier ID")
@@ -107,7 +111,7 @@ class OmnistrateFleetAPI:
 
         response = self.client().get(
             f"{self.base_url}/service/{service_id}/productTier/{tier_id}/version-set",
-            timeout=15,
+            timeout=60,
         )
 
         self.handle_response(response, "Failed to list tier versions")
@@ -131,10 +135,15 @@ class OmnistrateFleetAPI:
         deployment_create_timeout_seconds: int = None,
         deployment_delete_timeout_seconds: int = None,
         deployment_failover_timeout_seconds: int = None,
+        deployment_update_timeout_seconds: int = None,
     ):
         return (
             omnistrate_tests.classes.omnistrate_fleet_instance.OmnistrateFleetInstance(
                 self,
+                deployment_create_timeout_seconds,
+                deployment_delete_timeout_seconds,
+                deployment_failover_timeout_seconds,
+                deployment_update_timeout_seconds,
                 service_id,
                 service_provider_id,
                 service_key,
@@ -145,8 +154,5 @@ class OmnistrateFleetAPI:
                 product_tier_key,
                 resource_key,
                 subscription_id,
-                deployment_create_timeout_seconds,
-                deployment_delete_timeout_seconds,
-                deployment_failover_timeout_seconds,
             )
         )

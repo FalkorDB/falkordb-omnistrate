@@ -530,6 +530,7 @@ class OmnistrateFleetInstance:
                             ConnectionError,
                             TimeoutError,
                             socket.timeout,
+                            ConnectionResetError,
                             redis_exceptions.ConnectionError
                         ),
                     ),

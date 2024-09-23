@@ -89,7 +89,7 @@ fn health_check_handler(is_sentinel: bool) -> Result<bool, redis::RedisError> {
 
     if is_sentinel {
         let sentinel_info: String = redis::cmd("PING").query(&mut con)?;
-        return Ok(!sentinel_info.is_empty());
+        return Ok(sentinel_info == "PONG");
     }
 
     let db_info: String = redis::cmd("INFO").query(&mut con)?;

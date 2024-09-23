@@ -452,26 +452,23 @@ fi
 
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   # Check if healthcheck binary exists
-
   if [ -f /usr/local/bin/healthcheck ]; then
-    echo "Starting Healthcheck"
-    healthcheck &
-    healthcheck_pid=$!
+    if [[ $RUN_NODE -eq 1 ]]; then
+      echo "Starting Healthcheck"
+      healthcheck &
+      healthcheck_pid=$!
+    fi
+
+    if [[ $RUN_SENTINEL -eq 1 ]]; then
+      echo "Starting Sentinel Healthcheck"
+      healthcheck sentinel &
+      sentinel_healthcheck_pid=$!
+    fi
   else
     echo "Healthcheck binary not found"
   fi
 fi
 
-if [[ $RUN_HEALTH_CHECK -eq 1 ]] && [[ $RUN_SENTINEL -eq 1 ]]; then
-  # Check if healthcheck binary exists
-  if [ -f /usr/local/bin/healthcheck ]; then
-    echo "Starting Sentinel Healthcheck"
-    healthcheck sentinel &
-    sentinel_healthcheck_pid=$!
-  else
-    echo "Healthcheck binary not found"
-  fi
-fi
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"

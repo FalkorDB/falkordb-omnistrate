@@ -2,6 +2,7 @@ from redis.cluster import RedisCluster, ClusterNode
 from time import sleep, time
 import subprocess
 from datetime import datetime
+import logging
 
 
 class FalkorDBClusterNode:
@@ -58,6 +59,14 @@ class FalkorDBClusterNode:
             else None
         )
 
+    @property
+    def is_master(self) -> bool:
+        return self.mode == "master"
+
+    @property
+    def is_slave(self) -> bool:
+        return self.mode == "slave"
+
     @staticmethod
     def from_dict(key: str, val: dict) -> "FalkorDBClusterNode":
         return FalkorDBClusterNode(
@@ -94,8 +103,14 @@ class FalkorDBCluster:
             for key, val in self.client.cluster_nodes().items()
         ]
         self.sort()
-        print(f"{datetime.now()}: Cluster refreshed: {self}")
+        logging.info(f"{datetime.now()}: Cluster refreshed: {self}")
         return self
+
+    def is_ready(self) -> bool:
+        # Check cluster status
+        cluster_state = self.client.cluster_info()["cluster_state"]
+        logging.info(f"{datetime.now()}: Cluster state: {cluster_state}")
+        return cluster_state == "ok"
 
     def is_connected(self) -> bool:
         return all(node.connected for node in self.nodes)
@@ -108,7 +123,7 @@ class FalkorDBCluster:
         text = "FalkorDBCluster:\n"
 
         for node in self.nodes:
-            if node.mode == "master":
+            if node.is_master:
                 text += f"Master: {node.idx} - {node.id} - {node.slots}\n"
                 text += "Slaves:\n" + "\n".join(
                     f"  {slave.idx} - {slave.id}"
@@ -135,16 +150,16 @@ class FalkorDBCluster:
         return [
             node
             for node in self.nodes
-            if node.mode == "slave" and self.get_node_by_id(node.master_id) is None
+            if node.is_slave and self.get_node_by_id(node.master_id) is None
         ]
 
     def get_masters(self) -> list[FalkorDBClusterNode]:
-        return [node for node in self.nodes if node.mode == "master"]
+        return [node for node in self.nodes if node.is_master]
 
     def get_slaves_from_master(self, master_id: str) -> list[FalkorDBClusterNode]:
         return [node for node in self.nodes if node.master_id == master_id]
 
-    def groups(self, replicas) -> list[list[FalkorDBClusterNode]]:
+    def groups(self, replicas: int) -> list[list[FalkorDBClusterNode]]:
         return [
             self.nodes[i : i + replicas + 1]
             for i in range(0, len(self.nodes), replicas + 1)
@@ -167,12 +182,12 @@ class FalkorDBCluster:
             new_master_node.to_cluster_node(), old_master_id
         )
 
-        print(
+        logging.info(
             f"{datetime.now()}: Replicate {new_master_node} to {old_master_node} at: {res}"
         )
 
         self._wait_for_condition(
-            lambda: self.get_node_by_id(new_master_id).mode == "slave"
+            lambda: self.get_node_by_id(new_master_id).is_slave
             and self.get_node_by_id(new_master_id).master_id == old_master_id,
             timeout,
             "Timed out waiting for the new master to become a slave",
@@ -182,10 +197,10 @@ class FalkorDBCluster:
 
         res = self.client.cluster_failover(new_master_node.to_cluster_node())
 
-        print(f"{datetime.now()}: Failover {old_master_node}: {res}")
+        logging.info(f"{datetime.now()}: Failover {old_master_node}: {res}")
 
         self._wait_for_condition(
-            lambda: self.get_node_by_id(old_master_id).mode == "slave"
+            lambda: self.get_node_by_id(old_master_id).is_slave
             and self.get_node_by_id(old_master_id).master_id == new_master_id,
             timeout,
             "Timed out waiting for the old master to become a slave",
@@ -208,15 +223,18 @@ class FalkorDBCluster:
         """
         Relocate a slave to a new node
         """
+        logging.info(f"Relocate slave {slave_id} to {new_master_id}")
         slave_node = self.get_node_by_id(slave_id)
         new_master_node = self.get_node_by_id(new_master_id)
 
         res = self.client.cluster_replicate(slave_node.to_cluster_node(), new_master_id)
 
-        print(f"{datetime.now()}: Replicate {slave_node} to {new_master_node}: {res}")
+        logging.info(
+            f"{datetime.now()}: Replicate {slave_node} to {new_master_node}: {res}"
+        )
 
         self._wait_for_condition(
-            lambda: self.get_node_by_id(slave_id).mode == "slave"
+            lambda: self.get_node_by_id(slave_id).is_slave
             and self.get_node_by_id(slave_id).master_id == new_master_id,
             180,
             "Timed out waiting for the slave to become a slave",
@@ -226,7 +244,7 @@ class FalkorDBCluster:
 
         slot_count = 16384 // shards
 
-        print(f"Reshard to {slot_count} slots. New node: {new_node.id}")
+        logging.info(f"Reshard to {slot_count} slots. New node: {new_node.id}")
         res = subprocess.call(
             [
                 "redis-cli",
@@ -234,6 +252,9 @@ class FalkorDBCluster:
                 self.host,
                 "-p",
                 f"{self.port}",
+                "-a",
+                self.password,
+                "--no-auth-warning",
                 "--cluster",
                 "reshard",
                 f"{new_node.hostname}",
@@ -248,10 +269,13 @@ class FalkorDBCluster:
             ]
         )
 
-        print(f"Reshard result: {res}")
+        logging.info(f"Reshard result: {res}")
 
         self._wait_for_condition(
             lambda: all(len(node.slots) > 0 for node in self.get_masters()),
             180,
             "Timed out waiting for all nodes to have the correct number of slots",
         )
+
+    def forget_node(self, node_id: str):
+        self.client.execute_command("CLUSTER FORGET", node_id)

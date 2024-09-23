@@ -125,6 +125,7 @@ set_memory_limit() {
   declare -A memory_limit_instance_type_map
   memory_limit_instance_type_map=(
     ["e2-custom-small-1024"]="100MB"
+    ["e2-medium"]="2GB"
     ["e2-custom-4-8192"]="6GB"
     ["e2-custom-8-16384"]="13GB"
     ["e2-custom-16-32768"]="30GB"
@@ -171,6 +172,11 @@ set_aof_persistence_config() {
   fi
 }
 
+config_rewrite() {
+  echo "Rewriting configuration"
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG REWRITE
+}
+
 create_cluster() {
 
   local urls=""
@@ -203,7 +209,13 @@ join_cluster() {
 
   redis-cli --cluster add-node $NODE_HOST:$NODE_PORT $cluster_host:$NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING
 
-  touch /data/cluster_initialized
+  # If it was not successful, retry after 10 seconds
+  if [[ $? -ne 0 ]]; then
+    echo "Failed to join cluster. Retrying in 10 seconds"
+    sleep 10
+    join_cluster
+  fi
+
 }
 
 run_node() {
@@ -255,11 +267,13 @@ set_memory_limit
 set_rdb_persistence_config
 set_aof_persistence_config
 
+config_rewrite
+
 if [[ $NODE_INDEX -eq 0 && ! -f "/data/cluster_initialized" ]]; then
   # Create cluster
   echo "Creating cluster"
   create_cluster
-elif [[ $NODE_INDEX -gt $CLUSTER_REPLICAS && ! -f "/data/cluster_initialized" ]]; then
+elif [[ $NODE_INDEX -gt 5 ]]; then
   # Join cluster
   echo "Joining cluster"
   join_cluster

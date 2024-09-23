@@ -1,6 +1,8 @@
 import sys
 import signal
+from random import randbytes
 from pathlib import Path  # if you haven't already done so
+import threading
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -11,6 +13,10 @@ from contextlib import suppress
 
 with suppress(ValueError):
     sys.path.remove(str(parent))
+
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
 import os
@@ -51,11 +57,14 @@ args = parser.parse_args()
 
 instance: OmnistrateFleetInstance = None
 
+
 # Intercept exit signals so we can delete the instance before exiting
 def signal_handler(sig, frame):
     if instance:
         instance.delete(False)
     sys.exit(0)
+
+
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
@@ -78,7 +87,7 @@ def test_update_memory():
         args.service_id, product_tier.service_model_id
     )
 
-    print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
+    logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     instance = omnistrate.instance(
         service_id=args.service_id,
@@ -91,6 +100,9 @@ def test_update_memory():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
+        deployment_create_timeout_seconds=2400,
+        deployment_delete_timeout_seconds=2400,
+        deployment_failover_timeout_seconds=2400
     )
 
     try:
@@ -101,7 +113,7 @@ def test_update_memory():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password="falkordb",
+            falkordb_password=randbytes(16).hex(),
             nodeInstanceType=args.instance_type,
             storageSize=args.storage_size,
             enableTLS=args.tls,
@@ -113,19 +125,41 @@ def test_update_memory():
 
         add_data(instance)
 
+        thread_signal = None
+        error_signal = None
+        thread = None
+        if "standalone" not in args.instance_name:
+            # Start a new thread and signal for zero_downtime test
+            thread_signal = threading.Event()
+            error_signal = threading.Event()
+            thread = threading.Thread(
+                target=test_zero_downtime,
+                args=(thread_signal, error_signal, instance, args.tls),
+            )
+            thread.start()
+
         # Update memory
         instance.update_instance_type(args.new_instance_type, wait_until_ready=True)
+
+        if "standalone" not in args.instance_name:
+            # Wait for the zero_downtime
+            thread_signal.set()
+            thread.join()
 
         query_data(instance)
 
     except Exception as e:
-        instance.delete(True)
+        logging.exception(e)
+        instance.delete(False)
         raise e
 
     # Delete instance
-    instance.delete(True)
+    instance.delete(False)
 
-    print("Update memory size test passed")
+    if "standalone" not in args.instance_name and error_signal.is_set():
+        raise ValueError("Test failed")
+    else:
+        logging.info("Test passed")
 
 
 def add_data(instance: OmnistrateFleetInstance):
@@ -142,7 +176,7 @@ def add_data(instance: OmnistrateFleetInstance):
 def query_data(instance: OmnistrateFleetInstance):
 
     # Get instance host and port
-    db = instance.create_connection(ssl=args.tls)
+    db = instance.create_connection(ssl=args.tls, force_reconnect=True)
 
     graph = db.select_graph("test")
 
@@ -151,6 +185,30 @@ def query_data(instance: OmnistrateFleetInstance):
 
     if len(result.result_set) == 0:
         raise ValueError("No data found in the graph after upgrade")
+
+
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a memory update happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+
+        graph = db.select_graph("test")
+
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
 
 
 if __name__ == "__main__":

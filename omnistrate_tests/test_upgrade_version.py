@@ -1,6 +1,8 @@
 import sys
 import signal
+from random import randbytes
 from pathlib import Path  # if you haven't already done so
+import threading
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -11,6 +13,10 @@ from contextlib import suppress
 
 with suppress(ValueError):
     sys.path.remove(str(parent))
+
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
 import os
@@ -43,17 +49,23 @@ parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
+parser.add_argument("--host-count", required=False, default="6")
+parser.add_argument("--cluster-replicas", required=False, default="1")
+
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
 instance: OmnistrateFleetInstance = None
 
+
 # Intercept exit signals so we can delete the instance before exiting
 def signal_handler(sig, frame):
     if instance:
         instance.delete(False)
     sys.exit(0)
+
+
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
@@ -76,7 +88,7 @@ def test_upgrade_version():
         args.service_id, product_tier.service_model_id
     )
 
-    print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
+    logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     # 1. List product tier versions
     tiers = omnistrate.list_tier_versions(
@@ -96,8 +108,8 @@ def test_upgrade_version():
     if last_tier is None:
         raise ValueError("No last tier found")
 
-    print(f"Preferred tier: {preferred_tier.version}")
-    print(f"Last tier: {last_tier.version}")
+    logging.info(f"Preferred tier: {preferred_tier.version}")
+    logging.info(f"Last tier: {last_tier.version}")
 
     # 2. Create omnistrate instance with previous version
     instance = omnistrate.instance(
@@ -111,6 +123,9 @@ def test_upgrade_version():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
+        deployment_create_timeout_seconds=2400,
+        deployment_delete_timeout_seconds=2400,
+        deployment_failover_timeout_seconds=2400
     )
     try:
         instance.create(
@@ -120,17 +135,31 @@ def test_upgrade_version():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password="falkordb",
+            falkordb_password=randbytes(16).hex(),
             nodeInstanceType=args.instance_type,
             storageSize=args.storage_size,
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            hostCount=args.host_count,
+            clusterReplicas=args.cluster_replicas,
             product_tier_version=last_tier.version,
         )
 
         # 3. Add data to the instance
         add_data(instance)
+
+        thread_signal = None
+        error_signal = None
+        thread = None
+        if "standalone" not in args.instance_name:
+            thread_signal = threading.Event()
+            error_signal = threading.Event()
+            thread = threading.Thread(
+                target=test_zero_downtime,
+                args=(thread_signal, error_signal, instance, args.tls),
+            )
+            thread.start()
 
         # 4. Upgrade version for the omnistrate instance
         upgrade_timer = time.time()
@@ -142,19 +171,26 @@ def test_upgrade_version():
             wait_until_ready=True,
         )
 
-        print(f"Upgrade time: {(time.time() - upgrade_timer):.2f}s")
+        if "standalone" not in args.instance_name:
+            thread_signal.set()
+            thread.join()
+
+        logging.info(f"Upgrade time: {(time.time() - upgrade_timer):.2f}s")
 
         # 6. Verify the upgrade was successful
         query_data(instance)
     except Exception as e:
-        print("Error " + str(e))
-        instance.delete(True)
+        logging.exception(e)
+        instance.delete(False)
         raise e
 
     # 7. Delete the instance
-    instance.delete(True)
+    instance.delete(False)
 
-    print("Upgrade version test passed")
+    if "standalone" not in args.instance_name and error_signal.is_set():
+        raise ValueError("Test failed")
+    else:
+        logging.info("Test passed")
 
 
 def add_data(instance: OmnistrateFleetInstance):
@@ -180,6 +216,29 @@ def query_data(instance: OmnistrateFleetInstance):
 
     if len(result.result_set) == 0:
         raise ValueError("No data found in the graph after upgrade")
+
+
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a memory update happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+
+        graph = db.select_graph("test")
+
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
 
 
 if __name__ == "__main__":

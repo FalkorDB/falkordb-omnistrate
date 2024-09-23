@@ -1,6 +1,8 @@
 import sys
 import signal
-from pathlib import Path  # if you haven't already done so
+from random import randbytes
+from pathlib import Path
+import threading
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -11,6 +13,9 @@ try:
     sys.path.remove(str(parent))
 except ValueError:  # Already removed
     pass
+
+import logging
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
 import os
@@ -81,7 +86,7 @@ def test_replication():
         args.service_id, product_tier.service_model_id
     )
 
-    print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
+    logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     instance = omnistrate.instance(
         service_id=args.service_id,
@@ -94,9 +99,13 @@ def test_replication():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
+        deployment_create_timeout_seconds=2400,
+        deployment_delete_timeout_seconds=2400,
+        deployment_failover_timeout_seconds=2400
     )
 
     try:
+        password = randbytes(16).hex()
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
@@ -104,7 +113,7 @@ def test_replication():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password="falkordb",
+            falkordb_password=password,
             nodeInstanceType=args.instance_type,
             storageSize=args.storage_size,
             enableTLS=args.tls,
@@ -112,22 +121,37 @@ def test_replication():
             AOFPersistenceConfig=args.aof_config,
         )
 
+        thread_signal = threading.Event()
+        error_signal = threading.Event()
+        thread = threading.Thread(
+            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+        )
+        thread.start()
+
         # Test failover and data loss
-        test_failover(instance)
+        test_failover(instance, password)
+
+        # Wait for the zero_downtime
+        thread_signal.set()
+        thread.join()
 
         # Test stop and start instance
-        test_stop_start(instance)
+        test_stop_start(instance, password)
     except Exception as e:
-        instance.delete(True)
+        logging.exception(e)
+        instance.delete(False)
         raise e
 
     # Delete instance
-    instance.delete(True)
+    instance.delete(False)
 
-    print("Test passed")
+    if error_signal.is_set():
+        raise ValueError("Test failed")
+    else:
+        logging.info("Test passed")
 
 
-def test_failover(instance: OmnistrateFleetInstance):
+def test_failover(instance: OmnistrateFleetInstance, password: str):
     """
     Single Zone tests are the following:
     1. Create a single zone instance
@@ -157,14 +181,14 @@ def test_failover(instance: OmnistrateFleetInstance):
         host=db_resource[0]["endpoint"],
         port=db_resource[0]["ports"][0],
         username="falkordb",
-        password="falkordb",
+        password=password,
         ssl=args.tls,
     )
     db_1 = FalkorDB(
         host=db_resource[1]["endpoint"],
         port=db_resource[1]["ports"][0],
         username="falkordb",
-        password="falkordb",
+        password=password,
         ssl=args.tls,
     )
     sentinels = Sentinel(
@@ -175,12 +199,12 @@ def test_failover(instance: OmnistrateFleetInstance):
         ],
         sentinel_kwargs={
             "username": "falkordb",
-            "password": "falkordb",
+            "password": password,
             "ssl": args.tls,
         },
         connection_kwargs={
             "username": "falkordb",
-            "password": "falkordb",
+            "password": password,
             "ssl": args.tls,
         },
     )
@@ -209,7 +233,7 @@ def test_failover(instance: OmnistrateFleetInstance):
 
     id_key = "sz" if args.resource_key == "single-Zone" else "mz"
 
-    print(f"Triggering failover for node-{id_key}-0")
+    logging.info(f"Triggering failover for node-{id_key}-0")
     # Trigger failover
     instance.trigger_failover(
         replica_id=f"node-{id_key}-0",
@@ -225,10 +249,10 @@ def test_failover(instance: OmnistrateFleetInstance):
                 promotion_completed = True
             time.sleep(5)
         except Exception as e:
-            print("Promotion not completed yet")
+            logging.info("Promotion not completed yet")
             time.sleep(5)
 
-    print("Promotion completed")
+    logging.info("Promotion completed")
 
     # Check if data is still there
     graph_1 = db_1.select_graph("test")
@@ -238,18 +262,18 @@ def test_failover(instance: OmnistrateFleetInstance):
     if len(result.result_set) == 0:
         raise Exception("Data lost after first failover")
 
-    print("Data persisted after first failover")
+    logging.info("Data persisted after first failover")
 
     graph_1.query("CREATE (n:Person {name: 'Bob'})")
 
     result = graph_1.query("MATCH (n:Person) RETURN n")
 
-    print("result after bob", result.result_set)
+    logging.info(f"result after bob: {result.result_set}")
 
     # wait until the node 0 is ready
     instance.wait_for_instance_status(timeout_seconds=600)
 
-    print(f"Triggering failover for sentinel-{id_key}-0")
+    logging.info(f"Triggering failover for sentinel-{id_key}-0")
     # Trigger sentinel failover
     instance.trigger_failover(
         replica_id=f"sentinel-{id_key}-0",
@@ -264,12 +288,12 @@ def test_failover(instance: OmnistrateFleetInstance):
     if len(result.result_set) < 2:
         raise Exception("Data lost after second failover")
 
-    print("Data persisted after second failover")
+    logging.info("Data persisted after second failover")
 
     # wait until the node 0 is ready
     instance.wait_for_instance_status(timeout_seconds=600)
 
-    print(f"Triggering failover for node-{id_key}-1")
+    logging.info(f"Triggering failover for node-{id_key}-1")
     # Trigger failover
     instance.trigger_failover(
         replica_id=f"node-{id_key}-1",
@@ -285,10 +309,10 @@ def test_failover(instance: OmnistrateFleetInstance):
                 promotion_completed = True
             time.sleep(5)
         except Exception as e:
-            print("Promotion not completed yet")
+            logging.info("Promotion not completed yet")
             time.sleep(5)
 
-    print("Promotion completed")
+    logging.info("Promotion completed")
 
     # Check if data is still there
     graph_0 = db_0.select_graph("test")
@@ -296,13 +320,13 @@ def test_failover(instance: OmnistrateFleetInstance):
     result = graph_0.query("MATCH (n:Person) RETURN n")
 
     if len(result.result_set) < 2:
-        print(result.result_set)
+        logging.info(result.result_set)
         raise Exception("Data lost after third failover")
 
-    print("Data persisted after third failover")
+    logging.info("Data persisted after third failover")
 
 
-def test_stop_start(instance: OmnistrateFleetInstance):
+def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     """
     Single Zone tests are the following:
     1. Create a single zone instance
@@ -323,7 +347,7 @@ def test_stop_start(instance: OmnistrateFleetInstance):
         host=sentinel_resource["endpoint"],
         port=sentinel_resource["ports"][0],
         username="falkordb",
-        password="falkordb",
+        password=password,
         ssl=args.tls,
     )
 
@@ -332,11 +356,11 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     # Write some data to the DB
     graph.query("CREATE (n:Person {name: 'Alice'})")
 
-    print("Stopping node")
+    logging.info("Stopping node")
 
     instance.stop(wait_for_ready=True)
 
-    print("Instance stopped")
+    logging.info("Instance stopped")
 
     instance.start(wait_for_ready=True)
 
@@ -347,7 +371,31 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     if len(result.result_set) == 0:
         raise Exception("Data lost after stop/start")
 
-    print("Instance started")
+    logging.info("Instance started")
+
+
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a memory update happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+
+        graph = db.select_graph("test_zero_downtime")
+
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
 
 
 if __name__ == "__main__":

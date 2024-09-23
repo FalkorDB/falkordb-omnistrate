@@ -1,6 +1,12 @@
 from falkordb import FalkorDB
 import json
 import os
+import logging
+import socket
+from redis import retry, backoff, exceptions as redis_exceptions
+
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
+
 import time
 import random
 import string
@@ -23,9 +29,15 @@ class OmnistrateFleetInstance:
     _network_topology = None
     _connection: FalkorDB = None
 
+    falkordb_password: str = None
+
     def __init__(
         self,
         fleet_api: omnistrate_tests.classes.omnistrate_fleet_api.OmnistrateFleetAPI,
+        deployment_create_timeout_seconds: int | None,
+        deployment_delete_timeout_seconds: int | None,
+        deployment_failover_timeout_seconds: int | None,
+        deployment_update_timeout_seconds: int | None,
         service_id: str = os.getenv("SERVICE_ID"),
         service_provider_id: str = os.getenv("SERVICE_PROVIDER_ID"),
         service_key: str = os.getenv("SERVICE_KEY"),
@@ -36,15 +48,6 @@ class OmnistrateFleetInstance:
         product_tier_key: str = os.getenv("PRODUCT_TIER_KEY"),
         resource_key: str = os.getenv("RESOURCE_KEY"),
         subscription_id: str = os.getenv("SUBSCRIPTION_ID"),
-        deployment_create_timeout_seconds: int = int(
-            os.getenv("DEPLOYMENT_CREATE_TIMEOUT_SECONDS", "1200")
-        ),
-        deployment_delete_timeout_seconds: int = int(
-            os.getenv("DEPLOYMENT_DELETE_TIMEOUT_SECONDS", "1200")
-        ),
-        deployment_failover_timeout_seconds: int = int(
-            os.getenv("DEPLOYMENT_FAILOVER_TIMEOUT_SECONDS", "1500")
-        ),
     ):
         assert (
             service_provider_id is not None
@@ -83,9 +86,22 @@ class OmnistrateFleetInstance:
         self.resource_key = resource_key
         self.subscription_id = subscription_id
 
-        self.deployment_create_timeout_seconds = deployment_create_timeout_seconds
-        self.deployment_delete_timeout_seconds = deployment_delete_timeout_seconds
-        self.deployment_failover_timeout_seconds = deployment_failover_timeout_seconds
+        self.deployment_create_timeout_seconds = (
+            deployment_create_timeout_seconds
+            or int(os.getenv("DEPLOYMENT_CREATE_TIMEOUT_SECONDS", "2400"))
+        )
+        self.deployment_delete_timeout_seconds = (
+            deployment_delete_timeout_seconds
+            or int(os.getenv("DEPLOYMENT_DELETE_TIMEOUT_SECONDS", "1200"))
+        )
+        self.deployment_failover_timeout_seconds = (
+            deployment_failover_timeout_seconds
+            or int(os.getenv("DEPLOYMENT_FAILOVER_TIMEOUT_SECONDS", "1500"))
+        )
+        self.deployment_update_timeout_seconds = (
+            deployment_update_timeout_seconds
+            or int(os.getenv("DEPLOYMENT_UPDATE_TIMEOUT_SECONDS", "2400"))
+        )
 
     def create(
         self,
@@ -101,6 +117,8 @@ class OmnistrateFleetInstance:
     ) -> str:
         """Create an instance with the specified parameters. Optionally wait for the instance to be ready."""
 
+        self.falkordb_password = falkordb_password
+
         data = {
             "cloud_provider": deployment_cloud_provider,
             "region": deployment_region,
@@ -114,19 +132,19 @@ class OmnistrateFleetInstance:
             "productTierVersion": product_tier_version,
         }
 
-        print(f"Creating instance {name}")
+        logging.info(f"Creating instance {name}")
 
         response = self._fleet_api.client().post(
             f"{self._fleet_api.base_url}/fleet/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}?subscriptionId={self.subscription_id}",
             data=json.dumps(data),
-            timeout=15,
+            timeout=60,
         )
 
         self._fleet_api.handle_response(response, f"Failed to create instance {name}")
 
         self.instance_id = response.json()["id"]
 
-        print(f"Instance {name} created: {self.instance_id}")
+        logging.info(f"Instance {name} created: {self.instance_id}")
 
         if not wait_for_ready:
             return
@@ -139,9 +157,12 @@ class OmnistrateFleetInstance:
             raise Exception(f"Failed to create instance {name}")
 
     def wait_for_instance_status(
-        self, requested_status="RUNNING", timeout_seconds: int = 1200
+        self,
+        timeout_seconds: int,
+        requested_status="RUNNING",
     ):
         """Wait for the instance to be ready."""
+        print(f"Waiting for instance to be ready. Timeout: {timeout_seconds} seconds")
         timeout_timer = time.time() + int(timeout_seconds or 1200)
 
         while True:
@@ -150,13 +171,13 @@ class OmnistrateFleetInstance:
 
             status = self.get_instance_details()["status"]
             if status == requested_status:
-                print(f"Instance is {requested_status}")
+                logging.info(f"Instance is {requested_status}")
                 break
             elif status == "FAILED":
-                print("Instance is in error state")
+                logging.info("Instance is in error state")
                 raise Exception("Instance is in error state")
             else:
-                print("Instance is in " + status + " state")
+                logging.info("Instance is in " + status + " state")
                 time.sleep(5)
 
     def get_instance_details(self, retries=5):
@@ -168,7 +189,7 @@ class OmnistrateFleetInstance:
 
                 response = self._fleet_api.client().get(
                     f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
-                    timeout=15,
+                    timeout=60,
                 )
 
             except exceptions.ReadTimeout as e:
@@ -212,7 +233,7 @@ class OmnistrateFleetInstance:
 
         response = self._fleet_api.client().delete(
             f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
-            timeout=15,
+            timeout=60,
             data=json.dumps({"resourceId": resource_id}),
         )
 
@@ -231,17 +252,17 @@ class OmnistrateFleetInstance:
             if e.args[0] == "Timeout":
                 raise Exception(f"Failed to delete instance {self.instance_id}")
 
-    def stop(self, wait_for_ready: bool, retry=5):
+    def stop(self, wait_for_ready: bool, retry=10):
         """Stop the instance. Optionally wait for the instance to be ready."""
 
         response = self._fleet_api.client().post(
             f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}/stop",
-            timeout=15,
+            timeout=60,
             data=json.dumps({"resourceId": self.get_resource_id()}),
         )
 
-        if "another operation is already in progress" in response.text and retry > 0:
-            time.sleep(60)
+        if "operation is already in progress" in response.text and retry > 0:
+            time.sleep(90)
             return self.stop(wait_for_ready, retry - 1)
 
         self._fleet_api.handle_response(
@@ -256,17 +277,17 @@ class OmnistrateFleetInstance:
             timeout_seconds=self.deployment_failover_timeout_seconds,
         )
 
-    def start(self, wait_for_ready: bool, retry=5):
+    def start(self, wait_for_ready: bool, retry=10):
         """Start the instance. Optionally wait for the instance to be ready."""
 
         response = self._fleet_api.client().post(
             f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}/start",
-            timeout=15,
+            timeout=60,
             data=json.dumps({"resourceId": self.get_resource_id()}),
         )
 
-        if "another operation is already in progress" in response.text and retry > 0:
-            time.sleep(60)
+        if "operation is already in progress" in response.text and retry > 0:
+            time.sleep(90)
             return self.start(wait_for_ready, retry - 1)
 
         self._fleet_api.handle_response(
@@ -281,10 +302,10 @@ class OmnistrateFleetInstance:
         )
 
     def trigger_failover(
-        self, replica_id: str, wait_for_ready: bool, resource_id: str = None, retry=5
+        self, replica_id: str, wait_for_ready: bool, resource_id: str = None, retry=10
     ):
         """Trigger failover for the instance. Optionally wait for the instance to be ready."""
-        print(f"Triggering failover for instance {self.instance_id}")
+        logging.info(f"Triggering failover for instance {self.instance_id}")
 
         data = {
             "failedReplicaID": replica_id,
@@ -295,11 +316,11 @@ class OmnistrateFleetInstance:
         response = self._fleet_api.client().post(
             f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}/failover",
             data=json.dumps(data),
-            timeout=15,
+            timeout=60,
         )
 
-        if "another operation is already in progress" in response.text and retry > 0:
-            time.sleep(60)
+        if "operation is already in progress" in response.text and retry > 0:
+            time.sleep(90)
             return self.trigger_failover(
                 replica_id, wait_for_ready, resource_id, retry - 1
             )
@@ -326,25 +347,21 @@ class OmnistrateFleetInstance:
 
         return self.update_params(wait_until_ready, retry, **data)
 
-    def update_params(self, wait_until_ready: bool = True, retry=5, **kwargs):
+    def update_params(self, wait_until_ready: bool = True, retry=10, **kwargs):
         """Update the instance parameters."""
 
-        self.wait_for_instance_status()
+        self.wait_for_instance_status(timeout_seconds=1200)
 
-        data = kwargs
+        data = {"requestParams": kwargs}
 
         response = self._fleet_api.client().patch(
             f"{self._fleet_api.base_url}/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}/{self.instance_id}",
             data=json.dumps(data),
-            timeout=15,
+            timeout=60,
         )
 
-        if "another operation is already in progress" in str(response.text):
-            if retry == 0:
-                raise Exception(
-                    f"Failed to update instance type {self.instance_id} after {retry} retries"
-                )
-            time.sleep(60)
+        if "operation is already in progress" in response.text and retry > 0:
+            time.sleep(90)
             return self.update_params(wait_until_ready, retry - 1, **kwargs)
 
         self._fleet_api.handle_response(
@@ -353,9 +370,9 @@ class OmnistrateFleetInstance:
 
         if not wait_until_ready:
             return
-
+        
         self.wait_for_instance_status(
-            timeout_seconds=self.deployment_failover_timeout_seconds
+            timeout_seconds=self.deployment_update_timeout_seconds
         )
 
     def upgrade(
@@ -377,7 +394,7 @@ class OmnistrateFleetInstance:
         response = self._fleet_api.client().post(
             f"{self._fleet_api.base_url}/fleet/service/{service_id}/productTier/{product_tier_id}/upgrade-path",
             json=data,
-            timeout=15,
+            timeout=60,
         )
 
         self._fleet_api.handle_response(response, "Failed to upgrade instance")
@@ -397,22 +414,34 @@ class OmnistrateFleetInstance:
         upgrade_timeout: int = 1200,
     ):
         right_now = time.time()
+        skipped_running = False
         while True:
             response = self._fleet_api.client().get(
                 f"{self._fleet_api.base_url}/fleet/service/{service_id}/productTier/{product_tier_id}/upgrade-path/{upgrade_id}",
-                timeout=15,
+                timeout=60,
             )
 
             self._fleet_api.handle_response(response, "Failed to get upgrade status")
 
             status = response.json()["status"]
 
+            if (
+                status == "RUNNING"
+                and not skipped_running
+                and time.time() - right_now < upgrade_timeout
+            ):
+                logging.info("Skipping first running status")
+                time.sleep(5)
+                continue
+
+            skipped_running = True
+
             if status == "IN_PROGRESS":
-                print("Upgrade in progress")
+                logging.info("Upgrade in progress")
                 time.sleep(10)
-                print("Waiting for instance to be ready")
+                logging.info("Waiting for instance to be ready")
             elif status == "COMPLETE":
-                print("Upgrade completed")
+                logging.info("Upgrade completed")
                 break
             else:
                 raise Exception(f"Upgrade failed: {status}")
@@ -420,9 +449,9 @@ class OmnistrateFleetInstance:
             if time.time() - right_now > upgrade_timeout:
                 raise Exception("Upgrade timed out")
 
-    def get_network_topology(self):
+    def get_network_topology(self, force_refresh=False):
 
-        if self._network_topology is not None:
+        if self._network_topology is not None and not force_refresh:
             return self._network_topology
 
         self._network_topology = self.get_instance_details()["detailedNetworkTopology"]
@@ -433,7 +462,7 @@ class OmnistrateFleetInstance:
         """Get the connection endpoints for the instance."""
 
         resources = self.get_network_topology()
-
+        
         resources_keys = resources.keys()
 
         endpoints = []
@@ -464,7 +493,7 @@ class OmnistrateFleetInstance:
                 and len(resources[key]["clusterEndpoint"]) > 0
                 and "streamer." not in resources[key]["clusterEndpoint"]
                 and "clusterPorts" in resources[key]
-                and resources[key]['networkingType'] != "INTERNAL"
+                and resources[key]["networkingType"] != "INTERNAL"
             ):
                 return {
                     "endpoint": resources[key]["clusterEndpoint"],
@@ -483,17 +512,31 @@ class OmnistrateFleetInstance:
         # Connect to the master node
         while retries > 0:
             try:
-                print(f"Connecting to {endpoint['endpoint']}:{endpoint['ports'][0]}")
+                logging.info(
+                    f"Connecting to {endpoint['endpoint']}:{endpoint['ports'][0]}"
+                )
                 self._connection = FalkorDB(
                     host=endpoint["endpoint"],
                     port=endpoint["ports"][0],
                     username="falkordb",
-                    password="falkordb",
+                    password=self.falkordb_password,
                     ssl=ssl,
+                    cluster_error_retry_attempts=20,
+                    retry=retry.Retry(
+                        retries=20,
+                        backoff=backoff.ExponentialBackoff(base=3),
+                        supported_errors=(
+                            ConnectionRefusedError,
+                            ConnectionError,
+                            TimeoutError,
+                            socket.timeout,
+                            redis_exceptions.ConnectionError
+                        ),
+                    ),
                 )
                 break
             except Exception as e:
-                print(f"Failed to connect to the master node: {e}")
+                logging.error(f"Failed to connect to the master node: {e}")
                 retries -= 1
                 time.sleep(60)
 
@@ -507,7 +550,7 @@ class OmnistrateFleetInstance:
 
         db = self.create_connection()
 
-        print("Generating data")
+        logging.info("Generating data")
         for i in range(0, graph_count):
 
             name = rand_string()
@@ -520,4 +563,4 @@ class OmnistrateFleetInstance:
                     CREATE (a:L {v:x})-[:R]->(b:X {v: tostring(x)}), (a)-[:Z]->(:Y {v:tostring(x)})""",
                 {"node_count": node_count},
             )
-        print("Data generated")
+        logging.info("Data generated")

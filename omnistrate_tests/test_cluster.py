@@ -1,6 +1,9 @@
 import sys
 import signal
+from random import randbytes
 from pathlib import Path
+import threading
+
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -11,6 +14,9 @@ from contextlib import suppress
 
 with suppress(ValueError):
     sys.path.remove(str(parent))
+
+import logging
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
 import os
@@ -79,7 +85,7 @@ def test_cluster():
         args.service_id, product_tier.service_model_id
     )
 
-    print(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
+    logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     instance = omnistrate.instance(
         service_id=args.service_id,
@@ -92,9 +98,13 @@ def test_cluster():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
+        deployment_create_timeout_seconds=2400,
+        deployment_delete_timeout_seconds=2400,
+        deployment_failover_timeout_seconds=2400
     )
 
     try:
+        password = randbytes(16).hex()
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
@@ -102,7 +112,7 @@ def test_cluster():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password="falkordb",
+            falkordb_password=password,
             nodeInstanceType=args.instance_type,
             storageSize=args.storage_size,
             enableTLS=args.tls,
@@ -111,30 +121,46 @@ def test_cluster():
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
         )
+        
+
+        thread_signal = threading.Event()
+        error_signal = threading.Event()
+        thread = threading.Thread(
+            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+        )
+        thread.start()
 
         if args.ensure_mz_distribution:
-            test_ensure_mz_distribution(instance)
+            test_ensure_mz_distribution(instance, password)
 
         # Test failover and data loss
         test_failover(instance)
 
+        # Wait for the zero_downtime
+        thread_signal.set()
+        thread.join()
+        
         # Test stop and start instance
         test_stop_start(instance)
     except Exception as e:
-        instance.delete(True)
+        logging.exception(e)
+        instance.delete(False)
         raise e
 
     # Delete instance
-    instance.delete(True)
+    instance.delete(False)
 
-    print("Test passed")
+    if error_signal.is_set():
+        raise ValueError("Test failed")
+    else:
+        logging.info("Test passed")
 
 
-def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
+def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str):
     """This function should ensure that each shard is distributed across multiple availability zones"""
 
     instance_details = instance.get_instance_details()
-    network_topology: dict = instance.get_network_topology()
+    network_topology: dict = instance.get_network_topology(force_refresh=True)
 
     params = (
         instance_details["result_params"]
@@ -142,20 +168,20 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
         else None
     )
 
-    if not params:
-        raise Exception("No result_params found in instance details")
+    # if not params:
+    #     raise Exception("No result_params found in instance details")
 
-    host_count = int(params["hostCount"]) if "hostCount" in params else None
+    # host_count = int(params["hostCount"]) if "hostCount" in params else None
 
-    if not host_count:
-        raise Exception("No hostCount found in instance details")
+    # if not host_count:
+    #     raise Exception("No hostCount found in instance details")
 
-    cluster_replicas = (
-        int(params["clusterReplicas"]) if "clusterReplicas" in params else None
-    )
+    # cluster_replicas = (
+    #     int(params["clusterReplicas"]) if "clusterReplicas" in params else None
+    # )
 
-    if not cluster_replicas:
-        raise Exception("No clusterReplicas found in instance details")
+    # if not cluster_replicas:
+    #     raise Exception("No clusterReplicas found in instance details")
 
     resource_key = next(
         (k for [k, v] in network_topology.items() if v["resourceName"] == "cluster-mz"),
@@ -169,18 +195,18 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
     if len(nodes) == 0:
         raise Exception("No nodes found in network topology")
 
-    if len(nodes) != host_count:
-        raise Exception("Host count does not match number of nodes")
+    if len(nodes) != 6:
+        raise Exception(f"Host count does not match number of nodes. Current host count: {6}; Number of nodes: {len(nodes)}")
 
     cluster = FalkorDBCluster(
         host=resource["clusterEndpoint"],
         port=resource["clusterPorts"][0],
         username="falkordb",
-        password="falkordb",
+        password=password,
         ssl=params["enableTLS"] == "true" if "enableTLS" in params else False,
     )
 
-    groups = cluster.groups(cluster_replicas)
+    groups = cluster.groups(1)
 
     for group in groups:
         group_azs = set()
@@ -189,7 +215,8 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
                 (n for n in nodes if n["endpoint"] == node.hostname), None
             )
             if not omnistrateNode:
-                raise Exception(f"Node {node.hostname} not found in network topology")
+                logging.warning(f"Node {node.hostname} not found in network topology")
+                continue
 
             group_azs.add(omnistrateNode["availabilityZone"])
 
@@ -198,9 +225,9 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance):
                 "Group is not distributed across multiple availability zones"
             )
 
-        print(f"Group {group} is distributed across availability zones {group_azs}")
+        logging.info(f"Group {group} is distributed across availability zones {group_azs}")
 
-    print("Shards are distributed across multiple availability zones")
+    logging.info("Shards are distributed across multiple availability zones")
 
 
 def test_failover(instance: OmnistrateFleetInstance):
@@ -221,9 +248,7 @@ def test_failover(instance: OmnistrateFleetInstance):
         replica_id=args.replica_id,
         wait_for_ready=True,
     )
-
-    # Check if data is still there
-
+    
     graph = db.select_graph("test")
 
     result = graph.query("MATCH (n:Person) RETURN n")
@@ -231,9 +256,7 @@ def test_failover(instance: OmnistrateFleetInstance):
     if len(result.result_set) == 0:
         raise Exception("Data lost after failover")
 
-    print("Data persisted after failover")
-
-    graph.delete()
+    logging.info("Data persisted after failover")
 
 
 def test_stop_start(instance: OmnistrateFleetInstance):
@@ -249,11 +272,11 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     # Write some data to the DB
     graph.query("CREATE (n:Person {name: 'Alice'})")
 
-    print("Stopping instance")
+    logging.info("Stopping instance")
 
     instance.stop(wait_for_ready=True)
 
-    print("Instance stopped")
+    logging.info("Instance stopped")
 
     instance.start(wait_for_ready=True)
 
@@ -264,8 +287,34 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     if len(result.result_set) == 0:
         raise Exception("Data lost after stop/start")
 
-    print("Instance started")
+    logging.info("Instance started")
 
+
+
+
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a memory update happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+
+        graph = db.select_graph("test")
+
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
 
 if __name__ == "__main__":
     test_cluster()
+

@@ -459,7 +459,7 @@ if [ -f /usr/local/bin/healthcheck ]; then
       healthcheck_pid=$!
   fi
 
-  if [[ $RUN_SENTINEL -eq 1 ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1]];then
+  if [[ $RUN_SENTINEL -eq 1 ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]];then
       echo "Starting Sentinel Healthcheck"
       healthcheck sentinel &
       sentinel_healthcheck_pid=$!

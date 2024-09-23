@@ -32,6 +32,9 @@ jobs:
           - dockerfile: ./falkordb-cluster-rebalance/Dockerfile
             image-name: falkordb-cluster-rebalance
     steps:
+      - run: ${{ tojson(github.event) }}
+        shell: cat {0}
+      
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -51,10 +54,9 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           push: true
-          tags: falkordb/${{ matrix.image-name }}:${{ github.ref_name }}, falkordb/${{ matrix.image-name }}:latest
+          tags: falkordb/${{ matrix.image-name }}:${{ github.event.workflow_run.head_branch }}, falkordb/${{ matrix.image-name }}:latest
 
   omnistrate-update-plans:
-    if: contains(github.ref, 'refs/tags/v')    
     needs: build-and-push
     runs-on: ubuntu-latest
     strategy:
@@ -79,9 +81,9 @@ jobs:
           sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:${{ github.ref_name }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:${{ github.ref_name }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:${{ github.ref_name }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:${{ github.event.workflow_run.head_branch }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:${{ github.event.workflow_run.head_branch }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:${{ github.event.workflow_run.head_branch }}/g' ${{ matrix.plans.file }}
 
       - name: Remove e2-machine from pro
         if: ${{ contains( vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) && matrix.plans.key == 'pro' }}

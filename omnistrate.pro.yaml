@@ -1125,7 +1125,7 @@ services:
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
@@ -1182,6 +1182,7 @@ services:
       - RUN_NODE=0
       - RUN_SENTINEL=1
       - RUN_METRICS=0
+      - RUN_HEALTH_CHECK=1
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
@@ -1224,7 +1225,7 @@ services:
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
@@ -1640,7 +1641,7 @@ services:
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
@@ -1696,6 +1697,7 @@ services:
       - RUN_NODE=0
       - RUN_SENTINEL=1
       - RUN_METRICS=0
+      - RUN_HEALTH_CHECK=1
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
@@ -1738,7 +1740,7 @@ services:
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"

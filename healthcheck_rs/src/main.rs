@@ -88,7 +88,7 @@ fn health_check_handler(is_sentinel: bool) -> Result<bool, redis::RedisError> {
     let mut con = client.get_connection()?;
 
     if is_sentinel {
-        let sentinel_info: Vec<Vec<String>> = redis::cmd("SENTINEL").arg("MASTERS").query(&mut con)?;
+        let sentinel_info: String = redis::cmd("PING").query(&mut con)?;
         return Ok(!sentinel_info.is_empty());
     }
 

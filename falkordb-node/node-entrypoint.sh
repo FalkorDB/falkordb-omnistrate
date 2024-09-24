@@ -71,6 +71,10 @@ SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/
 NODE_CONF_FILE=$DATA_DIR/node.conf
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 
+if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
+  DEBUG=1
+fi
+
 dump_conf_files() {
   echo "Dumping configuration files"
 

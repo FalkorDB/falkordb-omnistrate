@@ -225,7 +225,7 @@ jobs:
           - name: PRO/Standalone - GCP/us-central1 - Upgrade Version
             if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
             testFile: test_upgrade_version.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-main
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -235,7 +235,7 @@ jobs:
           - name: PRO/SingleZone - GCP/us-central1 - Upgrade Version
             if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
             testFile: test_upgrade_version.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-main
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -245,7 +245,7 @@ jobs:
           - name: PRO/ClusterSingleZone - GCP/us-central1 - Upgrade Version
             if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
             testFile: test_upgrade_version.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-main
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0

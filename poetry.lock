@@ -111,6 +111,19 @@ files = [
 ]
 
 [[package]]
+name = "curlify"
+version = "2.2.1"
+description = "Library to convert python requests object to curl command."
+optional = false
+python-versions = "*"
+files = [
+    {file = "curlify-2.2.1.tar.gz", hash = "sha256:0d3f02e7235faf952de8ef45ef469845196d30632d5838bcd5aee217726ddd6d"},
+]
+
+[package.dependencies]
+requests = "*"
+
+[[package]]
 name = "falkordb"
 version = "1.0.8"
 description = "Python client for interacting with FalkorDB database"
@@ -126,7 +139,7 @@ redis = "^5.0.1"
 type = "git"
 url = "https://github.com/FalkorDB/falkordb-py"
 reference = "main"
-resolved_reference = "1544d89c69f1a29e577715d859acfb7423fe078f"
+resolved_reference = "fb56ead9da179dfce6dac29474f4792f2dd76d43"
 
 [[package]]
 name = "idna"
@@ -218,4 +231,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11.4"
-content-hash = "cbebbc4f94f433b773f8b8f3406a75071e974a60cbf1d4664ecde78455f8f48b"
+content-hash = "89ade5481ba7b7a71dd9515547aaadf98b95eca33a286ac6c28a44d6be287cb3"

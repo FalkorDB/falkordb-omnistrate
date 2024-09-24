@@ -15,3 +15,4 @@ falkordb = {git = "https://github.com/FalkorDB/falkordb-py", rev = "main"}
 redis = {git = "https://github.com/dudizimber/redis-py", rev = "master"}
 requests = "^2.32.3"
 setuptools = "^71.1.0"
+curlify = "^2.2.1"

@@ -4,7 +4,7 @@ import os
 import logging
 import socket
 from redis import retry, backoff, exceptions as redis_exceptions
-
+from redis.exceptions import ReadOnlyError
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
@@ -530,6 +530,7 @@ class OmnistrateFleetInstance:
                             ConnectionError,
                             TimeoutError,
                             socket.timeout,
+                            ReadOnlyError,
                             redis_exceptions.ConnectionError
                         ),
                     ),

@@ -775,6 +775,7 @@ services:
         defaultValue: "2"
         options:
           - "2"
+          - "3"
         parameterDependencyMap:
           node-sz: numReplicas
       - key: enableTLS
@@ -957,6 +958,7 @@ services:
         defaultValue: "2"
         options:
           - "2"
+          - "3"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -1258,6 +1260,7 @@ services:
         defaultValue: "2"
         options:
           - "2"
+          - "3"
         parameterDependencyMap:
           node-mz: numReplicas
       - key: enableTLS
@@ -1440,6 +1443,7 @@ services:
         defaultValue: "2"
         options:
           - "2"
+          - "3"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS

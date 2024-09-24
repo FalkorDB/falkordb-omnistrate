@@ -1,8 +1,16 @@
 import sys
 import signal
-from random import randbytes
 from pathlib import Path
+from random import randbytes
+from redis import Redis
+from redis.backoff import ExponentialBackoff
+from redis.retry import Retry
+from redis.exceptions import (
+   ConnectionError,
+   TimeoutError
+)
 import threading
+
 
 
 file = Path(__file__).resolve()
@@ -16,14 +24,10 @@ with suppress(ValueError):
     sys.path.remove(str(parent))
 
 import logging
-
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
-
 import time
 import os
 from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
 from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
-from omnistrate_tests.classes.falkordb_cluster import FalkorDBCluster
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -39,6 +43,8 @@ parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
 parser.add_argument("--resource-key", required=True)
+parser.add_argument("--replica-id", required=True)
+
 
 parser.add_argument("--instance-name", required=True)
 parser.add_argument("--instance-description", required=False, default="test-standalone")
@@ -47,31 +53,24 @@ parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
-parser.add_argument("--host-count", required=False, default="6")
-parser.add_argument("--cluster-replicas", required=False, default="1")
+parser.add_argument("--replica-count", required=False, default="2")
 
-parser.add_argument("--ensure-mz-distribution", action="store_true")
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
 instance: OmnistrateFleetInstance = None
 
-current_host_count = int(args.host_count)
-
-
 # Intercept exit signals so we can delete the instance before exiting
 def signal_handler(sig, frame):
     if instance:
         instance.delete(False)
     sys.exit(0)
-
-
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-def test_cluster_shards():
+def test_add_remove_replica():
     global instance
 
     omnistrate = OmnistrateFleetAPI(
@@ -122,37 +121,31 @@ def test_cluster_shards():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
-            hostCount=args.host_count,
-            clusterReplicas=args.cluster_replicas,
         )
 
         add_data(instance)
 
-        # Start a new thread and signal for zero_downtime test
         thread_signal = threading.Event()
         error_signal = threading.Event()
         thread = threading.Thread(
             target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
         )
+        
         thread.start()
 
-        change_host_count(instance, int(args.host_count) + 2)
-
-        if args.ensure_mz_distribution:
-            test_ensure_mz_distribution(instance, password)
-
         check_data(instance)
-        
-        change_host_count(instance, int(args.host_count))
 
-        if args.ensure_mz_distribution:
-            test_ensure_mz_distribution(instance, password)
+        change_replica_count(instance, int(args.replica_count) + 1)
 
-        # Wait for the zero_downtime
+        test_fail_over(instance)
+
+        change_replica_count(instance,int(args.replica_count))
+    
+        check_data(instance)
+
         thread_signal.set()
         thread.join()
-        
-        check_data(instance)
+
     except Exception as e:
         logging.exception(e)
         instance.delete(False)
@@ -167,113 +160,55 @@ def test_cluster_shards():
         logging.info("Test passed")
 
 
-def change_host_count(instance: OmnistrateFleetInstance, new_host_count: int):
-    global current_host_count
+def change_replica_count(instance: OmnistrateFleetInstance, new_replica_count: int):
 
-    logging.info(f"Changing host count to {new_host_count}")
+    logging.info(f"Changing replica count to {new_replica_count}")
     instance.update_params(
-        hostCount=new_host_count,
+        numReplicas=new_replica_count,
         wait_for_ready=True,
     )
 
-    current_host_count = new_host_count
+def test_fail_over(instance: OmnistrateFleetInstance):
+    logging.info("Testing failover to the newly created replica")
 
-    instance_details = instance.get_instance_details()
-
-    params = (
-        instance_details["result_params"]
-        if "result_params" in instance_details
-        else None
-    )
-
-    if not params:
-        raise Exception("No result_params found in instance details")
-
-    host_count = int(params["hostCount"]) if "hostCount" in params else None
-
-    if not host_count:
-        raise Exception("No hostCount found in instance details")
-
-    if host_count != current_host_count:
-        raise Exception("Host count does not match new host count")
-
-
-def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str):
-    """This function should ensure that each shard is distributed across multiple availability zones"""
-
-    instance_details = instance.get_instance_details()
-    network_topology: dict = instance.get_network_topology(force_refresh=True)
-
-    params = (
-        instance_details["result_params"]
-        if "result_params" in instance_details
-        else None
-    )
-
-    if not params:
-        raise Exception("No result_params found in instance details")
-
-    cluster_replicas = (
-        int(params["clusterReplicas"]) if "clusterReplicas" in params else None
-    )
-
-    if not cluster_replicas:
-        raise Exception("No clusterReplicas found in instance details")
-
-    resource_key = next(
-        (k for [k, v] in network_topology.items() if v["resourceName"] == "cluster-mz"),
-        None,
-    )
-
-    resource = network_topology[resource_key]
-
-    nodes = resource["nodes"]
-
-    logging.debug(f"Nodes: {nodes}")
-
-    if len(nodes) == 0:
-        raise Exception("No nodes found in network topology")
-
-    if len(nodes) != current_host_count:
-        raise Exception(f"Host count does not match number of nodes. Current host count: {current_host_count}; Number of nodes: {len(nodes)}")
-
-    cluster = FalkorDBCluster(
-        host=resource["clusterEndpoint"],
-        port=resource["clusterPorts"][0],
-        username="falkordb",
+    endpoint = instance.get_cluster_endpoint()
+    password = instance.falkordb_password
+    id_key = "sz" if args.resource_key == "single-Zone" else "mz"
+    retry = Retry(ExponentialBackoff(base=3), retries=20)
+    try:
+        client = Redis(
+        host=f"{endpoint["endpoint"]}", port=endpoint['ports'][0],
+        username="falkordb", 
         password=password,
-        ssl=params["enableTLS"] == "true" if "enableTLS" in params else False,
-    )
-
-    groups = cluster.groups(cluster_replicas)
-
-    for group in groups:
-        group_azs = set()
-        for node in group:
-            omnistrateNode = next(
-                (n for n in nodes if n["endpoint"] == node.hostname), None
-            )
-            if not omnistrateNode:
-                logging.warning(f"Node {node.hostname} not found in network topology")
-                continue
-
-            group_azs.add(omnistrateNode["availabilityZone"])
-
-        if len(group_azs) == 1:
-            raise Exception(
-                "Group is not distributed across multiple availability zones"
-            )
-
-        logging.info(
-            f"Group {group} is distributed across availability zones {group_azs}"
+        decode_responses=True,
+        ssl=args.tls,
+        retry=retry,
+        retry_on_error=[TimeoutError,ConnectionError,ConnectionRefusedError]
         )
-
-    logging.info("Shards are distributed across multiple availability zones")
-
-
+    except Exception as e:
+        logging.exception("Failed to connect to Sentinel!")
+        logging.info(e)
+    
+    tout = time.time() + 600
+    while True:
+        if time.time() > tout:
+            raise Exception(f"Failed to failover to node-{id_key}-2")
+        try:
+            time.sleep(5)
+            print(client.execute_command('SENTINEL FAILOVER master'))
+            time.sleep(5)
+            master = client.execute_command('SENTINEL MASTER master')[3]
+            if master.startswith(f"node-{id_key}-2"):
+                break
+        except Exception as e:
+            logging.info(e)
+            continue
+    time.sleep(15)
+    check_data(instance)
+    
 def add_data(instance: OmnistrateFleetInstance):
     """This function should retrieve the instance host and port for connection, write some data to the DB, then check that the data is there"""
-
+    logging.info('Added data ....')
     # Get instance host and port
     db = instance.create_connection(
         ssl=args.tls,
@@ -291,10 +226,12 @@ def add_data(instance: OmnistrateFleetInstance):
 
 
 def check_data(instance: OmnistrateFleetInstance):
-
+    print('Retrieving data ....')
     # Get instance host and port
     db = instance.create_connection(
         ssl=args.tls,
+        force_reconnect=True,
+        retries=10
     )
 
     graph = db.select_graph("test")
@@ -303,7 +240,6 @@ def check_data(instance: OmnistrateFleetInstance):
 
     if len(result.result_set) == 0:
         raise Exception("Data did not persist after host count change")
-    
 
 def test_zero_downtime(
     thread_signal: threading.Event,
@@ -328,6 +264,5 @@ def test_zero_downtime(
         error_signal.set()
         raise e
 
-    
 if __name__ == "__main__":
-    test_cluster_shards()
+    test_add_remove_replica()

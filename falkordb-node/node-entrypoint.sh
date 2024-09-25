@@ -57,6 +57,7 @@ ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
 DATA_DIR=${DATA_DIR:-/data}
 DEBUG=${DEBUG:-0}
+DEBUG_REDIS_EXPORTER=${DEBUG_REDIS_EXPORTER:-false}
 REPLACE_NODE_CONF=${REPLACE_NODE_CONF:-0}
 REPLACE_SENTINEL_CONF=${REPLACE_SENTINEL_CONF:-0}
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
@@ -462,7 +463,7 @@ fi
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
-  export REDIS_EXPORTER_DEBUG=$(if [[ $DEBUG -eq 1 ]]; then echo "true"; else echo "false"; fi)
+  export REDIS_EXPORTER_DEBUG="$DEBUG_REDIS_EXPORTER"
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -tls-server-min-version TLS1.3 &
   redis_exporter_pid=$!

@@ -143,7 +143,7 @@ set_memory_limit() {
     ["e2-custom-8-16384"]="13GB"
     ["e2-custom-16-32768"]="30GB"
     ["e2-custom-32-65536"]="62GB"
-    ["t2.medium"]="6GB"
+    ["t2.medium"]="2GB"
     ["c6i.xlarge"]="6GB"
     ["c6i.2xlarge"]="13GB"
     ["c6i.4xlarge"]="30GB"

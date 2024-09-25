@@ -1099,7 +1099,7 @@ services:
       - RUN_HEALTH_CHECK=1
       - BROWSER=0
       - DEBUG=0
-      - DEBUG_REDIS_EXPORTER=false
+      - REDIS_EXPORTER_DEBUG=false
       - SENTINEL_HOST=$sentinel-sz.sys.network.externalClusterEndpoint
       - SENTINEL_PORT=26379
       - MASTER_NAME=master
@@ -1174,7 +1174,7 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=0
       - DEBUG=0
-      - DEBUG_REDIS_EXPORTER=false
+      - REDIS_EXPORTER_DEBUG=false
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - DATA_DIR=/data
@@ -1586,7 +1586,7 @@ services:
       - RUN_HEALTH_CHECK=1
       - BROWSER=0
       - DEBUG=0
-      - DEBUG_REDIS_EXPORTER=false
+      - REDIS_EXPORTER_DEBUG=false
       - IS_MULTI_ZONE=1
       - SENTINEL_HOST=$sentinel-mz.sys.network.externalClusterEndpoint
       - SENTINEL_PORT=26379
@@ -1661,7 +1661,7 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=0
       - DEBUG=0
-      - DEBUG_REDIS_EXPORTER=false
+      - REDIS_EXPORTER_DEBUG=false
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - DATA_DIR=/data
@@ -1973,7 +1973,7 @@ services:
       - CLUSTER_REPLICAS=1
       - NODE_PORT=6379
       - DEBUG=0
-      - DEBUG_REDIS_EXPORTER=false
+      - REDIS_EXPORTER_DEBUG=false
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -2270,7 +2270,7 @@ services:
       - CLUSTER_REPLICAS=1
       - NODE_PORT=6379
       - DEBUG=0
-      - DEBUG_REDIS_EXPORTER=false
+      - REDIS_EXPORTER_DEBUG=false
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword

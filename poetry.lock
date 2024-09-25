@@ -133,13 +133,13 @@ files = []
 develop = false
 
 [package.dependencies]
-redis = "^5.0.1"
+redis = {git = "https://github.com/MuhammadQadora/redis-py", rev = "master"}
 
 [package.source]
 type = "git"
 url = "https://github.com/FalkorDB/falkordb-py"
-reference = "main"
-resolved_reference = "fb56ead9da179dfce6dac29474f4792f2dd76d43"
+reference = "57-changing-the-cluster_conn-function-to-use-domain-nameshostnames-instead-of-ips"
+resolved_reference = "d79518980427f2594e774793fcd32ef742b2ee40"
 
 [[package]]
 name = "idna"
@@ -231,4 +231,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11.4"
-content-hash = "56b6f774649df8e5bd5c4ff399019d62c6d4ca8f5c619baeecb463b8f00c2612"
+content-hash = "1579b6de676107230c9ee9c878e26fa8a92435c79ded3ac9b05655cce9ebdd43"

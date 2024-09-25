@@ -154,13 +154,13 @@ set_memory_limit() {
     return
   fi
 
-  memory_limit=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
+  MEMORY_LIMIT=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
 
-  if [[ ! -z $memory_limit ]]; then
-    memory_limit="100MB"
+  if [[ ! -z $MEMORY_LIMIT ]]; then
+    MEMORY_LIMIT="100MB"
   fi
   
-  echo "Setting maxmemory to $memory_limit"
+  echo "Setting maxmemory to $MEMORY_LIMIT"
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
 }
 

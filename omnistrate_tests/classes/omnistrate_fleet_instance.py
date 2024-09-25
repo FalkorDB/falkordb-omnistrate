@@ -527,8 +527,8 @@ class OmnistrateFleetInstance:
                     ssl=ssl,
                     cluster_error_retry_attempts=20,
                     retry=retry.Retry(
-                        retries=300,
-                        backoff=backoff.ExponentialBackoff(base=3,cap=90),
+                        retries=-1,
+                        backoff=backoff.ExponentialBackoff(base=3,cap=5),
                         supported_errors=(
                             ConnectionRefusedError,
                             ConnectionError,

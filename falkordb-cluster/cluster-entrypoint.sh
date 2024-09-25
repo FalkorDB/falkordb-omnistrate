@@ -69,6 +69,14 @@ handle_sigterm() {
   if [[ ! -z $falkordb_pid ]]; then
     kill -TERM $falkordb_pid
   fi
+
+  if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
+    kill -TERM $redis_exporter_pid
+  fi
+
+  if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $healthcheck_pid ]]; then
+    kill -TERM $healthcheck_pid
+  fi
 }
 
 trap handle_sigterm SIGTERM
@@ -300,7 +308,8 @@ fi
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
-  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -is-cluster | awk '{ print "**EXPORTER**: " $0 }' >>$FALKORDB_LOG_FILE_PATH &
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -is-cluster -tls-server-min-version TLS1.3 >>$FALKORDB_LOG_FILE_PATH &
+  redis_exporter_pid=$!
 fi
 
 while true; do

@@ -1097,6 +1097,7 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
+      - RUN_HEALTH_CHECK_SENTINEL=1
       - BROWSER=0
       - DEBUG=0
       - SENTINEL_HOST=$sentinel-sz.sys.network.externalClusterEndpoint
@@ -1127,11 +1128,11 @@ services:
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
-
+          SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
           call_health_check() {
 
             echo "Health check URL: $HEALTH_CHECK_URL"
@@ -1143,10 +1144,27 @@ services:
             fi
           }
 
+          sentinel_call_health_check() {
+
+            echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
+            curl -sf $SENTINEL_HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
           call_health_check
+          fi
+
+          if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
+            sentinel_call_health_check
+          fi
       - scope: NODE
         type: REMOVE
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           # Trigger failover before master is removed
@@ -1172,6 +1190,8 @@ services:
       - RUN_NODE=0
       - RUN_SENTINEL=1
       - RUN_METRICS=0
+      - RUN_HEALTH_CHECK=1
+      - RUN_HEALTH_CHECK_SENTINEL=1
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
@@ -1211,6 +1231,27 @@ services:
         modifiable: false
         required: true
         export: false
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
+          sentinel_call_health_check() {
+
+            echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
+            curl -sf $SENTINEL_HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
+            sentinel_call_health_check
+          fi
 
   # Multi Zone
 
@@ -1582,6 +1623,7 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
+      - RUN_HEALTH_CHECK_SENTINEL=1
       - BROWSER=0
       - DEBUG=0
       - IS_MULTI_ZONE=1
@@ -1613,11 +1655,11 @@ services:
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
-
+          SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
           call_health_check() {
 
             echo "Health check URL: $HEALTH_CHECK_URL"
@@ -1629,10 +1671,27 @@ services:
             fi
           }
 
+          sentinel_call_health_check() {
+
+            echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
+            curl -sf $SENTINEL_HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
           call_health_check
+          fi
+
+          if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
+            sentinel_call_health_check
+          fi
       - scope: NODE
         type: REMOVE
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           # Trigger failover before master is removed
@@ -1657,6 +1716,8 @@ services:
       - RUN_NODE=0
       - RUN_SENTINEL=1
       - RUN_METRICS=0
+      - RUN_HEALTH_CHECK=1
+      - RUN_HEALTH_CHECK_SENTINEL=1
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
@@ -1696,6 +1757,27 @@ services:
         modifiable: false
         required: true
         export: false
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
+          sentinel_call_health_check() {
+
+            echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
+            curl -sf $SENTINEL_HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
+            sentinel_call_health_check
+          fi
 
   Cluster-Single-Zone:
     x-omnistrate-mode-internal: false
@@ -1881,6 +1963,7 @@ services:
     depends_on:
       - cluster-sz
       - cluster-sz-rebalance
+    
 
   cluster-sz:
     x-omnistrate-mode-internal: true
@@ -1934,7 +2017,7 @@ services:
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
@@ -1950,8 +2033,9 @@ services:
             fi
           }
 
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
           call_health_check
-
+          fi
   cluster-sz-rebalance:
     x-omnistrate-mode-internal: true
     image: $FalkorDBClusterRebalanceImage
@@ -1975,7 +2059,7 @@ services:
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
@@ -1991,7 +2075,9 @@ services:
             fi
           }
 
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
           call_health_check
+          fi
 
   Cluster-Multi-Zone:
     x-omnistrate-mode-internal: false
@@ -2230,7 +2316,7 @@ services:
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
@@ -2246,7 +2332,9 @@ services:
             fi
           }
 
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
           call_health_check
+          fi
 
   cluster-mz-rebalance:
     x-omnistrate-mode-internal: true
@@ -2271,7 +2359,7 @@ services:
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
@@ -2287,7 +2375,9 @@ services:
             fi
           }
 
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
           call_health_check
+          fi
 secrets:
   adminpasspath:
     file: ./secrets/adminpassword

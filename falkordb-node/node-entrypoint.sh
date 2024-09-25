@@ -24,6 +24,7 @@ RUN_SENTINEL=${RUN_SENTINEL:-0}
 RUN_NODE=${RUN_NODE:-1}
 RUN_METRICS=${RUN_METRICS:-1}
 RUN_HEALTH_CHECK=${RUN_HEALTH_CHECK:-1}
+RUN_HEALTH_CHECK_SENTINEL=${RUN_HEALTH_CHECK_SENTINEL:-1}
 TLS=${TLS:-false}
 NODE_INDEX=${NODE_INDEX:-0}
 INSTANCE_TYPE=${INSTANCE_TYPE:-''}
@@ -159,6 +160,10 @@ handle_sigterm() {
 
   if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $healthcheck_pid ]]; then
     kill -TERM $healthcheck_pid
+  fi
+
+  if [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 && ! -z $sentinel_healthcheck_pid ]]; then
+    kill -TERM $sentinel_healthcheck_pid
   fi
 }
 
@@ -449,20 +454,25 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
     fi
 fi
 
-if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
-  # Check if healthcheck binary exists
-  if [ -f /usr/local/bin/healthcheck ]; then
-    echo "Starting Healthcheck"
-    healthcheck &
-    healthcheck_pid=$!
+
+if [ -f /usr/local/bin/healthcheck ]; then
+  if [[ $RUN_NODE -eq 1 ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+      echo "Starting Healthcheck"
+      healthcheck &
+      healthcheck_pid=$!
+  fi
+
+  if [[ $RUN_SENTINEL -eq 1 ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]];then
+      echo "Starting Sentinel Healthcheck"
+      healthcheck sentinel &
+      sentinel_healthcheck_pid=$!
+  fi
   else
     echo "Healthcheck binary not found"
-  fi
 fi
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
-  export REDIS_EXPORTER_DEBUG=$(if [[ $DEBUG -eq 1 ]]; then echo "true"; else echo "false"; fi)
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -tls-server-min-version TLS1.3 &
   redis_exporter_pid=$!

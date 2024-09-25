@@ -77,9 +77,6 @@ services:
     image: $FalkorDBNodeImage
     x-omnistrate-compute:
       replicaCount: 1
-      instanceTypes:
-        - cloudProvider: gcp
-          name: e2-custom-small-1024
     x-omnistrate-api-params:
       - key: name
         description: The name of the FalkorDB instance

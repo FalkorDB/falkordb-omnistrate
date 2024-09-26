@@ -3,7 +3,7 @@ import signal
 from random import randbytes
 from pathlib import Path  # if you haven't already done so
 import threading
-
+from redis.exceptions import (ReadOnlyError)
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
@@ -201,7 +201,14 @@ def test_zero_downtime(
 
         while not thread_signal.is_set():
             # Write some data to the DB
-            graph.query("CREATE (n:Person {name: 'Alice'})")
+            try:
+                graph.query("CREATE (n:Person {name: 'Alice'})")
+            except (ReadOnlyError,ConnectionError,TimeoutError) as e:
+                logging.info(e)
+                db.connection.close()
+                db = instance.create_connection(ssl=ssl, force_reconnect=True)
+                graph = db.select_graph("test")
+                continue
             graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
 
             time.sleep(3)

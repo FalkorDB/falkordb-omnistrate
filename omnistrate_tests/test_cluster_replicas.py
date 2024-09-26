@@ -3,6 +3,12 @@ import signal
 from random import randbytes
 from pathlib import Path
 import threading
+from redis.exceptions import (
+   ConnectionError,
+   TimeoutError,
+   ReadOnlyError
+)
+
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
@@ -335,7 +341,7 @@ def test_zero_downtime(
             try:
                 graph.query("CREATE (n:Person {name: 'Alice'})")
                 graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
-            except:
+            except (ReadOnlyError) as e:
                 logging.info("THE CREATE COMMAND FAILED")
                 print("THE CREATE COMMAND FAILED")
                 db.connection.close()

@@ -526,7 +526,7 @@ class OmnistrateFleetInstance:
                     password=self.falkordb_password,
                     ssl=ssl,
                     cluster_error_retry_attempts=10,
-                    socket_connect_timeout=5,
+                    socket_keepalive=True,
                     retry=retry.Retry(
                         retries=20,
                         backoff=backoff.ExponentialBackoff(),

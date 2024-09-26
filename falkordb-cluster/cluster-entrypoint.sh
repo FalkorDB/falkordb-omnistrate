@@ -143,18 +143,25 @@ set_memory_limit() {
     ["e2-custom-8-16384"]="13GB"
     ["e2-custom-16-32768"]="30GB"
     ["e2-custom-32-65536"]="62GB"
+    ["t2.medium"]="2GB"
+    ["c6i.xlarge"]="6GB"
+    ["c6i.2xlarge"]="13GB"
+    ["c6i.4xlarge"]="30GB"
+    ["c6i.8xlarge"]="62GB"
   )
   if [[ -z $INSTANCE_TYPE ]]; then
     echo "INSTANCE_TYPE is not set"
     return
   fi
 
-  memory_limit=$(echo $memory_limit_instance_type_map | jq -r ".\"$INSTANCE_TYPE\"")
+  MEMORY_LIMIT=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
 
-  if [[ ! -z $memory_limit ]]; then
-    echo "Setting maxmemory to $memory_limit"
-    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
+  if [[ ! -z $MEMORY_LIMIT ]]; then
+    MEMORY_LIMIT="100MB"
   fi
+  
+  echo "Setting maxmemory to $MEMORY_LIMIT"
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
 }
 
 set_rdb_persistence_config() {

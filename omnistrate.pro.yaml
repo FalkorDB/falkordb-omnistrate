@@ -8,6 +8,8 @@ x-omnistrate-service-plan:
       GcpProjectId: "$GcpProjectId"
       GcpProjectNumber: "$GcpProjectNumber"
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
+      AwsAccountId: "$AwsAccountId"
+      AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
 
 x-omnistrate-load-balancer:
   tcp:
@@ -243,6 +245,11 @@ x-clusterparam: &clusterparam
         - e2-custom-8-16384
         - e2-custom-16-32768
         - e2-custom-32-65536
+        - t2.medium
+        - c6i.xlarge
+        - c6i.2xlarge
+        - c6i.4xlarge
+        - c6i.8xlarge
     - key: enableTLS
       description: Whether to enable TLS for the database
       name: Enable TLS
@@ -390,13 +397,17 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
         options:
           - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
         parameterDependencyMap:
           node-s: nodeInstanceType
       - key: enableTLS
@@ -554,6 +565,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -562,13 +575,17 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
         options:
           - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -693,6 +710,9 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -756,13 +776,17 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
         options:
           - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
         parameterDependencyMap:
           node-sz: nodeInstanceType
       - key: numReplicas
@@ -933,6 +957,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -941,13 +967,17 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
         options:
           - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1087,6 +1117,9 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -1209,6 +1242,9 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 10
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -1284,13 +1320,17 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
         options:
           - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
         parameterDependencyMap:
           node-mz: nodeInstanceType
       - key: numReplicas
@@ -1461,6 +1501,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -1469,13 +1511,17 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
         options:
           - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1615,6 +1661,9 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -1737,6 +1786,9 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 10
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -1817,6 +1869,11 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
         parameterDependencyMap:
           cluster-sz: nodeInstanceType
       - key: enableTLS
@@ -1986,6 +2043,9 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -2118,6 +2178,11 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
         parameterDependencyMap:
           cluster-mz: nodeInstanceType
       - key: enableTLS
@@ -2285,6 +2350,9 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath

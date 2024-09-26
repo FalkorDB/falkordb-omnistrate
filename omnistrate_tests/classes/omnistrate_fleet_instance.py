@@ -529,7 +529,7 @@ class OmnistrateFleetInstance:
                     socket_connect_timeout=5,
                     retry=retry.Retry(
                         retries=20,
-                        backoff=backoff.ExponentialBackoff(base=3,cap=5),
+                        backoff=backoff.ExponentialBackoff(),
                         supported_errors=(
                             ConnectionRefusedError,
                             ConnectionError,

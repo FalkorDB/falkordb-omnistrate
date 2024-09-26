@@ -7,7 +7,8 @@ from redis.backoff import ExponentialBackoff
 from redis.retry import Retry
 from redis.exceptions import (
    ConnectionError,
-   TimeoutError
+   TimeoutError,
+   ReadOnlyError
 )
 import threading
 
@@ -258,7 +259,7 @@ def test_zero_downtime(
             try:
                 graph.query("CREATE (n:Person {name: 'Alice'})")
                 graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
-            except:
+            except (ReadOnlyError) as e:
                 logging.info("THE CREATE COMMAND FAILED")
                 print("THE CREATE COMMAND FAILED")
                 db.connection.close()

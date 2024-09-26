@@ -8,7 +8,8 @@ from redis.backoff import ExponentialBackoff
 from redis.exceptions import (
     TimeoutError,
     ConnectionError,
-    BusyLoadingError
+    BusyLoadingError,
+    ReadOnlyError
 )
 
 file = Path(__file__).resolve()
@@ -378,7 +379,7 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     logging.info("Instance stopped")
 
     instance.start(wait_for_ready=True)
-
+    
     graph = db.select_graph("test")
 
     result = graph.query("MATCH (n:Person) RETURN n")
@@ -406,7 +407,7 @@ def test_zero_downtime(
             try:
                 graph.query("CREATE (n:Person {name: 'Alice'})")
                 graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
-            except:
+            except (ReadOnlyError) as e:
                 logging.info("THE CREATE COMMAND FAILED")
                 print("THE CREATE COMMAND FAILED")
                 db.connection.close()

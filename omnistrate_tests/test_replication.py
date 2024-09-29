@@ -407,9 +407,9 @@ def test_zero_downtime(
             try:
                 graph.query("CREATE (n:Person {name: 'Alice'})")
                 graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
-            except (ConnectionError) as e:
-                logging.info("THE CREATE COMMAND FAILED")
+            except Exception as e:
                 print("THE CREATE COMMAND FAILED")
+                print(e)
                 db.connection.close()
                 db = instance.create_connection(ssl=ssl, force_reconnect=True)
                 graph = db.select_graph("test")

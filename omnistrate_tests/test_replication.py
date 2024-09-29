@@ -381,8 +381,23 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     instance.start(wait_for_ready=True)
     
     graph = db.select_graph("test")
-    print("PASSED SELECT GRAPH")
-    result = graph.query("MATCH (n:Person) RETURN n")
+    tout = time.time() + 60
+    while time.time() < tout:
+        try:
+            result = graph.query("MATCH (n:Person) RETURN n")
+        except Exception as e:
+            print("query failed")
+            db.connection.close()
+            db = FalkorDB(
+                host=sentinel_resource["endpoint"],
+                port=sentinel_resource["ports"][0],
+                username="falkordb",
+                password=password,
+                ssl=args.tls,
+            )
+            graph = db.select_graph("test")
+            continue
+
     print("PASSED QUERY")
     if len(result.result_set) == 0:
         raise Exception("Data lost after stop/start")

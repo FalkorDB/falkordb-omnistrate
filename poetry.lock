@@ -139,7 +139,7 @@ redis = {git = "https://github.com/MuhammadQadora/redis-py", rev = "master"}
 type = "git"
 url = "https://github.com/FalkorDB/falkordb-py"
 reference = "57-changing-the-cluster_conn-function-to-use-domain-nameshostnames-instead-of-ips"
-resolved_reference = "d05f64417724c76278f58c4c49fa7c4628086a91"
+resolved_reference = "343f0c03e855e90fe76e82f28cc3b47a4768f180"
 
 [[package]]
 name = "idna"

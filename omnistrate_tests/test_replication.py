@@ -381,9 +381,9 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     instance.start(wait_for_ready=True)
     
     graph = db.select_graph("test")
-
+    print("PASSED SELECT GRAPH")
     result = graph.query("MATCH (n:Person) RETURN n")
-
+    print("PASSED QUERY")
     if len(result.result_set) == 0:
         raise Exception("Data lost after stop/start")
 
@@ -407,9 +407,9 @@ def test_zero_downtime(
             try:
                 graph.query("CREATE (n:Person {name: 'Alice'})")
                 graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
-            except Exception as e:
+            except (ConnectionError) as e:
+                logging.info("THE CREATE COMMAND FAILED")
                 print("THE CREATE COMMAND FAILED")
-                print(e)
                 db.connection.close()
                 db = instance.create_connection(ssl=ssl, force_reconnect=True)
                 graph = db.select_graph("test")

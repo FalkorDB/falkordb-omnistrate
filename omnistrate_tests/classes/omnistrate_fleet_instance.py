@@ -4,7 +4,7 @@ import os
 import logging
 import socket
 from redis import retry, backoff, exceptions as redis_exceptions
-from redis.exceptions import ReadOnlyError
+from redis.exceptions import ReadOnlyError, ResponseError
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
@@ -529,7 +529,8 @@ class OmnistrateFleetInstance:
                         ConnectionRefusedError,
                         TimeoutError,
                         socket.timeout,
-                        redis_exceptions.ConnectionError
+                        redis_exceptions.ConnectionError,
+                        ResponseError
                     ],
                     cluster_error_retry_attempts=20,
                     retry=retry.Retry(
@@ -539,7 +540,8 @@ class OmnistrateFleetInstance:
                             ConnectionRefusedError,
                             TimeoutError,
                             socket.timeout,
-                            redis_exceptions.ConnectionError
+                            redis_exceptions.ConnectionError,
+                            ResponseError
                         ),
                     ),
                 )

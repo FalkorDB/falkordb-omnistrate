@@ -338,23 +338,13 @@ def test_zero_downtime(
 
         while not thread_signal.is_set():
             # Write some data to the DB
-            try:
-                graph.query("CREATE (n:Person {name: 'Alice'})")
-                graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
-            except Exception as e:
-                print("THE CREATE COMMAND FAILED")
-                print(e)
-                db.connection.close()
-                db = instance.create_connection(ssl=ssl, force_reconnect=True)
-                graph = db.select_graph("test")
-                continue
-
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
             time.sleep(3)
     except Exception as e:
         logging.exception(e)
         error_signal.set()
         raise e
-
 
 if __name__ == "__main__":
     test_cluster_replicas()

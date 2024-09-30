@@ -527,7 +527,6 @@ class OmnistrateFleetInstance:
                     ssl=ssl,
                     retry_on_error=[
                         ConnectionRefusedError,
-                        ConnectionError,
                         TimeoutError,
                         socket.timeout,
                         redis_exceptions.ConnectionError
@@ -538,7 +537,6 @@ class OmnistrateFleetInstance:
                         backoff=backoff.ExponentialBackoff(base=3),
                         supported_errors=(
                             ConnectionRefusedError,
-                            ConnectionError,
                             TimeoutError,
                             socket.timeout,
                             redis_exceptions.ConnectionError

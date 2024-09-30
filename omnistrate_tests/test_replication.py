@@ -297,7 +297,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
         resource_id=instance.get_resource_id(f"sentinel-{id_key}"),
     )
     print("sleeping to see if it is a latency issue..")
-    time.sleep(120)
+
     graph_1 = db_1.select_graph("test")
 
     result = graph_1.query("MATCH (n:Person) RETURN n")
@@ -381,8 +381,9 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
 
     instance.start(wait_for_ready=True)
     
+    time.sleep(60)
     graph = db.select_graph("test")
-
+    
     result = graph.query("MATCH (n:Person) RETURN n")
 
     print("PASSED QUERY")
@@ -406,17 +407,8 @@ def test_zero_downtime(
 
         while not thread_signal.is_set():
             # Write some data to the DB
-            try:
-                graph.query("CREATE (n:Person {name: 'Alice'})")
-                graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
-            except (ConnectionError) as e:
-                logging.info("THE CREATE COMMAND FAILED")
-                print("THE CREATE COMMAND FAILED")
-                db.connection.close()
-                db = instance.create_connection(ssl=ssl, force_reconnect=True)
-                graph = db.select_graph("test")
-                continue
-
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
             time.sleep(3)
     except Exception as e:
         logging.exception(e)

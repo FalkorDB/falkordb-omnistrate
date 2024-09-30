@@ -9,7 +9,8 @@ from redis.exceptions import (
     TimeoutError,
     ConnectionError,
     BusyLoadingError,
-    ReadOnlyError
+    ReadOnlyError,
+    ResponseError
 )
 
 file = Path(__file__).resolve()
@@ -200,10 +201,11 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
         ssl=args.tls,
     )
 
-    retry = Retry(ExponentialBackoff(base=3,cap=30),30,supported_errors=(
+    retry = Retry(ExponentialBackoff(base=3),20,supported_errors=(
         TimeoutError,
         ConnectionError,
-        ConnectionRefusedError
+        ConnectionRefusedError,
+        ResponseError
     ))
     
     sentinels = Sentinel(

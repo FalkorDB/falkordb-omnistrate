@@ -381,8 +381,8 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     instance.start(wait_for_ready=True)
     
     graph = db.select_graph("test")
-    tout = time.time() + 60
-    while time.time() < tout:
+    count = 0
+    while count <= 5:
         try:
             result = graph.query("MATCH (n:Person) RETURN n")
         except Exception as e:
@@ -396,6 +396,8 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
                 ssl=args.tls,
             )
             graph = db.select_graph("test")
+            time.sleep(30)
+            count +=1
             continue
 
     print("PASSED QUERY")

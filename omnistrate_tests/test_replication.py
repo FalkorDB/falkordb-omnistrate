@@ -296,7 +296,8 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
         wait_for_ready=False,
         resource_id=instance.get_resource_id(f"sentinel-{id_key}"),
     )
-
+    print("sleeping to see if it is a latency issue..")
+    time.sleep(120)
     graph_1 = db_1.select_graph("test")
 
     result = graph_1.query("MATCH (n:Person) RETURN n")
@@ -381,24 +382,8 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     instance.start(wait_for_ready=True)
     
     graph = db.select_graph("test")
-    count = 0
-    while count <= 5:
-        try:
-            result = graph.query("MATCH (n:Person) RETURN n")
-        except Exception as e:
-            print("query failed")
-            db.connection.close()
-            db = FalkorDB(
-                host=sentinel_resource["endpoint"],
-                port=sentinel_resource["ports"][0],
-                username="falkordb",
-                password=password,
-                ssl=args.tls,
-            )
-            graph = db.select_graph("test")
-            time.sleep(30)
-            count +=1
-            continue
+
+    result = graph.query("MATCH (n:Person) RETURN n")
 
     print("PASSED QUERY")
     if len(result.result_set) == 0:

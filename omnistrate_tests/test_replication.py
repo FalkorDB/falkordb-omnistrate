@@ -223,7 +223,13 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
             "username": "falkordb",
             "password": password,
             "ssl": args.tls,
-            "retry": retry
+            "retry": retry,
+            "retry_on_error": [
+                TimeoutError,
+                ConnectionError,
+                ConnectionRefusedError,
+                ResponseError
+            ]
         },
     )
 
@@ -298,7 +304,6 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
         wait_for_ready=False,
         resource_id=instance.get_resource_id(f"sentinel-{id_key}"),
     )
-    print("sleeping to see if it is a latency issue..")
 
     graph_1 = db_1.select_graph("test")
 
@@ -383,6 +388,7 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
 
     instance.start(wait_for_ready=True)
     
+    print("sleeping to see if it is a latency issue..")
     time.sleep(60)
     graph = db.select_graph("test")
     

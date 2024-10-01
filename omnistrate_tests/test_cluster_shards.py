@@ -3,11 +3,6 @@ import signal
 from random import randbytes
 from pathlib import Path
 import threading
-from redis.exceptions import (
-   ConnectionError,
-   TimeoutError,
-   ReadOnlyError
-)
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]

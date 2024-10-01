@@ -227,7 +227,7 @@ def add_data(instance: OmnistrateFleetInstance):
 
 
 def check_data(instance: OmnistrateFleetInstance):
-    print('Retrieving data ....')
+    logging.info('Retrieving data ....')
     # Get instance host and port
     db = instance.create_connection(
         ssl=args.tls,

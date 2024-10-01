@@ -388,13 +388,11 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
 
     instance.start(wait_for_ready=True)
     
-    print("sleeping to see if it is a latency issue..")
     time.sleep(120)
     graph = db.select_graph("test")
     
     result = graph.query("MATCH (n:Person) RETURN n")
 
-    print("PASSED QUERY")
     if len(result.result_set) == 0:
         raise Exception("Data lost after stop/start")
 

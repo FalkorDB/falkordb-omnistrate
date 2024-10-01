@@ -145,8 +145,12 @@ handle_sigterm() {
   if [[ $RUN_SENTINEL -eq 1 && ! -z $sentinel_pid ]]; then
     #kill -TERM $sentinel_pid
     if [[ $TLS == "true" ]];then
+      redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
+      cat $NODE_CONF_FILE
       redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SHUTDOWN
     else
+      redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD SENTINEL FLUSHCONFIG
+      cat $NODE_CONF_FILE
       redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning SHUTDOWN
     fi
   fi

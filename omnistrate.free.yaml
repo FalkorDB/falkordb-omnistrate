@@ -8,6 +8,8 @@ x-omnistrate-service-plan:
       GcpProjectId: "$GcpProjectId"
       GcpProjectNumber: "$GcpProjectNumber"
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
+      AwsAccountId: "$AwsAccountId"
+      AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
 
 x-internal-integrations:
   logs:

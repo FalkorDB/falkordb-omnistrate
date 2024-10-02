@@ -19,34 +19,25 @@ class OmnistrateFleetNetwork:
     def __init__(
         self,
         fleet_api: omnistrate_tests.classes.omnistrate_fleet_api.OmnistrateFleetAPI,
+        network_name: str,
     ):
         self._fleet_api = fleet_api
+        self.network_name = network_name
 
-    def create(
-        self,
-        name: str,
-        cidr: str,
-        cloudProviderName: str,
-        cloudProviderRegion: str,
-    ):
-        response = self._fleet_api.client().post(
-            f"{self._fleet_api.base_url}/resource-instance/custom-network",
-            data=json.dumps(
-                {
-                    "name": name,
-                    "cidr": cidr,
-                    "cloudProviderName": cloudProviderName,
-                    "cloudProviderRegion": cloudProviderRegion,
-                },
-            ),
-            timeout=15,
+        self._get_network_id(network_name)
+
+    def _get_network_id(self, network_name: str) -> None:
+        response = self._fleet_api.client().get(
+            f"{self._fleet_api.base_url}/custom-network",
+            timeout=60,
         )
-        self.network_id = response.json()["id"]
+        self._fleet_api.handle_response(response, "Failed to get network")
 
-        return self.network_id
+        networks = response.json()["customNetworks"]
 
-    def delete(self):
-        self._fleet_api.client().delete(
-            f"{self._fleet_api.base_url}/resource-instance/custom-network/{self.network_id}"
-        )
-        self.network_id = None
+        for network in networks:
+            if network["name"] == network_name:
+                self.network_id = network["id"]
+                return
+
+        return

@@ -53,7 +53,7 @@ parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
 
 parser.add_argument("--ensure-mz-distribution", action="store_true")
-parser.add_argument("--enable-custom-network", action="store_true")
+parser.add_argument("--custom-network", required=False)
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -93,14 +93,8 @@ def test_cluster():
     logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     network = None
-    if args.enable_custom_network:
-        network = omnistrate.network()
-        network.create(
-            name=args.instance_name,
-            cidr="10.0.0.0/20",
-            cloudProviderName=args.cloud_provider,
-            cloudProviderRegion=args.region,
-        )
+    if args.custom_network:
+        network = omnistrate.network(args.custom_network)
 
     instance = omnistrate.instance(
         service_id=args.service_id,
@@ -115,7 +109,7 @@ def test_cluster():
         subscription_id=args.subscription_id,
         deployment_create_timeout_seconds=2400,
         deployment_delete_timeout_seconds=2400,
-        deployment_failover_timeout_seconds=2400
+        deployment_failover_timeout_seconds=2400,
     )
 
     try:
@@ -137,12 +131,12 @@ def test_cluster():
             clusterReplicas=args.cluster_replicas,
             custom_network_id=network.network_id if network else None,
         )
-        
 
         thread_signal = threading.Event()
         error_signal = threading.Event()
         thread = threading.Thread(
-            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+            target=test_zero_downtime,
+            args=(thread_signal, error_signal, instance, args.tls),
         )
         thread.start()
 
@@ -155,20 +149,16 @@ def test_cluster():
         # Wait for the zero_downtime
         thread_signal.set()
         thread.join()
-        
+
         # Test stop and start instance
         test_stop_start(instance)
     except Exception as e:
         logging.exception(e)
         instance.delete(network is not None)
-        if network:
-            network.delete()
         raise e
 
     # Delete instance
     instance.delete(network is not None)
-    if network:
-        network.delete()
 
     if error_signal.is_set():
         raise ValueError("Test failed")
@@ -272,7 +262,7 @@ def test_failover(instance: OmnistrateFleetInstance):
         replica_id=args.replica_id,
         wait_for_ready=True,
     )
-    
+
     graph = db.select_graph("test")
 
     result = graph.query("MATCH (n:Person) RETURN n")
@@ -314,8 +304,6 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     logging.info("Instance started")
 
 
-
-
 def test_zero_downtime(
     thread_signal: threading.Event,
     error_signal: threading.Event,
@@ -339,6 +327,6 @@ def test_zero_downtime(
         error_signal.set()
         raise e
 
+
 if __name__ == "__main__":
     test_cluster()
-

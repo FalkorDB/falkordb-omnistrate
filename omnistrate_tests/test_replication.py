@@ -61,7 +61,7 @@ parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 
-parser.add_argument("--enable-custom-network", action="store_true")
+parser.add_argument("--custom-network", required=False)
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -99,13 +99,7 @@ def test_replication():
 
     network = None
     if args.enable_custom_network:
-        network = omnistrate.network()
-        network.create(
-            name=args.instance_name,
-            cidr="10.0.0.0/20",
-            cloudProviderName=args.cloud_provider,
-            cloudProviderRegion=args.region,
-        )
+        network = omnistrate.network(args.custom_network)
 
     instance = omnistrate.instance(
         service_id=args.service_id,
@@ -160,14 +154,10 @@ def test_replication():
     except Exception as e:
         logging.exception(e)
         instance.delete(network is not None)
-        if network:
-            network.delete()
         raise e
 
     # Delete instance
     instance.delete(network is not None)
-    if network:
-        network.delete()
 
     if error_signal.is_set():
         raise ValueError("Test failed")

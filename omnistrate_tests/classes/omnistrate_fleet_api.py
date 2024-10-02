@@ -160,7 +160,8 @@ class OmnistrateFleetAPI:
 
     def network(
         self,
+        network_name: str,
     ):
         return omnistrate_tests.classes.omnistrate_fleet_network.OmnistrateFleetNetwork(
-            self
+            self, network_name
         )

@@ -21,14 +21,10 @@ inputs:
     description: "The name to use for the custom network"
     required: true
 
-outputs:
-  custom_network_id:
-    description: "The ID of the custom network"
-
 runs:
   using: docker
   image: ghcr.io/omnistrate/ctl:latest
   entrypoint: /bin/sh
   args:
     - -c
-    - "/usr/local/bin/omnistrate-ctl login --email ${{ inputs.username }} --password ${{ inputs.password }} && echo \"custom_network_id=$(/usr/local/bin/omnistrate-ctl custom-network create --cloud-provider ${{ inputs.cloud_provider }} --region ${{ inputs.region }} --cidr ${{ inputs.cidr }} --name '${{ inputs.name }}' -o json | jq -r '.custom_network_id')\" >> $GITHUB_OUTPUT"
+    - "/usr/local/bin/omnistrate-ctl login --email ${{ inputs.username }} --password ${{ inputs.password }} && /usr/local/bin/omnistrate-ctl custom-network create --cloud-provider ${{ inputs.cloud_provider }} --region ${{ inputs.region }} --cidr ${{ inputs.cidr }} --name '${{ inputs.name }}'"

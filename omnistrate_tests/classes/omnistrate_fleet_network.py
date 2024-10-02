@@ -28,7 +28,7 @@ class OmnistrateFleetNetwork:
 
     def _get_network_id(self, network_name: str) -> None:
         response = self._fleet_api.client().get(
-            f"{self._fleet_api.base_url}/custom-network",
+            f"{self._fleet_api.base_url}/resource-instance/custom-network",
             timeout=60,
         )
         self._fleet_api.handle_response(response, "Failed to get network")

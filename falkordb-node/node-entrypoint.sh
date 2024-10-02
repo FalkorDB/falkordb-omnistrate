@@ -24,6 +24,7 @@ RUN_SENTINEL=${RUN_SENTINEL:-0}
 RUN_NODE=${RUN_NODE:-1}
 RUN_METRICS=${RUN_METRICS:-1}
 RUN_HEALTH_CHECK=${RUN_HEALTH_CHECK:-1}
+RUN_HEALTH_CHECK_SENTINEL=${RUN_HEALTH_CHECK_SENTINEL:-1}
 TLS=${TLS:-false}
 NODE_INDEX=${NODE_INDEX:-0}
 INSTANCE_TYPE=${INSTANCE_TYPE:-''}
@@ -69,6 +70,10 @@ FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/
 SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
+
+if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
+  DEBUG=1
+fi
 
 dump_conf_files() {
   echo "Dumping configuration files"
@@ -156,6 +161,10 @@ handle_sigterm() {
   if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $healthcheck_pid ]]; then
     kill -TERM $healthcheck_pid
   fi
+
+  if [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 && ! -z $sentinel_healthcheck_pid ]]; then
+    kill -TERM $sentinel_healthcheck_pid
+  fi
 }
 
 trap handle_sigterm SIGTERM
@@ -178,18 +187,28 @@ get_self_host_ip() {
 }
 
 get_memory_limit() {
+  declare -A memory_limit_instance_type_map
+  memory_limit_instance_type_map=(
+    ["e2-custom-small-1024"]="100MB"
+    ["e2-medium"]="2GB"
+    ["e2-custom-4-8192"]="6GB"
+    ["e2-custom-8-16384"]="13GB"
+    ["e2-custom-16-32768"]="30GB"
+    ["e2-custom-32-65536"]="62GB"
+    ["t2.medium"]="2GB"
+    ["c6i.xlarge"]="6GB"
+    ["c6i.2xlarge"]="13GB"
+    ["c6i.4xlarge"]="30GB"
+    ["c6i.8xlarge"]="62GB"
+  )
 
-  memory_limit_instance_type_map="{\"e2-custom-small-1024\":\"100MB\",\"e2-medium\":\"2GB\",\"e2-custom-4-8192\":\"6GB\",\"e2-custom-8-16384\":\"13GB\",\"e2-custom-16-32768\":\"30GB\",\"e2-custom-32-65536\":\"62GB\"}"
-
-  if [[ -z $INSTANCE_TYPE ]]; then
-    echo "INSTANCE_TYPE is not set"
-    return
+  MEMORY_LIMIT=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
+  if [[ -z $MEMORY_LIMIT ]]; then
+    echo "INSTANCE_TYPE is not set. Setting 100MB"
+    MEMORY_LIMIT="100MB"
   fi
 
-  MEMORY_LIMIT=$(echo $memory_limit_instance_type_map | jq -r ".\"$INSTANCE_TYPE\"")
-
   echo "Memory Limit: $MEMORY_LIMIT"
-
 }
 
 wait_until_sentinel_host_resolves() {
@@ -294,6 +313,36 @@ set_persistence_config() {
   fi
 }
 
+create_user() {
+  echo "Creating falkordb user"
+
+  if [[ $RESET_ADMIN_PASSWORD -eq 1 ]]; then
+    echo "Resetting admin password"
+    redis-cli -p $NODE_PORT -a $CURRENT_ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET requirepass $ADMIN_PASSWORD
+    redis-cli -p $NODE_PORT -a $CURRENT_ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET masterauth $ADMIN_PASSWORD
+
+  fi
+
+  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG
+
+  config_rewrite
+}
+
+config_rewrite() {
+  # Config rewrite
+  echo "Rewriting config"
+  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
+}
+
+if [ -f $NODE_CONF_FILE ]; then
+  # Get current admin password
+  CURRENT_ADMIN_PASSWORD=$(cat $NODE_CONF_FILE | grep -oP '(?<=requirepass ).*')
+  # If current admin password is different from the new one, reset it
+  if [[ $CURRENT_ADMIN_PASSWORD != $ADMIN_PASSWORD ]]; then
+    RESET_ADMIN_PASSWORD=1
+  fi
+fi
+
 # If node.conf doesn't exist or $REPLACE_NODE_CONF=1, copy it from /falkordb
 if [ ! -f $NODE_CONF_FILE ] || [ "$REPLACE_NODE_CONF" -eq "1" ]; then
   echo "Copying node.conf from /falkordb"
@@ -360,6 +409,8 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
   sleep 10
 
+  create_user
+
   # If node should be master, add it to sentinel
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
     echo "Adding master to sentinel"
@@ -379,9 +430,6 @@ if [ "$RUN_NODE" -eq "1" ]; then
     redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
   fi
 
-  echo "Creating falkordb user"
-  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG
-
   # Set maxmemory based on instance type
   get_memory_limit
   if [[ ! -z $MEMORY_LIMIT ]]; then
@@ -399,12 +447,10 @@ if [ "$RUN_NODE" -eq "1" ]; then
     redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET appendfsync $PERSISTENCE_AOF_CONFIG
   fi
 
-  # Config rewrite
-  echo "Rewriting config"
-  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
+  config_rewrite
 fi
 
-if [ "$RUN_SENTINEL" -eq "1" ]; then
+if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" == "1" ]]); then
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
@@ -443,23 +489,26 @@ if [ "$RUN_SENTINEL" -eq "1" ]; then
     redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
     redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
   fi
-
 fi
 
-if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
-  # Check if healthcheck binary exists
-  if [ -f /usr/local/bin/healthcheck ]; then
+if [ -f /usr/local/bin/healthcheck ]; then
+  if [[ $RUN_NODE -eq 1 ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
     echo "Starting Healthcheck"
     healthcheck &
     healthcheck_pid=$!
-  else
-    echo "Healthcheck binary not found"
   fi
+
+  if [[ $RUN_SENTINEL -eq 1 ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]]; then
+    echo "Starting Sentinel Healthcheck"
+    healthcheck sentinel &
+    sentinel_healthcheck_pid=$!
+  fi
+else
+  echo "Healthcheck binary not found"
 fi
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
-  export REDIS_EXPORTER_DEBUG=$(if [[ $DEBUG -eq 1 ]]; then echo "true"; else echo "false"; fi)
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -tls-server-min-version TLS1.3 &
   redis_exporter_pid=$!

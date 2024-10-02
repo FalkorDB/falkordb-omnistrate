@@ -617,8 +617,6 @@ jobs:
         with:
           username: ${{ secrets.OMNISTRATE_USERNAME }}
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
-          cloud_provider: gcp
-          region: us-central1
           custom_network_name: ${{ env.GCP_NETWORK_NAME }}
 
       - name: Delete Omnistrate Custom Network - AWS
@@ -627,6 +625,4 @@ jobs:
         with:
           username: ${{ secrets.OMNISTRATE_USERNAME }}
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
-          cloud_provider: aws
-          region: us-east-2
-          custom_network: ${{ env.AWS_NETWORK_NAME }}
+          custom_network_name: ${{ env.AWS_NETWORK_NAME }}

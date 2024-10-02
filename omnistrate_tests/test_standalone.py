@@ -87,7 +87,7 @@ def test_standalone():
     logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
     network = None
-    if args.enable_custom_network:
+    if args.custom_network:
         network = omnistrate.network(args.custom_network)
 
     instance = omnistrate.instance(

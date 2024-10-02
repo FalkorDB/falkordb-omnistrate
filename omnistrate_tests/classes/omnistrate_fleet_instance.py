@@ -5,13 +5,14 @@ import logging
 import socket
 from redis import retry, backoff, exceptions as redis_exceptions
 
+import omnistrate_tests.classes.omnistrate_fleet_api
+
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
 import random
 import string
 from requests import exceptions
-import omnistrate_tests.classes.omnistrate_fleet_api
 
 
 def rand_range(a, b):
@@ -374,7 +375,7 @@ class OmnistrateFleetInstance:
 
         if not wait_until_ready:
             return
-        
+
         self.wait_for_instance_status(
             timeout_seconds=self.deployment_update_timeout_seconds
         )
@@ -470,7 +471,7 @@ class OmnistrateFleetInstance:
         """Get the connection endpoints for the instance."""
 
         resources = self.get_network_topology()
-        
+
         resources_keys = resources.keys()
 
         endpoints = []
@@ -538,7 +539,7 @@ class OmnistrateFleetInstance:
                             ConnectionError,
                             TimeoutError,
                             socket.timeout,
-                            redis_exceptions.ConnectionError
+                            redis_exceptions.ConnectionError,
                         ),
                     ),
                 )

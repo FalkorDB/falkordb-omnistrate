@@ -57,12 +57,25 @@ DATE_NOW=$(date +"%Y%m%d%H%M%S")
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo ""; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 
+
+if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
+  DEBUG=1
+fi
+
 handle_sigterm() {
   echo "Caught SIGTERM"
   echo "Stopping FalkorDB"
 
   if [[ ! -z $falkordb_pid ]]; then
     kill -TERM $falkordb_pid
+  fi
+
+  if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
+    kill -TERM $redis_exporter_pid
+  fi
+
+  if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $healthcheck_pid ]]; then
+    kill -TERM $healthcheck_pid
   fi
 }
 
@@ -130,18 +143,25 @@ set_memory_limit() {
     ["e2-custom-8-16384"]="13GB"
     ["e2-custom-16-32768"]="30GB"
     ["e2-custom-32-65536"]="62GB"
+    ["t2.medium"]="2GB"
+    ["c6i.xlarge"]="6GB"
+    ["c6i.2xlarge"]="13GB"
+    ["c6i.4xlarge"]="30GB"
+    ["c6i.8xlarge"]="62GB"
   )
   if [[ -z $INSTANCE_TYPE ]]; then
     echo "INSTANCE_TYPE is not set"
     return
   fi
 
-  memory_limit=$(echo $memory_limit_instance_type_map | jq -r ".\"$INSTANCE_TYPE\"")
+  MEMORY_LIMIT=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
 
-  if [[ ! -z $memory_limit ]]; then
-    echo "Setting maxmemory to $memory_limit"
-    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
+  if [[ ! -z $MEMORY_LIMIT ]]; then
+    MEMORY_LIMIT="100MB"
   fi
+  
+  echo "Setting maxmemory to $MEMORY_LIMIT"
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
 }
 
 set_rdb_persistence_config() {
@@ -288,7 +308,8 @@ fi
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
-  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -is-cluster | awk '{ print "**EXPORTER**: " $0 }' >>$FALKORDB_LOG_FILE_PATH &
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -is-cluster -tls-server-min-version TLS1.3 >>$FALKORDB_LOG_FILE_PATH &
+  redis_exporter_pid=$!
 fi
 
 while true; do

@@ -8,6 +8,8 @@ x-omnistrate-service-plan:
       GcpProjectId: "$GcpProjectId"
       GcpProjectNumber: "$GcpProjectNumber"
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
+      AwsAccountId: "$AwsAccountId"
+      AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
 
 x-omnistrate-load-balancer:
   tcp:
@@ -243,6 +245,11 @@ x-clusterparam: &clusterparam
         - e2-custom-8-16384
         - e2-custom-16-32768
         - e2-custom-32-65536
+        - t2.medium
+        - c6i.xlarge
+        - c6i.2xlarge
+        - c6i.4xlarge
+        - c6i.8xlarge
     - key: enableTLS
       description: Whether to enable TLS for the database
       name: Enable TLS
@@ -390,13 +397,17 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
         options:
           - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
         parameterDependencyMap:
           node-s: nodeInstanceType
       - key: enableTLS
@@ -554,6 +565,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -562,13 +575,17 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
         options:
           - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -693,6 +710,9 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -756,13 +776,17 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
         options:
           - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
         parameterDependencyMap:
           node-sz: nodeInstanceType
       - key: numReplicas
@@ -775,6 +799,7 @@ services:
         defaultValue: "2"
         options:
           - "2"
+          - "3"
         parameterDependencyMap:
           node-sz: numReplicas
       - key: enableTLS
@@ -932,6 +957,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -940,13 +967,17 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
         options:
           - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -957,6 +988,7 @@ services:
         defaultValue: "2"
         options:
           - "2"
+          - "3"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -1085,6 +1117,9 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -1095,8 +1130,10 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
+      - RUN_HEALTH_CHECK_SENTINEL=1
       - BROWSER=0
       - DEBUG=0
+      - REDIS_EXPORTER_DEBUG=false
       - SENTINEL_HOST=$sentinel-sz.sys.network.externalClusterEndpoint
       - SENTINEL_PORT=26379
       - MASTER_NAME=master
@@ -1125,11 +1162,11 @@ services:
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
-
+          SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
           call_health_check() {
 
             echo "Health check URL: $HEALTH_CHECK_URL"
@@ -1141,10 +1178,27 @@ services:
             fi
           }
 
+          sentinel_call_health_check() {
+
+            echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
+            curl -sf $SENTINEL_HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
           call_health_check
+          fi
+
+          if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
+            sentinel_call_health_check
+          fi
       - scope: NODE
         type: REMOVE
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           # Trigger failover before master is removed
@@ -1170,7 +1224,10 @@ services:
       - RUN_NODE=0
       - RUN_SENTINEL=1
       - RUN_METRICS=0
+      - RUN_HEALTH_CHECK=1
+      - RUN_HEALTH_CHECK_SENTINEL=1
       - DEBUG=0
+      - REDIS_EXPORTER_DEBUG=false
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - DATA_DIR=/data
@@ -1184,6 +1241,9 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 10
+          aws:
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 10
     secrets:
       - source: adminpasspath
@@ -1209,6 +1269,27 @@ services:
         modifiable: false
         required: true
         export: false
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
+          sentinel_call_health_check() {
+
+            echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
+            curl -sf $SENTINEL_HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
+            sentinel_call_health_check
+          fi
 
   # Multi Zone
 
@@ -1239,13 +1320,17 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
         options:
           - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
         parameterDependencyMap:
           node-mz: nodeInstanceType
       - key: numReplicas
@@ -1258,6 +1343,7 @@ services:
         defaultValue: "2"
         options:
           - "2"
+          - "3"
         parameterDependencyMap:
           node-mz: numReplicas
       - key: enableTLS
@@ -1415,6 +1501,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -1423,13 +1511,17 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
         options:
           - e2-medium
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1440,6 +1532,7 @@ services:
         defaultValue: "2"
         options:
           - "2"
+          - "3"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -1568,6 +1661,9 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -1578,8 +1674,10 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
+      - RUN_HEALTH_CHECK_SENTINEL=1
       - BROWSER=0
       - DEBUG=0
+      - REDIS_EXPORTER_DEBUG=false
       - IS_MULTI_ZONE=1
       - SENTINEL_HOST=$sentinel-mz.sys.network.externalClusterEndpoint
       - SENTINEL_PORT=26379
@@ -1609,11 +1707,11 @@ services:
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
-
+          SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
           call_health_check() {
 
             echo "Health check URL: $HEALTH_CHECK_URL"
@@ -1625,10 +1723,27 @@ services:
             fi
           }
 
+          sentinel_call_health_check() {
+
+            echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
+            curl -sf $SENTINEL_HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
           call_health_check
+          fi
+
+          if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
+            sentinel_call_health_check
+          fi
       - scope: NODE
         type: REMOVE
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           # Trigger failover before master is removed
@@ -1653,7 +1768,10 @@ services:
       - RUN_NODE=0
       - RUN_SENTINEL=1
       - RUN_METRICS=0
+      - RUN_HEALTH_CHECK=1
+      - RUN_HEALTH_CHECK_SENTINEL=1
       - DEBUG=0
+      - REDIS_EXPORTER_DEBUG=false
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - DATA_DIR=/data
@@ -1667,6 +1785,9 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 10
+          aws:
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 10
     secrets:
       - source: adminpasspath
@@ -1692,6 +1813,27 @@ services:
         modifiable: false
         required: true
         export: false
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
+          sentinel_call_health_check() {
+
+            echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
+            curl -sf $SENTINEL_HEALTH_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
+            sentinel_call_health_check
+          fi
 
   Cluster-Single-Zone:
     x-omnistrate-mode-internal: false
@@ -1727,6 +1869,11 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
         parameterDependencyMap:
           cluster-sz: nodeInstanceType
       - key: enableTLS
@@ -1877,6 +2024,7 @@ services:
     depends_on:
       - cluster-sz
       - cluster-sz-rebalance
+    
 
   cluster-sz:
     x-omnistrate-mode-internal: true
@@ -1894,6 +2042,9 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
@@ -1930,7 +2081,7 @@ services:
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
@@ -1946,8 +2097,9 @@ services:
             fi
           }
 
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
           call_health_check
-
+          fi
   cluster-sz-rebalance:
     x-omnistrate-mode-internal: true
     image: $FalkorDBClusterRebalanceImage
@@ -1965,13 +2117,14 @@ services:
       - CLUSTER_REPLICAS=1
       - NODE_PORT=6379
       - DEBUG=0
+      - REDIS_EXPORTER_DEBUG=false
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
@@ -1987,7 +2140,9 @@ services:
             fi
           }
 
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
           call_health_check
+          fi
 
   Cluster-Multi-Zone:
     x-omnistrate-mode-internal: false
@@ -2023,6 +2178,11 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
+          - t2.medium
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
         parameterDependencyMap:
           cluster-mz: nodeInstanceType
       - key: enableTLS
@@ -2191,6 +2351,9 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -2226,7 +2389,7 @@ services:
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
@@ -2242,7 +2405,9 @@ services:
             fi
           }
 
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
           call_health_check
+          fi
 
   cluster-mz-rebalance:
     x-omnistrate-mode-internal: true
@@ -2261,13 +2426,14 @@ services:
       - CLUSTER_REPLICAS=1
       - NODE_PORT=6379
       - DEBUG=0
+      - REDIS_EXPORTER_DEBUG=false
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
-        commandTemplate: >
+        commandTemplate: |
           #!/bin/bash
 
           HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
@@ -2283,7 +2449,9 @@ services:
             fi
           }
 
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
           call_health_check
+          fi
 secrets:
   adminpasspath:
     file: ./secrets/adminpassword

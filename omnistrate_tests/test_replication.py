@@ -3,6 +3,13 @@ import signal
 from random import randbytes
 from pathlib import Path
 import threading
+from redis.retry import Retry
+from redis.backoff import ExponentialBackoff
+from redis.exceptions import (
+    TimeoutError,
+    ConnectionError,
+    BusyLoadingError
+)
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -111,7 +118,9 @@ def test_replication():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
-        deployment_create_timeout_seconds=2400
+        deployment_create_timeout_seconds=2400,
+        deployment_delete_timeout_seconds=2400,
+        deployment_failover_timeout_seconds=2400
     )
 
     try:
@@ -206,6 +215,13 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
         password=password,
         ssl=args.tls,
     )
+
+    retry = Retry(ExponentialBackoff(base=3),20,supported_errors=(
+        TimeoutError,
+        ConnectionError,
+        ConnectionRefusedError
+    ))
+    
     sentinels = Sentinel(
         sentinels=[
             (sentinel_resource["endpoint"], sentinel_resource["ports"][0]),
@@ -221,6 +237,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
             "username": "falkordb",
             "password": password,
             "ssl": args.tls,
+            "retry": retry
         },
     )
 

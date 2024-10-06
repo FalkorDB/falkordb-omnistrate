@@ -143,6 +143,7 @@ handle_sigterm() {
   fi
 
   if [[ $RUN_SENTINEL -eq 1 && ! -z $sentinel_pid ]]; then
+    cat /data/sentinel.conf
     kill -TERM $sentinel_pid
   fi
 
@@ -457,7 +458,6 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
       log "Master Name: $MASTER_NAME\Master Host: $FALKORDB_MASTER_HOST\Master Port: $FALKORDB_MASTER_PORT_NUMBER\nSentinel Quorum: $SENTINEL_QUORUM"
       wait_until_node_host_resolves $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER
       redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER $SENTINEL_QUORUM
-      echo "$MASTER_NAME, $FALKORDB_MASTER_HOST"
       redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
       redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
       redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
@@ -506,6 +506,23 @@ if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]]; then
     sleep 5
   done
 fi
+
+check_duplicate_master(){
+  while true; do
+    result=$(grep -i 'Duplicate' $SENTINEL_LOG_FILE_PATH)
+    if [[ $? -eq 0 ]];then
+      if [[ $TLS == 'true' ]];then
+        redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL RESET master
+        break
+      else
+        redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD SENTINEL RESET master
+        break
+      fi
+    fi
+  done
+}
+
+check_duplicate_master &
 
 while true; do
   sleep 1

@@ -512,6 +512,9 @@ check_duplicate_master(){
     sleep 5
     result=$(grep -i 'Duplicate' $SENTINEL_LOG_FILE_PATH)
     if [[ $? -eq 0 ]];then
+      echo '###############'
+      echo '# WARNING FOUND DUPLICATE MASTER NAME #'
+      echo '###############'
       if [[ $TLS == 'true' ]];then
         redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL RESET master
         break

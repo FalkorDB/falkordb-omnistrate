@@ -509,6 +509,7 @@ fi
 
 check_duplicate_master(){
   while true; do
+    sleep 5
     result=$(grep -i 'Duplicate' $SENTINEL_LOG_FILE_PATH)
     if [[ $? -eq 0 ]];then
       if [[ $TLS == 'true' ]];then

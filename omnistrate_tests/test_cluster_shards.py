@@ -308,9 +308,9 @@ def test_zero_downtime(
     thread_signal: threading.Event,
     error_signal: threading.Event,
     instance: OmnistrateFleetInstance,
-    ssl=False,
+    ssl=args.tls,
 ):
-    """This function should test the ability to read and write while a memory update happens"""
+    """This function should test the ability to read and write while testing cluster shards"""
     try:
         db = instance.create_connection(ssl=ssl, force_reconnect=True)
 

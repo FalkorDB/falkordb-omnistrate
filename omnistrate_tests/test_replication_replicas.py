@@ -246,7 +246,7 @@ def test_zero_downtime(
     thread_signal: threading.Event,
     error_signal: threading.Event,
     instance: OmnistrateFleetInstance,
-    ssl=args.tls,
+    ssl=False,
 ):
     """This function should test the ability to read and write while adding and removing a replica"""
     try:

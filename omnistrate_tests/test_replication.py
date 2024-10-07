@@ -205,7 +205,8 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
         TimeoutError,
         ConnectionError,
         ConnectionRefusedError,
-        ResponseError
+        ResponseError,
+        ReadOnlyError
     ))
     
     sentinels = Sentinel(
@@ -228,7 +229,8 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
                 TimeoutError,
                 ConnectionError,
                 ConnectionRefusedError,
-                ResponseError
+                ResponseError,
+                ReadOnlyError
             ]
         },
     )
@@ -388,7 +390,6 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
 
     instance.start(wait_for_ready=True)
     
-    time.sleep(120)
     graph = db.select_graph("test")
     
     result = graph.query("MATCH (n:Person) RETURN n")
@@ -403,9 +404,9 @@ def test_zero_downtime(
     thread_signal: threading.Event,
     error_signal: threading.Event,
     instance: OmnistrateFleetInstance,
-    ssl=False,
+    ssl=args.tls,
 ):
-    """This function should test the ability to read and write while a memory update happens"""
+    """This function should test the ability to read and write while replication happens"""
     try:
         db = instance.create_connection(ssl=ssl, force_reconnect=True)
 

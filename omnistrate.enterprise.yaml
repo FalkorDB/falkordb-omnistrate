@@ -679,6 +679,9 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -1059,6 +1062,9 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -1158,6 +1164,9 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 10
+          aws:
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 10
     secrets:
       - source: adminpasspath
@@ -1530,6 +1539,9 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -1629,6 +1641,9 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 10
+          aws:
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 10
     secrets:
       - source: adminpasspath
@@ -1850,6 +1865,9 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
@@ -2140,6 +2158,9 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 200
+          aws:
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath

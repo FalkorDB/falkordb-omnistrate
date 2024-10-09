@@ -127,6 +127,9 @@ services:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
             instanceStorageSizeGi: 10
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 10
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword

@@ -55,6 +55,17 @@ parser.add_argument("--cluster-replicas", required=False, default="1")
 parser.add_argument("--ensure-mz-distribution", action="store_true")
 parser.add_argument("--custom-network", required=False)
 
+parser.add_argument(
+    "--deployment-create-timeout-seconds", required=False, default=2400, type=int
+)
+parser.add_argument(
+    "--deployment-delete-timeout-seconds", required=False, default=2400, type=int
+)
+parser.add_argument(
+    "--deployment-failover-timeout-seconds", required=False, default=2400, type=int
+)
+
+
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
@@ -107,9 +118,9 @@ def test_cluster():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
-        deployment_create_timeout_seconds=2400,
-        deployment_delete_timeout_seconds=2400,
-        deployment_failover_timeout_seconds=2400,
+        deployment_create_timeout_seconds=args.deployment_create_timeout_seconds,
+        deployment_delete_timeout_seconds=args.deployment_delete_timeout_seconds,
+        deployment_failover_timeout_seconds=args.deployment_failover_timeout_seconds,
     )
 
     try:

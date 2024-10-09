@@ -137,7 +137,7 @@ jobs:
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
           cloud_provider: gcp
           region: us-central1
-          cidr: "10.0.0.0/20"
+          cidr: "73.0.0.0/16"
           name: ${{ env.GCP_NETWORK_NAME}}
 
       - name: Create Omnistrate Custom Network - AWS
@@ -148,7 +148,7 @@ jobs:
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
           cloud_provider: aws
           region: us-east-2
-          cidr: "10.0.0.0/20"
+          cidr: "73.0.0.0/16"
           name: ${{ env.AWS_NETWORK_NAME }}
 
   test:

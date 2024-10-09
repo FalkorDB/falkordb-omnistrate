@@ -201,7 +201,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
         ssl=args.tls,
     )
 
-    retry = Retry(ExponentialBackoff(base=5),20,supported_errors=(
+    retry = Retry(ExponentialBackoff(base=1,cap=8),20,supported_errors=(
         TimeoutError,
         ConnectionError,
         ConnectionRefusedError,

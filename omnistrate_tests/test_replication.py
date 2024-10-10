@@ -61,6 +61,8 @@ parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 
+parser.add_argument("--custom-network", required=False)
+
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
@@ -95,6 +97,10 @@ def test_replication():
 
     logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
+    network = None
+    if args.custom_network:
+        network = omnistrate.network(args.custom_network)
+
     instance = omnistrate.instance(
         service_id=args.service_id,
         service_provider_id=service.service_provider_id,
@@ -126,6 +132,7 @@ def test_replication():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            custom_network_id=network.network_id if network else None,
         )
 
         thread_signal = threading.Event()
@@ -146,11 +153,11 @@ def test_replication():
         test_stop_start(instance, password)
     except Exception as e:
         logging.exception(e)
-        instance.delete(False)
+        instance.delete(network is not None)
         raise e
 
     # Delete instance
-    instance.delete(False)
+    instance.delete(network is not None)
 
     if error_signal.is_set():
         raise ValueError("Test failed")

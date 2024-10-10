@@ -8,6 +8,8 @@ x-omnistrate-service-plan:
       GcpProjectId: "$GcpProjectId"
       GcpProjectNumber: "$GcpProjectNumber"
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
+      AwsAccountId: "$AwsAccountId"
+      AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
 
 x-internal-integrations:
   logs:
@@ -124,6 +126,9 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 10
+          aws:
+            instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 10
     secrets:
       - source: adminpasspath

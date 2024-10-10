@@ -1,11 +1,37 @@
-name: Delete Omnistrate Service Plan
+name: Cleanup after PR
 
 on:
   workflow_dispatch:
   pull_request:
     types: [closed]
 
+env: 
+  GCP_NETWORK_NAME: gcp-network-${{ github.ref_name }}
+  AWS_NETWORK_NAME: aws-network-${{ github.ref_name }}
+
 jobs:
+  delete-networks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Delete Omnistrate Custom Network - GCP
+        uses: ./.github/actions/delete-omnistrate-custom-network
+        continue-on-error: true
+        with:
+          username: ${{ secrets.OMNISTRATE_USERNAME }}
+          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          custom_network_name: ${{ env.GCP_NETWORK_NAME }}
+
+      - name: Delete Omnistrate Custom Network - AWS
+        continue-on-error: true
+        uses: ./.github/actions/delete-omnistrate-custom-network
+        with:
+          username: ${{ secrets.OMNISTRATE_USERNAME }}
+          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          custom_network_name: ${{ env.AWS_NETWORK_NAME }}
+
   delete-service-plan:
     runs-on: ubuntu-latest
     strategy:

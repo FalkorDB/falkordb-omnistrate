@@ -62,7 +62,7 @@ parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
-
+parser.add_argument("--debug",required=False,default=False)
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
@@ -73,8 +73,9 @@ def signal_handler(sig, frame):
     if instance:
         instance.delete(False)
     sys.exit(0)
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
+if args.debug is False:
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
 
 
 def test_replication():
@@ -148,7 +149,8 @@ def test_replication():
         test_stop_start(instance, password)
     except Exception as e:
         logging.exception(e)
-        instance.delete(False)
+        if args.debug is False:
+            instance.delete(False)
         raise e
 
     # Delete instance

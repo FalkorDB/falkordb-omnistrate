@@ -51,6 +51,7 @@ parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--cluster-replicas", required=False, default="1")
 parser.add_argument("--host-count", required=False, default="6")
+parser.add_argument("--debug",required=False,default=False)
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -65,9 +66,9 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
-
+if args.debug is False:
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
 
 def test_update_memory():
     global instance
@@ -91,7 +92,7 @@ def test_update_memory():
 
     instance = omnistrate.instance(
         service_id=args.service_id,
-        service_provider_id=service.service_provider_id,
+        service_provider_id="sp-JvkxkPhinN",
         service_key=service.key,
         service_environment_id=args.environment_id,
         service_environment_key=service.get_environment(args.environment_id).key,
@@ -150,7 +151,8 @@ def test_update_memory():
 
     except Exception as e:
         logging.exception(e)
-        instance.delete(False)
+        if args.debug is False:
+            instance.delete(False)
         raise e
 
     # Delete instance
@@ -174,7 +176,7 @@ def add_data(instance: OmnistrateFleetInstance):
 
 
 def query_data(instance: OmnistrateFleetInstance):
-
+    logging.info("Retrieving data ....")
     # Get instance host and port
     db = instance.create_connection(ssl=args.tls, force_reconnect=True)
 

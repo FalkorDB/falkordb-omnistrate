@@ -70,6 +70,9 @@ jobs:
           - name: FalkorDB
             file: omnistrate.pro.yaml
             key: pro
+          - name: FalkorDB
+            file: omnistrate.enterprise.yaml
+            key: enterprise
     steps:
       - name: Checkout
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
@@ -87,8 +90,8 @@ jobs:
           sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:${{ github.event.workflow_run.head_branch }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:${{ github.event.workflow_run.head_branch }}/g' ${{ matrix.plans.file }}
 
-      - name: Remove e2-machine and t2.medium from pro
-        if: ${{ contains( vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) && matrix.plans.key == 'pro' }}
+      - name: Remove e2-machine from pro and enterprise
+        if: ${{ contains( vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) && (matrix.plans.key == 'pro' || matrix.plans.key == 'enterprise') }}
         run: |
           sed -i 's/- e2-medium//g' ${{ matrix.plans.file }}
           sed -i 's/- t2.medium//g' ${{ matrix.plans.file }}

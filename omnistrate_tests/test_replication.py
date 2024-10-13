@@ -198,7 +198,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
     )
 
 
-    retry = Retry(ExponentialBackoff(base=1,cap=8),20,supported_errors=(
+    retry = Retry(ExponentialBackoff(base=1,cap=10),40,supported_errors=(
         TimeoutError,
         ConnectionError,
         ConnectionRefusedError,
@@ -238,14 +238,6 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
         ]
     )
 
-    retry = Retry(ExponentialBackoff(base=1,cap=8),20,supported_errors=(
-        TimeoutError,
-        ConnectionError,
-        ConnectionRefusedError,
-        ResponseError,
-        ReadOnlyError
-    ))
-    
     sentinels = Sentinel(
         sentinels=[
             (sentinel_resource["endpoint"], sentinel_resource["ports"][0]),
@@ -261,14 +253,14 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
             "username": "falkordb",
             "password": password,
             "ssl": args.tls,
-            # "retry": retry,
-            # "retry_on_error": [
-            #     TimeoutError,
-            #     ConnectionError,
-            #     ConnectionRefusedError,
-            #     ResponseError,
-            #     ReadOnlyError
-            # ]
+            "retry": retry,
+            "retry_on_error": [
+                TimeoutError,
+                ConnectionError,
+                ConnectionRefusedError,
+                ResponseError,
+                ReadOnlyError
+            ]
         },
     )
 

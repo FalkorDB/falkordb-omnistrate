@@ -603,3 +603,29 @@ jobs:
         run: |
           poetry run python -u ./omnistrate_tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
 
+  # Runs only if the branch is 'main' or 'v*'
+  delete-networks:
+    runs-on: ubuntu-latest
+    needs: test
+    if: contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Delete Omnistrate Custom Network - GCP
+        uses: ./.github/actions/delete-omnistrate-custom-network
+        continue-on-error: true
+        with:
+          username: ${{ secrets.OMNISTRATE_USERNAME }}
+          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          custom_network_name: ${{ env.GCP_NETWORK_NAME }}
+
+      - name: Delete Omnistrate Custom Network - AWS
+        continue-on-error: true
+        uses: ./.github/actions/delete-omnistrate-custom-network
+        with:
+          username: ${{ secrets.OMNISTRATE_USERNAME }}
+          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          custom_network_name: ${{ env.AWS_NETWORK_NAME }}
+
+      

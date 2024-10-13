@@ -1,5 +1,5 @@
 import requests
-import omnistrate_tests.classes.omnistrate_fleet_instance
+import omnistrate_tests.classes
 from .omnistrate_types import (
     ProductTier,
     Service,
@@ -138,7 +138,7 @@ class OmnistrateFleetAPI:
         deployment_update_timeout_seconds: int = None,
     ):
         return (
-            omnistrate_tests.classes.omnistrate_fleet_instance.OmnistrateFleetInstance(
+            omnistrate_tests.OmnistrateFleetInstance(
                 self,
                 deployment_create_timeout_seconds,
                 deployment_delete_timeout_seconds,
@@ -156,3 +156,9 @@ class OmnistrateFleetAPI:
                 subscription_id,
             )
         )
+
+    def network(
+        self,
+        network_name: str,
+    ):
+        return omnistrate_tests.OmnistrateFleetNetwork(self, network_name)

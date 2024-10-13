@@ -17,6 +17,7 @@ with suppress(ValueError):
     sys.path.remove(str(parent))
 
 import logging
+
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
@@ -53,17 +54,32 @@ parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
 
 parser.add_argument("--ensure-mz-distribution", action="store_true")
+parser.add_argument("--custom-network", required=False)
+
+parser.add_argument(
+    "--deployment-create-timeout-seconds", required=False, default=2400, type=int
+)
+parser.add_argument(
+    "--deployment-delete-timeout-seconds", required=False, default=2400, type=int
+)
+parser.add_argument(
+    "--deployment-failover-timeout-seconds", required=False, default=2400, type=int
+)
+
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
 instance: OmnistrateFleetInstance = None
 
+
 # Intercept exit signals so we can delete the instance before exiting
 def signal_handler(sig, frame):
     if instance:
         instance.delete(False)
     sys.exit(0)
+
+
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
@@ -88,6 +104,10 @@ def test_cluster():
 
     logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
+    network = None
+    if args.custom_network:
+        network = omnistrate.network(args.custom_network)
+
     instance = omnistrate.instance(
         service_id=args.service_id,
         service_provider_id=service.service_provider_id,
@@ -99,9 +119,9 @@ def test_cluster():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
-        deployment_create_timeout_seconds=2400,
-        deployment_delete_timeout_seconds=2400,
-        deployment_failover_timeout_seconds=2400
+        deployment_create_timeout_seconds=args.deployment_create_timeout_seconds,
+        deployment_delete_timeout_seconds=args.deployment_delete_timeout_seconds,
+        deployment_failover_timeout_seconds=args.deployment_failover_timeout_seconds,
     )
 
     try:
@@ -121,13 +141,14 @@ def test_cluster():
             AOFPersistenceConfig=args.aof_config,
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
+            custom_network_id=network.network_id if network else None,
         )
-        
 
         thread_signal = threading.Event()
         error_signal = threading.Event()
         thread = threading.Thread(
-            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+            target=test_zero_downtime,
+            args=(thread_signal, error_signal, instance, args.tls),
         )
         thread.start()
 
@@ -140,16 +161,16 @@ def test_cluster():
         # Wait for the zero_downtime
         thread_signal.set()
         thread.join()
-        
+
         # Test stop and start instance
         test_stop_start(instance)
     except Exception as e:
         logging.exception(e)
-        instance.delete(False)
+        instance.delete(network is not None)
         raise e
 
     # Delete instance
-    instance.delete(False)
+    instance.delete(network is not None)
 
     if error_signal.is_set():
         raise ValueError("Test failed")
@@ -197,7 +218,9 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str
         raise Exception("No nodes found in network topology")
 
     if len(nodes) != 6:
-        raise Exception(f"Host count does not match number of nodes. Current host count: {6}; Number of nodes: {len(nodes)}")
+        raise Exception(
+            f"Host count does not match number of nodes. Current host count: {6}; Number of nodes: {len(nodes)}"
+        )
 
     cluster = FalkorDBCluster(
         host=resource["clusterEndpoint"],
@@ -226,7 +249,9 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str
                 "Group is not distributed across multiple availability zones"
             )
 
-        logging.info(f"Group {group} is distributed across availability zones {group_azs}")
+        logging.info(
+            f"Group {group} is distributed across availability zones {group_azs}"
+        )
 
     logging.info("Shards are distributed across multiple availability zones")
 
@@ -249,7 +274,7 @@ def test_failover(instance: OmnistrateFleetInstance):
         replica_id=args.replica_id,
         wait_for_ready=True,
     )
-    
+
     graph = db.select_graph("test")
 
     result = graph.query("MATCH (n:Person) RETURN n")
@@ -291,8 +316,6 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     logging.info("Instance started")
 
 
-
-
 def test_zero_downtime(
     thread_signal: threading.Event,
     error_signal: threading.Event,
@@ -316,6 +339,6 @@ def test_zero_downtime(
         raise e
     
 
+
 if __name__ == "__main__":
     test_cluster()
-

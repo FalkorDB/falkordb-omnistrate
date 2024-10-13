@@ -196,12 +196,31 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
         (resource for resource in resources if resource["id"].startswith("sentinel-")),
         None,
     )
+
+
+    retry = Retry(ExponentialBackoff(base=1,cap=8),20,supported_errors=(
+        TimeoutError,
+        ConnectionError,
+        ConnectionRefusedError,
+        ResponseError,
+        ReadOnlyError
+    ))
+
+
     db_0 = FalkorDB(
         host=db_resource[0]["endpoint"],
         port=db_resource[0]["ports"][0],
         username="falkordb",
         password=password,
         ssl=args.tls,
+        retry=retry,
+        retry_on_error=[
+            TimeoutError,
+            ConnectionError,
+            ConnectionRefusedError,
+            ResponseError,
+            ReadOnlyError
+        ]
     )
     db_1 = FalkorDB(
         host=db_resource[1]["endpoint"],
@@ -209,6 +228,14 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
         username="falkordb",
         password=password,
         ssl=args.tls,
+        retry=retry,
+        retry_on_error=[
+            TimeoutError,
+            ConnectionError,
+            ConnectionRefusedError,
+            ResponseError,
+            ReadOnlyError
+        ]
     )
 
     retry = Retry(ExponentialBackoff(base=1,cap=8),20,supported_errors=(
@@ -234,14 +261,14 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
             "username": "falkordb",
             "password": password,
             "ssl": args.tls,
-            "retry": retry,
-            "retry_on_error": [
-                TimeoutError,
-                ConnectionError,
-                ConnectionRefusedError,
-                ResponseError,
-                ReadOnlyError
-            ]
+            # "retry": retry,
+            # "retry_on_error": [
+            #     TimeoutError,
+            #     ConnectionError,
+            #     ConnectionRefusedError,
+            #     ResponseError,
+            #     ReadOnlyError
+            # ]
         },
     )
 

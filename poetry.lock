@@ -125,7 +125,7 @@ requests = "*"
 
 [[package]]
 name = "falkordb"
-version = "1.0.8"
+version = "1.0.9"
 description = "Python client for interacting with FalkorDB database"
 optional = false
 python-versions = "^3.8"
@@ -133,13 +133,13 @@ files = []
 develop = false
 
 [package.dependencies]
-redis = {git = "https://github.com/MuhammadQadora/redis-py", rev = "master"}
+redis = "^5.0.1"
 
 [package.source]
 type = "git"
 url = "https://github.com/FalkorDB/falkordb-py"
-reference = "57-changing-the-cluster_conn-function-to-use-domain-nameshostnames-instead-of-ips"
-resolved_reference = "343f0c03e855e90fe76e82f28cc3b47a4768f180"
+reference = "main"
+resolved_reference = "d0671f61c5a8341a11635d2f705462c07ba2b4a7"
 
 [[package]]
 name = "idna"
@@ -170,9 +170,9 @@ ocsp = ["cryptography (>=36.0.1)", "pyopenssl (==23.2.1)", "requests (>=2.31.0)"
 
 [package.source]
 type = "git"
-url = "https://github.com/MuhammadQadora/redis-py"
+url = "https://github.com/dudizimber/redis-py"
 reference = "master"
-resolved_reference = "907dbebb3bff2449a15756ede113fa35e2ca1579"
+resolved_reference = "7d73d742d6df4b3d6f6a1f0ec73e72d4a02add74"
 
 [[package]]
 name = "requests"
@@ -231,4 +231,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11.4"
-content-hash = "1579b6de676107230c9ee9c878e26fa8a92435c79ded3ac9b05655cce9ebdd43"
+content-hash = "89ade5481ba7b7a71dd9515547aaadf98b95eca33a286ac6c28a44d6be287cb3"

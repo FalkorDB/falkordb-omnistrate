@@ -188,7 +188,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover' --debug True --instance-description 'test-sz-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover' --instance-description 'test-sz-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
@@ -198,7 +198,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover' --debug True --instance-description 'test-mz-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover' --instance-description 'test-mz-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_standalone.py
@@ -218,7 +218,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-tls' --debug True --instance-description 'test-sz-failover-tls' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-tls' --instance-description 'test-sz-failover-tls' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_replication.py
@@ -228,7 +228,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-tls' --debug True --instance-description 'test-mz-failover-tls' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-tls' --instance-description 'test-mz-failover-tls' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Update Memory
             if: "true"
             testFile: test_update_memory.py
@@ -238,7 +238,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-update-memory' --debug True --instance-description 'test-standalone-update-memory' --instance-type 'e2-medium' --new-instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-update-memory' --instance-description 'test-standalone-update-memory' --instance-type 'e2-medium' --new-instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Update Memory
             if: "true"
             testFile: test_update_memory.py
@@ -248,7 +248,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-update-memory' --debug True --instance-description 'test-replication-update-memory' --instance-type 'e2-medium' --new-instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-update-memory' --instance-description 'test-replication-update-memory' --instance-type 'e2-medium' --new-instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/ClusterSingleZone - GCP/us-central1 - Update Memory
             if: "true"
             testFile: test_update_memory.py
@@ -258,7 +258,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-update-memory' --debug True --instance-description 'test-cluster-update-memory' --instance-type 'e2-medium' --new-instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
+            extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-update-memory' --instance-description 'test-cluster-update-memory' --instance-type 'e2-medium' --new-instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
           - name: PRO/Standalone - GCP/us-central1 - Upgrade Version
             if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
             testFile: test_upgrade_version.py
@@ -431,7 +431,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --replica-id 'node-sz-0' --debug True --instance-name 'test-sz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'single-Zone' --replica-id 'node-sz-0' --instance-name 'test-sz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - GCP/us-central1 - Test add/remove replica
             if: "true"
             testFile: test_replication_replicas.py
@@ -441,7 +441,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --replica-id 'node-mz-0' --debug True --instance-name 'test-mz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'multi-Zone' --replica-id 'node-mz-0' --instance-name 'test-mz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
 
             ###################### AWS ######################
           - name: Free - AWS/us-east-2 - Failover & Persistence
@@ -473,7 +473,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover' --debug True --instance-description 'test-sz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover' --instance-description 'test-sz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
@@ -483,7 +483,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover' --debug True --instance-description 'test-mz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover' --instance-description 'test-mz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/ClusterSingleZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py

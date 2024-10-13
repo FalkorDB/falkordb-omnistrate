@@ -27,4 +27,4 @@ runs:
   entrypoint: /bin/sh
   args:
     - -c
-    - "/usr/local/bin/omnistrate-ctl login --email ${{ inputs.username }} --password ${{ inputs.password }} && /usr/local/bin/omnistrate-ctl custom-network create --cloud-provider ${{ inputs.cloud_provider }} --region ${{ inputs.region }} --cidr ${{ inputs.cidr }} --name '${{ inputs.name }}' || true"
+    - "/usr/local/bin/omnistrate-ctl login --email ${{ inputs.username }} --password ${{ inputs.password }} && /usr/local/bin/omnistrate-ctl custom-network list -o json | jq -r '.[].custom_network_name' | grep -q '${{ inputs.name }}' || /usr/local/bin/omnistrate-ctl custom-network create --cloud-provider ${{ inputs.cloud_provider }} --region ${{ inputs.region }} --cidr ${{ inputs.cidr }} --name '${{ inputs.name }}'"

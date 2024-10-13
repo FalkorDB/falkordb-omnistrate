@@ -55,7 +55,7 @@ parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
-parser.add_argument("--debug",required=False,default=False)
+parser.add_argument("--persist-instance-on-fail",required=False,default=False)
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -70,7 +70,7 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 
-if args.debug is False:
+if args.persist_instance_on_fail is False:
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -186,7 +186,7 @@ def test_upgrade_version():
         query_data(instance)
     except Exception as e:
         logging.exception(e)
-        if args.debug is False:
+        if args.persist_instance_on_fail is False:
             instance.delete(False)
         raise e
 

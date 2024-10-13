@@ -55,7 +55,7 @@ parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--replica-count", required=False, default="2")
-parser.add_argument("--debug",required=False,default=False)
+parser.add_argument("--persist-instance-on-fail",required=False,default=False)
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -68,7 +68,7 @@ def signal_handler(sig, frame):
         instance.delete(False)
     sys.exit(0)
 
-if args.debug is False:
+if args.persist_instance_on_fail is False:
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -151,7 +151,7 @@ def test_add_remove_replica():
 
     except Exception as e:
         logging.exception(e)
-        if args.debug is False:
+        if args.persist_instance_on_fail is False:
             instance.delete(False)
         raise e
 
@@ -234,8 +234,7 @@ def check_data(instance: OmnistrateFleetInstance):
     # Get instance host and port
     db = instance.create_connection(
         ssl=args.tls,
-        force_reconnect=True,
-        retries=10
+        force_reconnect=True
     )
 
     graph = db.select_graph("test")

@@ -51,7 +51,7 @@ parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
-
+parser.add_argument("--persist-instance-on-fail",required=False,default=False)
 parser.add_argument("--custom-network", required=False)
 
 parser.set_defaults(tls=False)
@@ -67,8 +67,9 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
+if args.persist_instance_on_fail is False:
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
 
 
 def test_standalone():
@@ -135,7 +136,8 @@ def test_standalone():
         test_stop_start(instance)
     except Exception as e:
         logging.exception(e)
-        instance.delete(network is not None)
+        if args.persist_instance_on_fail is False:
+            instance.delete(network is not None)
         raise e
 
     # Delete instance

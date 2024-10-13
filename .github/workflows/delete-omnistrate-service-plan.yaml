@@ -2,12 +2,17 @@ name: Cleanup after PR
 
 on:
   workflow_dispatch:
+      inputs:
+        ref-name: 
+          description: 'The name of the branch or tag to delete'
+          required: true
+          default: 'main'
   pull_request:
     types: [closed]
 
 env: 
-  GCP_NETWORK_NAME: gcp-network-${{ github.ref_name }}
-  AWS_NETWORK_NAME: aws-network-${{ github.ref_name }}
+  GCP_NETWORK_NAME: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || inputs.ref-name }}
+  AWS_NETWORK_NAME: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || inputs.ref-name }}
 
 jobs:
   delete-networks:

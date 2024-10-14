@@ -3,10 +3,9 @@ import json
 import os
 import logging
 import socket
-from redis import retry, backoff, exceptions as redis_exceptions
-
 import omnistrate_tests.classes.omnistrate_fleet_api
-
+from redis.exceptions import ReadOnlyError, ResponseError
+from redis import retry, backoff, exceptions as redis_exceptions
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
@@ -530,16 +529,25 @@ class OmnistrateFleetInstance:
                     username="falkordb",
                     password=self.falkordb_password,
                     ssl=ssl,
+                    retry_on_error=[
+                        ConnectionRefusedError,
+                        TimeoutError,
+                        socket.timeout,
+                        redis_exceptions.ConnectionError,
+                        ResponseError,
+                        ReadOnlyError
+                    ],
                     cluster_error_retry_attempts=20,
                     retry=retry.Retry(
-                        retries=20,
-                        backoff=backoff.ExponentialBackoff(base=3),
+                        retries=40,
+                        backoff=backoff.ExponentialBackoff(base=1,cap=10),
                         supported_errors=(
                             ConnectionRefusedError,
-                            ConnectionError,
                             TimeoutError,
                             socket.timeout,
                             redis_exceptions.ConnectionError,
+                            ResponseError,
+                            ReadOnlyError
                         ),
                     ),
                 )

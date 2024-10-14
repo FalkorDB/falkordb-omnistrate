@@ -4,6 +4,7 @@ from random import randbytes
 from pathlib import Path  # if you haven't already done so
 import threading
 
+
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
@@ -51,6 +52,7 @@ parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--cluster-replicas", required=False, default="1")
 parser.add_argument("--host-count", required=False, default="6")
+parser.add_argument("--persist-instance-on-fail",action="store_true")
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -65,9 +67,9 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
-
+if not args.persist_instance_on_fail:
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
 
 def test_update_memory():
     global instance
@@ -150,7 +152,8 @@ def test_update_memory():
 
     except Exception as e:
         logging.exception(e)
-        instance.delete(False)
+        if not args.persist_instance_on_fail:
+            instance.delete(False)
         raise e
 
     # Delete instance
@@ -174,7 +177,7 @@ def add_data(instance: OmnistrateFleetInstance):
 
 
 def query_data(instance: OmnistrateFleetInstance):
-
+    logging.info("Retrieving data ....")
     # Get instance host and port
     db = instance.create_connection(ssl=args.tls, force_reconnect=True)
 
@@ -203,7 +206,6 @@ def test_zero_downtime(
             # Write some data to the DB
             graph.query("CREATE (n:Person {name: 'Alice'})")
             graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
-
             time.sleep(3)
     except Exception as e:
         logging.exception(e)

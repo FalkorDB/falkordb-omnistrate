@@ -44,7 +44,7 @@ SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
 SENTINEL_FAILOVER=${SENTINEL_FAILOVER:-1000}
 
 # SENTINEL_HOST=${SENTINEL_HOST:-localhost}
-SENTINEL_HOST=sentinel-$(echo $RESOURCE_ALIAS | cut -d "-" -f 2)-0
+SENTINEL_HOST=sentinel-$(echo $RESOURCE_ALIAS | cut -d "-" -f 2)-0.$LOCAL_DNS_SUFFIX
 
 NODE_HOST=${NODE_HOST:-localhost}
 NODE_PORT=${NODE_PORT:-6379}
@@ -531,6 +531,8 @@ if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]]; then
     sleep 5
   done
 fi
+
+log $(getent hosts || cat /etc/hosts)
 
 while true; do
   sleep 1

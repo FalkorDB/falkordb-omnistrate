@@ -51,7 +51,7 @@ parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
 parser.add_argument("--shards", required=False, default="3")
-parser.add_argument("--persist-instance-on-fail",required=False,default=False)
+parser.add_argument("--persist-instance-on-fail",action="store_true")
 parser.add_argument("--ensure-mz-distribution", action="store_true")
 
 parser.set_defaults(tls=False)
@@ -67,7 +67,7 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 
-if args.persist_instance_on_fail is False:
+if not args.persist_instance_on_fail:
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -158,7 +158,7 @@ def test_cluster_replicas():
 
     except Exception as e:
         logging.exception(e)
-        if args.persist_instance_on_fail is False:
+        if not args.persist_instance_on_fail:
             instance.delete(False)
         raise e
 

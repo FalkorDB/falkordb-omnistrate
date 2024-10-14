@@ -336,7 +336,7 @@ config_rewrite() {
 
 if [ -f $NODE_CONF_FILE ]; then
   # Get current admin password
-  CURRENT_ADMIN_PASSWORD=$(cat $NODE_CONF_FILE | grep -oP '(?<=requirepass ).*')
+  CURRENT_ADMIN_PASSWORD=$(cat $NODE_CONF_FILE | grep -oP '(?<=requirepass ).*' | sed 's/\"//g')
   # If current admin password is different from the new one, reset it
   if [[ $CURRENT_ADMIN_PASSWORD != $ADMIN_PASSWORD ]]; then
     RESET_ADMIN_PASSWORD=1

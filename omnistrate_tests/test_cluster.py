@@ -66,7 +66,7 @@ parser.add_argument(
     "--deployment-failover-timeout-seconds", required=False, default=2400, type=int
 )
 
-parser.add_argument("--persist-instance-on-fail",required=False,default=False)
+parser.add_argument("--persist-instance-on-fail",action="store_true")
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -81,7 +81,7 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 
-if args.persist_instance_on_fail is False:
+if not args.persist_instance_on_fail:
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -169,7 +169,7 @@ def test_cluster():
         test_stop_start(instance)
     except Exception as e:
         logging.exception(e)
-        if args.persist_instance_on_fail is False:
+        if not args.persist_instance_on_fail:
             instance.delete(network is not None)
         raise e
 

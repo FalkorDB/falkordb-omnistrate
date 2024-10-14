@@ -8,7 +8,8 @@ from redis.backoff import ExponentialBackoff
 from redis.exceptions import (
     TimeoutError,
     ConnectionError,
-    BusyLoadingError
+    ReadOnlyError,
+    ResponseError
 )
 
 file = Path(__file__).resolve()
@@ -60,7 +61,7 @@ parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
-
+parser.add_argument("--persist-instance-on-fail",action="store_true")
 parser.add_argument("--custom-network", required=False)
 
 parser.set_defaults(tls=False)
@@ -73,8 +74,10 @@ def signal_handler(sig, frame):
     if instance:
         instance.delete(False)
     sys.exit(0)
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
+
+if not args.persist_instance_on_fail:
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
 
 
 def test_replication():
@@ -153,7 +156,8 @@ def test_replication():
         test_stop_start(instance, password)
     except Exception as e:
         logging.exception(e)
-        instance.delete(network is not None)
+        if not args.persist_instance_on_fail:
+            instance.delete(network is not None)
         raise e
 
     # Delete instance
@@ -191,12 +195,31 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
         (resource for resource in resources if resource["id"].startswith("sentinel-")),
         None,
     )
+
+
+    retry = Retry(ExponentialBackoff(base=1,cap=10),40,supported_errors=(
+        TimeoutError,
+        ConnectionError,
+        ConnectionRefusedError,
+        ResponseError,
+        ReadOnlyError
+    ))
+
+
     db_0 = FalkorDB(
         host=db_resource[0]["endpoint"],
         port=db_resource[0]["ports"][0],
         username="falkordb",
         password=password,
         ssl=args.tls,
+        retry=retry,
+        retry_on_error=[
+            TimeoutError,
+            ConnectionError,
+            ConnectionRefusedError,
+            ResponseError,
+            ReadOnlyError
+        ]
     )
     db_1 = FalkorDB(
         host=db_resource[1]["endpoint"],
@@ -204,14 +227,16 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
         username="falkordb",
         password=password,
         ssl=args.tls,
+        retry=retry,
+        retry_on_error=[
+            TimeoutError,
+            ConnectionError,
+            ConnectionRefusedError,
+            ResponseError,
+            ReadOnlyError
+        ]
     )
 
-    retry = Retry(ExponentialBackoff(base=3),20,supported_errors=(
-        TimeoutError,
-        ConnectionError,
-        ConnectionRefusedError
-    ))
-    
     sentinels = Sentinel(
         sentinels=[
             (sentinel_resource["endpoint"], sentinel_resource["ports"][0]),
@@ -227,7 +252,14 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
             "username": "falkordb",
             "password": password,
             "ssl": args.tls,
-            "retry": retry
+            "retry": retry,
+            "retry_on_error": [
+                TimeoutError,
+                ConnectionError,
+                ConnectionRefusedError,
+                ResponseError,
+                ReadOnlyError
+            ]
         },
     )
 
@@ -387,7 +419,7 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     instance.start(wait_for_ready=True)
 
     graph = db.select_graph("test")
-
+    
     result = graph.query("MATCH (n:Person) RETURN n")
 
     if len(result.result_set) == 0:
@@ -402,23 +434,23 @@ def test_zero_downtime(
     instance: OmnistrateFleetInstance,
     ssl=False,
 ):
-    """This function should test the ability to read and write while a memory update happens"""
+    """This function should test the ability to read and write while replication happens"""
     try:
         db = instance.create_connection(ssl=ssl, force_reconnect=True)
 
-        graph = db.select_graph("test_zero_downtime")
+        graph = db.select_graph("test")
 
         while not thread_signal.is_set():
             # Write some data to the DB
             graph.query("CREATE (n:Person {name: 'Alice'})")
             graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
-
             time.sleep(3)
     except Exception as e:
         logging.exception(e)
         error_signal.set()
         raise e
-
+    
 
 if __name__ == "__main__":
     test_replication()
+

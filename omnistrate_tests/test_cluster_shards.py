@@ -4,7 +4,6 @@ from random import randbytes
 from pathlib import Path
 import threading
 
-
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
@@ -51,6 +50,7 @@ parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
 
 parser.add_argument("--ensure-mz-distribution", action="store_true")
+parser.add_argument("--persist-instance-on-fail",action="store_true")
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -67,9 +67,9 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
-
+if not args.persist_instance_on_fail:
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
 
 def test_cluster_shards():
     global instance
@@ -155,7 +155,8 @@ def test_cluster_shards():
         check_data(instance)
     except Exception as e:
         logging.exception(e)
-        instance.delete(False)
+        if not args.persist_instance_on_fail:
+            instance.delete(False)
         raise e
 
     # Delete instance
@@ -311,7 +312,7 @@ def test_zero_downtime(
     instance: OmnistrateFleetInstance,
     ssl=False,
 ):
-    """This function should test the ability to read and write while a memory update happens"""
+    """This function should test the ability to read and write while testing cluster shards"""
     try:
         db = instance.create_connection(ssl=ssl, force_reconnect=True)
 
@@ -321,13 +322,12 @@ def test_zero_downtime(
             # Write some data to the DB
             graph.query("CREATE (n:Person {name: 'Alice'})")
             graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
-
             time.sleep(3)
     except Exception as e:
         logging.exception(e)
         error_signal.set()
         raise e
 
-    
+
 if __name__ == "__main__":
     test_cluster_shards()

@@ -125,7 +125,7 @@ requests = "*"
 
 [[package]]
 name = "falkordb"
-version = "1.0.8"
+version = "1.0.9"
 description = "Python client for interacting with FalkorDB database"
 optional = false
 python-versions = "^3.8"
@@ -139,7 +139,7 @@ redis = "^5.0.1"
 type = "git"
 url = "https://github.com/FalkorDB/falkordb-py"
 reference = "main"
-resolved_reference = "fb56ead9da179dfce6dac29474f4792f2dd76d43"
+resolved_reference = "d0671f61c5a8341a11635d2f705462c07ba2b4a7"
 
 [[package]]
 name = "idna"

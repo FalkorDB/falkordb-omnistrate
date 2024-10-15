@@ -143,6 +143,8 @@ handle_sigterm() {
   fi
 
   if [[ $RUN_SENTINEL -eq 1 && ! -z $sentinel_pid ]]; then
+    echo "Sentinel at stopping time"
+    cat /data/sentinel.conf
     kill -TERM $sentinel_pid
   fi
 
@@ -534,6 +536,8 @@ fi
 
 log $(getent hosts || cat /etc/hosts)
 
+echo "Sentinel Config at start time"
+cat /data/sentinel.conf
 while true; do
   sleep 1
 done

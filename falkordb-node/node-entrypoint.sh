@@ -134,9 +134,10 @@ get_sentinels_list() {
 handle_sigterm() {
   echo "Caught SIGTERM"
   echo "Stopping FalkorDB"
-
   # sentinels_list=$(get_sentinels_list)
 
+  echo "run sentinel is set to $RUN_SENTINEL"
+  echo "the pid of sentinel is $sentinel_pid"
   if [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
     remove_master_from_group
     kill -TERM $falkordb_pid
@@ -516,6 +517,13 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter_pid=$!
 fi
 
+
+log $(getent hosts || cat /etc/hosts)
+
+echo "Sentinel Config at start time"
+cat /data/sentinel.conf
+
+
 if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]]; then
   # Check for crossed namespace
   echo "Checking for crossed namespace"
@@ -534,10 +542,7 @@ if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]]; then
   done
 fi
 
-log $(getent hosts || cat /etc/hosts)
 
-echo "Sentinel Config at start time"
-cat /data/sentinel.conf
 while true; do
   sleep 1
 done

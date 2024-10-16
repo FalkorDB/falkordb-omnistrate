@@ -171,6 +171,9 @@ handle_sigterm() {
 }
 
 trap handle_sigterm SIGTERM
+trap 'echo "Received a SIGKILL"' SIGKILL
+trap 'echo "Received a SIGINT"' SIGINT
+
 
 log() {
   if [[ $DEBUG -eq 1 ]]; then

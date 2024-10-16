@@ -168,6 +168,7 @@ handle_sigterm() {
   if [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 && ! -z $sentinel_healthcheck_pid ]]; then
     kill -TERM $sentinel_healthcheck_pid
   fi
+  echo "reached the end of the handle_sigterm"
 }
 
 trap handle_sigterm SIGTERM

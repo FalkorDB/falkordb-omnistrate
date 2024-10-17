@@ -319,7 +319,7 @@ create_user() {
   if [[ $RESET_ADMIN_PASSWORD -eq 1 ]]; then
     echo "Resetting admin password"
     redis-cli -p $NODE_PORT -a $CURRENT_ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET requirepass $ADMIN_PASSWORD
-    redis-cli -p $NODE_PORT -a $CURRENT_ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET masterauth $ADMIN_PASSWORD
+    redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET masterauth $ADMIN_PASSWORD
 
   fi
 

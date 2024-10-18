@@ -37,13 +37,13 @@ FALKORDB_TIMEOUT_MAX=${FALKORDB_TIMEOUT_MAX:-0}
 FALKORDB_TIMEOUT_DEFAULT=${FALKORDB_TIMEOUT_DEFAULT:-0}
 
 # If vars are <nil>, set it to 0
-if [[ "$FALKORDB_QUERY_MEM_CAPACITY" -eq "<nil>" ]]; then
+if [[ "$FALKORDB_QUERY_MEM_CAPACITY" == "<nil>" ]]; then
   FALKORDB_QUERY_MEM_CAPACITY=0
 fi
-if [[ "$FALKORDB_TIMEOUT_MAX" -eq "<nil>" ]]; then
+if [[ "$FALKORDB_TIMEOUT_MAX" == "<nil>" ]]; then
   FALKORDB_TIMEOUT_MAX=0
 fi
-if [[ "$FALKORDB_TIMEOUT_DEFAULT" -eq "<nil>" ]]; then
+if [[ "$FALKORDB_TIMEOUT_DEFAULT" == "<nil>" ]]; then
   FALKORDB_TIMEOUT_DEFAULT=0
 fi
 

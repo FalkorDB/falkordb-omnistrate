@@ -183,7 +183,8 @@ handle_sigterm() {
   echo "reached the end of the handle_sigterm"
 }
 
-trap handle_sigterm SIGTERM
+#trap handle_sigterm SIGTERM
+trap 'echo "Received a SIGTERM"' SIGTERM
 trap 'echo "Received a SIGKILL"' SIGKILL
 trap 'echo "Received a SIGINT"' SIGINT
 

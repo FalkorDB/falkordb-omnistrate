@@ -188,7 +188,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover' --instance-description 'test-sz-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover' --persist-instance-on-fail --instance-description 'test-sz-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
@@ -198,7 +198,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover' --instance-description 'test-mz-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover' --persist-instance-on-fail --instance-description 'test-mz-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_standalone.py
@@ -218,7 +218,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-tls' --instance-description 'test-sz-failover-tls' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-tls' --persist-instance-on-fail --instance-description 'test-sz-failover-tls' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_replication.py
@@ -228,7 +228,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-tls' --instance-description 'test-mz-failover-tls' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-tls' --persist-instance-on-fail --instance-description 'test-mz-failover-tls' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Update Memory
             if: "true"
             testFile: test_update_memory.py
@@ -238,7 +238,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-update-memory' --instance-description 'test-standalone-update-memory' --instance-type 'e2-medium' --new-instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-update-memory' --persist-instance-on-fail --instance-description 'test-standalone-update-memory' --instance-type 'e2-medium' --new-instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - GCP/us-central1 - Update Memory
             if: "true"
             testFile: test_update_memory.py
@@ -248,7 +248,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-update-memory' --instance-description 'test-replication-update-memory' --instance-type 'e2-medium' --new-instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-update-memory' --persist-instance-on-fail --instance-description 'test-replication-update-memory' --instance-type 'e2-medium' --new-instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/ClusterSingleZone - GCP/us-central1 - Update Memory
             if: "true"
             testFile: test_update_memory.py
@@ -258,7 +258,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-update-memory' --instance-description 'test-cluster-update-memory' --instance-type 'e2-medium' --new-instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
+            extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-update-memory' --persist-instance-on-fail --instance-description 'test-cluster-update-memory' --instance-type 'e2-medium' --new-instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
           - name: PRO/Standalone - GCP/us-central1 - Upgrade Version
             if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
             testFile: test_upgrade_version.py
@@ -350,7 +350,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-enterprise-failover' --instance-description 'test-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.ref_name }}"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-enterprise-failover' --persist-instance-on-fail --instance-description 'test-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.ref_name }}"
           - name: Enterprise/MultiZone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
@@ -360,7 +360,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover' --instance-description 'test-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.ref_name }}"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover' --persist-instance-on-fail --instance-description 'test-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.ref_name }}"
           - name: Enterprise/ClusterSingleZone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py
@@ -441,7 +441,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --replica-id 'node-mz-0' --instance-name 'test-mz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'multi-Zone' --replica-id 'node-mz-0' --persist-instance-on-fail --instance-name 'test-mz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
 
             ###################### AWS ######################
           - name: Free - AWS/us-east-2 - Failover & Persistence
@@ -463,7 +463,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'standalone' --replica-id 'node-s-1' --instance-name 'test-standalone-failover' --instance-description 'test-standalone-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'standalone' --replica-id 'node-s-1' --instance-name 'test-standalone-failover' --instance-description 'test-standalone-failover' --instance-type 't3.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
@@ -473,7 +473,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover' --instance-description 'test-sz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover' --persist-instance-on-fail --instance-description 'test-sz-failover' --instance-type 't3.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
@@ -483,7 +483,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover' --instance-description 'test-mz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover' --persist-instance-on-fail --instance-description 'test-mz-failover' --instance-type 't3.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/ClusterSingleZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py
@@ -493,7 +493,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1' --instance-name 'test-cluster-sz-failover' --instance-description 'test-cluster-sz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1' --instance-name 'test-cluster-sz-failover' --instance-description 'test-cluster-sz-failover' --instance-type 't3.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
           - name: PRO/ClusterMultiZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py
@@ -503,7 +503,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-1' --instance-name 'test-cluster-mz-failover' --instance-description 'test-cluster-mz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-1' --instance-name 'test-cluster-mz-failover' --instance-description 'test-cluster-mz-failover' --instance-type 't3.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
           # Enterprise
           - name: Enterprise/Standalone - AWS/us-east-2 - Failover & Persistence
             if: "true"
@@ -514,7 +514,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-enterprise-failover' --instance-description 'test-standalone-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.ref_name }}"
+            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-enterprise-failover' --instance-description 'test-standalone-enterprise-failover' --instance-type 't3.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.ref_name }}"
           - name: Enterprise/SingleZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
@@ -524,7 +524,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-enterprise-failover' --instance-description 'test-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.ref_name }}"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-enterprise-failover' --persist-instance-on-fail --instance-description 'test-sz-enterprise-failover' --instance-type 't3.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.ref_name }}"
           - name: Enterprise/MultiZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
@@ -534,7 +534,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover' --instance-description 'test-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.ref_name }}"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover' --persist-instance-on-fail --instance-description 'test-mz-enterprise-failover' --instance-type 't3.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.ref_name }}"
           - name: Enterprise/ClusterSingleZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py
@@ -544,7 +544,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-0' --instance-name 'test-cluster-sz-enterprise-failover' --instance-description 'test-cluster-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --custom-network=aws-network-${{ github.ref_name }} --deployment-create-timeout-seconds 4800"
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-0' --instance-name 'test-cluster-sz-enterprise-failover' --instance-description 'test-cluster-sz-enterprise-failover' --instance-type 't3.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --custom-network=aws-network-${{ github.ref_name }} --deployment-create-timeout-seconds 4800"
           - name: Enterprise/ClusterMultiZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py
@@ -554,7 +554,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-0' --instance-name 'test-cluster-mz-enterprise-failover' --instance-description 'test-cluster-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=aws-network-${{ github.ref_name }} --deployment-create-timeout-seconds 4800"
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-0' --instance-name 'test-cluster-mz-enterprise-failover' --instance-description 'test-cluster-mz-enterprise-failover' --instance-type 't3.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=aws-network-${{ github.ref_name }} --deployment-create-timeout-seconds 4800"
 
     steps:
       - name: Checkout

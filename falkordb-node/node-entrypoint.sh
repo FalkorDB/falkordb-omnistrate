@@ -184,9 +184,8 @@ handle_sigterm() {
 }
 
 #trap handle_sigterm SIGTERM
-trap 'echo "Received a SIGTERM"' SIGTERM
-trap 'echo "Received a SIGKILL"' SIGKILL
-trap 'echo "Received a SIGINT"' SIGINT
+trap 'echo "$(date): received SIGTERM" >> /proc/1/fd/1' SIGTERM
+trap 'echo "$(date): received SIGINT" >> /proc/1/fd/1' SIGINT
 
 
 log() {

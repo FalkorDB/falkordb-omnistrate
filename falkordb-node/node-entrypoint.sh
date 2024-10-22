@@ -526,7 +526,7 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter_pid=$!
 fi
 
-if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]]; then
+if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]] && [[ ("$HOSTNAME" =~ ^sentinel.*0 ) || ("$NODE_INDEX" == "1" || "$NODE_INDEX" == "0") ]]; then
   # Check for crossed namespace
   echo "Checking for crossed namespace"
   while true; do

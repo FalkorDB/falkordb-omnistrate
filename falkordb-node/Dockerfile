@@ -16,7 +16,7 @@ RUN cargo build --release
 
 FROM falkordb/falkordb:$FALKORDB_VERSION
 
-RUN apt-get update && apt-get install -y curl jq openssl
+RUN apt-get update && apt-get install -y curl jq openssl supervisor
 
 RUN mkdir -p /falkordb
 
@@ -31,4 +31,6 @@ COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/loc
 RUN chown redis:redis /falkordb/* && \
   chmod +x /usr/local/bin/node-entrypoint.sh
 
-CMD ["node-entrypoint.sh"]
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+CMD ["/usr/bin/supervisord"]

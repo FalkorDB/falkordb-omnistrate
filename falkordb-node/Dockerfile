@@ -31,6 +31,6 @@ COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/loc
 RUN chown redis:redis /falkordb/* && \
   chmod +x /usr/local/bin/node-entrypoint.sh
 
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY falkordb-node/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 CMD ["/usr/bin/supervisord"]

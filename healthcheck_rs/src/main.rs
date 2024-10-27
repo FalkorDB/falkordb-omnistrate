@@ -73,7 +73,7 @@ fn health_check_handler(is_sentinel: bool) -> Result<bool, redis::RedisError> {
     let redis_url = match env::var("TLS") {
         Ok(tls) => {
             if tls == "true" {
-                let url = env::var("NODE_EXTERNAL_DNS").unwrap();
+                let url = env::var("NODE_HOST").unwrap();
                 resolve_host(&url);
                 format!("rediss://:{}@{}:{}", password, url, node_port)
             } else {

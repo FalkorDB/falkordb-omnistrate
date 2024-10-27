@@ -2112,6 +2112,7 @@ services:
           name: e2-small
     <<: *rebalanceparam
     environment:
+      - NODE_HOST=$sys.network.node.externalEndpoint
       - IS_MULTI_ZONE=0
       - TLS=$var.enableTLS
       - CLUSTER_REPLICAS=1

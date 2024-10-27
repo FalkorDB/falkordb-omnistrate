@@ -34,5 +34,5 @@ RUN chown redis:redis /falkordb/* && \
 RUN chown redis:redis -R /var
 COPY falkordb-node/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-#CMD ["/usr/bin/supervisord"]
-CMD [ "node-entrypoint.sh" ]
+CMD ["/usr/bin/supervisord"]
+#CMD [ "node-entrypoint.sh" ]

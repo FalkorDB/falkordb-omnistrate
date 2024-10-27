@@ -951,6 +951,8 @@ services:
 
   node-sz:
     user: "999"
+    group_add:
+      - "999"
     x-omnistrate-mode-internal: true
     image: $FalkorDBNodeImage
     x-omnistrate-compute:
@@ -1215,6 +1217,8 @@ services:
 
   sentinel-sz:
     user: "999"
+    group_add:
+      - "999"
     x-omnistrate-mode-internal: true
     image: $FalkorDBNodeImage
     x-omnistrate-compute:
@@ -1497,6 +1501,8 @@ services:
 
   node-mz:
     user: "999"
+    group_add:
+      - "999"
     x-omnistrate-mode-internal: true
     image: $FalkorDBNodeImage
     x-omnistrate-compute:
@@ -1761,6 +1767,8 @@ services:
 
   sentinel-mz:
     user: "999"
+    group_add:
+      - "999"
     x-omnistrate-mode-internal: true
     image: $FalkorDBNodeImage
     x-omnistrate-compute:

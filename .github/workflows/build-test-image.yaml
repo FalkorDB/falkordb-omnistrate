@@ -56,7 +56,7 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           push: true
-          tags: falkordb/${{ matrix.image-name }}:dev-${{ github.event.head_commit.id }}
+          tags: falkordb/${{ matrix.image-name }}:dev-${{ github.event.head_commit.id || github.job }}
 
   omnistrate-update-plans:
     needs: build-and-push
@@ -70,17 +70,17 @@ jobs:
             plan-name: FalkorDB Free
             file: omnistrate.free.yaml
             key: free
-            tier-name: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tier-name: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
           - service-name: FalkorDB
             plan-name: FalkorDB Pro
             file: omnistrate.pro.yaml
             key: pro
-            tier-name: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tier-name: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label ||  github.ref_name }}
           - service-name: FalkorDB
             plan-name: FalkorDB Enterprise
             file: omnistrate.enterprise.yaml
             key: enterprise
-            tier-name: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tier-name: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label ||  github.ref_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -92,9 +92,9 @@ jobs:
           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
           sed -i 's/$AwsAccountId/${{ vars.AWS_ACCOUNT_ID }}/g' ${{ matrix.plans.file }}
           sed -i 's|$AwsBootstrapRoleAccountArn|${{ vars.AWS_BOOTSTRAP_ROLE_ACCOUNT_ARN }}|g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.job }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.job }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.job }}/g' ${{ matrix.plans.file }}
           sed -i 's/${{ matrix.plans.plan-name }}/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
 
       - name: Upload yaml as artifact

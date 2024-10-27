@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: falkordb-node-branch-${{ github.ref_name }}
+  group: falkordb-node-branch-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
   cancel-in-progress: false
 
 env:
@@ -17,11 +17,11 @@ env:
   CLUSTER_IMAGE_NAME: falkordb-cluster
   CLUSTER_REBALANCE_IMAGE_NAME: falkordb-cluster-rebalance
   FALKORDB_VERSION: v4.2.1
-  FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
-  PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
-  ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
-  GCP_NETWORK_NAME: gcp-network-${{ github.ref_name }}
-  AWS_NETWORK_NAME: aws-network-${{ github.ref_name }}
+  FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
+  PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
+  ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
+  GCP_NETWORK_NAME: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
+  AWS_NETWORK_NAME: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
 
 jobs:
   build-and-push:
@@ -169,7 +169,7 @@ jobs:
           - name: Free - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_standalone.py
-            tierName: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -179,7 +179,7 @@ jobs:
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_standalone.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -189,7 +189,7 @@ jobs:
           - name: PRO/SingleZone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -199,7 +199,7 @@ jobs:
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -209,7 +209,7 @@ jobs:
           - name: PRO/Standalone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_standalone.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -219,7 +219,7 @@ jobs:
           - name: PRO/SingleZone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_replication.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -229,7 +229,7 @@ jobs:
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_replication.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -239,7 +239,7 @@ jobs:
           - name: PRO/Standalone - GCP/us-central1 - Update Memory
             if: "true"
             testFile: test_update_memory.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -249,7 +249,7 @@ jobs:
           - name: PRO/SingleZone - GCP/us-central1 - Update Memory
             if: "true"
             testFile: test_update_memory.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -259,7 +259,7 @@ jobs:
           - name: PRO/ClusterSingleZone - GCP/us-central1 - Update Memory
             if: "true"
             testFile: test_update_memory.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -299,7 +299,7 @@ jobs:
           - name: PRO/ClusterSingleZone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -309,7 +309,7 @@ jobs:
           - name: PRO/ClusterMultiZone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -319,7 +319,7 @@ jobs:
           - name: PRO/ClusterSingleZone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_cluster.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -329,7 +329,7 @@ jobs:
           - name: PRO/ClusterMultiZone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_cluster.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -341,58 +341,58 @@ jobs:
           - name: Enterprise/Standalone - GCP/us-central1 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_standalone.py
-            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-enterprise-failover' --instance-description 'test-standalone-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.ref_name }}"
+            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-enterprise-failover' --instance-description 'test-standalone-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}"
           - name: Enterprise/SingleZone - GCP/us-central1 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_replication.py
-            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-enterprise-failover' --instance-description 'test-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.ref_name }}"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-enterprise-failover' --instance-description 'test-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}"
           - name: Enterprise/MultiZone - GCP/us-central1 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_replication.py
-            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover' --instance-description 'test-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.ref_name }}"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover' --instance-description 'test-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}"
           - name: Enterprise/ClusterSingleZone - GCP/us-central1 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_cluster.py
-            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-0' --instance-name 'test-cluster-sz-enterprise-failover' --instance-description 'test-cluster-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --custom-network=gcp-network-${{ github.ref_name }} --deployment-create-timeout-seconds 4800"
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-0' --instance-name 'test-cluster-sz-enterprise-failover' --instance-description 'test-cluster-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }} --deployment-create-timeout-seconds 4800"
           - name: Enterprise/ClusterMultiZone - GCP/us-central1 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_cluster.py
-            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-0' --instance-name 'test-cluster-mz-enterprise-failover' --instance-description 'test-cluster-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=gcp-network-${{ github.ref_name }} --deployment-create-timeout-seconds 4800"
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-0' --instance-name 'test-cluster-mz-enterprise-failover' --instance-description 'test-cluster-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }} --deployment-create-timeout-seconds 4800"
 
           # - name: PRO/ClusterSingleZone - GCP/us-central1 - Add/Remove Shards
           #   if: "true"
           #   testFile: test_cluster_shards.py
-          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
           #   cloudProvider: gcp
           #   cloudRegion: us-central1
           #   subscriptionId: sub-GJPV3NoNC0
@@ -402,7 +402,7 @@ jobs:
           # - name: PRO/ClusterMultiZone - GCP/us-central1 - Add/Remove Shards
           #   if: "true"
           #   testFile: test_cluster_shards.py
-          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
           #   cloudProvider: gcp
           #   cloudRegion: us-central1
           #   subscriptionId: sub-GJPV3NoNC0
@@ -412,7 +412,7 @@ jobs:
           # - name: PRO/ClusterSingleZone - GCP/us-central1 - Add/Remove Replicas
           #   if: "true"
           #   testFile: test_cluster_replicas.py
-          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
           #   cloudProvider: gcp
           #   cloudRegion: us-central1
           #   subscriptionId: sub-GJPV3NoNC0
@@ -422,7 +422,7 @@ jobs:
           # - name: PRO/ClusterMultiZone - GCP/us-central1 - Add/Remove Replicas
           #   if: "true"
           #   testFile: test_cluster_replicas.py
-          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
           #   cloudProvider: gcp
           #   cloudRegion: us-central1
           #   subscriptionId: sub-GJPV3NoNC0
@@ -432,7 +432,7 @@ jobs:
           - name: PRO/SingleZone - GCP/us-central1 - Test add/remove replica
             if: "true"
             testFile: test_replication_replicas.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -442,7 +442,7 @@ jobs:
           - name: PRO/MultiZone - GCP/us-central1 - Test add/remove replica
             if: "true"
             testFile: test_replication_replicas.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
@@ -454,7 +454,7 @@ jobs:
           - name: Free - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_standalone.py
-            tierName: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-2
             subscriptionId: sub-GJPV3NoNC0
@@ -464,7 +464,7 @@ jobs:
           - name: PRO/Standalone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_standalone.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-2
             subscriptionId: sub-GJPV3NoNC0
@@ -474,7 +474,7 @@ jobs:
           - name: PRO/SingleZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-2
             subscriptionId: sub-GJPV3NoNC0
@@ -484,7 +484,7 @@ jobs:
           - name: PRO/MultiZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-2
             subscriptionId: sub-GJPV3NoNC0
@@ -494,7 +494,7 @@ jobs:
           - name: PRO/ClusterSingleZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-2
             subscriptionId: sub-GJPV3NoNC0
@@ -504,7 +504,7 @@ jobs:
           - name: PRO/ClusterMultiZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-2
             subscriptionId: sub-GJPV3NoNC0
@@ -516,53 +516,53 @@ jobs:
             # Run only if is tag, or PR is ready for review
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_standalone.py
-            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-2
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-enterprise-failover' --instance-description 'test-standalone-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.ref_name }}"
+            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-enterprise-failover' --instance-description 'test-standalone-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}"
           - name: Enterprise/SingleZone - AWS/us-east-2 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_replication.py
-            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-2
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-enterprise-failover' --instance-description 'test-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.ref_name }}"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-enterprise-failover' --instance-description 'test-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}"
           - name: Enterprise/MultiZone - AWS/us-east-2 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_replication.py
-            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-2
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover' --instance-description 'test-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.ref_name }}"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover' --instance-description 'test-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}"
           - name: Enterprise/ClusterSingleZone - AWS/us-east-2 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_cluster.py
-            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-2
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-0' --instance-name 'test-cluster-sz-enterprise-failover' --instance-description 'test-cluster-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --custom-network=aws-network-${{ github.ref_name }} --deployment-create-timeout-seconds 4800"
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-0' --instance-name 'test-cluster-sz-enterprise-failover' --instance-description 'test-cluster-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }} --deployment-create-timeout-seconds 4800"
           - name: Enterprise/ClusterMultiZone - AWS/us-east-2 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_cluster.py
-            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.ref_name }}
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-2
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-0' --instance-name 'test-cluster-mz-enterprise-failover' --instance-description 'test-cluster-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=aws-network-${{ github.ref_name }} --deployment-create-timeout-seconds 4800"
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-0' --instance-name 'test-cluster-mz-enterprise-failover' --instance-description 'test-cluster-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }} --deployment-create-timeout-seconds 4800"
 
     steps:
       - name: Checkout

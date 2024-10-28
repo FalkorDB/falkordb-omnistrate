@@ -33,5 +33,5 @@ RUN chown redis:redis /falkordb/* && \
 
 COPY falkordb-node/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN chown redis:redis -R /var
-CMD ["/usr/bin/supervisord"]
+CMD ["sleep","infinity"]
 #CMD [ "node-entrypoint.sh" ]

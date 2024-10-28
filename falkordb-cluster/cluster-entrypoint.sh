@@ -101,8 +101,8 @@ log() {
 
 get_host() {
   local host_idx=$1
-  local deployment_mode=$(if [[ $IS_MULTI_ZONE -eq 1 ]]; then echo "mz"; else echo "sz"; fi)
-  echo $NODE_HOST | sed "s/cluster-$deployment_mode-$NODE_INDEX/cluster-$deployment_mode-$host_idx/g"
+  local deployment_mode=$(if [[ "$IS_MULTI_ZONE" == "1" ]]; then echo "mz"; else echo "sz"; fi)
+  echo $(echo $NODE_HOST | sed "s/cluster-$deployment_mode-$NODE_INDEX/cluster-$deployment_mode-$host_idx/g")
 }
 
 wait_until_node_host_resolves() {

@@ -64,7 +64,6 @@ AUTH_CONNECTION_STRING="-a $ADMIN_PASSWORD --no-auth-warning"
 SAVE_LOGS_TO_FILE=${SAVE_LOGS_TO_FILE:-1}
 LOG_LEVEL=${LOG_LEVEL:-notice}
 RESOURCE_ALIAS=${RESOURCE_ALIAS:-""}
-EXTERNAL_DNS_SUFFIX=${EXTERNAL_DNS_SUFFIX:-""}
 
 DATE_NOW=$(date +"%Y%m%d%H%M%S")
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo ""; fi)
@@ -102,7 +101,8 @@ log() {
 
 get_host() {
   local host_idx=$1
-  echo "$RESOURCE_ALIAS-$host_idx.$EXTERNAL_DNS_SUFFIX"
+  local deployment_mode=$(if [[ "$IS_MULTI_ZONE" == "1" ]]; then echo "mz"; else echo "sz"; fi)
+  echo $(echo $NODE_HOST | sed "s/cluster-$deployment_mode-$NODE_INDEX/cluster-$deployment_mode-$host_idx/g")
 }
 
 wait_until_node_host_resolves() {

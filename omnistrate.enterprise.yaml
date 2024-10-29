@@ -1155,6 +1155,7 @@ services:
       - TLS=$var.enableTLS
       - DATA_DIR=/data
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - NODE_HOST=$sys.network.node.externalEndpoint
     ports:
       - "26379:26379"
     volumes:
@@ -1632,6 +1633,7 @@ services:
       - TLS=$var.enableTLS
       - DATA_DIR=/data
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - NODE_HOST=$sys.network.node.externalEndpoint
     ports:
       - "26379:26379"
     volumes:

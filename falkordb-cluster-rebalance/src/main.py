@@ -31,7 +31,7 @@ CLUSTER_REPLICAS = int(os.getenv("CLUSTER_REPLICAS", "1"))
 NODE_PORT = int(os.getenv("NODE_PORT", "6379"))
 DEBUG = os.getenv("DEBUG", "0") == "1"
 IS_MULTI_ZONE = os.getenv("IS_MULTI_ZONE", "0") == "1"
-NODE_HOST = os.getenv("NODE_HOST")
+NODE_HOST = os.getenv("NODE_HOST", "")
 
 logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO)
 

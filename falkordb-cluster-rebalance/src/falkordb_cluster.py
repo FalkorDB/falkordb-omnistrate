@@ -3,6 +3,7 @@ from time import sleep, time
 import subprocess
 from datetime import datetime
 import logging
+import re
 
 
 class FalkorDBClusterNode:
@@ -54,7 +55,7 @@ class FalkorDBClusterNode:
             return None
 
         return (
-            int(self.hostname.split(".")[0].split("-")[-1])
+            int(re.search(r"(\d)", self.hostname.split(".")[0]).group(1))
             if "-" in self.hostname and "." in self.hostname
             else None
         )

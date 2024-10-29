@@ -1,4 +1,5 @@
 import requests
+from requests.adapters import HTTPAdapter, Retry
 import omnistrate_tests.classes
 from .omnistrate_types import (
     ProductTier,
@@ -44,12 +45,19 @@ class OmnistrateFleetAPI:
     def client(self):
         session = requests.session()
 
+        retries = Retry(
+            total=10,
+            backoff_factor=0.1,
+        )
+
         session.headers.update(
             {
                 "Content-Type": "application/json",
                 "Authorization": "Bearer " + self.get_token(),
             }
         )
+
+        session.mount("https://", HTTPAdapter(max_retries=retries))
 
         return session
 
@@ -137,24 +145,22 @@ class OmnistrateFleetAPI:
         deployment_failover_timeout_seconds: int = None,
         deployment_update_timeout_seconds: int = None,
     ):
-        return (
-            omnistrate_tests.OmnistrateFleetInstance(
-                self,
-                deployment_create_timeout_seconds,
-                deployment_delete_timeout_seconds,
-                deployment_failover_timeout_seconds,
-                deployment_update_timeout_seconds,
-                service_id,
-                service_provider_id,
-                service_key,
-                service_api_version,
-                service_environment_key,
-                service_environment_id,
-                service_model_key,
-                product_tier_key,
-                resource_key,
-                subscription_id,
-            )
+        return omnistrate_tests.OmnistrateFleetInstance(
+            self,
+            deployment_create_timeout_seconds,
+            deployment_delete_timeout_seconds,
+            deployment_failover_timeout_seconds,
+            deployment_update_timeout_seconds,
+            service_id,
+            service_provider_id,
+            service_key,
+            service_api_version,
+            service_environment_key,
+            service_environment_id,
+            service_model_key,
+            product_tier_key,
+            resource_key,
+            subscription_id,
         )
 
     def network(

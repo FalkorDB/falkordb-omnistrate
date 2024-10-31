@@ -97,6 +97,11 @@ jobs:
           sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
           sed -i 's/${{ matrix.plans.plan-name }}/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
 
+      - name: Remove custom metrics for testing
+        run: |
+          yq eval 'del(.x-omnistrate-integrations[1].omnistrateMetrics.additionalMetrics)' ${{ matrix.plans.file }} > ${{ matrix.plans.file }}.tmp
+          mv ${{ matrix.plans.file }}.tmp ${{ matrix.plans.file }}
+  
       - name: Upload yaml as artifact
         uses: actions/upload-artifact@v4
         with:
@@ -114,10 +119,6 @@ jobs:
             echo "secrets option was not used"
             exit 0
           fi
-
-      - name: Remove custom metrics for testing
-        run: |
-          yq eval 'del(.x-omnistrate-integrations[1].omnistrateMetrics.additionalMetrics)' ${{ matrix.plans.file }} > ${{ matrix.plans.file }}
 
       - name: Update Omnistrate plan
         uses: ./.github/actions/update-omnistrate-plan

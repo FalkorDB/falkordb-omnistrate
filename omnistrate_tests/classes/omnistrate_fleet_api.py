@@ -7,7 +7,7 @@ from .omnistrate_types import (
     ServiceModel,
     OmnistrateTierVersion,
 )
-
+import os
 import logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
@@ -15,7 +15,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
 class OmnistrateFleetAPI:
 
-    base_url = "https://api.omnistrate.cloud/2022-09-01-00"
+    base_url = os.getenv(
+        "OMNISTRATE_BASE_URL", "https://api.omnistrate.cloud/2022-09-01-00"
+    )
     _token = None
 
     _session = None
@@ -48,13 +50,14 @@ class OmnistrateFleetAPI:
 
         if self._session is not None:
             return self._session
-        
+
         self._session = requests.session()
 
         retries = Retry(
             total=10,
             backoff_factor=0.1,
             status_forcelist=[403, 429, 500, 502, 503, 504],
+            allowed_methods=["GET", "POST", "PUT", "DELETE"],
         )
 
         self._session.headers.update(

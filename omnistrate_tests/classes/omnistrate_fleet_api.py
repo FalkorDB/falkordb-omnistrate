@@ -18,6 +18,8 @@ class OmnistrateFleetAPI:
     base_url = "https://api.omnistrate.cloud/2022-09-01-00"
     _token = None
 
+    _session = None
+
     def __init__(self, email: str, password: str):
         self._email = email
         self._password = password
@@ -43,7 +45,11 @@ class OmnistrateFleetAPI:
         return self._token
 
     def client(self):
-        session = requests.session()
+
+        if self._session is not None:
+            return self._session
+        
+        self._session = requests.session()
 
         retries = Retry(
             total=10,
@@ -51,16 +57,16 @@ class OmnistrateFleetAPI:
             status_forcelist=[403, 429, 500, 502, 503, 504],
         )
 
-        session.headers.update(
+        self._session.headers.update(
             {
                 "Content-Type": "application/json",
                 "Authorization": "Bearer " + self.get_token(),
             }
         )
 
-        session.mount("https://", HTTPAdapter(max_retries=retries))
+        self._session.mount("https://", HTTPAdapter(max_retries=retries))
 
-        return session
+        return self._session
 
     def get_service(self, service_id: str) -> "Service":
         """Get the service by ID."""

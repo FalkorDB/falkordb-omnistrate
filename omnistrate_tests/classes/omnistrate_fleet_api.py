@@ -48,6 +48,7 @@ class OmnistrateFleetAPI:
         retries = Retry(
             total=10,
             backoff_factor=0.1,
+            status_forcelist=[429]
         )
 
         session.headers.update(

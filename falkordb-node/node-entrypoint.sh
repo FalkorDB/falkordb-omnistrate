@@ -156,7 +156,8 @@ handle_sigterm() {
   fi
 
   if [[ $RUN_SENTINEL -eq 1 && ! -z $sentinel_pid ]]; then
-    echo "Sentinel at stopping time"
+    echo "#####Sentinel at stopping time#######"
+    echo "######################################"
     cat /data/sentinel.conf
     kill -TERM $sentinel_pid
   fi
@@ -183,10 +184,10 @@ handle_sigterm() {
   echo "reached the end of the handle_sigterm"
 }
 
-#trap handle_sigterm SIGTERM
-trap 'echo "Received a SIGTERM"' SIGTERM
-trap 'echo "Received a SIGKILL"' SIGKILL
-trap 'echo "Received a SIGINT"' SIGINT
+trap handle_sigterm SIGTERM
+# trap 'echo "Received a SIGTERM"' SIGTERM
+# trap 'echo "Received a SIGKILL"' SIGKILL
+# trap 'echo "Received a SIGINT"' SIGINT
 
 
 log() {

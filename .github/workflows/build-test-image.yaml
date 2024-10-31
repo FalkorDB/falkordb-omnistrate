@@ -39,6 +39,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -84,6 +86,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Replace Variables
         run: |
@@ -101,7 +105,7 @@ jobs:
         run: |
           yq eval 'del(.x-omnistrate-integrations[1].omnistrateMetrics.additionalMetrics)' ${{ matrix.plans.file }} > ${{ matrix.plans.file }}.tmp
           mv ${{ matrix.plans.file }}.tmp ${{ matrix.plans.file }}
-  
+
       - name: Upload yaml as artifact
         uses: actions/upload-artifact@v4
         with:
@@ -138,6 +142,8 @@ jobs:
       - name: Checkout
         if: ${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Create Omnistrate Custom Network - GCP
         if: ${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}
@@ -572,7 +578,9 @@ jobs:
     steps:
       - name: Checkout
         if: matrix.instances.if == 'true' || matrix.instances.if == true
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup python
         if: matrix.instances.if == 'true' || matrix.instances.if == true
@@ -624,6 +632,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Delete Omnistrate Custom Network - GCP
         uses: ./.github/actions/delete-omnistrate-custom-network

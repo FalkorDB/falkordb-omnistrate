@@ -152,13 +152,14 @@ handle_sigterm() {
   echo "the pid of sentinel is $sentinel_pid"
   if [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
     remove_master_from_group
-    kill -TERM $falkordb_pid
+    kill -TERM $falkordb_pid # I THINK WE DO NOT NEED THIS
   fi
 
   if [[ $RUN_SENTINEL -eq 1 && ! -z $sentinel_pid ]]; then
     echo "#####Sentinel at stopping time#######"
     echo "######################################"
-    cat /data/sentinel.conf
+    redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
+    redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL SHUTDOWN
     kill -TERM $sentinel_pid
   fi
 
@@ -181,7 +182,6 @@ handle_sigterm() {
   if [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 && ! -z $sentinel_healthcheck_pid ]]; then
     kill -TERM $sentinel_healthcheck_pid
   fi
-  echo "reached the end of the handle_sigterm"
 }
 
 trap handle_sigterm SIGTERM

@@ -15,10 +15,6 @@ x-internal-integrations:
   logs:
     provider: native
   metrics:
-    provider: native
-
-x-omnistrate-integrations:
-  - omnistrateMetrics:
 
 services:
   # Free

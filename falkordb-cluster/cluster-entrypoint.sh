@@ -169,7 +169,7 @@ set_memory_limit() {
 
   MEMORY_LIMIT=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
 
-  if [[ ! -z $MEMORY_LIMIT ]]; then
+  if [[ -z $MEMORY_LIMIT ]]; then
     MEMORY_LIMIT="100MB"
   fi
   

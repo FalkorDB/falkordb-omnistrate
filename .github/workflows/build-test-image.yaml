@@ -115,6 +115,10 @@ jobs:
             exit 0
           fi
 
+      - name: Remove custom metrics for testing
+        run: |
+          yq eval 'del(.x-omnistrate-integrations[1].omnistrateMetrics.additionalMetrics)' ${{ matrix.plans.file }} > ${{ matrix.plans.file }}
+
       - name: Update Omnistrate plan
         uses: ./.github/actions/update-omnistrate-plan
         id: update_omnistrate_plan

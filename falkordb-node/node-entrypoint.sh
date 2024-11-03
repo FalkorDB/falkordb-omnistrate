@@ -150,9 +150,11 @@ handle_sigterm() {
 
   echo "run sentinel is set to $RUN_SENTINEL"
   echo "the pid of sentinel is $sentinel_pid"
-  is_replica
 
   if [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
+    #DO NOT USE is_replica FUNCTION
+    role=$(redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL get-master-addr-by-name $MASTER_NAME | grep role)
+    if [[ "$role" == "role:master" ]];then IS_REPLICA=0 ;fi
     remove_master_from_group
     #kill -TERM $falkordb_pid
   fi
@@ -299,8 +301,7 @@ is_replica() {
     is_replica
     return
   fi
-  
-  echo "The falkordb master host: $FALKORDB_MASTER_HOST"
+
   # IF host is empty, then this node is the master
   if [[ -z $FALKORDB_MASTER_HOST ]]; then
     FALKORDB_MASTER_HOST=$NODE_HOST

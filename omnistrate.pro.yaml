@@ -37,21 +37,9 @@ x-internal-integrations:
   metrics:
     provider: native
 
-x-redisMetrics: &metrics
+x-falkordbMetrics: &metrics
   prometheusEndpoint: "http://localhost:9121/metrics"
   metrics:
-    redis_blocked_clients:
-      "Blocked Clients":
-        aggregationFunction: sum
-    redis_cluster_connections:
-      "Cluster Connections":
-        aggregationFunction: sum
-    redis_commands_duration_seconds_total:
-      "Total Command Duration (Seconds)":
-        aggregationFunction: sum
-    redis_commands_failed_calls_total:
-      "Failed Command Calls":
-        aggregationFunction: sum
     redis_commands_latencies_usec_bucket:
       "Command Latency (μs) Bucket":
         aggregationFunction: sum
@@ -70,35 +58,11 @@ x-redisMetrics: &metrics
     redis_commands_total:
       "Total Commands":
         aggregationFunction: sum
-    redis_config_maxclients:
-      "Max Clients Configured":
-        aggregationFunction: sum
-    redis_config_maxmemory:
-      "Max Memory Configured":
-        aggregationFunction: sum
     redis_connected_clients:
       "Connected Clients":
         aggregationFunction: sum
     redis_connections_received_total:
       "Total Connections Received":
-        aggregationFunction: sum
-    redis_cpu_sys_children_seconds_total:
-      "CPU Sys Children Time (Seconds)":
-        aggregationFunction: sum
-    redis_cpu_sys_main_thread_seconds_total:
-      "Total CPU Sys Main Thread Time (Seconds)":
-        aggregationFunction: sum
-    redis_cpu_sys_seconds_total:
-      "Total CPU Sys Time (Seconds)":
-        aggregationFunction: sum
-    redis_cpu_user_children_seconds_total:
-      "Total CPU User Children Time (Seconds)":
-        aggregationFunction: sum
-    redis_cpu_user_main_thread_seconds_total:
-      "Total CPU User Main Thread Time (Seconds)":
-        aggregationFunction: sum
-    redis_cpu_user_seconds_total:
-      "Total CPU User Time (Seconds)":
         aggregationFunction: sum
     redis_db_keys:
       "Database Keys":
@@ -106,49 +70,15 @@ x-redisMetrics: &metrics
     redis_errors_total:
       "Total Errors":
         aggregationFunction: sum
-    redis_exporter_scrapes_total:
-      "Total Exporter Scrapes":
-        aggregationFunction: sum
-    redis_io_threads_active:
-      "Active I/O Threads":
-        aggregationFunction: sum
-    redis_keyspace_hits_total:
-      "Total Keyspace Hits":
-        aggregationFunction: sum
-    redis_keyspace_misses_total:
-      "Total Keyspaces Misses":
-        aggregationFunction: sum
     redis_last_slow_execution_duration_seconds:
       "Last Slow Execution Duration (Seconds)":
-        aggregationFunction: sum
-    redis_latency_percentiles_usec:
-      "Latency Percentiles (μs)":
-        aggregationFunction: sum
-    redis_latency_percentiles_usec_sum:
-      "Total Latency Percentiles (μs)":
-        aggregationFunction: sum
-    redis_latency_percentiles_usec_count:
-      "Latency Percentiles Count":
-        aggregationFunction: sum
-    redis_latest_fork_seconds:
-      "Latest Fork Time (Seconds)":
         aggregationFunction: sum
     redis_loading_dump_file:
       "Loading Dump File":
         aggregationFunction: sum
-    redis_master_repl_offset:
-      "Master Replication Offset":
-        aggregationFunction: sum
     redis_mem_clients_normal:
       "Memory Used By Normal Clients":
         aggregationFunction: sum
-    redis_mem_clients_slaves:
-      "Memory Used By Slave Clients":
-        aggregationFunction: sum
-    redis_memory_max_bytes:
-      "Max Memory (Bytes)":
-        aggregationFunction: sum
-    redis_memory_used_bytes:
       "Memory Used (Bytes)":
         aggregationFunction: sum
     redis_memory_used_dataset_bytes:
@@ -165,9 +95,6 @@ x-redisMetrics: &metrics
         aggregationFunction: sum
     redis_rdb_last_bgsave_duration_sec:
       "Last RDB BGSAVE Duration (Seconds)":
-        aggregationFunction: sum
-    redis_rdb_last_bgsave_status:
-      "Last RDB BGSAVE Status":
         aggregationFunction: sum
     redis_rdb_last_cow_size_bytes:
       "Last RDB Copy-On-Write Size (Bytes)":
@@ -187,17 +114,8 @@ x-redisMetrics: &metrics
     redis_slowlog_last_id:
       "Slow Log Last ID":
         aggregationFunction: sum
-    redis_slowlog_length:
-      "Slow Log Length":
-        aggregationFunction: sum
-    redis_start_time_seconds:
-      "Start Time (Seconds)":
-        aggregationFunction: sum
     redis_unexpected_error_replies:
       "Unexpected Error Replies":
-        aggregationFunction: sum
-    redis_up:
-      "Redis Up":
         aggregationFunction: sum
     redis_uptime_in_seconds:
       "Uptime (Seconds)":

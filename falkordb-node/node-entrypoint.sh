@@ -153,7 +153,7 @@ handle_sigterm() {
 
   if [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
     #DO NOT USE is_replica FUNCTION
-    role=$(redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL get-master-addr-by-name $MASTER_NAME | grep role)
+    role=$(redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING info replication | grep role)
     if [[ "$role" == "role:master" ]];then IS_REPLICA=0 ;fi
     remove_master_from_group
     #kill -TERM $falkordb_pid

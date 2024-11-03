@@ -298,7 +298,8 @@ is_replica() {
     is_replica
     return
   fi
-
+  
+  echo "The falkordb master host: $FALKORDB_MASTER_HOST"
   # IF host is empty, then this node is the master
   if [[ -z $FALKORDB_MASTER_HOST ]]; then
     FALKORDB_MASTER_HOST=$NODE_HOST

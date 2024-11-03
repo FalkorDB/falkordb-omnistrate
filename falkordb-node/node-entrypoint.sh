@@ -150,7 +150,8 @@ handle_sigterm() {
 
   echo "run sentinel is set to $RUN_SENTINEL"
   echo "the pid of sentinel is $sentinel_pid"
-  echo "the is_replicafunction returned: $IS_REPLICA"
+  is_replica
+
   if [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
     remove_master_from_group
     #kill -TERM $falkordb_pid

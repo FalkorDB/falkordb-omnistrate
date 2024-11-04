@@ -1,4 +1,5 @@
 import requests
+from requests.adapters import HTTPAdapter, Retry
 import omnistrate_tests.classes
 from .omnistrate_types import (
     ProductTier,
@@ -6,7 +7,7 @@ from .omnistrate_types import (
     ServiceModel,
     OmnistrateTierVersion,
 )
-
+import os
 import logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
@@ -14,8 +15,12 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
 class OmnistrateFleetAPI:
 
-    base_url = "https://api.omnistrate.cloud/2022-09-01-00"
+    base_url = os.getenv(
+        "OMNISTRATE_BASE_URL", "https://api.omnistrate.cloud/2022-09-01-00"
+    )
     _token = None
+
+    _session = None
 
     def __init__(self, email: str, password: str):
         self._email = email
@@ -42,16 +47,29 @@ class OmnistrateFleetAPI:
         return self._token
 
     def client(self):
-        session = requests.session()
 
-        session.headers.update(
+        if self._session is not None:
+            return self._session
+
+        self._session = requests.session()
+
+        retries = Retry(
+            total=10,
+            backoff_factor=0.1,
+            status_forcelist=[403, 429, 500, 502, 503, 504],
+            allowed_methods=["GET", "POST", "PUT", "DELETE"],
+        )
+
+        self._session.headers.update(
             {
                 "Content-Type": "application/json",
                 "Authorization": "Bearer " + self.get_token(),
             }
         )
 
-        return session
+        self._session.mount("https://", HTTPAdapter(max_retries=retries))
+
+        return self._session
 
     def get_service(self, service_id: str) -> "Service":
         """Get the service by ID."""
@@ -137,24 +155,22 @@ class OmnistrateFleetAPI:
         deployment_failover_timeout_seconds: int = None,
         deployment_update_timeout_seconds: int = None,
     ):
-        return (
-            omnistrate_tests.OmnistrateFleetInstance(
-                self,
-                deployment_create_timeout_seconds,
-                deployment_delete_timeout_seconds,
-                deployment_failover_timeout_seconds,
-                deployment_update_timeout_seconds,
-                service_id,
-                service_provider_id,
-                service_key,
-                service_api_version,
-                service_environment_key,
-                service_environment_id,
-                service_model_key,
-                product_tier_key,
-                resource_key,
-                subscription_id,
-            )
+        return omnistrate_tests.OmnistrateFleetInstance(
+            self,
+            deployment_create_timeout_seconds,
+            deployment_delete_timeout_seconds,
+            deployment_failover_timeout_seconds,
+            deployment_update_timeout_seconds,
+            service_id,
+            service_provider_id,
+            service_key,
+            service_api_version,
+            service_environment_key,
+            service_environment_id,
+            service_model_key,
+            product_tier_key,
+            resource_key,
+            subscription_id,
         )
 
     def network(

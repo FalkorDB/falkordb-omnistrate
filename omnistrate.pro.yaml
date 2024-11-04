@@ -163,7 +163,7 @@ x-clusterparam: &clusterparam
         - e2-custom-8-16384
         - e2-custom-16-32768
         - e2-custom-32-65536
-        - t3.medium
+        - t2.medium
         - c6i.xlarge
         - c6i.2xlarge
         - c6i.4xlarge
@@ -321,7 +321,7 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
-          - t3.medium
+          - t2.medium
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -499,7 +499,7 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
-          - t3.medium
+          - t2.medium
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -700,7 +700,7 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
-          - t3.medium
+          - t2.medium
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -891,7 +891,7 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
-          - t3.medium
+          - t2.medium
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -1245,7 +1245,7 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
-          - t3.medium
+          - t2.medium
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -1436,7 +1436,7 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
-          - t3.medium
+          - t2.medium
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -1789,7 +1789,7 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
-          - t3.medium
+          - t2.medium
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -2100,7 +2100,7 @@ services:
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
-          - t3.medium
+          - t2.medium
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge

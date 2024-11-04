@@ -24,22 +24,7 @@ env:
   AWS_NETWORK_NAME: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
 jobs:
-  debug:
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          # print all env variables
-          env
-
-      - run: |
-          echo ${{ toJSON(github) }}
-
-      - run: |
-          exit 1
-
-
   build-and-push:
-    needs: debug
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true

@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: falkordb-node-branch-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
+  group: falkordb-node-branch-${{ github.event_name == 'pull_request' && github.ref_name.event.pull_request.head.label || github.ref_name }}
   cancel-in-progress: false
 
 env:
@@ -17,14 +17,29 @@ env:
   CLUSTER_IMAGE_NAME: falkordb-cluster
   CLUSTER_REBALANCE_IMAGE_NAME: falkordb-cluster-rebalance
   FALKORDB_VERSION: v4.2.1
-  FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
+  FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
   PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
   ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
   GCP_NETWORK_NAME: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
   AWS_NETWORK_NAME: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref_name }}
 
 jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          # print all env variables
+          env
+
+      - run: |
+          echo ${{ toJSON(github) }}
+
+      - run: |
+          exit 1
+
+
   build-and-push:
+    needs: debug
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true

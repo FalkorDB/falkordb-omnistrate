@@ -230,6 +230,9 @@ class OmnistrateFleetInstance:
     def delete(self, wait_for_delete: bool):
         """Delete the instance. Optionally wait for the instance to be deleted."""
 
+        if not self.instance_id:
+            return
+
         resource_id = self.get_resource_id()
 
         if resource_id is None:

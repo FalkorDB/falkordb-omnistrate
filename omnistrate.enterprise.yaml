@@ -2179,12 +2179,6 @@ services:
           }
 
           call_health_check
-secrets:
-  adminpasspath:
-    file: ./secrets/adminpassword
-  falkordbpasspath:
-    file: ./secrets/falkordbpassword
-
 
   Grafana:
     x-omnistrate-mode-internal: false
@@ -2196,7 +2190,7 @@ secrets:
           name: e2-medium
     environment:
       - SECURITY_CONTEXT_FS_GROUP=472
-    ports:  
+    ports:
       - "3000:3000"
     volumes:
       - ./grafana:/var/lib/grafana
@@ -2207,3 +2201,9 @@ secrets:
       aws:
         instanceStorageType: AWS::EBS_GP3
         instanceStorageSizeGi: 200
+
+secrets:
+  adminpasspath:
+    file: ./secrets/adminpassword
+  falkordbpasspath:
+    file: ./secrets/falkordbpassword

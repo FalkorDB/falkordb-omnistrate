@@ -2194,9 +2194,8 @@ secrets:
       instanceTypes:
         - cloudProvider: gcp
           name: e2-medium
-    x-omnistrate-api-params:
     environment:
-      - SECURITY_CONTEXT_FS_GROUP="472"
+      - SECURITY_CONTEXT_FS_GROUP=472
     ports:  
       - "3000:3000"
     volumes:

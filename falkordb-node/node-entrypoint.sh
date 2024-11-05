@@ -148,34 +148,19 @@ handle_sigterm() {
   echo "Stopping FalkorDB"
   # sentinels_list=$(get_sentinels_list)
 
-  echo "run sentinel is set to $RUN_SENTINEL"
-  echo "the pid of sentinel is $sentinel_pid"
-  echo "the pid of falkordb is $falkordb_pid"
   if [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
     #DO NOT USE is_replica FUNCTION
     role=$(redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING info replication | grep role)
-    echo "$role"
+    
     if [[ "$role" =~ ^role:master ]];then IS_REPLICA=0 ;fi
-    echo "The IS_REPLICA is: $IS_REPLICA"
+    
     remove_master_from_group
-    #kill -TERM $falkordb_pid
   fi
 
   if [[ $RUN_SENTINEL -eq 1 && ! -z $sentinel_pid ]]; then
-    echo "#####Sentinel at stopping time#######"
-    echo "######################################"
     redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
     redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SHUTDOWN
-    #kill -TERM $sentinel_pid
   fi
-
-  # if [[ ! -z $falkordb_pid ]]; then
-  #   wait $falkordb_pid
-  # fi
-
-  # if [[ ! -z $sentinel_pid ]]; then
-  #   wait $sentinel_pid
-  # fi
 
   if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
     kill -TERM $redis_exporter_pid
@@ -538,9 +523,6 @@ fi
 
 
 log $(getent hosts || cat /etc/hosts)
-
-echo "Sentinel Config at start time"
-cat /data/sentinel.conf
 
 
 if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]]; then

@@ -282,7 +282,7 @@ x-clusterparam: &clusterparam
       modifiable: false
       required: false
       export: true
-      defaultValue: "0GB"
+      defaultValue: "6GB"
 
 services:
   # Standalone
@@ -464,7 +464,7 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0GB"
+        defaultValue: "6GB"
         parameterDependencyMap:
           node-s: maxMemory
     x-omnistrate-capabilities:
@@ -614,7 +614,7 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0GB"
+        defaultValue: "6GB"
     volumes:
       - source: ./data
         target: /data
@@ -653,7 +653,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
-      - E_MEMORY_LIMIT=$var.maxMemory
+      - MEMORY_LIMIT=$var.maxMemory
     ports:
       - "6379:6379"
     x-omnistrate-capabilities:
@@ -852,7 +852,7 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0GB"
+        defaultValue: "6GB"
         parameterDependencyMap:
           node-sz: maxMemory
 
@@ -1017,7 +1017,7 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0GB"
+        defaultValue: "6GB"
 
     volumes:
       - source: ./data
@@ -1061,7 +1061,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
-      - E_MEMORY_LIMIT=$var.maxMemory
+      - MEMORY_LIMIT=$var.maxMemory
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1351,7 +1351,7 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0GB"
+        defaultValue: "6GB"
         parameterDependencyMap:
           node-mz: maxMemory
     x-omnistrate-capabilities:
@@ -1515,7 +1515,7 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0GB"
+        defaultValue: "6GB"
     volumes:
       - source: ./data
         target: /data
@@ -1559,7 +1559,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
-      - E_MEMORY_LIMIT=$vat.maxMemory
+      - MEMORY_LIMIT=$vat.maxMemory
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1835,7 +1835,7 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0GB"
+        defaultValue: "6GB"
         parameterDependencyMap:
           cluster-sz: maxMemory
     x-omnistrate-capabilities:
@@ -1893,7 +1893,7 @@ services:
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - CLUSTER_REPLICAS=1
-      - E_MEMORY_LIMIT=$var.maxMemory
+      - MEMORY_LIMIT=$var.maxMemory
     ports:
       - "6379"
       - "16379"
@@ -2141,7 +2141,7 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0GB"
+        defaultValue: "6GB"
         parameterDependencyMap:
           cluster-mz: maxMemory
     x-omnistrate-capabilities:

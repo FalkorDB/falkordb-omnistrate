@@ -71,6 +71,9 @@ services:
       - node-f
 
   node-f:
+    user: "999"
+    group_add:
+      - "999"
     x-omnistrate-mode-internal: true
     image: $FalkorDBNodeImage
     x-omnistrate-compute:

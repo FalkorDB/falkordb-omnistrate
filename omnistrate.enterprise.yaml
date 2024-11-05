@@ -2184,3 +2184,27 @@ secrets:
     file: ./secrets/adminpassword
   falkordbpasspath:
     file: ./secrets/falkordbpassword
+
+
+  Grafana:
+    x-omnistrate-mode-internal: false
+    image: grafana/grafana:latest
+    x-omnistrate-compute:
+      replicaCount: 1
+      instanceTypes:
+        - cloudProvider: gcp
+          name: e2-medium
+    x-omnistrate-api-params:
+    environment:
+      - SECURITY_CONTEXT_FS_GROUP=472
+    ports:  
+      - "3000:3000"
+    volumes:
+      - ./grafana:/var/lib/grafana
+    x-omnistrate-storage:
+      gcp:
+        instanceStorageType: GCP::PD_BALANCED
+        instanceStorageSizeGi: 200
+      aws:
+        instanceStorageType: AWS::EBS_GP3
+        instanceStorageSizeGi: 200

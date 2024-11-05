@@ -417,7 +417,7 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     logging.info("Instance stopped")
 
     instance.start(wait_for_ready=True)
-
+    time.sleep(60)
     graph = db.select_graph("test")
     
     result = graph.query("MATCH (n:Person) RETURN n")

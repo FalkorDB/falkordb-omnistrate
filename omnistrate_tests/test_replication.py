@@ -169,7 +169,7 @@ def test_replication():
         logging.info("Test passed")
 
 
-def test_failover(instance: OmnistrateFleetInstance, password: str):
+def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_seconds: int = 300):
     """
     Single Zone tests are the following:
     1. Create a single zone instance
@@ -296,7 +296,11 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
     )
 
     promotion_completed = False
+    tout = time.time() + timeout_in_seconds
     while not promotion_completed:
+        if time.time() > tout:
+            logging.info("Failed to promote instance,timeout exceeded.")
+            raise TimeoutError
         try:
             graph = db_1.execute_command("info replication")
             if "role:master" in graph:
@@ -356,7 +360,11 @@ def test_failover(instance: OmnistrateFleetInstance, password: str):
     )
 
     promotion_completed = False
+    tout = time.time() + timeout_in_seconds
     while not promotion_completed:
+        if time.time() > tout:
+            logging.info("Failed to promote instance,timeout exceeded.")
+            raise TimeoutError
         try:
             graph = db_0.execute_command("info replication")
             if "role:master" in graph:

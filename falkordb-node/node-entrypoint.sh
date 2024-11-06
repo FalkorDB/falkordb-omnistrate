@@ -254,7 +254,7 @@ wait_until_node_host_resolves() {
       host_response=$(redis-cli -h $1 -p $2 -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING PING)
       
       log "Host Response: $host_response"
-      if [[ ! $host_response =~ ^Could.* ]] && [[ $host_response == "PONG" ]]; then
+      if [[ $host_response == "PONG" ]]; then
         echo "Node host resolved"
         sleep 10
         break

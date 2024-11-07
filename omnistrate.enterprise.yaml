@@ -275,6 +275,14 @@ x-clusterparam: &clusterparam
       defaultValue: "0"
       min: 0
       max: 2000000000
+    - key: maxMemory
+      description: Choose the maxmemory for your database (do not exceed InstanceType memory)
+      name: FalkorDB Maxmemory
+      type: String
+      modifiable: false
+      required: false
+      export: true
+      defaultValue: "6GB"
 
 services:
   # Standalone
@@ -449,6 +457,16 @@ services:
         max: 2000000000
         parameterDependencyMap:
           node-s: falkorDBQueryMemCapacity
+      - key: maxMemory
+        description: Choose the maxmemory for your database (do not exceed InstanceType memory)
+        name: FalkorDB Maxmemory
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "6GB"
+        parameterDependencyMap:
+          node-s: maxMemory
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -589,6 +607,14 @@ services:
         defaultValue: "0"
         min: 0
         max: 2000000000
+      - key: maxMemory
+        description: Choose the maxmemory for your database (do not exceed InstanceType memory)
+        name: FalkorDB Maxmemory
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "6GB"
     volumes:
       - source: ./data
         target: /data
@@ -627,6 +653,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - MEMORY_LIMIT=$var.maxMemory
     ports:
       - "6379:6379"
     x-omnistrate-capabilities:
@@ -818,6 +845,17 @@ services:
         max: 2000000000
         parameterDependencyMap:
           node-sz: falkorDBQueryMemCapacity
+      - key: maxMemory
+        description: Choose the maxmemory for your database (do not exceed InstanceType memory)
+        name: FalkorDB Maxmemory
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "6GB"
+        parameterDependencyMap:
+          node-sz: maxMemory
+
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -972,6 +1010,15 @@ services:
         defaultValue: "0"
         min: 0
         max: 2000000000
+      - key: maxMemory
+        description: Choose the maxmemory for your database (do not exceed InstanceType memory)
+        name: FalkorDB Maxmemory
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "6GB"
+
     volumes:
       - source: ./data
         target: /data
@@ -1014,6 +1061,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - MEMORY_LIMIT=$var.maxMemory
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1296,6 +1344,16 @@ services:
         max: 2000000000
         parameterDependencyMap:
           node-mz: falkorDBQueryMemCapacity
+      - key: maxMemory
+        description: Choose the maxmemory for your database (do not exceed InstanceType memory)
+        name: FalkorDB Maxmemory
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "6GB"
+        parameterDependencyMap:
+          node-mz: maxMemory
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -1450,6 +1508,14 @@ services:
         defaultValue: "0"
         min: 0
         max: 2000000000
+      - key: maxMemory
+        description: Choose the maxmemory for your database (do not exceed InstanceType memory)
+        name: FalkorDB Maxmemory
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "6GB"
     volumes:
       - source: ./data
         target: /data
@@ -1493,6 +1559,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - MEMORY_LIMIT=$vat.maxMemory
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1761,6 +1828,16 @@ services:
         max: 2000000000
         parameterDependencyMap:
           cluster-sz: falkorDBQueryMemCapacity
+      - key: maxMemory
+        description: Choose the maxmemory for your database (do not exceed InstanceType memory)
+        name: FalkorDB Maxmemory
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "6GB"
+        parameterDependencyMap:
+          cluster-sz: maxMemory
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -1816,6 +1893,7 @@ services:
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - CLUSTER_REPLICAS=1
+      - MEMORY_LIMIT=$var.maxMemory
     ports:
       - "6379"
       - "16379"
@@ -2056,6 +2134,16 @@ services:
         max: 2000000000
         parameterDependencyMap:
           cluster-mz: falkorDBQueryMemCapacity
+      - key: maxMemory
+        description: Choose the maxmemory for your database (do not exceed InstanceType memory)
+        name: FalkorDB Maxmemory
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "6GB"
+        parameterDependencyMap:
+          cluster-mz: maxMemory
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7

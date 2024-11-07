@@ -38,7 +38,7 @@ FALKORDB_RESULT_SET_SIZE=${FALKORDB_RESULT_SET_SIZE:-10000}
 FALKORDB_QUERY_MEM_CAPACITY=${FALKORDB_QUERY_MEM_CAPACITY:-0}
 FALKORDB_TIMEOUT_MAX=${FALKORDB_TIMEOUT_MAX:-0}
 FALKORDB_TIMEOUT_DEFAULT=${FALKORDB_TIMEOUT_DEFAULT:-0}
-
+MEMORY_LIMIT=${MEMORY_LIMIT:-''}
 # If vars are <nil>, set it to 0
 if [[ "$FALKORDB_QUERY_MEM_CAPACITY" == "<nil>" ]]; then
   FALKORDB_QUERY_MEM_CAPACITY=0
@@ -199,6 +199,7 @@ get_self_host_ip() {
 }
 
 get_memory_limit() {
+
   declare -A memory_limit_instance_type_map
   memory_limit_instance_type_map=(
     ["e2-custom-small-1024"]="100MB"
@@ -213,9 +214,17 @@ get_memory_limit() {
     ["c6i.4xlarge"]="30GB"
     ["c6i.8xlarge"]="62GB"
   )
+  
+  if [[ -z $INSTANCE_TYPE ]]; then
+    echo "INSTANCE_TYPE is not set"
+    return
+  fi
 
-  MEMORY_LIMIT=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
-  if [[ -z $MEMORY_LIMIT ]]; then
+  instance_size_in_map=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
+
+  if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]];then
+    MEMORY_LIMIT=$instance_size_in_map
+  elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]];then
     echo "INSTANCE_TYPE is not set. Setting 100MB"
     MEMORY_LIMIT="100MB"
   fi

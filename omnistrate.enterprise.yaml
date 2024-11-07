@@ -2258,6 +2258,7 @@ services:
         modifiable: true
         required: false
         export: true
+        defaultValue: localhost
       - key: smtpUser
         description: The SMTP user for Grafana
         name: SMTP User
@@ -2265,6 +2266,7 @@ services:
         modifiable: true
         required: false
         export: true
+        defaultValue: admin
       - key: smtpPassword
         description: The SMTP password for Grafana
         name: SMTP Password
@@ -2272,6 +2274,7 @@ services:
         modifiable: true
         required: false
         export: false
+        defaultValue: admin
       - key: smtpFromAddress
         description: The SMTP from address for Grafana
         name: SMTP From Address
@@ -2279,6 +2282,7 @@ services:
         modifiable: true
         required: false
         export: true
+        defaultValue: mail@example.com
       - key: smtpFromName
         description: The SMTP from name for Grafana
         name: SMTP From Name
@@ -2286,6 +2290,7 @@ services:
         modifiable: true
         required: false
         export: true
+        defaultValue: Grafana
     environment:
       - SECURITY_CONTEXT_FS_GROUP=472
       - GF_SECURITY_ADMIN_USER=$var.adminUser

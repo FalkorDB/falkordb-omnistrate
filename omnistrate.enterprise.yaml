@@ -2384,6 +2384,7 @@ services:
       - GF_SECURITY_ADMIN_USER=$var.adminUser
       - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
       - GF_SECURITY_ADMIN_EMAIL=$var.adminEmail
+      - GF_SECURITY_SECRET_KEY__FILE=/run/secrets/grafana_secret_key
       - GF_SERVER_ROOT_URL=$var.rootUrl
       - GF_SMTP_ENABLED=$var.smtpEnabled
       - GF_SMTP_HOST=$var.smtpHost
@@ -2410,6 +2411,8 @@ services:
     secrets:
       - source: grafana_admin_password
         target: /run/secrets/grafana_admin_password
+      - source: grafana_secret_key
+        target: /run/secrets/grafana_secret_key
       - source: grafana_smtp_password
         target: /run/secrets/grafana_smtp_password
 
@@ -2424,5 +2427,7 @@ secrets:
     file: ./secrets/falkordbpassword
   grafana_admin_password:
     file: ./secrets/grafana_admin_password
+  grafana_secret_key:
+    file: ./secrets/grafana_secret_key
   grafana_smtp_password:
     file: ./secrets/grafana_smtp_password

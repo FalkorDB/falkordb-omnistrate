@@ -1,7 +1,3 @@
 __pycache__/
 .omnistrate
 secrets
-test.py
-a.yaml
-redis*
-Dockerfile-VI

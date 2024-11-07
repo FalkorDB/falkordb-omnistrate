@@ -518,7 +518,7 @@ if [ -f /usr/local/bin/healthcheck ]; then
     healthcheck_pid=$!
   fi
 
-  if [[ $RUN_SENTINEL -eq 1 ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ ("$HOSTNAME" =~ ^sentinel.*0 ) || ("$NODE_INDEX" == "1" || "$NODE_INDEX" == "0") ]]; then
+  if [[ $RUN_SENTINEL -eq 1 ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ "$NODE_INDEX" == "1" || "$NODE_INDEX" == "0" ]]; then
     echo "Starting Sentinel Healthcheck"
     healthcheck sentinel &
     sentinel_healthcheck_pid=$!
@@ -534,7 +534,7 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter_pid=$!
 fi
 
-if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]] && [[ ("$HOSTNAME" =~ ^sentinel.*0 ) || ("$NODE_INDEX" == "1" || "$NODE_INDEX" == "0") ]]; then
+if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]] && [[ "$NODE_INDEX" == "1" || "$NODE_INDEX" == "0" ]]; then
   # Check for crossed namespace
   echo "Checking for crossed namespace"
   while true; do

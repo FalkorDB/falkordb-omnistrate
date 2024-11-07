@@ -230,7 +230,7 @@ wait_until_sentinel_host_resolves() {
       sentinel_response=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING ping)
       
       log "Sentinel Response: $sentinel_response"
-      if [[ -n $sentinel_response && $sentinel_response == "PONG"]]; then
+      if [[ -n $sentinel_response && $sentinel_response == "PONG" ]]; then
         echo "Sentinel host resolved"
         break
       fi

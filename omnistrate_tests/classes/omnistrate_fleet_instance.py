@@ -4,7 +4,7 @@ import os
 import logging
 import socket
 import omnistrate_tests.classes.omnistrate_fleet_api
-from redis.exceptions import ReadOnlyError, ResponseError
+from redis.exceptions import ReadOnlyError, ResponseError, ClusterError, RedisClusterException, ClusterDownError
 from redis import retry, backoff, exceptions as redis_exceptions
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
@@ -550,7 +550,10 @@ class OmnistrateFleetInstance:
                             socket.timeout,
                             redis_exceptions.ConnectionError,
                             ResponseError,
-                            ReadOnlyError
+                            ReadOnlyError,
+                            ClusterError,
+                            RedisClusterException,
+                            ClusterDownError
                         ),
                     ),
                 )

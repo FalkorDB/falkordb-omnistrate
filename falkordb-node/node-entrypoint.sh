@@ -53,7 +53,7 @@ fi
 
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
-SENTINEL_FAILOVER=${SENTINEL_FAILOVER:-1000}
+SENTINEL_FAILOVER=${SENTINEL_FAILOVER:-180000}
 
 # SENTINEL_HOST=${SENTINEL_HOST:-localhost}
 SENTINEL_HOST=sentinel-$(echo $RESOURCE_ALIAS | cut -d "-" -f 2)-0.$LOCAL_DNS_SUFFIX
@@ -153,6 +153,7 @@ handle_sigterm() {
     role=$(redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING info replication | grep role)
     
     if [[ "$role" =~ ^role:master ]];then IS_REPLICA=0 ;fi
+    echo "skipped"
     remove_master_from_group
   fi
 

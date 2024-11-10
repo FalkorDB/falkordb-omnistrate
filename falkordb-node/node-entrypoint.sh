@@ -404,12 +404,19 @@ if [ "$RUN_NODE" -eq "1" ]; then
   sed -i "s/\$FALKORDB_QUERY_MEM_CAPACITY/$FALKORDB_QUERY_MEM_CAPACITY/g" $NODE_CONF_FILE
   echo "dir $DATA_DIR" >>$NODE_CONF_FILE
 
-  is_replica
-  if [[ $IS_REPLICA -eq 1 ]]; then
+  #check if the hostname has a replica string in it then it is a replica no need for the is_replica
+  if [[ $HOSTNAME =~ .*replica.* ]];then
     echo "replicaof $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER" >>$NODE_CONF_FILE
+    echo "replica-priority 0" >> $NODE_CONF_FILE
     echo "Starting Replica"
   else
-    echo "Starting Master"
+    is_replica
+    if [[ $IS_REPLICA -eq 1 ]]; then
+      echo "replicaof $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER" >>$NODE_CONF_FILE
+      echo "Starting Replica"
+    else
+      echo "Starting Master"
+    fi
   fi
 
   if [[ $TLS == "true" ]]; then

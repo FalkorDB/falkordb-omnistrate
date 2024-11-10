@@ -35,7 +35,7 @@ FALKORDB_RESULT_SET_SIZE=${FALKORDB_RESULT_SET_SIZE:-10000}
 FALKORDB_QUERY_MEM_CAPACITY=${FALKORDB_QUERY_MEM_CAPACITY:-0}
 FALKORDB_TIMEOUT_MAX=${FALKORDB_TIMEOUT_MAX:-0}
 FALKORDB_TIMEOUT_DEFAULT=${FALKORDB_TIMEOUT_DEFAULT:-0}
-
+MEMORY_LIMIT=${MEMORY_LIMIT:-''}
 # If vars are <nil>, set it to 0
 if [[ "$FALKORDB_QUERY_MEM_CAPACITY" == "<nil>" ]]; then
   FALKORDB_QUERY_MEM_CAPACITY=0
@@ -167,9 +167,12 @@ set_memory_limit() {
     return
   fi
 
-  MEMORY_LIMIT=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
+  instance_size_in_map=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
 
-  if [[ -z $MEMORY_LIMIT ]]; then
+  if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]];then
+    MEMORY_LIMIT=$instance_size_in_map
+  elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]];then
+    echo "INSTANCE_TYPE is not set. Setting 100MB"
     MEMORY_LIMIT="100MB"
   fi
   

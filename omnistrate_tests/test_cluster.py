@@ -3,6 +3,7 @@ import signal
 from random import randbytes
 from pathlib import Path
 import threading
+import socket
 
 
 
@@ -267,7 +268,9 @@ def test_failover(instance: OmnistrateFleetInstance):
     db = instance.create_connection(
         ssl=args.tls,
     )
-
+    con = instance.get_connection_endpoints()
+    thehostname = [ i for i in con if "cluster-sz-1" or "cluster-mz-1" in i['endpoint'] ][0]['endpoint']
+    print(f"The ip of cluster-1 at the begining of test_failover: {socket.gethostbyname(thehostname)}")
     graph = db.select_graph("test")
 
     # Write some data to the DB
@@ -278,7 +281,7 @@ def test_failover(instance: OmnistrateFleetInstance):
         replica_id=args.replica_id,
         wait_for_ready=True,
     )
-
+    print(f"The ip of cluster-1 after trigger failover : {socket.gethostbyname(thehostname)}")
     graph = db.select_graph("test")
 
     result = graph.query("MATCH (n:Person) RETURN n")

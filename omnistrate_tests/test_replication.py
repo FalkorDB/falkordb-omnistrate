@@ -263,10 +263,23 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
             ]
         },
     )
+    try:
+        print("############################################################")
+        print(f"loadbalancer: {socket.gethostbyname(instance.get_cluster_endpoint()['endpoint'])}")
+    except Exception as e:
+        print(e)
 
-    print(f"loadbalancer: {socket.gethostbyname(instance.get_cluster_endpoint()['endpoint'])}")
-    print(f"sentinel: {socket.gethostbyname(sentinel_resource["endpoint"])}")
-    print(f"node-0: {socket.gethostbyname(db_resource[0]["endpoint"])}")
+    try:
+        print("############################################################")
+        print(f"sentinel: {socket.gethostbyname(sentinel_resource["endpoint"])}")
+    except Exception as e:
+        print(e)
+    try:
+        print("############################################################")
+        print(f"node-0: {socket.gethostbyname(db_resource[0]["endpoint"])}")
+    except Exception as e:
+        print(e)
+
     print(f"node-1: {socket.gethostbyname(db_resource[1]["endpoint"])}")
 
     sentinels_list = random.choice(sentinels.sentinels).execute_command(

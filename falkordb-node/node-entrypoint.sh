@@ -236,10 +236,10 @@ wait_until_sentinel_host_resolves() {
   while true; do
     log "Checking if sentinel host resolves $SENTINEL_HOST"
     if [[ $(getent hosts $SENTINEL_HOST) ]]; then
-      sentinel_response=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters)
-      sentinel_response_code=$?
-      log "Sentinel Response: $sentinel_response_code - $sentinel_response"
-      if [[ $? -eq 0 ]] && [[ $sentinel_response != *"ERR"* ]]; then
+      sentinel_response=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING ping)
+      
+      log "Sentinel Response: $sentinel_response"
+      if [[ $sentinel_response == "PONG" ]]; then
         echo "Sentinel host resolved"
         break
       fi
@@ -261,9 +261,9 @@ wait_until_node_host_resolves() {
     log "Checking if node host resolves $1"
     if [[ $(getent hosts $1) ]]; then
       host_response=$(redis-cli -h $1 -p $2 -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING PING)
-      host_response_code=$?
-      log "Host Response: $host_response_code - $host_response"
-      if [[ $host_response_code -eq 0 ]] && [[ $host_response == "PONG" ]]; then
+      
+      log "Host Response: $host_response"
+      if [[ $host_response == "PONG" ]]; then
         echo "Node host resolved"
         sleep 10
         break
@@ -276,11 +276,11 @@ wait_until_node_host_resolves() {
 
 get_master() {
   master_info=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD $TLS_CONNECTION_STRING --no-auth-warning SENTINEL get-master-addr-by-name $MASTER_NAME)
-  redisRetVal=$?
+
   echo "Master Info: $master_info"
 
   # If RUN_SENTINEL is 1 and could not connect to sentinel, wait and try again
-  if [[ $RUN_SENTINEL -eq 1 && $redisRetVal -ne 0 ]]; then
+  if [[ $RUN_SENTINEL -eq 1 && -z $master_info && ! $HOSTNAME =~ ^node.*0 ]]; then
     echo "Could not connect to sentinel, waiting 5 seconds and trying again"
     sleep 5
     get_master
@@ -440,7 +440,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
     wait_until_node_host_resolves $NODE_HOST $NODE_PORT
     log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
     res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
-    if [[ $? -ne 0 || ($res == *"ERR"* && $res != *"Duplicate master name"*) ]]; then
+    if [[ $res == *"ERR"* && $res != *"Duplicate master name"* ]]; then
       echo "Could not add master to sentinel: $res"
       exit 1
     fi

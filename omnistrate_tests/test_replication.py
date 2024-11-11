@@ -264,7 +264,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
         },
     )
 
-    print(f"loadbalancer: {socket.gethostbyname(instance.get_cluster_endpoint())}")
+    print(f"loadbalancer: {socket.gethostbyname(instance.get_cluster_endpoint()['endpoint'])}")
     print(f"sentinel: {socket.gethostbyname(sentinel_resource["endpoint"])}")
     print(f"node-0: {socket.gethostbyname(db_resource[0]["endpoint"])}")
     print(f"node-1: {socket.gethostbyname(db_resource[1]["endpoint"])}")

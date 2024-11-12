@@ -2,22 +2,17 @@
 
 FALKORDB_USER=${FALKORDB_USER:-falkordb}
 #FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
-if [[ -f "/run/secrets/falkordbpassword" ]] && [[ -s "/run/secrets/falkordbpassword" ]]; then
-  FALKORDB_PASSWORD=$(cat "/run/secrets/falkordbpassword")
-elif [[ -n "$FALKORDB_PASSWORD" ]]; then
-  FALKORDB_PASSWORD=$FALKORDB_PASSWORD
+if [[ $HOSTNAME =~ .*replica.* ]]; then
+  SECRET_PATH="/run/secrets/falkordbpasswordreplica"
 else
-  FALKORDB_PASSWORD=''
+  SECRET_PATH="/run/secrets/falkordbpassword"
 fi
 
-#ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
-if [[ -f "/run/secrets/adminpassword" ]] && [[ -s "/run/secrets/adminpassword" ]]; then
-  ADMIN_PASSWORD=$(cat "/run/secrets/adminpassword")
-  export ADMIN_PASSWORD
-elif [[ -n "$ADMIN_PASSWORD" ]]; then
-  export ADMIN_PASSWORD=$ADMIN_PASSWORD
+if [[ -f "$SECRET_PATH" && -s "$SECRET_PATH" ]]; then
+  # Use `read` instead of `cat` for better performance
+  FALKORDB_PASSWORD=$(cat "$SECRET_PATH")
 else
-  export ADMIN_PASSWORD=''
+  FALKORDB_PASSWORD=''
 fi
 
 RUN_SENTINEL=${RUN_SENTINEL:-0}

@@ -1331,7 +1331,7 @@ services:
       - source: adminpasspath
         target: /run/secrets/adminpassword
       - source: falkordbpasspath
-        target: /run/secrets/falkordbpassword
+        target: /run/secrets/falkordbpasswordreplica
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=0

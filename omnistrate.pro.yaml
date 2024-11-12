@@ -1330,7 +1330,7 @@ services:
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
-      - source: falkordbpasspath
+      - source: falkordbpassreplicapath
         target: /run/secrets/falkordbpasswordreplica
     environment:
       - RUN_NODE=1
@@ -2654,3 +2654,5 @@ secrets:
     file: ./secrets/adminpassword
   falkordbpasspath:
     file: ./secrets/falkordbpassword
+  falkordbpassreplicapath:
+    file: ./secrets/falkordbpasswordreplica

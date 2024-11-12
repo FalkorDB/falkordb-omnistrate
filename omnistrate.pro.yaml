@@ -1402,7 +1402,6 @@ services:
 
     depends_on:
       - sentinel-sz
-      - node-sz
 
   sentinel-sz:
     x-omnistrate-mode-internal: true

@@ -729,9 +729,8 @@ services:
         required: false
         export: true
         defaultValue: "0"
-        options:
-          min: 0
-          max: 5
+        min: 0
+        max: 5
         parameterDependencyMap:
           node-sz-replica: numReplicas-r
       - key: enableTLS
@@ -1195,9 +1194,8 @@ services:
         required: false
         export: true
         defaultValue: "0"
-        options:
-          min: 0
-          max: 5
+        min: 0
+        max: 5
       - key: enableTLS-r
         description: Whether to enable TLS for the database
         name: Enable TLS

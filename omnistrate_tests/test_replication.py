@@ -140,7 +140,7 @@ def test_replication():
         )
 
         print("Sleeping for 60 seconds to test DNS propogation")
-        time.sleep(60)
+        time.sleep(120)
         thread_signal = threading.Event()
         error_signal = threading.Event()
         thread = threading.Thread(

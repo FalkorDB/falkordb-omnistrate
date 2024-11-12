@@ -139,6 +139,8 @@ def test_replication():
             custom_network_id=network.network_id if network else None,
         )
 
+        print("Sleeping for 60 seconds to test DNS propogation")
+        time.sleep(60)
         thread_signal = threading.Event()
         error_signal = threading.Event()
         thread = threading.Thread(

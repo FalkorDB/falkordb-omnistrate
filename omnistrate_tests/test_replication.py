@@ -386,7 +386,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
         raise Exception("Data lost after third failover")
 
     logging.info("Data persisted after third failover")
-
+    time.sleep(180)
 def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     """
     Single Zone tests are the following:

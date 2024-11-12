@@ -15,6 +15,16 @@ else
   FALKORDB_PASSWORD=''
 fi
 
+#ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
+if [[ -f "/run/secrets/adminpassword" ]] && [[ -s "/run/secrets/adminpassword" ]]; then
+  ADMIN_PASSWORD=$(cat "/run/secrets/adminpassword")
+  export ADMIN_PASSWORD
+elif [[ -n "$ADMIN_PASSWORD" ]]; then
+  export ADMIN_PASSWORD=$ADMIN_PASSWORD
+else
+  export ADMIN_PASSWORD=''
+fi
+
 RUN_SENTINEL=${RUN_SENTINEL:-0}
 RUN_NODE=${RUN_NODE:-1}
 RUN_METRICS=${RUN_METRICS:-1}

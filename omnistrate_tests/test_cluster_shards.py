@@ -3,7 +3,7 @@ import signal
 from random import randbytes
 from pathlib import Path
 import threading
-
+import socket
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
@@ -126,6 +126,8 @@ def test_cluster_shards():
             clusterReplicas=args.cluster_replicas,
         )
 
+        resolve_hostname(instance=instance,timeout=120)
+        
         add_data(instance)
 
         # Start a new thread and signal for zero_downtime test
@@ -328,6 +330,20 @@ def test_zero_downtime(
         error_signal.set()
         raise e
 
+def resolve_hostname(instance: OmnistrateFleetInstance,timeout=30, interval=1):
+    """ This function checks if the main endpoint is resolvable """
+    hostname = instance.get_cluster_endpoint()['endpoint']
+
+    start_time = time.time()
+
+    while time.time() - start_time < timeout:
+        try:
+            ip = socket.gethostbyname(hostname)
+            return ip
+        except socket.gaierror:
+            time.sleep(interval)
+    
+    raise TimeoutError(f"Unable to resolve hostname '{hostname}' within {timeout} seconds.")
 
 if __name__ == "__main__":
     test_cluster_shards()

@@ -11,7 +11,7 @@ from redis.exceptions import (
    ReadOnlyError
 )
 import threading
-
+import socket
 
 
 file = Path(__file__).resolve()
@@ -126,6 +126,8 @@ def test_add_remove_replica():
             AOFPersistenceConfig=args.aof_config,
         )
 
+        resolve_hostname(instance=instance,timeout=120)
+        
         add_data(instance)
 
         thread_signal = threading.Event()
@@ -266,6 +268,20 @@ def test_zero_downtime(
         error_signal.set()
         raise e
     
+def resolve_hostname(instance: OmnistrateFleetInstance,timeout=30, interval=1):
+    """ This function checks if the main endpoint is resolvable """
+    hostname = instance.get_cluster_endpoint()['endpoint']
+
+    start_time = time.time()
+
+    while time.time() - start_time < timeout:
+        try:
+            ip = socket.gethostbyname(hostname)
+            return ip
+        except socket.gaierror:
+            time.sleep(interval)
+    
+    raise TimeoutError(f"Unable to resolve hostname '{hostname}' within {timeout} seconds.")
 
 if __name__ == "__main__":
     test_add_remove_replica()

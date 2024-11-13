@@ -11,7 +11,7 @@ from redis.exceptions import (
     ReadOnlyError,
     ResponseError
 )
-import socket
+
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -138,9 +138,7 @@ def test_replication():
             AOFPersistenceConfig=args.aof_config,
             custom_network_id=network.network_id if network else None,
         )
-
-        print("Sleeping for 60 seconds to test DNS propogation")
-        time.sleep(120)
+        
         thread_signal = threading.Event()
         error_signal = threading.Event()
         thread = threading.Thread(
@@ -265,24 +263,6 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
             ]
         },
     )
-    try:
-        print("############################################################")
-        print(f"loadbalancer: {socket.gethostbyname(instance.get_cluster_endpoint()['endpoint'])}")
-    except Exception as e:
-        print(e)
-
-    try:
-        print("############################################################")
-        print(f"sentinel: {socket.gethostbyname(sentinel_resource["endpoint"])}")
-    except Exception as e:
-        print(e)
-    try:
-        print("############################################################")
-        print(f"node-0: {socket.gethostbyname(db_resource[0]["endpoint"])}")
-    except Exception as e:
-        print(e)
-
-    print(f"node-1: {socket.gethostbyname(db_resource[1]["endpoint"])}")
 
     sentinels_list = random.choice(sentinels.sentinels).execute_command(
         "sentinel sentinels master"

@@ -1400,9 +1400,6 @@ services:
               redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT SENTINEL failover $MASTER_NAME
           fi
 
-    depends_on:
-      - node-sz
-
   sentinel-sz:
     x-omnistrate-mode-internal: true
     image: $FalkorDBNodeImage

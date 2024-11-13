@@ -79,6 +79,7 @@ handle_sigterm() {
   echo "Stopping FalkorDB"
 
   if [[ ! -z $falkordb_pid ]]; then
+    config_rewrite
     kill -TERM $falkordb_pid
   fi
 

@@ -476,9 +476,6 @@ services:
       - node-s
 
   node-s:
-    user: "999"
-    group_add:
-      - "999"
     x-omnistrate-mode-internal: true
     image: $FalkorDBNodeImage
     x-omnistrate-compute:
@@ -871,9 +868,6 @@ services:
       - node-sz
 
   node-sz:
-    user: "999"
-    group_add:
-      - "999"
     x-omnistrate-mode-internal: true
     image: $FalkorDBNodeImage
     x-omnistrate-compute:
@@ -1137,9 +1131,6 @@ services:
       - sentinel-sz
 
   sentinel-sz:
-    user: "999"
-    group_add:
-      - "999"
     x-omnistrate-mode-internal: true
     image: $FalkorDBNodeImage
     x-omnistrate-compute:
@@ -1422,9 +1413,6 @@ services:
       - node-mz
 
   node-mz:
-    user: "999"
-    group_add:
-      - "999"
     x-omnistrate-mode-internal: true
     image: $FalkorDBNodeImage
     x-omnistrate-compute:
@@ -1688,9 +1676,6 @@ services:
       - sentinel-mz
 
   sentinel-mz:
-    user: "999"
-    group_add:
-      - "999"
     x-omnistrate-mode-internal: true
     image: $FalkorDBNodeImage
     x-omnistrate-compute:

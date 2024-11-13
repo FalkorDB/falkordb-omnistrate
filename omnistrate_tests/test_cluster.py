@@ -147,7 +147,9 @@ def test_cluster():
             clusterReplicas=args.cluster_replicas,
             custom_network_id=network.network_id if network else None,
         )
-
+        
+        resolve_hostname(instance=instance,timeout=120)
+        
         thread_signal = threading.Event()
         error_signal = threading.Event()
         thread = threading.Thread(
@@ -347,7 +349,20 @@ def test_zero_downtime(
         error_signal.set()
         raise e
     
+def resolve_hostname(instance: OmnistrateFleetInstance,timeout=30, interval=1):
+    """ This function checks if the main endpoint is resolvable """
+    hostname = instance.get_cluster_endpoint()['endpoint']
 
+    start_time = time.time()
+
+    while time.time() - start_time < timeout:
+        try:
+            ip = socket.gethostbyname(hostname)
+            return ip
+        except socket.gaierror:
+            time.sleep(interval)
+    
+    raise TimeoutError(f"Unable to resolve hostname '{hostname}' within {timeout} seconds.")
 
 if __name__ == "__main__":
     test_cluster()

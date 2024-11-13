@@ -3,7 +3,7 @@ import signal
 from random import randbytes
 from pathlib import Path  # if you haven't already done so
 import threading
-
+import socket
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -125,6 +125,8 @@ def test_update_memory():
             hostCount=args.host_count,
         )
 
+        resolve_hostname(instance=instance,timeout=120)
+        
         add_data(instance)
 
         thread_signal = None
@@ -212,6 +214,20 @@ def test_zero_downtime(
         error_signal.set()
         raise e
 
+def resolve_hostname(instance: OmnistrateFleetInstance,timeout=30, interval=1):
+    """ This function checks if the main endpoint is resolvable """
+    hostname = instance.get_cluster_endpoint()['endpoint']
+
+    start_time = time.time()
+
+    while time.time() - start_time < timeout:
+        try:
+            ip = socket.gethostbyname(hostname)
+            return ip
+        except socket.gaierror:
+            time.sleep(interval)
+    
+    raise TimeoutError(f"Unable to resolve hostname '{hostname}' within {timeout} seconds.")
 
 if __name__ == "__main__":
     test_update_memory()

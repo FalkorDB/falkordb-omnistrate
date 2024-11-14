@@ -178,7 +178,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
     endpoint = instance.get_cluster_endpoint()
     password = instance.falkordb_password
     id_key = "sz" if args.resource_key == "single-Zone" else "mz"
-    retry = Retry(ExponentialBackoff(base=5), retries=20,supported_errors=(TimeoutError,ConnectionError,ConnectionRefusedError,ReadOnlyError))
+    retry = Retry(ExponentialBackoff(base=1,cap=10), retries=20,supported_errors=(TimeoutError,ConnectionError,ConnectionRefusedError,ReadOnlyError))
     try:
         client = Redis(
         host=f"{endpoint["endpoint"]}", port=endpoint['ports'][0],

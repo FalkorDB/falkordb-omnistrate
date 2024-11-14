@@ -120,6 +120,9 @@ jobs:
             echo '{{ $var.falkordbPassword }}' > ./secrets/falkordbpassword || { echo "Failed to write falkordbpassword"; exit 1; }
             echo '{{ $var.falkordbPasswordReplica }}' > ./secrets/falkordbpasswordreplica || { echo "Failed to write falkordbpassword"; exit 1; }
             echo '{{ $func.random(string, 16, $sys.deterministicSeedValue) }}' > ./secrets/adminpassword || { echo "Failed to write adminpassword"; exit 1; }
+            echo '{{ $var.adminPassword }}' > ./secrets/grafana_admin_password || { echo "Failed to write grafana_admin_password"; exit 1; }
+            echo '{{ $func.random(string, 16, $sys.deterministicSeedValue)  }}' > ./secrets/grafana_secret_key || { echo "Failed to write grafana_secret_key"; exit 1; }
+            echo '{{ $var.smtpPassword }}' > ./secrets/grafana_smtp_password || { echo "Failed to write grafana_smtp_password"; exit 1; }
           else
             echo "secrets option was not used"
             exit 0
@@ -135,6 +138,7 @@ jobs:
           service-name: ${{ matrix.plans.service-name }}
           environment: testing
           environment-type: qa
+          release-description: dev-${{ github.event.head_commit.id || github.run_id }}
 
   create-custom-networks:
     needs: omnistrate-update-plans

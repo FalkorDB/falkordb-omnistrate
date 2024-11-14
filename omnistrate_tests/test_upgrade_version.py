@@ -3,6 +3,7 @@ import signal
 from random import randbytes
 from pathlib import Path  # if you haven't already done so
 import threading
+from .utils import get_last_gh_tag
 import socket
 
 file = Path(__file__).resolve()
@@ -52,7 +53,7 @@ parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
-parser.add_argument("--persist-instance-on-fail",action="store_true")
+parser.add_argument("--persist-instance-on-fail", action="store_true")
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -97,9 +98,17 @@ def test_upgrade_version():
         service_id=args.service_id, tier_id=product_tier.product_tier_id
     )
 
+    preferred_tier_tag = get_last_gh_tag()
+
     preferred_tier = next(
-        (tier for tier in tiers if tier.status == TierVersionStatus.PREFERRED), None
+        (tier for tier in tiers if tier.description == preferred_tier_tag), None
     )
+
+    if preferred_tier is None:
+        preferred_tier = next(
+            (tier for tier in tiers if tier.status == TierVersionStatus.PREFERRED), None
+        )
+
     if preferred_tier is None:
         raise ValueError("No preferred tier found")
 
@@ -127,7 +136,7 @@ def test_upgrade_version():
         subscription_id=args.subscription_id,
         deployment_create_timeout_seconds=2400,
         deployment_delete_timeout_seconds=2400,
-        deployment_failover_timeout_seconds=2400
+        deployment_failover_timeout_seconds=2400,
     )
     try:
         instance.create(
@@ -226,6 +235,7 @@ def query_data(instance: OmnistrateFleetInstance):
 
     if len(result.result_set) == 0:
         raise ValueError("No data found in the graph after upgrade")
+
 
 def test_zero_downtime(
     thread_signal: threading.Event,

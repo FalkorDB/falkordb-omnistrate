@@ -265,16 +265,11 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str
 
 def test_failover(instance: OmnistrateFleetInstance):
     """This function should retrieve the instance host and port for connection, write some data to the DB, then trigger a failover. After X seconds, the instance should be back online and data should have persisted"""
-    id_key = "sz" if args.resource_key == "cluster-Single-Zone" else "mz"
     # Get instance host and port
     db = instance.create_connection(
         ssl=args.tls,
     )
-    con = instance.get_cluster_endpoint()['endpoint'].split('.')
-    con[0] = f"cluster-{id_key}-1"
-    con = '.'.join(con)
 
-    print(f"The ip of cluster-1 at the begining of test_failover: {socket.gethostbyname(con)}")
     graph = db.select_graph("test")
 
     # Write some data to the DB
@@ -285,7 +280,7 @@ def test_failover(instance: OmnistrateFleetInstance):
         replica_id=args.replica_id,
         wait_for_ready=True,
     )
-    print(f"The ip of cluster-1 after trigger failover : {socket.gethostbyname(con)}")
+    
     graph = db.select_graph("test")
 
     result = graph.query("MATCH (n:Person) RETURN n")

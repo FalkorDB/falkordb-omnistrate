@@ -158,7 +158,7 @@ def test_upgrade_version():
         )
 
         try:
-            ip = resolve_hostname(instance=instance, timeout=120)
+            ip = resolve_hostname(instance=instance, timeout=300)
             logging.info(f"Instance endpoint {instance.get_cluster_endpoint()['endpoint']} resolved to {ip}")
         except TimeoutError as e:
             logging.error(f"DNS resolution failed: {e}")

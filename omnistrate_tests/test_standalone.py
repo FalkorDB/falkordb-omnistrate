@@ -125,7 +125,12 @@ def test_standalone():
             custom_network_id=network.network_id if network else None,
         )
         
-        resolve_hostname(instance=instance,timeout=120)
+        try:
+            ip = resolve_hostname(instance=instance, timeout=120)
+            logging.info(f"Instance endpoint {instance.get_cluster_endpoint()['endpoint']} resolved to {ip}")
+        except TimeoutError as e:
+            logging.error(f"DNS resolution failed: {e}")
+            raise Exception("Instance endpoint not ready: DNS resolution failed") from e
         # Test failover and data loss
         test_failover(instance)
 

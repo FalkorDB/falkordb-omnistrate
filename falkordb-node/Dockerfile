@@ -31,4 +31,4 @@ COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/loc
 RUN chown redis:redis /falkordb/* && \
   chmod +x /usr/local/bin/node-entrypoint.sh
 
-CMD ["node-entrypoint.sh"]
+CMD [ "node-entrypoint.sh" ]

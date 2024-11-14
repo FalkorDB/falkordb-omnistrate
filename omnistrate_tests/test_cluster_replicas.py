@@ -132,7 +132,12 @@ def test_cluster_replicas():
             clusterReplicas=args.cluster_replicas,
         )
 
-        resolve_hostname(instance=instance,timeout=120)
+        try:
+            ip = resolve_hostname(instance=instance, timeout=120)
+            logging.info(f"Instance endpoint {instance.get_cluster_endpoint()['endpoint']} resolved to {ip}")
+        except TimeoutError as e:
+            logging.error(f"DNS resolution failed: {e}")
+            raise Exception("Instance endpoint not ready: DNS resolution failed") from e
         
         add_data(instance)
 

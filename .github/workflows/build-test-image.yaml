@@ -372,7 +372,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-enterprise-failover' --instance-description 'test-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-enterprise-failover'  --instance-description 'test-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
           - name: Enterprise/MultiZone - GCP/us-central1 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_replication.py
@@ -382,7 +382,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover' --instance-description 'test-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover'  --instance-description 'test-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
           - name: Enterprise/ClusterSingleZone - GCP/us-central1 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_cluster.py
@@ -547,7 +547,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-enterprise-failover' --instance-description 'test-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-enterprise-failover'  --instance-description 'test-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
           - name: Enterprise/MultiZone - AWS/us-east-2 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_replication.py
@@ -557,7 +557,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover' --instance-description 'test-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover'  --instance-description 'test-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
           - name: Enterprise/ClusterSingleZone - AWS/us-east-2 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_cluster.py

@@ -248,10 +248,7 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=30, interval=1):
     while time.time() - start_time < timeout:
         try:
             ip = socket.gethostbyname(hostname)
-            # Validate basic IP format
-            if not all(0 <= int(part) <= 255 for part in ip.split('.')):
-                raise socket.error("Invalid IP format")
-                return ip
+            return ip
         except (socket.gaierror, socket.error) as e:
             logging.debug(f"DNS resolution attempt failed: {e}")
             time.sleep(interval)

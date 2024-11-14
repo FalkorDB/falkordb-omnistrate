@@ -129,3 +129,4 @@ jobs:
           service-name: ${{ matrix.plans.name }}
           environment: dev
           environment-type: dev
+          release-description: "${{ github.event.workflow_run.head_branch }}"

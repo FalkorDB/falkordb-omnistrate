@@ -112,11 +112,13 @@ class OmnistrateTierVersion:
         service_id: str,
         product_tier_id: str,
         status: TierVersionStatus,
+        description: str,
     ):
         self.version = version
         self.service_id = service_id
         self.product_tier_id = product_tier_id
         self.status = status
+        self.description = description
 
     @staticmethod
     def from_json(json: dict):
@@ -125,4 +127,5 @@ class OmnistrateTierVersion:
             json["serviceId"],
             json["productTierId"],
             TierVersionStatus.from_string(json["status"]),
+            json["description"],
         )

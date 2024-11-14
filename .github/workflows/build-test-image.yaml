@@ -137,6 +137,7 @@ jobs:
           service-name: ${{ matrix.plans.service-name }}
           environment: testing
           environment-type: qa
+          release-description: dev-${{ github.event.head_commit.id || github.run_id }}
 
   create-custom-networks:
     needs: omnistrate-update-plans

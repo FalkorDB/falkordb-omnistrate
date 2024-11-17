@@ -158,7 +158,7 @@ def test_upgrade_version():
         )
 
         try:
-            ip = resolve_hostname(instance=instance, timeout=300)
+            ip = resolve_hostname(instance=instance)
             logging.info(f"Instance endpoint {instance.get_cluster_endpoint()['endpoint']} resolved to {ip}")
         except TimeoutError as e:
             logging.error(f"DNS resolution failed: {e}")
@@ -259,7 +259,7 @@ def test_zero_downtime(
         error_signal.set()
         raise e
 
-def resolve_hostname(instance: OmnistrateFleetInstance,timeout=30, interval=1):
+def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     """Check if the instance's main endpoint is resolvable.
     Args:
         instance: The OmnistrateFleetInstance to check

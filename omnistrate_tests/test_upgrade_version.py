@@ -3,7 +3,8 @@ import signal
 from random import randbytes
 from pathlib import Path  # if you haven't already done so
 import threading
-from .utils import get_last_gh_tag
+# pylint: disable=no-name-in-module
+from utils import get_last_gh_tag
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]

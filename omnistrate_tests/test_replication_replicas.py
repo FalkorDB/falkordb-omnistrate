@@ -5,13 +5,8 @@ from random import randbytes
 from redis import Redis
 from redis.backoff import ExponentialBackoff
 from redis.retry import Retry
-from redis.exceptions import (
-   ConnectionError,
-   TimeoutError,
-   ReadOnlyError
-)
+from redis.exceptions import ConnectionError, TimeoutError, ReadOnlyError
 import threading
-
 
 
 file = Path(__file__).resolve()
@@ -55,18 +50,20 @@ parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--replica-count", required=False, default="2")
-parser.add_argument("--persist-instance-on-fail",action="store_true")
+parser.add_argument("--persist-instance-on-fail", action="store_true")
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
 instance: OmnistrateFleetInstance = None
 
+
 # Intercept exit signals so we can delete the instance before exiting
 def signal_handler(sig, frame):
     if instance:
         instance.delete(False)
     sys.exit(0)
+
 
 if not args.persist_instance_on_fail:
     signal.signal(signal.SIGTERM, signal_handler)
@@ -106,7 +103,7 @@ def test_add_remove_replica():
         subscription_id=args.subscription_id,
         deployment_create_timeout_seconds=2400,
         deployment_delete_timeout_seconds=2400,
-        deployment_failover_timeout_seconds=2400
+        deployment_failover_timeout_seconds=2400,
     )
 
     try:
@@ -131,9 +128,10 @@ def test_add_remove_replica():
         thread_signal = threading.Event()
         error_signal = threading.Event()
         thread = threading.Thread(
-            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+            target=test_zero_downtime,
+            args=(thread_signal, error_signal, instance, args.tls),
         )
-        
+
         thread.start()
 
         check_data(instance)
@@ -142,8 +140,8 @@ def test_add_remove_replica():
 
         test_fail_over(instance)
 
-        change_replica_count(instance,int(args.replica_count))
-    
+        change_replica_count(instance, int(args.replica_count))
+
         check_data(instance)
 
         thread_signal.set()
@@ -172,36 +170,52 @@ def change_replica_count(instance: OmnistrateFleetInstance, new_replica_count: i
         wait_for_ready=True,
     )
 
+
 def test_fail_over(instance: OmnistrateFleetInstance):
     logging.info("Testing failover to the newly created replica")
 
     endpoint = instance.get_cluster_endpoint()
     password = instance.falkordb_password
     id_key = "sz" if args.resource_key == "single-Zone" else "mz"
-    retry = Retry(ExponentialBackoff(base=5), retries=20,supported_errors=(TimeoutError,ConnectionError,ConnectionRefusedError,ReadOnlyError))
+    retry = Retry(
+        ExponentialBackoff(base=5),
+        retries=20,
+        supported_errors=(
+            TimeoutError,
+            ConnectionError,
+            ConnectionRefusedError,
+            ReadOnlyError,
+        ),
+    )
     try:
         client = Redis(
-        host=f"{endpoint["endpoint"]}", port=endpoint['ports'][0],
-        username="falkordb", 
-        password=password,
-        decode_responses=True,
-        ssl=args.tls,
-        retry=retry,
-        retry_on_error=[TimeoutError,ConnectionError,ConnectionRefusedError,ReadOnlyError]
+            host=f"{endpoint.get['endpoint']}",
+            port=endpoint["ports"][0],
+            username="falkordb",
+            password=password,
+            decode_responses=True,
+            ssl=args.tls,
+            retry=retry,
+            retry_on_error=[
+                TimeoutError,
+                ConnectionError,
+                ConnectionRefusedError,
+                ReadOnlyError,
+            ],
         )
     except Exception as e:
         logging.exception("Failed to connect to Sentinel!")
         logging.info(e)
-    
+
     tout = time.time() + 600
     while True:
         if time.time() > tout:
             raise Exception(f"Failed to failover to node-{id_key}-2")
         try:
             time.sleep(5)
-            print(client.execute_command('SENTINEL FAILOVER master'))
+            print(client.execute_command("SENTINEL FAILOVER master"))
             time.sleep(10)
-            master = client.execute_command('SENTINEL MASTER master')[3]
+            master = client.execute_command("SENTINEL MASTER master")[3]
             if master.startswith(f"node-{id_key}-2"):
                 break
         except Exception as e:
@@ -209,10 +223,11 @@ def test_fail_over(instance: OmnistrateFleetInstance):
             continue
     time.sleep(15)
     check_data(instance)
-    
+
+
 def add_data(instance: OmnistrateFleetInstance):
     """This function should retrieve the instance host and port for connection, write some data to the DB, then check that the data is there"""
-    logging.info('Added data ....')
+    logging.info("Added data ....")
     # Get instance host and port
     db = instance.create_connection(
         ssl=args.tls,
@@ -230,12 +245,9 @@ def add_data(instance: OmnistrateFleetInstance):
 
 
 def check_data(instance: OmnistrateFleetInstance):
-    logging.info('Retrieving data ....')
+    logging.info("Retrieving data ....")
     # Get instance host and port
-    db = instance.create_connection(
-        ssl=args.tls,
-        force_reconnect=True
-    )
+    db = instance.create_connection(ssl=args.tls, force_reconnect=True)
 
     graph = db.select_graph("test")
 
@@ -243,6 +255,7 @@ def check_data(instance: OmnistrateFleetInstance):
 
     if len(result.result_set) == 0:
         raise Exception("Data did not persist after host count change")
+
 
 def test_zero_downtime(
     thread_signal: threading.Event,
@@ -265,7 +278,7 @@ def test_zero_downtime(
         logging.exception(e)
         error_signal.set()
         raise e
-    
+
 
 if __name__ == "__main__":
     test_add_remove_replica()

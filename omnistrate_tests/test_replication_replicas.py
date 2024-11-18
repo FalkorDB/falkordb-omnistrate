@@ -11,7 +11,7 @@ from redis.exceptions import (
    ReadOnlyError
 )
 import threading
-
+import socket
 
 
 file = Path(__file__).resolve()
@@ -126,6 +126,13 @@ def test_add_remove_replica():
             AOFPersistenceConfig=args.aof_config,
         )
 
+        try:
+            ip = resolve_hostname(instance=instance)
+            logging.info(f"Instance endpoint {instance.get_cluster_endpoint()['endpoint']} resolved to {ip}")
+        except TimeoutError as e:
+            logging.error(f"DNS resolution failed: {e}")
+            raise Exception("Instance endpoint not ready: DNS resolution failed") from e
+        
         add_data(instance)
 
         thread_signal = threading.Event()
@@ -266,6 +273,41 @@ def test_zero_downtime(
         error_signal.set()
         raise e
     
+def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
+    """Check if the instance's main endpoint is resolvable.
+    Args:
+        instance: The OmnistrateFleetInstance to check
+        timeout: Maximum time in seconds to wait for resolution (default: 30)
+        interval: Time in seconds between retry attempts (default: 1)
+    
+    Returns:
+        str: The resolved IP address
+
+    Raises:
+        ValueError: If interval or timeout are invalid
+        KeyError: If endpoint information is missing
+        TimeoutError: If hostname cannot be resolved within timeout
+    """
+    if interval <= 0 or timeout <= 0:
+        raise ValueError("Interval and timeout must be positive")
+    
+    cluster_endpoint = instance.get_cluster_endpoint()
+
+    if not cluster_endpoint or 'endpoint' not in cluster_endpoint:
+        raise KeyError("Missing endpoint information in cluster configuration")
+
+    hostname = cluster_endpoint['endpoint']
+    start_time = time.time()
+
+    while time.time() - start_time < timeout:
+        try:
+            ip = socket.gethostbyname(hostname)
+            return ip
+        except (socket.gaierror, socket.error) as e:
+            logging.debug(f"DNS resolution attempt failed: {e}")
+            time.sleep(interval)
+     
+    raise TimeoutError(f"Unable to resolve hostname '{hostname}' within {timeout} seconds.")
 
 if __name__ == "__main__":
     test_add_remove_replica()

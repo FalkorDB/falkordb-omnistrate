@@ -138,14 +138,14 @@ fn get_status_from_slave(db_info: String) -> Result<bool, redis::RedisError> {
 
 fn resolve_host(host: &str) {
     let mut resolved = false;
-    let max_retries = 10;
+    let max_retries = 15;
     let mut retries = 0;
 
     while !resolved && retries < max_retries {
         match dns_lookup::lookup_host(host) {
             Ok(_) => resolved = true,
             Err(_) => {
-                std::thread::sleep(std::time::Duration::from_secs(1));
+                std::thread::sleep(std::time::Duration::from_secs(5));
                 retries += 1;
             }
         }

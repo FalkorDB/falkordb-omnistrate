@@ -151,24 +151,19 @@ get_sentinels_list() {
 handle_sigterm() {
   echo "Caught SIGTERM"
   echo "Stopping FalkorDB"
-
   # sentinels_list=$(get_sentinels_list)
 
   if [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
+    #DO NOT USE is_replica FUNCTION
+    role=$(redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING info replication | grep role)
+    
+    if [[ "$role" =~ ^role:master ]];then IS_REPLICA=0 ;fi
     remove_master_from_group
-    kill -TERM $falkordb_pid
   fi
 
   if [[ $RUN_SENTINEL -eq 1 && ! -z $sentinel_pid ]]; then
-    kill -TERM $sentinel_pid
-  fi
-
-  if [[ ! -z $falkordb_pid ]]; then
-    wait $falkordb_pid
-  fi
-
-  if [[ ! -z $sentinel_pid ]]; then
-    wait $sentinel_pid
+    redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
+    redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SHUTDOWN
   fi
 
   if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
@@ -564,7 +559,6 @@ if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]] && [[ "$NODE_INDEX" == "1" || "$NOD
   done
 fi
 
-log $(getent hosts || cat /etc/hosts)
 
 while true; do
   sleep 1

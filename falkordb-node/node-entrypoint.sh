@@ -2,8 +2,12 @@
 
 FALKORDB_USER=${FALKORDB_USER:-falkordb}
 #FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
-if [[ $HOSTNAME =~ .*replica.* ]]; then
-  SECRET_PATH="/run/secrets/falkordbpasswordreplica"
+
+
+if [[ $HOSTNAME =~ .*sz-replica.* ]]; then
+  SECRET_PATH="/run/secrets/falkordbpasswordreplicaSZ"
+elif [[ $HOSTNAME =Z .*mz-replica.*]];then
+  SECRET_PATH="/run/secrets/falkordbpasswordreplicaMZ"
 else
   SECRET_PATH="/run/secrets/falkordbpassword"
 fi

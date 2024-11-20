@@ -4,6 +4,8 @@ use rouille::Response;
 use rouille::Server;
 use std::env;
 use std::env::args;
+use std::time;
+
 
 fn main() {
     let args: Vec<String> = args().collect();
@@ -138,15 +140,14 @@ fn get_status_from_slave(db_info: String) -> Result<bool, redis::RedisError> {
 
 fn resolve_host(host: &str) {
     let mut resolved = false;
-    let max_retries = 15;
-    let mut retries = 0;
+    let timeout = std::time::Duration::from_secs(300); // Total timeout: 150 seconds
+    let start_time = std::time::Instant::now();
 
-    while !resolved && retries < max_retries {
+    while !resolved && start_time.elapsed() < timeout {
         match dns_lookup::lookup_host(host) {
             Ok(_) => resolved = true,
             Err(_) => {
-                std::thread::sleep(std::time::Duration::from_secs(5));
-                retries += 1;
+                std::thread::sleep(std::time::Duration::from_secs(2));
             }
         }
     }

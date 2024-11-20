@@ -1574,7 +1574,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
-      - MEMORY_LIMIT=$vat.maxMemory
+      - MEMORY_LIMIT=$var.maxMemory
     ports:
       - "6379:6379"
       - "26379:26379"

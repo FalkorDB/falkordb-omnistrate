@@ -198,7 +198,7 @@ def test_fail_over(instance: OmnistrateFleetInstance):
     )
     try:
         client = Redis(
-            host=f"{endpoint.get['endpoint']}",
+            host=f"{endpoint['endpoint']}",
             port=endpoint["ports"][0],
             username="falkordb",
             password=password,

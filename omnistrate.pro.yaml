@@ -1138,6 +1138,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           name: e2-small
+        - cloudProvider: aws
+          name: t3a.small
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
@@ -1683,6 +1685,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           name: e2-small
+        - cloudProvider: aws
+          name: t3a.small
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
@@ -2031,6 +2035,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           name: e2-small
+        - cloudProvider: aws
+          name: t3a.small
     <<: *rebalanceparam
     environment:
       - NODE_HOST=$sys.network.node.externalEndpoint
@@ -2342,6 +2348,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           name: e2-small
+        - cloudProvider: aws
+          name: t3a.small
     <<: *rebalanceparam
     environment:
       - IS_MULTI_ZONE=1

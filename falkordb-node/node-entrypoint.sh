@@ -4,10 +4,10 @@ FALKORDB_USER=${FALKORDB_USER:-falkordb}
 #FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
 
 
-if [[ $HOSTNAME =~ .*sz-replica.* ]]; then
-  SECRET_PATH="/run/secrets/falkordbpasswordreplicaSZ"
-elif [[ $HOSTNAME =Z .*mz-replica.*]];then
-  SECRET_PATH="/run/secrets/falkordbpasswordreplicaMZ"
+if [[ $HOSTNAME =~ node-sz-replica.* ]]; then
+  SECRET_PATH="/run/secrets/falkordbpasswordreplicasz"
+elif [[ $HOSTNAME =~ node-mz-replica.* ]];then
+  SECRET_PATH="/run/secrets/falkordbpasswordreplicamz"
 else
   SECRET_PATH="/run/secrets/falkordbpassword"
 fi
@@ -28,6 +28,7 @@ elif [[ -n "$ADMIN_PASSWORD" ]]; then
 else
   export ADMIN_PASSWORD=''
 fi
+
 
 RUN_SENTINEL=${RUN_SENTINEL:-0}
 RUN_NODE=${RUN_NODE:-1}

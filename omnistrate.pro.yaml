@@ -923,13 +923,10 @@ services:
         description: Number of Replicas
         name: Number of Replicas
         type: Float64
-        modifiable: true
+        modifiable: false
         required: false
         export: true
         defaultValue: "2"
-        options:
-          - "2"
-          - "3"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -1072,6 +1069,7 @@ services:
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
       - RUN_HEALTH_CHECK_SENTINEL=1
+      - IS_MULTI_ZONE=0
       - BROWSER=0
       - DEBUG=0
       - REDIS_EXPORTER_DEBUG=false
@@ -1327,14 +1325,15 @@ services:
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
-      - source: falkordbpassreplicapathSZ
-        target: /run/secrets/falkordbpasswordreplicaSZ
+      - source: falkordbpasspathreplicasz
+        target: /run/secrets/falkordbpasswordreplicasz
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=0
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK=1
       - RUN_HEALTH_CHECK_SENTINEL=0
+      - IS_MULTI_ZONE=0
       - BROWSER=0
       - DEBUG=0
       - REDIS_EXPORTER_DEBUG=false
@@ -1537,8 +1536,9 @@ services:
         modifiable: true
         required: false
         export: true
-        defaultValue: "2"
-        min:
+        defaultValue: "0"
+        min: 0
+        max: 5
         parameterDependencyMap:
           node-mz-replica: numReplicasMZReplica
       - key: enableTLS
@@ -1614,7 +1614,7 @@ services:
         max: 256
         parameterDependencyMap:
           node-mz: falkorDBCacheSize
-          node-mz: falkorDBCacheSizeMZReplica
+          node-mz-replica: falkorDBCacheSizeMZReplica
       - key: falkorDBNodeCreationBuffer
         description: Choose the buffer size for your database
         name: FalkorDB Node Creation Buffer
@@ -1627,7 +1627,7 @@ services:
         max: 32768
         parameterDependencyMap:
           node-mz: falkorDBNodeCreationBuffer
-          node-mz: falkorDBNodeCreationBufferMZReplica
+          node-mz-replica: falkorDBNodeCreationBufferMZReplica
       - key: falkorDBMaxQueuedQueries
         description: Choose the max queued queries for your database
         name: FalkorDB Max Queued Queries
@@ -1692,7 +1692,7 @@ services:
         max: 2000000000
         parameterDependencyMap:
           node-mz: falkorDBQueryMemCapacity
-          node-mz: falkorDBQueryMemCapacityMZReplica
+          node-mz-replica: falkorDBQueryMemCapacityMZReplica
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -1734,13 +1734,10 @@ services:
         description: Number of Replicas
         name: Number of Replicas
         type: Float64
-        modifiable: true
+        modifiable: false
         required: false
         export: true
         defaultValue: "2"
-        options:
-          - "2"
-          - "3"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -1963,6 +1960,8 @@ services:
           fi
     depends_on:
       - sentinel-mz
+
+
   node-mz-replica:
     x-omnistrate-mode-internal: true
     image: $FalkorDBNodeImage
@@ -2136,8 +2135,8 @@ services:
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
-      - source: falkordbpasspathMZ
-        target: /run/secrets/falkordbpasswordMZ
+      - source: falkordbpasspathreplicamz
+        target: /run/secrets/falkordbpasswordreplicamz
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=0
@@ -2159,7 +2158,7 @@ services:
       - INSTANCE_TYPE=$var.nodeInstanceTypeMZReplica
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfigMZReplica
-      - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfigMZReplicaMZReplica
+      - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfigMZReplica
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSizeMZReplica
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBufferMZReplica
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueriesMZReplica
@@ -2917,7 +2916,7 @@ secrets:
     file: ./secrets/adminpassword
   falkordbpasspath:
     file: ./secrets/falkordbpassword
-  falkordbpassreplicapathSZ:
-    file: ./secrets/falkordbpasswordreplicaSZ
-  falkordbpassreplicapathMZ:
-    file: ./secrets/falkordbpasswordreplicaMZ
+  falkordbpasspathreplicasz:
+    file: ./secrets/falkordbpasswordreplicasz
+  falkordbpasspathreplicamz:
+    file: ./secrets/falkordbpasswordreplicamz

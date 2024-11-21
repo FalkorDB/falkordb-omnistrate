@@ -118,8 +118,8 @@ jobs:
           if [[ -n "$sec" ]];then
             mkdir -p secrets || { echo "Failed to create secrets directory"; exit 1; }
             echo '{{ $var.falkordbPassword }}' > ./secrets/falkordbpassword || { echo "Failed to write falkordbpassword"; exit 1; }
-            echo '{{ $var.falkordbPasswordSZReplica }}' > ./secrets/falkordbpasswordreplicaSZ || { echo "Failed to write falkordbpassword"; exit 1; }
-            echo '{{ $var.falkordbPasswordMZReplica }}' > ./secrets/falkordbpasswordreplicaMZ || { echo "Failed to write falkordbpassword"; exit 1; }
+            echo '{{ $var.falkordbPasswordSZReplica }}' > ./secrets/falkordbpasswordreplicasz || { echo "Failed to write falkordbpassword"; exit 1; }
+            echo '{{ $var.falkordbPasswordMZReplica }}' > ./secrets/falkordbpasswordreplicamz || { echo "Failed to write falkordbpassword"; exit 1; }
             echo '{{ $func.random(string, 16, $sys.deterministicSeedValue) }}' > ./secrets/adminpassword || { echo "Failed to write adminpassword"; exit 1; }
             echo '{{ $var.adminPassword }}' > ./secrets/grafana_admin_password || { echo "Failed to write grafana_admin_password"; exit 1; }
             echo '{{ $func.random(string, 16, $sys.deterministicSeedValue)  }}' > ./secrets/grafana_secret_key || { echo "Failed to write grafana_secret_key"; exit 1; }

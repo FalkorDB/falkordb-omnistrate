@@ -279,13 +279,18 @@ def test_failover(instance: OmnistrateFleetInstance):
 
     # Write some data to the DB
     graph.query("CREATE (n:Person {name: 'Alice'})")
+    end = instance.get_cluster_endpoint().get('endpoint').split('.')
+    end[0] = 'cluster-sz-1' if 'Single' in args.resource_key else 'cluster-mz-1'
 
+    '.'.join(end)
+
+    print("the host before failover",socket.gethostbyname(end))
     # Trigger failover
     instance.trigger_failover(
         replica_id=args.replica_id,
         wait_for_ready=True,
     )
-    
+    print("the host after failover",socket.gethostbyname(end))
     graph = db.select_graph("test")
 
     result = graph.query("MATCH (n:Person) RETURN n")

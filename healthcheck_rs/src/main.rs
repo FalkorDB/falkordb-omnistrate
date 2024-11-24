@@ -147,7 +147,8 @@ fn resolve_host(host: &str) {
         match dns_lookup::lookup_host(host) {
             Ok(_) => resolved = true,
             Err(_) => {
-                std::thread::sleep(std::time::Duration::from_secs(2));
+                println!("Host not resolved yet!")
+                std::thread::sleep(std::time::Duration::from_secs(1));
             }
         }
     }

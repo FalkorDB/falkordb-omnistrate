@@ -164,6 +164,7 @@ x-clusterparam: &clusterparam
         - e2-custom-16-32768
         - e2-custom-32-65536
         - t2.medium
+        - r6i.large
         - c6i.xlarge
         - c6i.2xlarge
         - c6i.4xlarge
@@ -322,6 +323,7 @@ services:
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - r6i.large
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -500,6 +502,7 @@ services:
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - r6i.large
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -701,6 +704,7 @@ services:
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - r6i.large
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -892,6 +896,7 @@ services:
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - r6i.large
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -1248,6 +1253,7 @@ services:
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - r6i.large
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -1439,6 +1445,7 @@ services:
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - r6i.large
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -1794,6 +1801,7 @@ services:
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - r6i.large
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -2109,6 +2117,7 @@ services:
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - r6i.large
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge

@@ -38,6 +38,7 @@ FALKORDB_RESULT_SET_SIZE=${FALKORDB_RESULT_SET_SIZE:-10000}
 FALKORDB_QUERY_MEM_CAPACITY=${FALKORDB_QUERY_MEM_CAPACITY:-0}
 FALKORDB_TIMEOUT_MAX=${FALKORDB_TIMEOUT_MAX:-0}
 FALKORDB_TIMEOUT_DEFAULT=${FALKORDB_TIMEOUT_DEFAULT:-0}
+FALKORDB_VKEY_MAX_ENTITY_COUNT=${FALKORDB_VKEY_MAX_ENTITY_COUNT:-4611686000000000000}
 MEMORY_LIMIT=${MEMORY_LIMIT:-''}
 # If vars are <nil>, set it to 0
 if [[ "$FALKORDB_QUERY_MEM_CAPACITY" == "<nil>" ]]; then
@@ -344,10 +345,17 @@ create_user() {
   config_rewrite
 }
 
+
 config_rewrite() {
   # Config rewrite
   echo "Rewriting config"
   redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
+}
+
+set_configs() {
+  echo "Setting configs"
+  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING GRAPH.CONFIG set VKEY_MAX_ENTITY_COUNT $FALKORDB_VKEY_MAX_ENTITY_COUNT
+  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING GRAPH.CONFIG get VKEY_MAX_ENTITY_COUNT
 }
 
 if [ -f $NODE_CONF_FILE ]; then
@@ -426,6 +434,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   sleep 10
 
   create_user
+  set_configs
 
   # If node should be master, add it to sentinel
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then

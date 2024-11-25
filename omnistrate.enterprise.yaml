@@ -484,8 +484,8 @@ services:
           node-s: maxMemory
     x-omnistrate-capabilities:
       backupConfiguration:
-        backupRetentionInDays: 7
-        backupPeriodInHours: 12
+        backupRetentionInDays: 2
+        backupPeriodInHours: 2
     depends_on:
       - node-s
 
@@ -875,8 +875,8 @@ services:
 
     x-omnistrate-capabilities:
       backupConfiguration:
-        backupRetentionInDays: 7
-        backupPeriodInHours: 12
+        backupRetentionInDays: 2
+        backupPeriodInHours: 2
     depends_on:
       - node-sz
 
@@ -1377,8 +1377,8 @@ services:
           node-mz: maxMemory
     x-omnistrate-capabilities:
       backupConfiguration:
-        backupRetentionInDays: 7
-        backupPeriodInHours: 12
+        backupRetentionInDays: 2
+        backupPeriodInHours: 2
     depends_on:
       - node-mz
 
@@ -1865,8 +1865,8 @@ services:
           cluster-sz: maxMemory
     x-omnistrate-capabilities:
       backupConfiguration:
-        backupRetentionInDays: 7
-        backupPeriodInHours: 12
+        backupRetentionInDays: 2
+        backupPeriodInHours: 2
     depends_on:
       - cluster-sz
       - cluster-sz-rebalance
@@ -2175,8 +2175,8 @@ services:
           cluster-mz: maxMemory
     x-omnistrate-capabilities:
       backupConfiguration:
-        backupRetentionInDays: 7
-        backupPeriodInHours: 12
+        backupRetentionInDays: 2
+        backupPeriodInHours: 2
     depends_on:
       - cluster-mz
       - cluster-mz-rebalance

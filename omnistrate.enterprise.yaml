@@ -497,6 +497,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -885,6 +887,8 @@ services:
       replicaCountAPIParam: numReplicas
       instanceTypes:
         - cloudProvider: gcp
+          apiParam: nodeInstanceType
+        - cloudProvider: aws
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
@@ -1386,6 +1390,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -1873,6 +1879,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
     <<: *clusterparam
     volumes:
       - source: ./data
@@ -2181,6 +2189,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
     <<: *clusterparam
     volumes:
       - source: ./data
@@ -2298,6 +2308,8 @@ services:
       replicaCount: 1
       instanceTypes:
         - cloudProvider: gcp
+          apiParam: nodeInstanceType
+        - cloudProvider: aws
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType

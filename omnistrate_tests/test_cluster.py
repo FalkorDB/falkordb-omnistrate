@@ -278,31 +278,14 @@ def test_failover(instance: OmnistrateFleetInstance):
     graph = db.select_graph("test")
 
     # Write some data to the DB
-    id = 'sz' if 'Single' in args.resource_key else 'mz'
     graph.query("CREATE (n:Person {name: 'Alice'})")
-    end = instance.get_cluster_endpoint().get('endpoint').split('.')
-    end.pop(0)
-    end = '.'.join(end)
-    print("the host before failover",socket.gethostbyname(f"cluster-{id}-0.{end}"))
-    print("the host before failover",socket.gethostbyname(f"cluster-{id}-1.{end}"))
-    print("the host before failover",socket.gethostbyname(f"cluster-{id}-2.{end}"))
-    print("the host before failover",socket.gethostbyname(f"cluster-{id}-3.{end}"))
-    print("the host before failover",socket.gethostbyname(f"cluster-{id}-4.{end}"))
-    print("the host before failover",socket.gethostbyname(f"cluster-{id}-5.{end}"))
 
     # Trigger failover
     instance.trigger_failover(
         replica_id=args.replica_id,
         wait_for_ready=True,
     )
-    print("the host after failover",socket.gethostbyname(f"cluster-{id}-0.{end}"))
-    print("the host after failover",socket.gethostbyname(f"cluster-{id}-1.{end}"))
-    print("the host after failover",socket.gethostbyname(f"cluster-{id}-2.{end}"))
-    print("the host after failover",socket.gethostbyname(f"cluster-{id}-3.{end}"))
-    print("the host after failover",socket.gethostbyname(f"cluster-{id}-4.{end}"))
-    print("the host after failover",socket.gethostbyname(f"cluster-{id}-5.{end}"))
-
-
+    
     graph = db.select_graph("test")
 
     result = graph.query("MATCH (n:Person) RETURN n")

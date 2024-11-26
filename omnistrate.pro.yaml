@@ -33,9 +33,18 @@ x-omnistrate-load-balancer:
 
 x-internal-integrations:
   logs:
-    provider: native
+    provider: datadog
+    endpoint: datadoghq.eu
+    secretLocators:
+      gcp: projects/$GcpProjectNumber/secrets/DATADOG_KEY/versions/latest
+      aws: arn:aws:secretsmanager:us-east-2:$AwsAccountId:secret:DATADOG_KEY-C2TTd6
   metrics:
-    provider: native
+    prometheusEndpoint: "http://localhost:9121/metrics"
+    provider: datadog
+    endpoint: datadoghq.eu
+    secretLocators:
+      gcp: projects/$GcpProjectNumber/secrets/DATADOG_KEY/versions/latest
+      aws: arn:aws:secretsmanager:us-east-2:$AwsAccountId:secret:DATADOG_KEY-C2TTd6
 
 x-falkordbMetrics: &metrics
   prometheusEndpoint: "http://localhost:9121/metrics"

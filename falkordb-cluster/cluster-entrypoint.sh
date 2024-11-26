@@ -78,8 +78,19 @@ fi
 
 update_ips_in_nodes_conf(){
   if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
-    res=$(cat $DATA_DIR/nodes.conf | grep myself | awk '{print $2}' | cut -d',' -f1)
-    sed -i "s/$res/$POD_IP:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf
+    myself=$(cat $DATA_DIR/nodes.conf | grep myself | awk '{print $2}' | cut -d',' -f1)
+    sed -i "s/$myself/$POD_IP:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf
+    while IFS= read -r line; do
+      if [[ $line =~ .*@.* && ! $line =~ .*myself.* ]];then
+        hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2)
+        echo "The hostname is: $hostname"
+        old_ip=$(echo $line | awk '{print $2}' | cut -d',' -f1)
+        echo "The old ip is: $old_ip"
+        new_ip=$(getent hosts $hostname | awk '{print $2}')
+        echo "The new ip: $new_ip"
+        sed -i "s/$old_ip/$new_ip:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf
+      fi
+    done < $DATA_DIR/nodes.conf
   else
     echo "First time running the node.."
   fi

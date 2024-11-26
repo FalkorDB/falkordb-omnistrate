@@ -307,8 +307,6 @@ touch $FALKORDB_LOG_FILE_PATH
 
 run_node
 
-reconnect_to_master
-
 sleep 10
 
 create_user

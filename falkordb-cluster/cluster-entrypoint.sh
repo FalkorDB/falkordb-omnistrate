@@ -74,6 +74,23 @@ if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
   DEBUG=1
 fi
 
+
+
+update_ips_in_nodes_conf(){
+  if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
+    res=(cat $DATA_DIR/nodes.conf | grep myself | awk '{print $2}' | cut -d',' -f1)
+    echo $res
+    echo $POD_IP
+    sed -i "s/$res/$POD_IP:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf
+    cat "$DATA_DIR/nodes.conf"
+  else
+    echo "First time running the node.."
+  fi
+}
+
+update_ips_in_nodes_conf
+
+
 handle_sigterm() {
   echo "Caught SIGTERM"
   echo "Stopping FalkorDB"
@@ -289,6 +306,8 @@ fi
 touch $FALKORDB_LOG_FILE_PATH
 
 run_node
+
+reconnect_to_master
 
 sleep 10
 

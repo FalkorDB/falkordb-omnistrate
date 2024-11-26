@@ -118,7 +118,7 @@ fn health_check_handler(is_sentinel: bool) -> Result<bool, redis::RedisError> {
 }
 
 fn get_status_from_cluster_node(
-    db_info: String,
+    _db_info: String,
     con: &mut redis::Connection,
 ) -> Result<bool, redis::RedisError> {
     let cluster_info: String = redis::cmd("CLUSTER").arg("INFO").query(con)?;
@@ -147,7 +147,7 @@ fn resolve_host(host: &str) {
         match dns_lookup::lookup_host(host) {
             Ok(_) => resolved = true,
             Err(_) => {
-                println!("Host not resolved yet!")
+                println!("Host not resolved yet!");
                 std::thread::sleep(std::time::Duration::from_secs(1));
             }
         }

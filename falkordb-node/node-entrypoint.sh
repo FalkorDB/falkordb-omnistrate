@@ -356,12 +356,6 @@ config_rewrite() {
   redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
 }
 
-set_configs() {
-  echo "Setting configs"
-  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING GRAPH.CONFIG set VKEY_MAX_ENTITY_COUNT $FALKORDB_VKEY_MAX_ENTITY_COUNT
-  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING GRAPH.CONFIG get VKEY_MAX_ENTITY_COUNT
-}
-
 if [ -f $NODE_CONF_FILE ]; then
   # Get current admin password
   CURRENT_ADMIN_PASSWORD=$(cat $NODE_CONF_FILE | grep -oP '(?<=requirepass ).*' | sed 's/\"//g')
@@ -409,6 +403,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   sed -i "s/\$FALKORDB_TIMEOUT_DEFAULT/$FALKORDB_TIMEOUT_DEFAULT/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_RESULT_SET_SIZE/$FALKORDB_RESULT_SET_SIZE/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_QUERY_MEM_CAPACITY/$FALKORDB_QUERY_MEM_CAPACITY/g" $NODE_CONF_FILE
+  sed -i "s/\$FALKORDB_VKEY_MAX_ENTITY_COUNT/$FALKORDB_VKEY_MAX_ENTITY_COUNT/g" $NODE_CONF_FILE
   echo "dir $DATA_DIR" >>$NODE_CONF_FILE
 
   is_replica
@@ -438,7 +433,6 @@ if [ "$RUN_NODE" -eq "1" ]; then
   sleep 10
 
   create_user
-  set_configs
 
   # If node should be master, add it to sentinel
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then

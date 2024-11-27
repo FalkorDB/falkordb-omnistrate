@@ -79,9 +79,10 @@ fi
 update_ips_in_nodes_conf(){
   if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
     res=$(cat $DATA_DIR/nodes.conf | grep myself | awk '{print $2}' | cut -d',' -f1)
+    external_ip=$(getent hosts $NODE_HOST | awk '{print $1}')
     echo "The old ip is: $res"
-    echo "The new ip is: $POD_IP"
-    sed -i "s/$res/$POD_IP:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf
+    echo "The new ip is: $external_ip"
+    sed -i "s/$res/$external_ip:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf
     cat $DATA_DIR/nodes.conf
   else
     echo "First time running the node.."

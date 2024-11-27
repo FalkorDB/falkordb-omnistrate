@@ -148,6 +148,10 @@ create_user() {
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +CLUSTER +COMMAND
 }
 
+get_default_memory_limit() {
+  echo "$(awk '/MemTotal/ {printf "%d\n", (($2 / 1024 - 2330) > 100 ? ($2 / 1024 - 2330) : 100)}' /proc/meminfo)MB"
+}
+
 set_memory_limit() {
   declare -A memory_limit_instance_type_map
   memory_limit_instance_type_map=(
@@ -165,7 +169,7 @@ set_memory_limit() {
   )
   if [[ -z $INSTANCE_TYPE ]]; then
     echo "INSTANCE_TYPE is not set"
-    return
+    MEMORY_LIMIT=$(get_default_memory_limit)
   fi
 
   instance_size_in_map=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
@@ -173,8 +177,8 @@ set_memory_limit() {
   if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]];then
     MEMORY_LIMIT=$instance_size_in_map
   elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]];then
-    echo "INSTANCE_TYPE is not set. Setting 100MB"
-    MEMORY_LIMIT="100MB"
+    MEMORY_LIMIT=$(get_default_memory_limit)
+    echo "INSTANCE_TYPE is not set. Setting to default memory limit"
   fi
   
   echo "Setting maxmemory to $MEMORY_LIMIT"

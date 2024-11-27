@@ -484,8 +484,8 @@ services:
           node-s: maxMemory
     x-omnistrate-capabilities:
       backupConfiguration:
-        backupRetentionInDays: 7
-        backupPeriodInHours: 12
+        backupRetentionInDays: 2
+        backupPeriodInHours: 2
     depends_on:
       - node-s
 
@@ -496,6 +496,8 @@ services:
       replicaCount: 1
       instanceTypes:
         - cloudProvider: gcp
+          apiParam: nodeInstanceType
+        - cloudProvider: aws
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
@@ -873,8 +875,8 @@ services:
 
     x-omnistrate-capabilities:
       backupConfiguration:
-        backupRetentionInDays: 7
-        backupPeriodInHours: 12
+        backupRetentionInDays: 2
+        backupPeriodInHours: 2
     depends_on:
       - node-sz
 
@@ -885,6 +887,8 @@ services:
       replicaCountAPIParam: numReplicas
       instanceTypes:
         - cloudProvider: gcp
+          apiParam: nodeInstanceType
+        - cloudProvider: aws
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
@@ -1373,8 +1377,8 @@ services:
           node-mz: maxMemory
     x-omnistrate-capabilities:
       backupConfiguration:
-        backupRetentionInDays: 7
-        backupPeriodInHours: 12
+        backupRetentionInDays: 2
+        backupPeriodInHours: 2
     depends_on:
       - node-mz
 
@@ -1385,6 +1389,8 @@ services:
       replicaCountAPIParam: numReplicas
       instanceTypes:
         - cloudProvider: gcp
+          apiParam: nodeInstanceType
+        - cloudProvider: aws
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
@@ -1859,8 +1865,8 @@ services:
           cluster-sz: maxMemory
     x-omnistrate-capabilities:
       backupConfiguration:
-        backupRetentionInDays: 7
-        backupPeriodInHours: 12
+        backupRetentionInDays: 2
+        backupPeriodInHours: 2
     depends_on:
       - cluster-sz
       - cluster-sz-rebalance
@@ -1872,6 +1878,8 @@ services:
       replicaCount: 6
       instanceTypes:
         - cloudProvider: gcp
+          apiParam: nodeInstanceType
+        - cloudProvider: aws
           apiParam: nodeInstanceType
     <<: *clusterparam
     volumes:
@@ -2167,8 +2175,8 @@ services:
           cluster-mz: maxMemory
     x-omnistrate-capabilities:
       backupConfiguration:
-        backupRetentionInDays: 7
-        backupPeriodInHours: 12
+        backupRetentionInDays: 2
+        backupPeriodInHours: 2
     depends_on:
       - cluster-mz
       - cluster-mz-rebalance
@@ -2180,6 +2188,8 @@ services:
       replicaCount: 6
       instanceTypes:
         - cloudProvider: gcp
+          apiParam: nodeInstanceType
+        - cloudProvider: aws
           apiParam: nodeInstanceType
     <<: *clusterparam
     volumes:
@@ -2298,6 +2308,8 @@ services:
       replicaCount: 1
       instanceTypes:
         - cloudProvider: gcp
+          apiParam: nodeInstanceType
+        - cloudProvider: aws
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType

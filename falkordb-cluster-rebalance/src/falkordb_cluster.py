@@ -103,6 +103,7 @@ class FalkorDBCluster:
             FalkorDBClusterNode.from_dict(key, val)
             for key, val in self.client.cluster_nodes().items()
         ]
+        self.nodes = [node for node in self.nodes if node.idx is not None]
         self.sort()
         logging.info(f"{datetime.now()}: Cluster refreshed: {self}")
         return self

@@ -83,6 +83,7 @@ update_ips_in_nodes_conf(){
     if [[ -z $external_ip ]];then
       echo "Could not resolve hostname, trying again: $NODE_HOST" 
       update_ips_in_nodes_conf
+      return
     fi
     echo "The old ip is: $res"
     echo "The new ip is: $external_ip"
@@ -361,6 +362,7 @@ meet_unkown_nodes(){
         ip=$(getent hosts $hostname | awk '{print $1}')
         if [[ -z $ip ]];then
           meet_unkown_nodes
+          return
         fi
         redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER MEET $ip $NODE_PORT
         echo "Found $discrepancy IP discrepancy in line: $line"

@@ -360,7 +360,7 @@ meet_unkown_nodes(){
         discrepancy=$(( $discrepancy + 1 ))
         hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
         ip=$(getent hosts $hostname | awk '{print $1}')
-        while true:do
+        while true;do
           sleep 3
           ip=$(getent hosts $hostname | awk '{print $1}')
 

@@ -81,7 +81,8 @@ update_ips_in_nodes_conf(){
     res=$(cat $DATA_DIR/nodes.conf | grep myself | awk '{print $2}' | cut -d',' -f1)
     external_ip=$(getent hosts $NODE_HOST | awk '{print $1}')
     if [[ -z $external_ip ]];then
-      echo "Could not resolve hostname, trying again: $NODE_HOST" 
+      echo "Could not resolve hostname, trying again: $NODE_HOST"
+      sleep 3
       update_ips_in_nodes_conf
       return
     fi

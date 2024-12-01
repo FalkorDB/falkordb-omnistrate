@@ -360,10 +360,14 @@ meet_unkown_nodes(){
         discrepancy=$(( $discrepancy + 1 ))
         hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
         ip=$(getent hosts $hostname | awk '{print $1}')
-        if [[ -z $ip ]];then
-          meet_unkown_nodes
-          return
-        fi
+        while true:do
+          sleep 3
+          ip=$(getent hosts $hostname | awk '{print $1}')
+          PONG=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
+          if [[ -n $ip && $PONG == "PONG" ]];then
+            break
+          fi
+        done
         redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER MEET $ip $NODE_PORT
         echo "Found $discrepancy IP discrepancy in line: $line"
       fi

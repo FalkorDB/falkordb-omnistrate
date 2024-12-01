@@ -363,7 +363,8 @@ meet_unkown_nodes(){
         while true:do
           sleep 3
           ip=$(getent hosts $hostname | awk '{print $1}')
-          PONG=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
+
+          PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
           if [[ -n $ip && $PONG == "PONG" ]];then
             break
           fi

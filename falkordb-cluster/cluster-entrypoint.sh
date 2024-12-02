@@ -75,6 +75,35 @@ if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
   DEBUG=1
 fi
 
+meet_unkown_nodes(){
+  sleep 60
+  # Look for nodes that have 0@0 in the nodes.conf and meet them again"
+  if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
+    discrepancy=0
+    while IFX= read -r line;do
+      if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
+        discrepancy=$(( $discrepancy + 1 ))
+        hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
+        ip=$(getent hosts $hostname | awk '{print $1}')
+        while true;do
+          sleep 3
+          ip=$(getent hosts $hostname | awk '{print $1}')
+
+          PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
+          if [[ -n $ip && $PONG == "PONG" ]];then
+            break
+          fi
+        done
+        redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER MEET $ip $NODE_PORT
+        echo "Found $discrepancy IP discrepancy in line: $line"
+      fi
+    done < $DATA_DIR/nodes.conf
+  fi
+
+  if [[ $discrepancy -eq 0 ]];then
+    echo "Did not find IP discrepancies between nodes."
+  fi
+}
 
 update_ips_in_nodes_conf(){
   # Replace old ip with new one (external ip)
@@ -341,6 +370,9 @@ else
   echo "Cluster does not exist. Waiting for it to be created"
 fi
 
+# Run this before health check to prevent client connections until discrepancies are resolved.
+meet_unkown_nodes
+
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   # Check if healthcheck binary exists
   if [ -f /usr/local/bin/healthcheck ]; then
@@ -357,39 +389,6 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -is-cluster -tls-server-min-version TLS1.3 >>$FALKORDB_LOG_FILE_PATH &
   redis_exporter_pid=$!
 fi
-
-meet_unkown_nodes(){
-  sleep 120
-  # Look for nodes that have 0@0 in the nodes.conf and meet them again"
-  if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
-    discrepancy=0
-    while IFX= read -r line;do
-      if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
-        discrepancy=$(( $discrepancy + 1 ))
-        hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
-        ip=$(getent hosts $hostname | awk '{print $1}')
-        while true;do
-          sleep 3
-          ip=$(getent hosts $hostname | awk '{print $1}')
-
-          PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
-          if [[ -n $ip && $PONG == "PONG" ]];then
-            break
-          fi
-        done
-        redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER MEET $ip $NODE_PORT
-        echo "Found $discrepancy IP discrepancy in line: $line"
-      fi
-    done < $DATA_DIR/nodes.conf
-  fi
-
-  if [[ $discrepancy -eq 0 ]];then
-    echo "Did not find IP discrepancies between nodes."
-  fi
-}
-
-meet_unkown_nodes
-
 
 while true; do
   sleep 1

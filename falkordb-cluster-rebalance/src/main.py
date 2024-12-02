@@ -1,5 +1,6 @@
 from time import sleep
 import os
+# pylint: disable=import-error
 from falkordb_cluster import FalkorDBCluster, FalkorDBClusterNode
 import socket
 import redis
@@ -67,11 +68,11 @@ def _handle_too_many_masters(cluster: FalkorDBCluster, expected_masters: int):
 
     if len(extra_masters) == 0:
         logging.info("No extra masters to handle")
-        return
+        return True
 
     if len(extra_masters) == 1:
         logging.info("Only one extra master to handle. Skipping...")
-        return
+        return False
 
     if len(extra_masters) > 1:
         logging.info(f"{len(extra_masters)} extra masters to handle.")
@@ -124,7 +125,7 @@ def _relocate_master(
             break
     else:
         logging.info(f"Cannot relocate master {node}, no suitable node found")
-        return
+        return False
 
     logging.info(f"Relocating master {node} to {suitable_relocation_node} in group {i}")
 
@@ -180,7 +181,7 @@ def main():
     # slots = client.cluster_slots()
     if len(cluster) < MIN_HOST_COUNT:
         logging.info("Not enough hosts to rebalance")
-        return
+        return False
 
     if not cluster.is_connected() and not cluster.is_ready():
         logging.info("Cluster is not fully connected")
@@ -191,7 +192,7 @@ def main():
         logging.info(
             f"Cannot rebalance, expected shards is not an integer: {expected_shards}"
         )
-        return
+        return False
 
     expected_shards = int(expected_shards)
 
@@ -199,7 +200,7 @@ def main():
         logging.info(
             f"Cannot rebalance, number of nodes does not match the shards. Nodes: {len(cluster)}, expected_shards: {expected_shards}"
         )
-        return
+        return False
 
     invalid_slaves = cluster.get_slaves_with_invalid_masters()
     if len(invalid_slaves) > 0:
@@ -262,6 +263,8 @@ def main():
 
     logging.info(f"Cluster after: {cluster}")
 
+    return True
+
 
 def _node_resolved():
     logging.info(f"Checking node connection: {NODE_0_HOST}:{NODE_PORT}")
@@ -296,8 +299,7 @@ def loop():
             sleep(5)
 
         try:
-            main()
-            healthcheck_ok = True
+            healthcheck_ok = main()
         except Exception as e:
             logging.exception(f"Error: {e}")
             healthcheck_ok = False

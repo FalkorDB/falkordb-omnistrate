@@ -2493,6 +2493,8 @@ services:
       instanceTypes:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
     <<: *clusterparam
     volumes:
       - source: ./data
@@ -2804,6 +2806,8 @@ services:
       replicaCount: 6
       instanceTypes:
         - cloudProvider: gcp
+          apiParam: nodeInstanceType
+        - cloudProvider: aws
           apiParam: nodeInstanceType
     <<: *clusterparam
     volumes:

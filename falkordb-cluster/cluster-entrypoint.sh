@@ -363,7 +363,7 @@ meet_unkown_nodes(){
   if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
     discrepancy=0
     while IFX= read -r line;do
-      if [[ $line =~ .*@0.* ]];then
+      if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
         discrepancy=$(( $discrepancy + 1 ))
         hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
         ip=$(getent hosts $hostname | awk '{print $1}')

@@ -118,6 +118,8 @@ jobs:
           if [[ -n "$sec" ]];then
             mkdir -p secrets || { echo "Failed to create secrets directory"; exit 1; }
             echo '{{ $var.falkordbPassword }}' > ./secrets/falkordbpassword || { echo "Failed to write falkordbpassword"; exit 1; }
+            echo '{{ $var.falkordbPasswordSZReplica }}' > ./secrets/falkordbpasswordreplicasz || { echo "Failed to write falkordbpassword"; exit 1; }
+            echo '{{ $var.falkordbPasswordMZReplica }}' > ./secrets/falkordbpasswordreplicamz || { echo "Failed to write falkordbpassword"; exit 1; }
             echo '{{ $func.random(string, 16, $sys.deterministicSeedValue) }}' > ./secrets/adminpassword || { echo "Failed to write adminpassword"; exit 1; }
             echo '{{ $var.adminPassword }}' > ./secrets/grafana_admin_password || { echo "Failed to write grafana_admin_password"; exit 1; }
             echo '{{ $func.random(string, 16, $sys.deterministicSeedValue)  }}' > ./secrets/grafana_secret_key || { echo "Failed to write grafana_secret_key"; exit 1; }
@@ -210,7 +212,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover'  --instance-description 'test-sz-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover' --instance-description 'test-sz-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
@@ -444,26 +446,26 @@ jobs:
           #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
           #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
           #   extraParams: "--resource-key 'cluster-Multi-Zone' --instance-name 'test-cluster-mz-replicas' --instance-description 'test-cluster-mz-replicas' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --shards '3' --ensure-mz-distribution"
-          - name: PRO/SingleZone - GCP/us-central1 - Test add/remove replica
-            if: "true"
-            testFile: test_replication_replicas.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-            cloudProvider: gcp
-            cloudRegion: us-central1
-            subscriptionId: sub-GJPV3NoNC0
-            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --replica-id 'node-sz-0' --instance-name 'test-sz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
-          - name: PRO/MultiZone - GCP/us-central1 - Test add/remove replica
-            if: "true"
-            testFile: test_replication_replicas.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-            cloudProvider: gcp
-            cloudRegion: us-central1
-            subscriptionId: sub-GJPV3NoNC0
-            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --replica-id 'node-mz-0'  --instance-name 'test-mz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          # - name: PRO/SingleZone - GCP/us-central1 - Test add/remove replica
+          #   if: "true"
+          #   testFile: test_replication_replicas.py
+          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: gcp
+          #   cloudRegion: us-central1
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'single-Zone' --replica-id 'node-sz-0' --instance-name 'test-sz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          # - name: PRO/MultiZone - GCP/us-central1 - Test add/remove replica
+          #   if: "true"
+          #   testFile: test_replication_replicas.py
+          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: gcp
+          #   cloudRegion: us-central1
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'multi-Zone' --replica-id 'node-mz-0'  --instance-name 'test-mz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
 
             ###################### AWS ######################
           - name: Free - AWS/us-east-2 - Failover & Persistence

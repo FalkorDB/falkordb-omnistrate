@@ -359,6 +359,7 @@ if [[ $RUN_METRICS -eq 1 ]]; then
 fi
 
 meet_unkown_nodes(){
+  sleep 120
   # Look for nodes that have 0@0 in the nodes.conf and meet them again"
   if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
     discrepancy=0

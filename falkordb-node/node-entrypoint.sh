@@ -38,6 +38,7 @@ FALKORDB_RESULT_SET_SIZE=${FALKORDB_RESULT_SET_SIZE:-10000}
 FALKORDB_QUERY_MEM_CAPACITY=${FALKORDB_QUERY_MEM_CAPACITY:-0}
 FALKORDB_TIMEOUT_MAX=${FALKORDB_TIMEOUT_MAX:-0}
 FALKORDB_TIMEOUT_DEFAULT=${FALKORDB_TIMEOUT_DEFAULT:-0}
+FALKORDB_VKEY_MAX_ENTITY_COUNT=${FALKORDB_VKEY_MAX_ENTITY_COUNT:-4611686000000000000}
 MEMORY_LIMIT=${MEMORY_LIMIT:-''}
 # If vars are <nil>, set it to 0
 if [[ "$FALKORDB_QUERY_MEM_CAPACITY" == "<nil>" ]]; then
@@ -193,6 +194,10 @@ get_self_host_ip() {
   fi
 }
 
+get_default_memory_limit() {
+  echo "$(awk '/MemTotal/ {printf "%d\n", (($2 / 1024 - 2330) > 100 ? ($2 / 1024 - 2330) : 100)}' /proc/meminfo)MB"
+}
+
 get_memory_limit() {
 
   declare -A memory_limit_instance_type_map
@@ -212,7 +217,7 @@ get_memory_limit() {
   
   if [[ -z $INSTANCE_TYPE ]]; then
     echo "INSTANCE_TYPE is not set"
-    return
+    MEMORY_LIMIT=$(get_default_memory_limit)
   fi
 
   instance_size_in_map=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
@@ -220,8 +225,8 @@ get_memory_limit() {
   if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]];then
     MEMORY_LIMIT=$instance_size_in_map
   elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]];then
-    echo "INSTANCE_TYPE is not set. Setting 100MB"
-    MEMORY_LIMIT="100MB"
+    MEMORY_LIMIT=$(get_default_memory_limit)
+    echo "INSTANCE_TYPE is not set. Setting to default memory limit"
   fi
 
   echo "Memory Limit: $MEMORY_LIMIT"
@@ -344,6 +349,7 @@ create_user() {
   config_rewrite
 }
 
+
 config_rewrite() {
   # Config rewrite
   echo "Rewriting config"
@@ -397,6 +403,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   sed -i "s/\$FALKORDB_TIMEOUT_DEFAULT/$FALKORDB_TIMEOUT_DEFAULT/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_RESULT_SET_SIZE/$FALKORDB_RESULT_SET_SIZE/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_QUERY_MEM_CAPACITY/$FALKORDB_QUERY_MEM_CAPACITY/g" $NODE_CONF_FILE
+  sed -i "s/\$FALKORDB_VKEY_MAX_ENTITY_COUNT/$FALKORDB_VKEY_MAX_ENTITY_COUNT/g" $NODE_CONF_FILE
   echo "dir $DATA_DIR" >>$NODE_CONF_FILE
 
   is_replica

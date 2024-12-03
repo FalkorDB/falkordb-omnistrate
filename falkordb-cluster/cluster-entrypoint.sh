@@ -87,7 +87,12 @@ meet_unknown_nodes(){
         hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
         ip=$(getent hosts "$hostname" | awk '{print $1}')
 
+        tout=$(echo "$(date +%s) + 300" | bc)  
         while true;do
+          if [[ $(date +%s) -gt $tout ]];then 
+            echo "Timedout after 5 minutes while trying to ping $ip"
+            break
+          fi
           sleep 3
           ip=$(getent hosts $hostname | awk '{print $1}')
           PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)

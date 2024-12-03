@@ -75,34 +75,42 @@ if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
   DEBUG=1
 fi
 
-meet_unkown_nodes(){
+meet_unknown_nodes(){
+  # Had to add sleep until things are stable (nodes that can communicate should be given time to do so)
   sleep 60
   # Look for nodes that have 0@0 in the nodes.conf and meet them again"
   if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
     discrepancy=0
-    while IFX= read -r line;do
+    while IFS= read -r line;do
       if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
         discrepancy=$(( $discrepancy + 1 ))
         hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
-        ip=$(getent hosts $hostname | awk '{print $1}')
+        ip=$(getent hosts "$hostname" | awk '{print $1}')
+
         while true;do
           sleep 3
           ip=$(getent hosts $hostname | awk '{print $1}')
-
           PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
+
           if [[ -n $ip && $PONG == "PONG" ]];then
             break
           fi
+
         done
+
         redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER MEET $ip $NODE_PORT
         echo "Found $discrepancy IP discrepancy in line: $line"
+
       fi
-    done < $DATA_DIR/nodes.conf
+
+    done < "$DATA_DIR/nodes.conf"
+
   fi
 
   if [[ $discrepancy -eq 0 ]];then
     echo "Did not find IP discrepancies between nodes."
   fi
+  return 0
 }
 
 update_ips_in_nodes_conf(){
@@ -123,6 +131,7 @@ update_ips_in_nodes_conf(){
   else
     echo "First time running the node.."
   fi
+  return 0
 }
 
 update_ips_in_nodes_conf
@@ -371,7 +380,7 @@ else
 fi
 
 # Run this before health check to prevent client connections until discrepancies are resolved.
-meet_unkown_nodes
+meet_unknown_nodes
 
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   # Check if healthcheck binary exists

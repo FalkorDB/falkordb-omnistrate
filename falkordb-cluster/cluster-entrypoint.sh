@@ -87,11 +87,11 @@ meet_unknown_nodes(){
         hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
         ip=$(getent hosts "$hostname" | awk '{print $1}')
 
-        tout=$(echo "$(date +%s) + 300" | bc)  
+        tout=$(( $(date +%s) + 300 ))
         while true;do
           if [[ $(date +%s) -gt $tout ]];then 
             echo "Timedout after 5 minutes while trying to ping $ip"
-            break
+            exit 1
           fi
           sleep 3
           ip=$(getent hosts $hostname | awk '{print $1}')

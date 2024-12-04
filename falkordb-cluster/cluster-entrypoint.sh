@@ -82,8 +82,7 @@ meet_unknown_nodes(){
   if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
     discrepancy=0
     while IFS= read -r line;do
-     #if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
-      if [[ ! $line =~ .*myself.* ]];then
+     if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
         discrepancy=$(( $discrepancy + 1 ))
         hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
         ip=$(getent hosts "$hostname" | awk '{print $1}')
@@ -95,7 +94,7 @@ meet_unknown_nodes(){
             exit 1
           fi
           sleep 3
-          ip=$(getent hosts $hostname | awk '{print $1}')
+          echo "pinging: $hostname"
           PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
 
           if [[ -n $ip && $PONG == "PONG" ]];then
@@ -116,6 +115,20 @@ meet_unknown_nodes(){
   if [[ $discrepancy -eq 0 ]];then
     echo "Did not find IP discrepancies between nodes."
   fi
+
+  sleep 60
+
+  echo "Taking extra measures"
+  info_ip=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication | grep ip | cut -d'=' -f2 | cut -d',' -f1)
+  for i in $(echo $info_ip);do
+    result=$(grep $i $DATA_DIR/nodes.conf)
+    if [[ -z $result ]];then
+      echo "The result is empty: $result"
+      echo "The node is not connected to the right master/replica"
+      exit 1
+    fi
+  done
+
   return 0
 }
 

@@ -82,7 +82,8 @@ meet_unknown_nodes(){
   if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
     discrepancy=0
     while IFS= read -r line;do
-      #if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
+     #if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
+      if [[ ! $line =~ .*myself.* ]];then
         discrepancy=$(( $discrepancy + 1 ))
         hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
         ip=$(getent hosts "$hostname" | awk '{print $1}')
@@ -106,7 +107,7 @@ meet_unknown_nodes(){
         redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER MEET $ip $NODE_PORT
         echo "Found $discrepancy IP discrepancy in line: $line"
 
-      #fi
+      fi
 
     done < "$DATA_DIR/nodes.conf"
 

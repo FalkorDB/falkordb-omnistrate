@@ -172,7 +172,7 @@ ocsp = ["cryptography (>=36.0.1)", "pyopenssl (==23.2.1)", "requests (>=2.31.0)"
 type = "git"
 url = "https://github.com/MuhammadQadora/redis-py.git"
 reference = "master"
-resolved_reference = "0cd982c41645453615c234337295aa10f1fb16c0"
+resolved_reference = "0fd6812f1a3c651c03355ccdb90ded125fb14fcf"
 
 [[package]]
 name = "requests"

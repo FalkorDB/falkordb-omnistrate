@@ -75,6 +75,20 @@ if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
   DEBUG=1
 fi
 
+extra_measure(){
+  sleep 120
+  echo "Taking extra measures"
+  info_ip=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication | grep ip | cut -d'=' -f2 | cut -d',' -f1)
+  for i in $(echo $info_ip);do
+    result=$(grep $i $DATA_DIR/nodes.conf)
+    if [[ -z $result ]];then
+      echo "The result is empty: $result"
+      echo "The node is not connected to the right master/replica"
+      exit 1
+    fi
+  done
+}
+
 meet_unknown_nodes(){
   # Had to add sleep until things are stable (nodes that can communicate should be given time to do so)
   sleep 60
@@ -116,19 +130,6 @@ meet_unknown_nodes(){
     echo "Did not find IP discrepancies between nodes."
   fi
 
-  sleep 60
-
-  echo "Taking extra measures"
-  info_ip=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication | grep ip | cut -d'=' -f2 | cut -d',' -f1)
-  for i in $(echo $info_ip);do
-    result=$(grep $i $DATA_DIR/nodes.conf)
-    if [[ -z $result ]];then
-      echo "The result is empty: $result"
-      echo "The node is not connected to the right master/replica"
-      exit 1
-    fi
-  done
-
   return 0
 }
 
@@ -145,7 +146,7 @@ update_ips_in_nodes_conf(){
     fi
     echo "The old ip is: $res"
     echo "The new ip is: $external_ip"
-    sed -i "s/$res/$POD_IP:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf
+    sed -i "s/$res/$external_ip:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf
     cat $DATA_DIR/nodes.conf
   else
     echo "First time running the node.."
@@ -417,6 +418,8 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -is-cluster -tls-server-min-version TLS1.3 >>$FALKORDB_LOG_FILE_PATH &
   redis_exporter_pid=$!
 fi
+
+extra_measure
 
 while true; do
   sleep 1

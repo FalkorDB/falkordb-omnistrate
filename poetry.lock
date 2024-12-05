@@ -170,9 +170,9 @@ ocsp = ["cryptography (>=36.0.1)", "pyopenssl (==23.2.1)", "requests (>=2.31.0)"
 
 [package.source]
 type = "git"
-url = "https://github.com/MuhammadQadora/redis-py.git"
+url = "https://github.com/dudizimber/redis-py.git"
 reference = "master"
-resolved_reference = "0fd6812f1a3c651c03355ccdb90ded125fb14fcf"
+resolved_reference = "7d73d742d6df4b3d6f6a1f0ec73e72d4a02add74"
 
 [[package]]
 name = "requests"
@@ -231,4 +231,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11.4"
-content-hash = "4c83ba3bbe19c64be2a0102fd4e0a70cd727c2f4a49c2f3cde9f75053f26ead5"
+content-hash = "2e727b3ae2d8a2594955a64bde10c3abaaa1cf45d0421fba68d30859a2a5f177"

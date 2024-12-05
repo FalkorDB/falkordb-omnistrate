@@ -78,13 +78,15 @@ fi
 
 meet_unknown_nodes(){
   # Had to add sleep until things are stable (nodes that can communicate should be given time to do so)
-  sleep 60
+  sleep 30
   # Look for nodes that have 0@0 in the nodes.conf and meet them again"
   if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
     discrepancy=0
     while IFS= read -r line;do
-     #if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
-      if [[ ! $line =~ .*myself.* && ! $line =~ .*current.* ]];then
+      if [[ $line =~ .*myself.* ]];then
+        myself=$line
+      fi
+      if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
         discrepancy=$(( $discrepancy + 1 ))
         hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
         ip=$(getent hosts "$hostname" | awk '{print $1}')
@@ -95,8 +97,8 @@ meet_unknown_nodes(){
             echo "Timedout after 5 minutes while trying to ping $ip"
             exit 1
           fi
+
           sleep 3
-          echo "pinging: $hostname"
           PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
 
           if [[ -n $ip && $PONG == "PONG" ]];then
@@ -112,12 +114,26 @@ meet_unknown_nodes(){
 
     done < "$DATA_DIR/nodes.conf"
 
-  fi
+    if [[ $discrepancy -eq 0 ]];then
+      echo "Did not find IP discrepancies between nodes."
+    fi
 
-  if [[ $discrepancy -eq 0 ]];then
-    echo "Did not find IP discrepancies between nodes."
-  fi
+    echo "make sure slave is connected to master using right ip."
+    info=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication)
+    if [[ "$info" =~ role:slave ]];then
+      master_ip=$(echo "$info" | grep master_host | cut -d':' -f2)
+    fi
 
+    for i in $master_ip;do
+      ans=$(grep $i $DATA_DIR/nodes.conf)
+      if [[ -z $ans ]];then
+        echo "Connected to master using the wrong ip."
+        master_id=$(echo $myself | awk '{print $4}')
+        redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER REPLICATE $master_id
+      fi
+    done
+
+  fi
   return 0
 }
 

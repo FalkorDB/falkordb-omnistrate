@@ -75,25 +75,6 @@ if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
   DEBUG=1
 fi
 
-extra_measure(){
-  sleep 120
-  echo "Taking extra measures"
-  info=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication)
-  if [[ "$info" =~ role:slave ]];then
-    ip=$(echo "$info" | grep master_host | cut -d':' -f2)
-  elif [[ "$info" =~ role:master ]];then
-    ip=$(echo "$info" | grep ip | cut -d'=' -f2 | cut -d',' -f1)
-  fi
-
-  for i in $ip;do
-    ans=$(grep $i $DATA_DIR/nodes.conf)
-    if [[ -z $ans ]];then
-      echo "The result is empty: $result"
-      echo "The node is not connected to the right master/replica"
-      exit 1
-    fi
-  done
-}
 
 meet_unknown_nodes(){
   # Had to add sleep until things are stable (nodes that can communicate should be given time to do so)
@@ -102,7 +83,8 @@ meet_unknown_nodes(){
   if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
     discrepancy=0
     while IFS= read -r line;do
-     if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
+     #if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
+      if [[ ! $line =~ .*myself.* ]];then
         discrepancy=$(( $discrepancy + 1 ))
         hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
         ip=$(getent hosts "$hostname" | awk '{print $1}')
@@ -113,7 +95,7 @@ meet_unknown_nodes(){
             echo "Timedout after 5 minutes while trying to ping $ip"
             exit 1
           fi
-          sleep 3
+          sleep 10
           echo "pinging: $hostname"
           PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
 
@@ -424,8 +406,6 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -is-cluster -tls-server-min-version TLS1.3 >>$FALKORDB_LOG_FILE_PATH &
   redis_exporter_pid=$!
 fi
-
-extra_measure
 
 while true; do
   sleep 1

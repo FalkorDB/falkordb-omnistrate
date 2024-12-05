@@ -78,10 +78,16 @@ fi
 extra_measure(){
   sleep 120
   echo "Taking extra measures"
-  info_ip=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication | grep ip | cut -d'=' -f2 | cut -d',' -f1)
-  for i in $(echo $info_ip);do
-    result=$(grep $i $DATA_DIR/nodes.conf)
-    if [[ -z $result ]];then
+  info=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication)
+  if [[ "$info" =~ role:slave ]];then
+    ip=$(echo "$info" | grep master_host | cut -d':' -f2)
+  elif [[ "$info" =~ role:master ]];then
+    ip=$(echo "$info" | grep ip | cut -d'=' -f2 | cut -d',' -f1)
+  fi
+
+  for i in $ip;do
+    ans=$(grep $i $DATA_DIR/nodes.conf)
+    if [[ -z $ans ]];then
       echo "The result is empty: $result"
       echo "The node is not connected to the right master/replica"
       exit 1

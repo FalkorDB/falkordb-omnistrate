@@ -84,7 +84,7 @@ meet_unknown_nodes(){
     discrepancy=0
     while IFS= read -r line;do
      #if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
-      if [[ ! $line =~ .*myself.* ]];then
+      if [[ ! $line =~ .*myself.* && ! $line =~ .*current.* ]];then
         discrepancy=$(( $discrepancy + 1 ))
         hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
         ip=$(getent hosts "$hostname" | awk '{print $1}')

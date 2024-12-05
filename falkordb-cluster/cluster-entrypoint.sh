@@ -95,7 +95,7 @@ meet_unknown_nodes(){
             echo "Timedout after 5 minutes while trying to ping $ip"
             exit 1
           fi
-          sleep 10
+          sleep 3
           echo "pinging: $hostname"
           PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
 

@@ -114,7 +114,7 @@ def test_cluster():
 
     instance = omnistrate.instance(
         service_id=args.service_id,
-        service_provider_id="sp-JvkxkPhinN",
+        service_provider_id=service.service_provider_id,
         service_key=service.key,
         service_environment_id=args.environment_id,
         service_environment_key=service.get_environment(args.environment_id).key,
@@ -338,11 +338,11 @@ def test_zero_downtime(
         db = instance.create_connection(ssl=ssl, force_reconnect=True)
 
         graph = db.select_graph("test")
-        graph.query("CREATE (n:Person {name: 'Alice'})")
+        
         while not thread_signal.is_set():
             # Write some data to the DB
             graph.query("CREATE (n:Person {name: 'Alice'})")
-            #graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
             time.sleep(3)
     except Exception as e:
         logging.exception(e)

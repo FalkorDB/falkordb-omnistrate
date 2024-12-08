@@ -94,7 +94,7 @@ meet_unknown_nodes(){
       if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
         discrepancy=$(( $discrepancy + 1 ))
         hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
-        ip=$(getent hosts "$hostname" | awk '{print $1}')
+        ip=$(dig +short "$hostname")
 
         tout=$(( $(date +%s) + 300 ))
         while true;do
@@ -158,7 +158,7 @@ update_ips_in_nodes_conf(){
   # contains the domain name of the current node) and updating the nodes.conf file with the new ip before starting the redis server.
   if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
     res=$(cat $DATA_DIR/nodes.conf | grep myself | awk '{print $2}' | cut -d',' -f1)
-    external_ip=$(getent hosts $NODE_HOST | awk '{print $1}')
+    external_ip=$(dig +short $NODE_HOST)
     if [[ -z $external_ip ]];then
       echo "Could not resolve hostname, trying again: $NODE_HOST"
       sleep 3

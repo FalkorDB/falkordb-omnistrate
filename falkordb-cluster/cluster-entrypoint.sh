@@ -69,7 +69,7 @@ RESOURCE_ALIAS=${RESOURCE_ALIAS:-""}
 DATE_NOW=$(date +"%Y%m%d%H%M%S")
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo ""; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
-
+myself=${myself:-""} # The line in the /data/nodes.conf which contains the information about the current node.
 
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
   DEBUG=1
@@ -79,7 +79,12 @@ fi
 meet_unknown_nodes(){
   # Had to add sleep until things are stable (nodes that can communicate should be given time to do so)
   sleep 30
-  # Look for nodes that have 0@0 in the nodes.conf and meet them again"
+  # This fixes an issue where two nodes restart (ex: cluster-sz-1 (x.x.x.1) and cluster-sz-2 (x.x.x.2)) and their ips are switched
+  # cluster-sz-1 gets (x.x.x.2) and cluster-sz-2 gets (x.x.x.1).
+  # This can be caught by looking for the lines in the /data/nodes.conf file which have either the "fail" state or the "0:@0".
+  # To fix the issue we use the CLUSTER MEET command to update the ips of each node that is unknown (0:@0 or fail).
+  # Now the nodes should communitcate as expected.
+
   if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
     discrepancy=0
     while IFS= read -r line;do
@@ -118,7 +123,17 @@ meet_unknown_nodes(){
       echo "Did not find IP discrepancies between nodes."
     fi
 
-    echo "make sure slave is connected to master using right ip."
+  fi
+  return 0
+}
+
+ensure_replica_connects_to_the_right_master_ip(){
+  # This fixes an issue where a replica connects to the wrong ip of its master
+  # the node does not update the ip of its master and gets stuck trying to connect to an incorrect ip.
+  # To fix this we check for each slave if the master ip present (shown) using the "INFO REPLICATION"
+  # is also found in the /data/nodes.conf or in the "CLUSTER NODES" output and if it is not
+  # we update the new master using the CLUSTER REPLICATE command.
+  echo "Making sure slave is connected to master using right ip."
     info=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication)
     if [[ "$info" =~ role:slave ]];then
       master_ip=$(echo "$info" | grep master_host | cut -d':' -f2)
@@ -127,18 +142,18 @@ meet_unknown_nodes(){
     for i in $master_ip;do
       ans=$(grep $i $DATA_DIR/nodes.conf)
       if [[ -z $ans ]];then
-        echo "Connected to master using the wrong ip."
+        echo "This instance is connected to its master using the wrong ip."
         master_id=$(echo $myself | awk '{print $4}')
         redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER REPLICATE $master_id
       fi
     done
-
-  fi
-  return 0
 }
 
 update_ips_in_nodes_conf(){
   # Replace old ip with new one (external ip)
+  # This fixes the issue where when a node restarts it does not update its own ip
+  # this is fixed by getting the new public ip using the command "getent hosts $NODE_HOST" (NODE_HOST
+  # contains the domain name of the current node) and updating the nodes.conf file with the new ip before starting the redis server.
   if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
     res=$(cat $DATA_DIR/nodes.conf | grep myself | awk '{print $2}' | cut -d',' -f1)
     external_ip=$(getent hosts $NODE_HOST | awk '{print $1}')
@@ -405,6 +420,8 @@ fi
 
 # Run this before health check to prevent client connections until discrepancies are resolved.
 meet_unknown_nodes
+ensure_replica_connects_to_the_right_master_ip
+
 
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   # Check if healthcheck binary exists

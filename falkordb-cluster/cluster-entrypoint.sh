@@ -106,6 +106,8 @@ meet_unknown_nodes(){
           sleep 3
           PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
 
+          echo "The answer to PING is: $PONG"
+          
           if [[ -n $ip && $PONG == "PONG" ]];then
             break
           fi

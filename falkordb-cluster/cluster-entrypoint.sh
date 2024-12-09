@@ -94,7 +94,6 @@ meet_unknown_nodes(){
       if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
         discrepancy=$(( $discrepancy + 1 ))
         hostname=$(echo $line | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
-        ip=$(dig +short "$hostname")
 
         tout=$(( $(date +%s) + 300 ))
         while true;do
@@ -104,9 +103,12 @@ meet_unknown_nodes(){
           fi
 
           sleep 3
-          PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
 
+          ip=$(dig +short "$hostname")
+          PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
+          
           echo "The answer to PING is: $PONG"
+          echo "The ip is: $ip"
           
           if [[ -n $ip && $PONG == "PONG" ]];then
             break

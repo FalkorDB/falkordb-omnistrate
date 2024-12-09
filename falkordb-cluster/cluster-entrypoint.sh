@@ -104,7 +104,7 @@ meet_unknown_nodes(){
 
           sleep 3
 
-          ip=$(getent hosts "$hostname" | aws '{print $1}')
+          ip=$(getent hosts "$hostname" | awk '{print $1}')
           PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
           
           echo "The answer to PING is: $PONG"
@@ -160,13 +160,20 @@ update_ips_in_nodes_conf(){
   # contains the domain name of the current node) and updating the nodes.conf file with the new ip before starting the redis server.
   if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
     res=$(cat $DATA_DIR/nodes.conf | grep myself | awk '{print $2}' | cut -d',' -f1)
-    external_ip=$(getent hosts $NODE_HOST | awk '{print $1}')
-    if [[ -z $external_ip ]];then
-      echo "Could not resolve hostname, trying again: $NODE_HOST"
-      sleep 3
-      update_ips_in_nodes_conf
-      return
-    fi
+
+    tout=$(( $(date +%s) + 300 ))
+    while true;do
+      if [[ $(date +%s) -gt $tout ]];then 
+        echo "Timedout trying to resolve ip for host: $HOSTNAME"
+        exit 1
+      fi
+      external_ip=$(getent hosts $NODE_HOST | awk '{print $1}')
+
+      if [[ -n $external_ip ]];then
+        break
+      fi
+    done 
+
     echo "The old ip is: $res"
     echo "The new ip is: $external_ip"
     sed -i "s/$res/$external_ip:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf

@@ -16,7 +16,7 @@ RUN cargo build --release
 
 FROM falkordb/falkordb:$FALKORDB_VERSION
 
-RUN apt-get update && apt-get install -y curl jq openssl dnsutils
+RUN apt-get update && apt-get install -y curl jq openssl
 
 RUN mkdir -p /falkordb
 

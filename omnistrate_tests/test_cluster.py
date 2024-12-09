@@ -114,7 +114,7 @@ def test_cluster():
 
     instance = omnistrate.instance(
         service_id=args.service_id,
-        service_provider_id=service.service_provider_id,
+        service_provider_id="sp-JvkxkPhinN",
         service_key=service.key,
         service_environment_id=args.environment_id,
         service_environment_key=service.get_environment(args.environment_id).key,
@@ -185,6 +185,7 @@ def test_cluster():
     instance.delete(network is not None)
 
     if error_signal.is_set():
+        time.sleep(99999)
         raise ValueError("Test failed")
     else:
         logging.info("Test passed")

@@ -78,7 +78,7 @@ fi
 
 meet_unknown_nodes(){
   # Had to add sleep until things are stable (nodes that can communicate should be given time to do so)
-  sleep 30
+  sleep 120
   # This fixes an issue where two nodes restart (ex: cluster-sz-1 (x.x.x.1) and cluster-sz-2 (x.x.x.2)) and their ips are switched
   # cluster-sz-1 gets (x.x.x.2) and cluster-sz-2 gets (x.x.x.1).
   # This can be caught by looking for the lines in the /data/nodes.conf file which have either the "fail" state or the "0:@0".

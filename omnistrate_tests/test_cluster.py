@@ -338,7 +338,7 @@ def test_zero_downtime(
         db = instance.create_connection(ssl=ssl, force_reconnect=True)
 
         graph = db.select_graph("test")
-
+        
         while not thread_signal.is_set():
             # Write some data to the DB
             graph.query("CREATE (n:Person {name: 'Alice'})")

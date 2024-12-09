@@ -126,6 +126,7 @@ meet_unknown_nodes(){
     if [[ $discrepancy -eq 0 ]];then
       echo "Did not find IP discrepancies between nodes."
     fi
+    cat $DATA_DIR/nodes.conf
 
   fi
   return 0
@@ -151,6 +152,8 @@ ensure_replica_connects_to_the_right_master_ip(){
         redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER REPLICATE $master_id
       fi
     done
+
+    cat $DATA_DIR/nodes.conf
 }
 
 update_ips_in_nodes_conf(){

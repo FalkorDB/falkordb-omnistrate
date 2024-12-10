@@ -38,7 +38,7 @@ x-internal-integrations:
     provider: native
 
 x-omnistrate-integrations:
-  - omnistrateLogging:
+  - omnistrateLogging
 
 x-rebalanceparam: &rebalanceparam
   x-omnistrate-api-params:

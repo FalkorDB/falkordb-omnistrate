@@ -58,13 +58,13 @@ parser.add_argument("--ensure-mz-distribution", action="store_true")
 parser.add_argument("--custom-network", required=False)
 
 parser.add_argument(
-    "--deployment-create-timeout-seconds", required=False, default=2400, type=int
+    "--deployment-create-timeout-seconds", required=False, default=2600, type=int
 )
 parser.add_argument(
-    "--deployment-delete-timeout-seconds", required=False, default=2400, type=int
+    "--deployment-delete-timeout-seconds", required=False, default=2600, type=int
 )
 parser.add_argument(
-    "--deployment-failover-timeout-seconds", required=False, default=2400, type=int
+    "--deployment-failover-timeout-seconds", required=False, default=2600, type=int
 )
 
 parser.add_argument("--persist-instance-on-fail",action="store_true")

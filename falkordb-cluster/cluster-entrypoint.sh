@@ -452,6 +452,8 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter_pid=$!
 fi
 
+redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER NODES
+redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING INFO REPLICATION
 while true; do
   sleep 1
 done

@@ -36,9 +36,7 @@ x-omnistrate-load-balancer:
 x-internal-integrations:
   logs:
     provider: native
-
-x-omnistrate-integrations:
-  - omnistrateLogging
+    
 
 x-rebalanceparam: &rebalanceparam
   x-omnistrate-api-params:

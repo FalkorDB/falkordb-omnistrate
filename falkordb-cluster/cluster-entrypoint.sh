@@ -389,6 +389,7 @@ run_node() {
     echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
     echo "tls-cluster yes" >>$NODE_CONF_FILE
     echo "tls-auth-clients no" >>$NODE_CONF_FILE
+    echo "tls-replication yes" >>$NODE_CONF_FILE
   else
     echo "port $NODE_PORT" >>$NODE_CONF_FILE
   fi

@@ -157,7 +157,7 @@ all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2
 
 [[package]]
 name = "redis"
-version = "5.1.1"
+version = "5.1.0b7"
 description = "Python client for Redis database and key-value store"
 optional = false
 python-versions = ">=3.8"
@@ -170,7 +170,7 @@ ocsp = ["cryptography (>=36.0.1)", "pyopenssl (==23.2.1)", "requests (>=2.31.0)"
 
 [package.source]
 type = "git"
-url = "https://github.com/dudizimber/redis-py.git"
+url = "https://github.com/dudizimber/redis-py"
 reference = "master"
 resolved_reference = "7d73d742d6df4b3d6f6a1f0ec73e72d4a02add74"
 
@@ -231,4 +231,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11.4"
-content-hash = "2e727b3ae2d8a2594955a64bde10c3abaaa1cf45d0421fba68d30859a2a5f177"
+content-hash = "89ade5481ba7b7a71dd9515547aaadf98b95eca33a286ac6c28a44d6be287cb3"

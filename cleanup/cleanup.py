@@ -30,8 +30,17 @@ headers = {
 }
 
 # Get all instances
-response = requests.get(get_instances_url, headers=headers)
-instances = response.json()["resourceInstances"]
+try:
+    response = requests.get(get_instances_url, headers=headers)
+    response.raise_for_status()
+    instances = response.json().get("resourceInstances", [])
+except requests.exceptions.RequestException as e:
+    print(f"Failed to retrieve instances: {e}")
+    # Handle the error or exit the script
+    exit(1)
+except KeyError:
+    print("Unexpected response format: 'resourceInstances' key not found")
+    exit(1)
 
 # Delete all instances
 for instance in (

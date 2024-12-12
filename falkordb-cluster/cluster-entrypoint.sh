@@ -134,10 +134,9 @@ ensure_replica_connects_to_the_right_master_ip(){
   # is also found in the /data/nodes.conf or in the "CLUSTER NODES" output and if it is not
   # we update the new master using the CLUSTER REPLICATE command.
   echo "Making sure slave is connected to master using right ip."
-    info=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication)
-    if [[ "$info" =~ role:slave ]];then
-      master_ip=$(echo "$info" | grep master_host | cut -d':' -f2)
-    fi
+  info=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication)
+  if [[ "$info" =~ role:slave ]];then
+    master_ip=$(echo "$info" | grep master_host | cut -d':' -f2| tr -d '\r' )
 
     ans=$(grep "$master_ip" "$DATA_DIR/nodes.conf")
     if [[ -z $ans ]];then
@@ -146,6 +145,8 @@ ensure_replica_connects_to_the_right_master_ip(){
       master_id=$(echo "$myself" | awk '{print $4}')
       redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER REPLICATE $master_id
     fi
+
+  fi
     
 }
 

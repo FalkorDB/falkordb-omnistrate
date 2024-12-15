@@ -155,6 +155,13 @@ update_ips_in_nodes_conf(){
   # This fixes the issue where when a node restarts it does not update its own ip
   # this is fixed by getting the new public ip using the command "getent hosts $NODE_HOST" (NODE_HOST
   # contains the domain name of the current node) and updating the nodes.conf file with the new ip before starting the redis server.
+
+  local NODE_PORT=$NODE_PORT
+
+  if [[ "$TLS" == "true" ]];then
+    NODE_PORT=0
+  fi
+
   if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
     res=$(cat $DATA_DIR/nodes.conf | grep myself | awk '{print $2}' | cut -d',' -f1)
 
@@ -173,8 +180,11 @@ update_ips_in_nodes_conf(){
 
     echo "The old ip is: $res"
     echo "The new ip is: $external_ip"
-    sed -i "s/$res/$external_ip:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf
+    echo "The port is: $NODE_PORT"
+
+    sed -i "s/$res/$POD_IP:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf
     cat $DATA_DIR/nodes.conf
+    
   else
     echo "First time running the node.."
   fi

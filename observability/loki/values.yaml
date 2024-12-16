@@ -1,0 +1,88 @@
+loki:
+  nodeSelector:
+    cloud.google.com/gke-nodepool: prometheus
+  commonConfig:
+    replication_factor: 1
+  useTestSchema: true
+  storage:
+    type: "filesystem"
+  storage_config:
+    filesystem:
+      directory: /tmp/loki/
+  extraMemberlistConfig:
+    bind_addr:
+      - ${MY_POD_IP}
+  auth_enabled: false
+  memcached:
+    chunk_cache:
+      enabled: false
+    results_cache:
+      enabled: false
+
+memberlist:
+  service:
+    publishNotReadyAddresses: true
+
+lokiCanary:
+  enabled: false
+
+ruler:
+  enabled: false
+
+minio:
+  enabled: false
+
+resultsCache:
+  enabled: false
+
+chunksCache:
+  enabled: false
+
+monitoring:
+  selfMonitoring:
+    enabled: false
+
+gateway:
+  enabled: false
+
+deploymentMode: SingleBinary
+
+singleBinary:
+  replicas: 1
+  extraArgs:
+    - -config.expand-env=true
+  extraEnv:
+    - name: MY_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+
+test:
+  enabled: false
+
+# Zero out replica counts of other deployment modes
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+
+ingester:
+  replicas: 0
+querier:
+  replicas: 0
+queryFrontend:
+  replicas: 0
+queryScheduler:
+  replicas: 0
+distributor:
+  replicas: 0
+compactor:
+  replicas: 0
+indexGateway:
+  replicas: 0
+bloomCompactor:
+  replicas: 0
+bloomGateway:
+  replicas: 0

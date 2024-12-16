@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: instance-monitor
+spec:
+  podMetricsEndpoints:
+    - bearerTokenSecret:
+        key: ""
+        name: ""
+      port: metrics
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: omnistrate
+  namespaceSelector: 
+    any: true

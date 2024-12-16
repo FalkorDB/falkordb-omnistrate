@@ -1,0 +1,205 @@
+prometheus.remote_write "default" {
+	endpoint {
+		url = "http://prometheus-server.observability-test.svc.cluster.local:9090/api/v1/write"
+	}
+}
+
+logging {
+	level  = "info"
+	format = "logfmt"
+}
+
+livedebugging {
+	enabled = true
+}
+
+import.git "ksm" {
+  repository = "https://github.com/grafana/alloy-modules.git"
+  revision = "main"
+  path = "modules/kubernetes/kube-state-metrics/metrics.alloy"
+  pull_frequency = "15m"
+}
+
+prometheus.operator.podmonitors "pods" {
+	forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+
+	namespaces = ["observability-test"]
+}
+
+discovery.kubernetes "pods" {
+	role = "pod"
+}
+
+discovery.kubernetes "nodes" {
+	role = "node"
+}
+
+ksm.kubernetes "targets" {}
+
+prometheus.exporter.unix "node_exporter" {}
+
+prometheus.exporter.self "alloy" {}
+
+discovery.relabel "metrics_cadvisor" {
+	targets = discovery.kubernetes.nodes.targets
+
+  rule {
+    action = "labelmap"
+    regex = "__meta_kubernetes_node_label_(.+)"
+  }
+
+	rule {
+		action       = "replace"
+		target_label = "__address__"
+		replacement  = "kubernetes.default.svc.cluster.local:443"
+	}
+
+	rule {
+		source_labels = ["__meta_kubernetes_node_name"]
+		regex         = "(.+)"
+		action        = "replace"
+		replacement   = "/api/v1/nodes/${1}/proxy/metrics/cadvisor"
+		target_label  = "__metrics_path__"
+	}
+}
+
+discovery.relabel "metrics_kubelet" {
+	targets = discovery.kubernetes.nodes.targets
+
+	rule {
+		action       = "replace"
+		target_label = "__address__"
+		replacement  = "kubernetes.default.svc.cluster.local:443"
+	}
+
+	rule {
+		source_labels = ["__meta_kubernetes_node_name"]
+		regex         = "(.+)"
+		action        = "replace"
+		replacement   = "/api/v1/nodes/${1}/proxy/metrics"
+		target_label  = "__metrics_path__"
+	}
+
+}
+
+prometheus.scrape "pods" {
+  scheme = "https"
+
+  tls_config {
+    server_name          = "kubernetes"
+    ca_file              = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    insecure_skip_verify = false
+  }
+  bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+  targets           = discovery.kubernetes.pods.targets
+  scrape_interval   = "60s"
+  forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
+}
+
+prometheus.scrape "cadvisor" {
+	scheme = "https"
+
+	tls_config {
+		server_name          = "kubernetes"
+		ca_file              = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+		insecure_skip_verify = false
+	}
+	bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	targets           = discovery.relabel.metrics_cadvisor.output
+	scrape_interval   = "60s"
+	forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
+}
+
+prometheus.scrape "kubelet" {
+	scheme = "https"
+
+	tls_config {
+		server_name          = "kubernetes"
+		ca_file              = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+		insecure_skip_verify = false
+	}
+	bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	targets           = discovery.relabel.metrics_kubelet.output
+	scrape_interval   = "60s"
+	forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
+}
+
+prometheus.scrape "node_exporter" {
+  targets = prometheus.exporter.unix.node_exporter.targets
+  forward_to = [prometheus.relabel.node_exporter.receiver]
+
+  job_name = "node-exporter"
+}
+
+ksm.scrape "metrics" {
+  targets = ksm.kubernetes.targets.output
+  forward_to = [prometheus.relabel.kube_state_metrics.receiver]
+}
+
+prometheus.scrape "alloy" {
+  targets    = prometheus.exporter.self.alloy.targets
+  forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+}
+
+prometheus.scrape "prometheus" {
+  targets = [
+    {__address__ = "prometheus-server.observability-test.svc.cluster.local:9090"},
+  ]
+  forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+}
+
+prometheus.relabel "kube_state_metrics" {
+  forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+
+  rule {
+    replacement = env("HOSTNAME")
+    target_label = "nodename"
+  }
+
+  rule {
+    replacement = "kube-state-metrics"
+    target_label = "job"
+  }
+}
+
+prometheus.relabel "drop_unwanted_metrics" {
+	forward_to = [prometheus.relabel.add_cluster_label.receiver]
+
+	rule {
+		source_labels = ["__name__"]
+		regex         = "^(___customer_|kube_node_info|kube_pod_info|kube_pod_status_phase|kube_pod_container_|prometheus_build_info|prometheus_tsdb_head_series|up|container_fs_usage_bytes|kubelet_volume_stats_used_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_inodes_used|kubelet_volume_stats_inodes|container_network_receive_packets_total|container_network_transmit_packets_total|container_network_receive_packets_dropped_total|container_network_transmit_packets_dropped_total|container_network_receive_errors_total|container_network_transmit_errors_total|kube_namespace_created|container_oom_events_total|container_cpu_cfs_throttled_seconds_total|kubelet_volume_stats_used_bytes|node_cpu_core_throttles_total|container_fs_limit_bytes|machine_cpu_cores|machine_memory_bytes|container_memory_usage_bytes|container_memory_rss|container_memory_working_set_bytes|container_cpu_usage_seconds_total|container_network_receive_bytes_total|container_network_transmit_bytes_total|kubelet_container_status_phase|kubelet_pod_status_phase).*"
+		action        = "keep"
+	}
+
+  rule {
+    replacement = env("HOSTNAME")
+    target_label = "nodename"
+  }
+}
+
+prometheus.relabel "node_exporter" {
+  forward_to = [prometheus.relabel.add_cluster_label.receiver]
+
+  rule {
+    replacement = env("HOSTNAME")
+    target_label = "nodename"
+  }
+
+  rule {
+    replacement = "node-exporter"
+    target_label = "job"
+  }
+}
+
+prometheus.relabel "add_cluster_label" {
+  forward_to = [prometheus.remote_write.default.receiver]
+
+  rule {
+    // Select "node" label and extract the cluster name with regex
+    source_labels = ["nodename", "node"]
+    regex = "gke-(c-[^-]+).+"
+    target_label = "cluster"
+    replacement = "$1"
+    action = "replace"
+  }
+}

@@ -46,7 +46,6 @@ except KeyError:
 for instance in (
     instances
     for instances in instances
-    #if instances["productTierId"] == TESTING_FALKORDDB_PLAN_ID
 ):
     time.sleep(5)
     instance_id = instance["consumptionResourceInstanceResult"]["id"]

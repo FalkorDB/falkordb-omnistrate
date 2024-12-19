@@ -2,10 +2,19 @@
 
 FALKORDB_USER=${FALKORDB_USER:-falkordb}
 #FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
-if [[ -f "/run/secrets/falkordbpassword" ]] && [[ -s "/run/secrets/falkordbpassword" ]]; then
-  FALKORDB_PASSWORD=$(cat "/run/secrets/falkordbpassword")
-elif [[ -n "$FALKORDB_PASSWORD" ]]; then
-  FALKORDB_PASSWORD=$FALKORDB_PASSWORD
+
+
+if [[ $HOSTNAME =~ node-sz-replica.* ]]; then
+  SECRET_PATH="/run/secrets/falkordbpasswordreplicasz"
+elif [[ $HOSTNAME =~ node-mz-replica.* ]];then
+  SECRET_PATH="/run/secrets/falkordbpasswordreplicamz"
+else
+  SECRET_PATH="/run/secrets/falkordbpassword"
+fi
+
+if [[ -f "$SECRET_PATH" && -s "$SECRET_PATH" ]]; then
+  # Use `read` instead of `cat` for better performance
+  FALKORDB_PASSWORD=$(cat "$SECRET_PATH")
 else
   FALKORDB_PASSWORD=''
 fi
@@ -19,6 +28,7 @@ elif [[ -n "$ADMIN_PASSWORD" ]]; then
 else
   export ADMIN_PASSWORD=''
 fi
+
 
 RUN_SENTINEL=${RUN_SENTINEL:-0}
 RUN_NODE=${RUN_NODE:-1}
@@ -407,11 +417,18 @@ if [ "$RUN_NODE" -eq "1" ]; then
   echo "dir $DATA_DIR" >>$NODE_CONF_FILE
 
   is_replica
-  if [[ $IS_REPLICA -eq 1 ]]; then
+  #check if the hostname has a replica string in it then it is a replica no need for the is_replica
+  if [[ $HOSTNAME =~ .*replica.* ]];then
     echo "replicaof $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER" >>$NODE_CONF_FILE
+    echo "replica-priority 0" >> $NODE_CONF_FILE
     echo "Starting Replica"
   else
-    echo "Starting Master"
+    if [[ $IS_REPLICA -eq 1 ]]; then
+      echo "replicaof $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER" >>$NODE_CONF_FILE
+      echo "Starting Replica"
+    else
+      echo "Starting Master"
+    fi
   fi
 
   if [[ $TLS == "true" ]]; then

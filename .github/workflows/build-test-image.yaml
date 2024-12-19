@@ -103,7 +103,7 @@ jobs:
 
       - name: Remove custom metrics for testing
         run: |
-          yq eval 'del(.x-omnistrate-integrations[1].omnistrateMetrics.additionalMetrics)' ${{ matrix.plans.file }} > ${{ matrix.plans.file }}.tmp
+          yq eval 'del(.x-omnistrate-integrations[1].omnistrateMetrics)' ${{ matrix.plans.file }} > ${{ matrix.plans.file }}.tmp
           mv ${{ matrix.plans.file }}.tmp ${{ matrix.plans.file }}
 
       - name: Upload yaml as artifact

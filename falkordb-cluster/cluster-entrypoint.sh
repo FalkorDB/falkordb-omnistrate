@@ -71,10 +71,129 @@ DATE_NOW=$(date +"%Y%m%d%H%M%S")
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo ""; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 
-
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
   DEBUG=1
 fi
+
+
+meet_unknown_nodes(){
+  # Had to add sleep until things are stable (nodes that can communicate should be given time to do so)
+  sleep 120
+  # This fixes an issue where two nodes restart (ex: cluster-sz-1 (x.x.x.1) and cluster-sz-2 (x.x.x.2)) and their ips are switched
+  # cluster-sz-1 gets (x.x.x.2) and cluster-sz-2 gets (x.x.x.1).
+  # This can be caught by looking for the lines in the /data/nodes.conf file which have either the "fail" state or the "0:@0".
+  # To fix the issue we use the CLUSTER MEET command to update the ips of each node that is unknown (0:@0 or fail).
+  # Now the nodes should communitcate as expected.
+
+  if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
+    discrepancy=0
+    while IFS= read -r line;do
+      if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
+        discrepancy=$((discrepancy + 1))
+        hostname=$(echo "$line" | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
+
+        tout=$(( $(date +%s) + 300 ))
+        while true;do
+          if [[ $(date +%s) -gt $tout ]];then 
+            echo "Timedout after 5 minutes while trying to ping $ip"
+            exit 1
+          fi
+
+          sleep 3
+
+          ip=$(getent hosts "$hostname" | awk '{print $1}')
+          PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
+          
+          echo "The answer to PING is: $PONG"
+          echo "The ip is: $ip"
+          
+          if [[ -n $ip && $PONG == "PONG" ]];then
+            break
+          fi
+
+        done
+
+        redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER MEET $ip $NODE_PORT
+        echo "Found $discrepancy IP discrepancy in line: $line"
+
+      fi
+
+    done < "$DATA_DIR/nodes.conf"
+
+    if [[ $discrepancy -eq 0 ]];then
+      echo "Did not find IP discrepancies between nodes."
+    fi
+
+  fi
+  return 0
+}
+
+ensure_replica_connects_to_the_right_master_ip(){
+  # This fixes an issue where a replica connects to the wrong ip of its master
+  # the node does not update the ip of its master and gets stuck trying to connect to an incorrect ip.
+  # To fix this we check for each slave if the master ip present (shown) using the "INFO REPLICATION"
+  # is also found in the /data/nodes.conf or in the "CLUSTER NODES" output and if it is not
+  # we update the new master using the CLUSTER REPLICATE command.
+  echo "Making sure slave is connected to master using right ip."
+  info=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication)
+  if [[ "$info" =~ role:slave ]];then
+    master_ip=$(echo "$info" | grep master_host | cut -d':' -f2| tr -d '\r' )
+
+    ans=$(grep "$master_ip" "$DATA_DIR/nodes.conf")
+    if [[ -z $ans ]];then
+      echo "This instance is connected to its master using the wrong ip."
+      myself=$(grep 'myself' "$DATA_DIR/nodes.conf")
+      master_id=$(echo "$myself" | awk '{print $4}')
+      redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER REPLICATE $master_id
+    fi
+
+  fi
+    
+}
+
+update_ips_in_nodes_conf(){
+  # Replace old ip with new one (external ip)
+  # This fixes the issue where when a node restarts it does not update its own ip
+  # this is fixed by getting the new public ip using the command "getent hosts $NODE_HOST" (NODE_HOST
+  # contains the domain name of the current node) and updating the nodes.conf file with the new ip before starting the redis server.
+
+  local NODE_PORT=$NODE_PORT
+
+  if [[ "$TLS" == "true" ]];then
+    NODE_PORT=0
+  fi
+
+  if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
+    res=$(cat $DATA_DIR/nodes.conf | grep myself | awk '{print $2}' | cut -d',' -f1)
+
+    tout=$(( $(date +%s) + 300 ))
+    while true;do
+      if [[ $(date +%s) -gt $tout ]];then 
+        echo "Timedout trying to resolve ip for host: $HOSTNAME"
+        exit 1
+      fi
+      external_ip=$(getent hosts $NODE_HOST | awk '{print $1}')
+
+      if [[ -n $external_ip ]];then
+        break
+      fi
+    done 
+
+    echo "The old ip is: $res"
+    echo "The new ip is: $external_ip"
+    echo "The port is: $NODE_PORT"
+
+    sed -i "s/$res/$POD_IP:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf
+    cat $DATA_DIR/nodes.conf
+    
+  else
+    echo "First time running the node.."
+  fi
+  return 0
+}
+
+update_ips_in_nodes_conf
+
 
 handle_sigterm() {
   echo "Caught SIGTERM"
@@ -277,6 +396,7 @@ run_node() {
     echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
     echo "tls-cluster yes" >>$NODE_CONF_FILE
     echo "tls-auth-clients no" >>$NODE_CONF_FILE
+    echo "tls-replication yes" >>$NODE_CONF_FILE
   else
     echo "port $NODE_PORT" >>$NODE_CONF_FILE
   fi
@@ -317,6 +437,11 @@ elif [[ $NODE_INDEX -gt 5 ]]; then
 else
   echo "Cluster does not exist. Waiting for it to be created"
 fi
+
+# Run this before health check to prevent client connections until discrepancies are resolved.
+meet_unknown_nodes
+ensure_replica_connects_to_the_right_master_ip
+
 
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   # Check if healthcheck binary exists

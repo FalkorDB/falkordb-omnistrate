@@ -4,6 +4,8 @@ use rouille::Response;
 use rouille::Server;
 use std::env;
 use std::env::args;
+use std::time;
+
 
 fn main() {
     let args: Vec<String> = args().collect();
@@ -116,7 +118,7 @@ fn health_check_handler(is_sentinel: bool) -> Result<bool, redis::RedisError> {
 }
 
 fn get_status_from_cluster_node(
-    db_info: String,
+    _db_info: String,
     con: &mut redis::Connection,
 ) -> Result<bool, redis::RedisError> {
     let cluster_info: String = redis::cmd("CLUSTER").arg("INFO").query(con)?;
@@ -138,15 +140,15 @@ fn get_status_from_slave(db_info: String) -> Result<bool, redis::RedisError> {
 
 fn resolve_host(host: &str) {
     let mut resolved = false;
-    let max_retries = 10;
-    let mut retries = 0;
+    let timeout = std::time::Duration::from_secs(300); // Total timeout: 150 seconds
+    let start_time = std::time::Instant::now();
 
-    while !resolved && retries < max_retries {
+    while !resolved && start_time.elapsed() < timeout {
         match dns_lookup::lookup_host(host) {
             Ok(_) => resolved = true,
             Err(_) => {
+                println!("Host not resolved yet!");
                 std::thread::sleep(std::time::Duration::from_secs(1));
-                retries += 1;
             }
         }
     }

@@ -373,6 +373,7 @@ join_cluster() {
 
 }
 
+sleep 600
 run_node() {
 
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE

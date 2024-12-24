@@ -425,8 +425,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   else
     echo "port $NODE_PORT" >>$NODE_CONF_FILE
   fi
-
-  sleep 600
+  
   redis-server $NODE_CONF_FILE --logfile $FALKORDB_LOG_FILE_PATH &
   falkordb_pid=$!
   tail -F $FALKORDB_LOG_FILE_PATH &

@@ -103,9 +103,9 @@ jobs:
 
       - name: Remove custom metrics for testing
         run: |
-          yq eval 'del(.x-omnistrate-integrations[1].omnistrateMetrics.additionalMetrics)' ${{ matrix.plans.file }} > ${{ matrix.plans.file }}.tmp
+          yq eval 'del(.x-omnistrate-integrations[1].omnistrateMetrics) | .x-omnistrate-integrations |= map(select(type != "!!map" or length > 0))' ${{ matrix.plans.file }} > ${{ matrix.plans.file }}.tmp
           mv ${{ matrix.plans.file }}.tmp ${{ matrix.plans.file }}
-
+      
       - name: Upload yaml as artifact
         uses: actions/upload-artifact@v4
         with:
@@ -240,7 +240,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-tls'   --instance-description 'test-sz-failover-tls' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-tls'  --instance-description 'test-sz-failover-tls' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_replication.py
@@ -250,7 +250,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-tls'   --instance-description 'test-mz-failover-tls' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-tls' --instance-description 'test-mz-failover-tls' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - GCP/us-central1 - Update Memory
             if: "true"
             testFile: test_update_memory.py
@@ -320,7 +320,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1' --instance-name 'test-cluster-sz-failover' --instance-description 'test-cluster-sz-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1'  --instance-name 'test-cluster-sz-failover' --instance-description 'test-cluster-sz-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
           - name: PRO/ClusterMultiZone - GCP/us-central1 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py
@@ -330,7 +330,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-1' --instance-name 'test-cluster-mz-failover' --instance-description 'test-cluster-mz-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'   --instance-name 'test-cluster-mz-failover' --instance-description 'test-cluster-mz-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
           - name: PRO/ClusterSingleZone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_cluster.py
@@ -340,7 +340,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1' --instance-name 'test-cluster-sz-failover-tls' --instance-description 'test-cluster-sz-failover' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1'   --instance-name 'test-cluster-sz-failover-tls' --instance-description 'test-cluster-sz-failover' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
           - name: PRO/ClusterMultiZone - GCP/us-central1 - Failover & Persistence With TLS
             if: "true"
             testFile: test_cluster.py
@@ -350,7 +350,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-1' --instance-name 'test-cluster-mz-failover-tls' --instance-description 'test-cluster-mz-failover' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'   --instance-name 'test-cluster-mz-failover-tls' --instance-description 'test-cluster-mz-failover' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
 
           # Enterprise
           - name: Enterprise/Standalone - GCP/us-central1 - Failover & Persistence
@@ -392,7 +392,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1' --instance-name 'test-cluster-sz-enterprise-failover' --instance-description 'test-cluster-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1'   --instance-name 'test-cluster-sz-enterprise-failover' --instance-description 'test-cluster-sz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
           - name: Enterprise/ClusterMultiZone - GCP/us-central1 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_cluster.py
@@ -402,7 +402,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-1' --instance-name 'test-cluster-mz-enterprise-failover' --instance-description 'test-cluster-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'  --instance-name 'test-cluster-mz-enterprise-failover' --instance-description 'test-cluster-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
 
           # - name: PRO/ClusterSingleZone - GCP/us-central1 - Add/Remove Shards
           #   if: "true"
@@ -495,7 +495,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover'   --instance-description 'test-sz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover' --instance-description 'test-sz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
@@ -505,7 +505,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover'   --instance-description 'test-mz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover' --instance-description 'test-mz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/ClusterSingleZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py
@@ -515,7 +515,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1' --instance-name 'test-cluster-sz-failover' --instance-description 'test-cluster-sz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1'  --instance-name 'test-cluster-sz-failover' --instance-description 'test-cluster-sz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
           - name: PRO/ClusterMultiZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_cluster.py
@@ -525,7 +525,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-1' --instance-name 'test-cluster-mz-failover' --instance-description 'test-cluster-mz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'  --instance-name 'test-cluster-mz-failover' --instance-description 'test-cluster-mz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
           # Enterprise
           - name: Enterprise/Standalone - AWS/us-east-2 - Failover & Persistence
             # Run only if is tag, or PR is ready for review
@@ -557,7 +557,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover'  --instance-description 'test-mz-enterprise-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover'   --instance-description 'test-mz-enterprise-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
           - name: Enterprise/ClusterSingleZone - AWS/us-east-2 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_cluster.py
@@ -567,7 +567,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1' --instance-name 'test-cluster-sz-enterprise-failover' --instance-description 'test-cluster-sz-enterprise-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1'   --instance-name 'test-cluster-sz-enterprise-failover' --instance-description 'test-cluster-sz-enterprise-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
           - name: Enterprise/ClusterMultiZone - AWS/us-east-2 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: test_cluster.py
@@ -577,7 +577,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-1' --instance-name 'test-cluster-mz-enterprise-failover' --instance-description 'test-cluster-mz-enterprise-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'   --instance-name 'test-cluster-mz-enterprise-failover' --instance-description 'test-cluster-mz-enterprise-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
 
     steps:
       - name: Checkout

@@ -72,6 +72,20 @@ FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/
 NODE_CONF_FILE=$DATA_DIR/node.conf
 
 
+
+
+if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
+  # Check if healthcheck binary exists
+  if [ -f /usr/local/bin/healthcheck ]; then
+    echo "Starting Healthcheck"
+    healthcheck | awk '{ print "**HEALTHCHECK**: " $0 }' >>$FALKORDB_LOG_FILE_PATH &
+  else
+    echo "Healthcheck binary not found"
+  fi
+fi
+
+
+
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
   DEBUG=1
 fi
@@ -318,15 +332,15 @@ else
   echo "Cluster does not exist. Waiting for it to be created"
 fi
 
-if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
-  # Check if healthcheck binary exists
-  if [ -f /usr/local/bin/healthcheck ]; then
-    echo "Starting Healthcheck"
-    healthcheck | awk '{ print "**HEALTHCHECK**: " $0 }' >>$FALKORDB_LOG_FILE_PATH &
-  else
-    echo "Healthcheck binary not found"
-  fi
-fi
+# if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
+#   # Check if healthcheck binary exists
+#   if [ -f /usr/local/bin/healthcheck ]; then
+#     echo "Starting Healthcheck"
+#     healthcheck | awk '{ print "**HEALTHCHECK**: " $0 }' >>$FALKORDB_LOG_FILE_PATH &
+#   else
+#     echo "Healthcheck binary not found"
+#   fi
+# fi
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"

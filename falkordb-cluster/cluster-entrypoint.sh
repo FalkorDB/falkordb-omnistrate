@@ -84,7 +84,7 @@ if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   fi
 fi
 
-
+sleep 10
 
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
   DEBUG=1
@@ -332,15 +332,6 @@ else
   echo "Cluster does not exist. Waiting for it to be created"
 fi
 
-# if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
-#   # Check if healthcheck binary exists
-#   if [ -f /usr/local/bin/healthcheck ]; then
-#     echo "Starting Healthcheck"
-#     healthcheck | awk '{ print "**HEALTHCHECK**: " $0 }' >>$FALKORDB_LOG_FILE_PATH &
-#   else
-#     echo "Healthcheck binary not found"
-#   fi
-# fi
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"

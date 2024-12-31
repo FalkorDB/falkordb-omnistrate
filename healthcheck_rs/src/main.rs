@@ -126,12 +126,15 @@ fn get_status_from_cluster_node(
     Ok(cluster_info.contains("cluster_state:ok"))
 }
 
-fn get_status_from_master(_db_info: String) -> Result<bool, redis::RedisError> {
+fn get_status_from_master(db_info: String) -> Result<bool, redis::RedisError> {
+    if db_info.contains("loading:1") {
+        return Ok(false);
+    }
     Ok(true)
 }
 
 fn get_status_from_slave(db_info: String) -> Result<bool, redis::RedisError> {
-    if !db_info.contains("master_link_status:up") || db_info.contains("master_sync_in_progress:1") {
+    if db_info.contains("loading:1") || !db_info.contains("master_link_status:up") || db_info.contains("master_sync_in_progress:1") {
         return Ok(false);
     }
 

@@ -447,7 +447,7 @@ class OmnistrateFleetInstance:
                 logging.info("Upgrade pending")
                 time.sleep(10)
                 logging.info("Waiting for instance to be ready")
-            if status == "IN_PROGRESS":
+            elif status == "IN_PROGRESS":
                 logging.info("Upgrade in progress")
                 time.sleep(10)
                 logging.info("Waiting for instance to be ready")

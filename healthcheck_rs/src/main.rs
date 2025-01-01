@@ -131,37 +131,7 @@ fn get_status_from_master(db_info: String) -> Result<bool, redis::RedisError> {
     if db_info.contains("loading:1") {
         return Ok(false);
     }
-
-    // Check if the last RDB save is in progress
-    if db_info.contains("rdb_bgsave_in_progress:1") {
-        return Ok(false);
-    }
-
-    // Check if there is an AOF rewrite in progress
-    if db_info.contains("aof_rewrite_in_progress:1") {
-        return Ok(false);
-    }
-
-    // Check if the last RDB save was unsuccessful
-    if db_info.contains("rdb_last_bgsave_status:failed") {
-        return Ok(false);
-    }
-
-    // Check if the AOF last write was unsuccessful
-    if db_info.contains("aof_last_write_status:failed") {
-        return Ok(false);
-    }
-
-    // Check if there is a pending AOF rewrite
-    if db_info.contains("aof_pending_rewrite:1") {
-        return Ok(false);
-    }
-
-    // Check if the current save keys are being processed
-    if db_info.contains("current_save_keys_processed:1") || db_info.contains("current_save_keys_total:1") {
-        return Ok(false);
-    }
-
+    
     Ok(true)
 }
 
@@ -178,31 +148,6 @@ fn get_status_from_slave(db_info: String) -> Result<bool, redis::RedisError> {
 
     // Check if the master sync is in progress
     if db_info.contains("master_sync_in_progress:1") {
-        return Ok(false);
-    }
-
-    // Check if the last RDB save is in progress (as a slave, it might still impact the node)
-    if db_info.contains("rdb_bgsave_in_progress:1") {
-        return Ok(false);
-    }
-
-    // Check if the last RDB save was unsuccessful
-    if db_info.contains("rdb_last_bgsave_status:failed") {
-        return Ok(false);
-    }
-
-    // Check if the AOF last write was unsuccessful
-    if db_info.contains("aof_last_write_status:failed") {
-        return Ok(false);
-    }
-
-    // Check if there is a pending AOF rewrite
-    if db_info.contains("aof_pending_rewrite:1") {
-        return Ok(false);
-    }
-
-    // Check if the current save keys are being processed
-    if db_info.contains("current_save_keys_processed:1") || db_info.contains("current_save_keys_total:1") {
         return Ok(false);
     }
 

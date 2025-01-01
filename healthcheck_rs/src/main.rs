@@ -35,7 +35,7 @@ fn start_health_check_server(is_sentinel: bool) {
     let server = Server::new(addr, move |request| {
         router!(request,
             (GET) (/healthcheck) => {
-                let health = health_check_handler(is_sentinel).unwrap();
+                let health = health_check_handler(is_sentinel).unwrap_or_else(|_| false);
 
                 if health {
                     Response::text("OK")

@@ -112,6 +112,7 @@ class OmnistrateFleetInstance:
         description: str,
         falkordb_user: str,
         falkordb_password: str,
+        network_type: str,
         product_tier_version: str | None = None,
         custom_network_id: str | None = None,
         **kwargs,
@@ -123,6 +124,7 @@ class OmnistrateFleetInstance:
         data = {
             "cloud_provider": deployment_cloud_provider,
             "region": deployment_region,
+            "network_type": network_type,
             "requestParams": {
                 "name": name,
                 "description": description,

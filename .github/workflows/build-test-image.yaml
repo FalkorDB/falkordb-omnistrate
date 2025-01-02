@@ -464,6 +464,131 @@ jobs:
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'multi-Zone' --replica-id 'node-mz-0'  --instance-name 'test-mz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          ###################### GCP PRIVATE ######################
+          - name: PRO/SingleZone - PRIVATE/GCP/us-central1 - Failover & Persistence
+            if: "true"
+            testFile: test_replication.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-private' --network-type INTERNAL --instance-description 'test-sz-failover-private' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          - name: PRO/MultiZone - PRIVATE/GCP/us-central1 - Failover & Persistence
+            if: "true"
+            testFile: test_replication.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-private' --network-type INTERNAL --instance-description 'test-mz-failover-private' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          - name: PRO/SingleZone - PRIVATE/GCP/us-central1 - Failover & Persistence With TLS
+            if: "true"
+            testFile: test_replication.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-tls-private' --network-type INTERNAL --instance-description 'test-sz-failover-tls-private' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+          - name: PRO/MultiZone - PRIVATE/GCP/us-central1 - Failover & Persistence With TLS
+            if: "true"
+            testFile: test_replication.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-tls-private' --network-type INTERNAL --instance-description 'test-mz-failover-tls-private' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+
+          - name: PRO/ClusterSingleZone - PRIVATE/GCP/us-central1 - Failover & Persistence
+            if: "true"
+            testFile: test_cluster.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1'  --network-type INTERNAL --instance-name 'test-cluster-sz-failover-private' --instance-description 'test-cluster-sz-failover-private' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
+          - name: PRO/ClusterMultiZone - PRIVATE/GCP/us-central1 - Failover & Persistence
+            if: "true"
+            testFile: test_cluster.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4' --network-type INTERNAL --instance-name 'test-cluster-mz-failover-private' --instance-description 'test-cluster-mz-failover-private' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
+          - name: PRO/ClusterSingleZone - PRIVATE/GCP/us-central1 - Failover & Persistence With TLS
+            if: "true"
+            testFile: test_cluster.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1' --network-type INTERNAL --instance-name 'test-cluster-sz-failover-tls-private' --instance-description 'test-cluster-sz-failover-private' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'"
+          - name: PRO/ClusterMultiZone - PRIVATE/GCP/us-central1 - Failover & Persistence With TLS
+            if: "true"
+            testFile: test_cluster.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4' --network-type INTERNAL --instance-name 'test-cluster-mz-failover-tls-private' --instance-description 'test-cluster-mz-failover-private' --instance-type 'e2-medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
+
+          # Enterprise
+
+          - name: Enterprise/SingleZone - PRIVATE/GCP/us-central1 - Failover & Persistence
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: test_replication.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-enterprise-failover-private' --network-type INTERNAL --instance-description 'test-sz-enterprise-failover-private' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+          - name: Enterprise/MultiZone - PRIVATE/GCP/us-central1 - Failover & Persistence
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: test_replication.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-enterprise-failover-private' --network-type INTERNAL --instance-description 'test-mz-enterprise-failover-private' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+          - name: Enterprise/ClusterSingleZone - PRIVATE/GCP/us-central1 - Failover & Persistence
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: test_cluster.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1' --network-type INTERNAL --instance-name 'test-cluster-sz-enterprise-failover-private' --instance-description 'test-cluster-sz-enterprise-failover-private' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: Enterprise/ClusterMultiZone - PRIVATE/GCP/us-central1 - Failover & Persistence
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: test_cluster.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4' --network-type INTERNAL --instance-name 'test-cluster-mz-enterprise-failover-private' --instance-description 'test-cluster-mz-enterprise-failover-private' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
 
             ###################### AWS ######################
           - name: Free - AWS/us-east-2 - Failover & Persistence

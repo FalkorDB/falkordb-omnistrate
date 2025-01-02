@@ -49,6 +49,7 @@ parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--persist-instance-on-fail",action="store_true")
 parser.add_argument("--custom-network", required=False)
+parser.add_argument("--network-type", required=False, default="PUBLIC")
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -112,6 +113,7 @@ def test_standalone():
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
+            network_type=args.network_type,
             deployment_region=args.region,
             name=args.instance_name,
             description=args.instance_description,

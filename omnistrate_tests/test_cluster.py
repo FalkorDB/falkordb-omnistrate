@@ -56,6 +56,8 @@ parser.add_argument("--cluster-replicas", required=False, default="1")
 
 parser.add_argument("--ensure-mz-distribution", action="store_true")
 parser.add_argument("--custom-network", required=False)
+parser.add_argument("--network-type", required=False, default="PUBLIC")
+
 
 parser.add_argument(
     "--deployment-create-timeout-seconds", required=False, default=2600, type=int
@@ -133,6 +135,7 @@ def test_cluster():
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
+            network_type=args.network_type,
             deployment_region=args.region,
             name=args.instance_name,
             description=args.instance_description,
@@ -146,6 +149,7 @@ def test_cluster():
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
             custom_network_id=network.network_id if network else None,
+
         )
         
         try:

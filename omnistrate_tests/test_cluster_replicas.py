@@ -54,7 +54,7 @@ parser.add_argument("--cluster-replicas", required=False, default="1")
 parser.add_argument("--shards", required=False, default="3")
 parser.add_argument("--persist-instance-on-fail",action="store_true")
 parser.add_argument("--ensure-mz-distribution", action="store_true")
-
+parser.add_argument("--network-type", required=False, default="PUBLIC")
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
@@ -118,6 +118,7 @@ def test_cluster_replicas():
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
+            network_type=args.network_type,
             deployment_region=args.region,
             name=args.instance_name,
             description=args.instance_description,

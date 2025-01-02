@@ -111,6 +111,7 @@ def test_add_remove_replica():
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
+            network_type=args.network_type,
             deployment_region=args.region,
             name=args.instance_name,
             description=args.instance_description,
@@ -121,7 +122,6 @@ def test_add_remove_replica():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
-            networkType=args.network_type,
         )
 
         try:

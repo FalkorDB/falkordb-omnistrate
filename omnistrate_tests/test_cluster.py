@@ -135,6 +135,7 @@ def test_cluster():
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
+            network_type=args.network_type,
             deployment_region=args.region,
             name=args.instance_name,
             description=args.instance_description,
@@ -148,7 +149,6 @@ def test_cluster():
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
             custom_network_id=network.network_id if network else None,
-            network_type=args.network_type,
 
         )
         

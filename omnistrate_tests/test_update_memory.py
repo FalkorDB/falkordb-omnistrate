@@ -123,6 +123,7 @@ def test_update_memory():
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
+            network_type=args.network_type,
             deployment_region=args.region,
             name=args.instance_name,
             description=args.instance_description,
@@ -135,7 +136,6 @@ def test_update_memory():
             AOFPersistenceConfig=args.aof_config,
             clusterReplicas=args.cluster_replicas,
             hostCount=args.host_count,
-            network_type=args.network_type,
         )
 
         try:

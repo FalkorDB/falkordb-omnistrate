@@ -51,7 +51,7 @@ parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--replica-count", required=False, default="2")
 parser.add_argument("--persist-instance-on-fail", action="store_true")
-
+parser.add_argument("--network-type", required=False, default="PUBLIC")
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
@@ -121,6 +121,7 @@ def test_add_remove_replica():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            networkType=args.network_type,
         )
 
         try:

@@ -101,7 +101,14 @@ meet_unknown_nodes(){
           sleep 3
 
           ip=$(getent hosts "$hostname" | awk '{print $1}')
-          PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
+
+          if [[ "$NETWORKING_TYPE" == "INTERNAL" ]]; then
+            hostname=$NODE_HOST
+          else
+            hostname=$(echo $hostname | cut -d'.' -f1)
+          fi
+
+          PONG=$(redis-cli -h $hostname $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
           
           echo "The answer to PING is: $PONG"
           echo "The ip is: $ip"

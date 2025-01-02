@@ -389,7 +389,7 @@ class OmnistrateFleetInstance:
         source_version: str,
         target_version: str,
         wait_until_ready: bool = False,
-        upgrade_timeout: int = 1200,
+        upgrade_timeout: int = 2400,
     ):
 
         data = {

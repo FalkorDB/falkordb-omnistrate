@@ -124,7 +124,7 @@ meet_unknown_nodes(){
 
       fi
 
-    done < "$DATA_DIR/nodes.conf"
+    done <<< "$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER NODES)"
 
     if [[ $discrepancy -eq 0 ]];then
       echo "Did not find IP discrepancies between nodes."

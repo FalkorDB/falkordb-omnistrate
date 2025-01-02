@@ -55,7 +55,7 @@ parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
 parser.add_argument("--persist-instance-on-fail", action="store_true")
-
+parser.add_argument("--network-type", required=False, default="PUBLIC")
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
@@ -156,6 +156,7 @@ def test_upgrade_version():
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
             product_tier_version=last_tier.version,
+            network_type=args.network_type,
         )
 
         try:

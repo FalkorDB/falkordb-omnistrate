@@ -113,6 +113,7 @@ def test_cluster_shards():
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
+            network_type=args.network_type,
             deployment_region=args.region,
             name=args.instance_name,
             description=args.instance_description,
@@ -125,7 +126,6 @@ def test_cluster_shards():
             AOFPersistenceConfig=args.aof_config,
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
-            network_type=args.network_type,
         )
 
         try:

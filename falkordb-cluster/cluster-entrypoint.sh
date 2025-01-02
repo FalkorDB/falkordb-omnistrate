@@ -134,16 +134,19 @@ ensure_replica_connects_to_the_right_master_ip(){
   # To fix this we check for each slave if the master ip present (shown) using the "INFO REPLICATION"
   # is also found in the /data/nodes.conf or in the "CLUSTER NODES" output and if it is not
   # we update the new master using the CLUSTER REPLICATE command.
-  echo "Making sure slave is connected to master using right ip."
   info=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication)
   if [[ "$info" =~ role:slave ]];then
+    echo "Making sure slave is connected to master using right ip."
     master_ip=$(echo "$info" | grep master_host | cut -d':' -f2| tr -d '\r' )
-
+    echo "the master ip is: $master_ip"
     ans=$(grep "$master_ip" "$DATA_DIR/nodes.conf")
+    echo "The answer is: $ans"
     if [[ -z $ans ]];then
       echo "This instance is connected to its master using the wrong ip."
       myself=$(grep 'myself' "$DATA_DIR/nodes.conf")
+      echo "The myself line is: $myself"
       master_id=$(echo "$myself" | awk '{print $4}')
+      echo "The master id is: $master_id"
       redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER REPLICATE $master_id
     fi
 
@@ -180,7 +183,7 @@ update_ips_in_nodes_conf(){
     done 
 
     echo "The old ip is: $res"
-    echo "The new ip is: $external_ip"
+    echo "The new ip is: $POD_IP"
     echo "The port is: $NODE_PORT"
 
     sed -i "s/$res/$POD_IP:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf

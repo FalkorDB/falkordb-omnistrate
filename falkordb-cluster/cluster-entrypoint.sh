@@ -323,6 +323,8 @@ set_aof_persistence_config() {
   if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then
     echo "Setting AOF persistence: $PERSISTENCE_AOF_CONFIG"
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET appendonly yes
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET auto-aof-rewrite-percentage 100
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET auto-aof-rewrite-min-size 0
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET appendfsync $PERSISTENCE_AOF_CONFIG
   fi
 }

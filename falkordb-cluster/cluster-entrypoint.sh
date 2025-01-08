@@ -103,6 +103,8 @@ meet_unknown_nodes(){
           ip=$(getent hosts "$hostname" | awk '{print $1}')
 
           if [[ "$NETWORKING_TYPE" == "INTERNAL" ]]; then
+            echo "The hostname is: $hostname"
+            echo "The network type is: $NETWORKING_TYPE"
             hostname=$NODE_HOST
           else
             hostname=$(echo $hostname | cut -d'.' -f1)

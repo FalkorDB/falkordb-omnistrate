@@ -154,7 +154,7 @@ def test_cluster():
         
         try:
             ip = resolve_hostname(instance=instance)
-            logging.info(f"Instance endpoint {instance.get_cluster_endpoint()['endpoint']} resolved to {ip}")
+            logging.info(f"Instance endpoint {instance.get_cluster_endpoint(network_type=args.network_type)['endpoint']} resolved to {ip}")
         except TimeoutError as e:
             logging.error(f"DNS resolution failed: {e}")
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
@@ -277,6 +277,7 @@ def test_failover(instance: OmnistrateFleetInstance):
     # Get instance host and port
     db = instance.create_connection(
         ssl=args.tls,
+        network_type=args.network_type,
     )
 
     graph = db.select_graph("test")
@@ -306,6 +307,7 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     # Get instance host and port
     db = instance.create_connection(
         ssl=args.tls,
+        network_type=args.network_type,
     )
 
     graph = db.select_graph("test")
@@ -339,7 +341,7 @@ def test_zero_downtime(
 ):
     """This function should test the ability to read and write while a failover happens"""
     try:
-        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+        db = instance.create_connection(ssl=ssl, force_reconnect=True, network_type=args.network_type)
 
         graph = db.select_graph("test")
         
@@ -371,7 +373,7 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     if interval <= 0 or timeout <= 0:
         raise ValueError("Interval and timeout must be positive")
     
-    cluster_endpoint = instance.get_cluster_endpoint()
+    cluster_endpoint = instance.get_cluster_endpoint(network_type=args.network_type)
 
     if not cluster_endpoint or 'endpoint' not in cluster_endpoint:
         raise KeyError("Missing endpoint information in cluster configuration")

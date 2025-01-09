@@ -183,9 +183,9 @@ update_ips_in_nodes_conf(){
         echo "Timedout trying to resolve ip for host: $HOSTNAME"
         exit 1
       fi
-      external_ip=$(getent hosts $NODE_HOST | awk '{print $1}')
+      ip=$(getent hosts $NODE_HOST | awk '{print $1}')
 
-      if [[ -n $external_ip ]];then
+      if [[ -n $ip ]];then
         break
       fi
     done 

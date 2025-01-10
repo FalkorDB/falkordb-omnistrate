@@ -76,6 +76,13 @@ if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
 fi
 
 
+run_bgrewrite_every_twealve_hours(){
+  # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
+  # The command is run every 12 hours to prevent the AOF file from growing too large.
+  cron
+  crontab <<< "* 0/12 * * * $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF"
+}
+
 meet_unknown_nodes(){
   # Had to add sleep until things are stable (nodes that can communicate should be given time to do so)
   sleep 30
@@ -323,8 +330,8 @@ set_aof_persistence_config() {
   if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then
     echo "Setting AOF persistence: $PERSISTENCE_AOF_CONFIG"
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET appendonly yes
-    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET auto-aof-rewrite-percentage 100
-    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET auto-aof-rewrite-min-size 0
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET auto-aof-rewrite-percentage 20
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET auto-aof-rewrite-min-size 64mb
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET appendfsync $PERSISTENCE_AOF_CONFIG
   fi
 }
@@ -461,6 +468,9 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -is-cluster -tls-server-min-version TLS1.3 >>$FALKORDB_LOG_FILE_PATH &
   redis_exporter_pid=$!
 fi
+
+
+run_bgrewrite_every_twealve_hours
 
 while true; do
   sleep 1

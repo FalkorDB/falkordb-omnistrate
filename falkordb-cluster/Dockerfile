@@ -16,9 +16,12 @@ RUN cargo build --release
 
 FROM falkordb/falkordb:$FALKORDB_VERSION
 
-RUN apt-get update && apt-get install -y curl jq openssl cron
-RUN useradd -u 1000 -m falkordb
-RUN touch /var/run/crond.pid && chown falkordb:falkordb /var/run/crond.pid && chmod gu+s /var/run/crond.pid && chmod gu+s /usr/sbin/cron
+RUN apt-get update && apt-get install -y curl jq openssl cron systemctl
+RUN systemctl start cron && systemctl enable cron
+RUN useradd -u 1000 -m falkordb && usermod -aG crontab falkordb && \
+  touch /var/run/crond.pid && chown root:crontab /var/run/crond.pid \
+  && chmod 660 /var/run/crond.pid \
+  && chmod u+s /usr/sbin/cron
 
 
 WORKDIR /falkordb

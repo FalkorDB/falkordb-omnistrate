@@ -76,7 +76,7 @@ if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
 fi
 
 
-run_bgrewrite_every_twealve_hours(){
+run_bgrewriteaof_every_twelve_hours(){
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
   # The command is run every 12 hours to prevent the AOF file from growing too large.
   cron
@@ -470,7 +470,7 @@ if [[ $RUN_METRICS -eq 1 ]]; then
 fi
 
 
-run_bgrewrite_every_twealve_hours
+run_bgrewriteaof_every_twelve_hours
 
 while true; do
   sleep 1

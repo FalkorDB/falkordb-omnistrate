@@ -37,6 +37,7 @@ FALKORDB_TIMEOUT_MAX=${FALKORDB_TIMEOUT_MAX:-0}
 FALKORDB_TIMEOUT_DEFAULT=${FALKORDB_TIMEOUT_DEFAULT:-0}
 FALKORDB_VKEY_MAX_ENTITY_COUNT=${FALKORDB_VKEY_MAX_ENTITY_COUNT:-4611686000000000000}
 MEMORY_LIMIT=${MEMORY_LIMIT:-''}
+AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'0 */12 * * *'}
 
 # If vars are <nil>, set it to 0
 if [[ "$FALKORDB_QUERY_MEM_CAPACITY" == "<nil>" ]]; then
@@ -76,11 +77,11 @@ if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
 fi
 
 
-run_bgrewriteaof_every_twelve_hours(){
+rewrite_aof_cronjob(){
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
   # The command is run every 12 hours to prevent the AOF file from growing too large.
   cron
-  crontab <<< "* */12 * * * $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF"
+  crontab <<< "$AOF_CRON_EXPRESSION $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF"
 }
 
 meet_unknown_nodes(){
@@ -330,8 +331,6 @@ set_aof_persistence_config() {
   if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then
     echo "Setting AOF persistence: $PERSISTENCE_AOF_CONFIG"
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET appendonly yes
-    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET auto-aof-rewrite-percentage 20
-    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET auto-aof-rewrite-min-size 64mb
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET appendfsync $PERSISTENCE_AOF_CONFIG
   fi
 }
@@ -469,8 +468,7 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter_pid=$!
 fi
 
-
-run_bgrewriteaof_every_twelve_hours
+rewrite_aof_cronjob
 
 while true; do
   sleep 1

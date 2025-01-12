@@ -80,7 +80,7 @@ run_bgrewrite_every_twealve_hours(){
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
   # The command is run every 12 hours to prevent the AOF file from growing too large.
   cron
-  crontab <<< "* 0/12 * * * $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF"
+  crontab <<< "* */12 * * * $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF"
 }
 
 meet_unknown_nodes(){

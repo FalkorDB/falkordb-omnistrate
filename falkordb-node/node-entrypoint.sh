@@ -74,6 +74,7 @@ DEBUG=${DEBUG:-0}
 REPLACE_NODE_CONF=${REPLACE_NODE_CONF:-0}
 REPLACE_SENTINEL_CONF=${REPLACE_SENTINEL_CONF:-0}
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
+AUTH_CONNECTION_STRING="-a $ADMIN_PASSWORD --no-auth-warning"
 SAVE_LOGS_TO_FILE=${SAVE_LOGS_TO_FILE:-1}
 LOG_LEVEL=${LOG_LEVEL:-notice}
 
@@ -83,10 +84,21 @@ FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/
 SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
+AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'0 */12 * * *'}
+
+
 
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
   DEBUG=1
 fi
+
+rewrite_aof_cronjob(){
+  # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
+  # The command is run every 12 hours to prevent the AOF file from growing too large.
+  cron
+  crontab <<< "$AOF_CRON_EXPRESSION $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF"
+}
+
 
 dump_conf_files() {
   echo "Dumping configuration files"
@@ -544,6 +556,11 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -tls-server-min-version TLS1.3 &
   redis_exporter_pid=$!
 fi
+
+if [[ ! "$NODE_NAME" =~ sentinel.* ]]; then
+  rewrite_aof_cronjob
+fi
+
 
 if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]] && [[ "$NODE_INDEX" == "1" || "$NODE_INDEX" == "0" ]]; then
   # Check for crossed namespace

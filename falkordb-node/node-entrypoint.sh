@@ -557,7 +557,7 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter_pid=$!
 fi
 
-if [[ ! "$HOSTNAME" =~ sentinel.* ]]; then
+if [[ ! "$NODE_NAME" =~ sentinel.* ]]; then
   rewrite_aof_cronjob
 fi
 

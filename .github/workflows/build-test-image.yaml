@@ -713,7 +713,7 @@ jobs:
   #         custom_network_name: ${{ env.AWS_NETWORK_NAME }}
 
   cleanup-runner:
-    needs: test
+    #needs: test
     if: ${{ always() }}
     runs-on: ubuntu-latest
     strategy:

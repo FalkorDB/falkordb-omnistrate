@@ -30,4 +30,4 @@ runs:
           exit 0
         fi
         echo "runner_id=$runner_id" >> $GITHUB_OUTPUT
-        gcloud compute instances delete $runner_id" --zone=${{ inputs.zone }} --quiet
+        gcloud compute instances delete $runner_id --zone=${{ inputs.zone }} --quiet

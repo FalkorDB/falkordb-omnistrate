@@ -27,7 +27,7 @@ runs:
         runner_id=$(gcloud compute instances list --filter=labels=${{ inputs.instance_label }} | awk '{print $1}' | tail +2)
         if [ -z "$runner_id" ]; then
           echo "Instance with label ${{ inputs.instance_label }} not found"
-          exit 1
+          exit 0
         fi
         echo "runner_id=$runner_id" >> $GITHUB_OUTPUT
     - id: kill-runner

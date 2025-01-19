@@ -64,6 +64,8 @@ parser.add_argument(
     "--deployment-failover-timeout-seconds", required=False, default=2600, type=int
 )
 
+parser.add_argument("--network-type", required=False, default="PUBLIC")
+
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
@@ -121,6 +123,7 @@ def test_update_memory():
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
+            network_type=args.network_type,
             deployment_region=args.region,
             name=args.instance_name,
             description=args.instance_description,

@@ -58,10 +58,11 @@ class FalkorDBClusterNode:
 
         return (
             int(self.hostname.split(".")[0].split("-")[-1])
-            if "-" in self.hostname and "." in self.hostname
+            if "-" in self.hostname and "." in self.hostname and "internal" not in self.hostname
+            else int(self.hostname.split(".")[0].split("-")[-2])
+            if "-" in self.hostname and "." in self.hostname and "internal" in self.hostname
             else None
         )
-
     @property
     def is_master(self) -> bool:
         return self.mode == "master"

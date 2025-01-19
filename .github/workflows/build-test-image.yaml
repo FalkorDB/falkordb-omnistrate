@@ -29,12 +29,12 @@ jobs:
       matrix:
         machines:
           - name: replication-runner-private-gcp
-            machine_type: e2-standard-4
+            machine_type: e2-medium
             runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
             arm: false
             image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
           - name: cluster-runner-private-gcp
-            machine_type: e2-standard-4
+            machine_type: e2-medium
             runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
             arm: false
             image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian

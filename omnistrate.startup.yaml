@@ -455,7 +455,6 @@ services:
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
       - DATA_DIR=/data
-      - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
@@ -833,7 +832,6 @@ services:
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
       - DATA_DIR=/data
-      - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
@@ -1015,8 +1013,6 @@ services:
         required: false
         defaultValue: FalkorDB Instance
         export: true
-        parameterDependencyMap:
-          node-mz: nodeInstanceType
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1348,7 +1344,6 @@ services:
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
       - DATA_DIR=/data
-      - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig

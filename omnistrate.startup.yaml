@@ -475,10 +475,10 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 2Gi
+          memory: 2000M
         reservations:
           cpus: "0.2"
-          memory: 1Gi
+          memory: 1000M
     x-omnistrate-actionhooks:
 
   # Single Zone
@@ -854,10 +854,10 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 2Gi
+          memory: 2000M
         reservations:
           cpus: "0.2"
-          memory: 1Gi
+          memory: 1000M
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK
@@ -1369,10 +1369,10 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 2Gi
+          memory: 2000M
         reservations:
           cpus: "0.2"
-          memory: 1Gi
+          memory: 1000M
     x-omnistrate-actionhooks:
       - scope: NODE
         type: HEALTH_CHECK

@@ -174,7 +174,10 @@ fn get_status_from_cluster_node(
 /// # Returns
 /// 
 /// A boolean value that indicates whether the Redis master is ready
-fn get_status_from_master(_db_info: &str) -> Result<bool, redis::RedisError> {
+fn get_status_from_master(db_info: &str) -> Result<bool, redis::RedisError> {
+    if db_info.contains("loading:1") {
+        return Ok(false);
+    }
     Ok(true)
 }
 
@@ -191,6 +194,10 @@ fn get_status_from_master(_db_info: &str) -> Result<bool, redis::RedisError> {
 /// 
 /// A boolean value that indicates whether the Redis slave is ready
 fn get_status_from_slave(db_info: &str) -> Result<bool, redis::RedisError> {
+    if db_info.contains("loading:1") {
+        return Ok(false);
+    }
+    
     if !db_info.contains("master_link_status:up") || db_info.contains("master_sync_in_progress:1") {
         return Ok(false);
     }

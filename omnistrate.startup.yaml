@@ -299,30 +299,19 @@ services:
         max: 2000000000
         parameterDependencyMap:
           node-s: falkorDBQueryMemCapacity
-      - key: memoryRequests
+      - key: memoryRequestsAndLimits
         description: Memory Requests
         name: Memory Requests
         type: Float64
         modifiable: false
         required: false
         export: true
-        defaultValue: "1000"
-        min: 1000
-        max: 2000
+        defaultValue: "1G"
+        options:
+          - "1G"
+          - "2G"
         parameterDependencyMap:
-          node-s: memoryRequests
-      - key: memoryLimits
-        description: Memory Limits
-        name: Memory Limits
-        type: Float64
-        modifiable: false
-        required: false
-        export: true
-        defaultValue: "1000"
-        min: 1000
-        max: 2000
-        parameterDependencyMap:
-          node-s: memoryLimits
+          node-s: memoryRequestsAndLimits
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7
@@ -452,26 +441,17 @@ services:
         defaultValue: "0"
         min: 0
         max: 2000000000
-      - key: memoryRequests
+      - key: memoryRequestsAndLimits
         description: Memory Requests
         name: Memory Requests
         type: Float64
         modifiable: false
         required: false
         export: true
-        defaultValue: "1000"
-        min: 1000
-        max: 2000
-      - key: memoryLimits
-        description: Memory Limits
-        name: Memory Limits
-        type: Float64
-        modifiable: false
-        required: false
-        export: true
-        defaultValue: "1500"
-        min: 1000
-        max: 2000
+        defaultValue: "1G"
+        options:
+          - "1G"
+          - "2G"
     volumes:
       - source: ./data
         target: /data
@@ -518,10 +498,10 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: "$var.memoryLimits"
+          memory: $var.memoryRequestsAndLimits
         reservations:
           cpus: "0.2"
-          memory: "$var.memoryRequests"
+          memory: $var.memoryRequestsAndLimits
     x-omnistrate-actionhooks:
 
   # Single Zone

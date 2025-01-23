@@ -469,7 +469,7 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "1000"
+        defaultValue: "1500"
         min: 1000
         max: 2000
     volumes:

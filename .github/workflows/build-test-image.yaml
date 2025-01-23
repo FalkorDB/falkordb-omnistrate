@@ -118,7 +118,7 @@ jobs:
           - service-name: FalkorDB
             plan-name: FalkorDB Startup
             file: omnistrate.startup.yaml
-            key: free
+            key: startup
             tier-name: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
     steps:
       - name: Checkout

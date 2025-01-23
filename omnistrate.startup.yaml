@@ -498,10 +498,10 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: $var.memoryRequestsAndLimits
+          memory: "$var.memoryRequestsAndLimits"
         reservations:
           cpus: "0.2"
-          memory: $var.memoryRequestsAndLimits
+          memory: "$var.memoryRequestsAndLimits"
     x-omnistrate-actionhooks:
 
   # Single Zone

@@ -717,7 +717,6 @@ services:
         defaultValue: "2"
         options:
           - "2"
-          - "3"
         parameterDependencyMap:
           node-sz: numReplicas
       - key: enableTLS
@@ -1264,7 +1263,6 @@ services:
         defaultValue: "2"
         options:
           - "2"
-          - "3"
         parameterDependencyMap:
           node-mz: numReplicas
       - key: enableTLS

@@ -711,7 +711,7 @@ services:
         description: Number of Replicas
         name: Number of Replicas
         type: Float64
-        modifiable: true
+        modifiable: false
         required: false
         export: true
         defaultValue: "2"
@@ -1258,7 +1258,7 @@ services:
         description: Number of Replicas
         name: Number of Replicas
         type: Float64
-        modifiable: true
+        modifiable: false
         required: false
         export: true
         defaultValue: "2"

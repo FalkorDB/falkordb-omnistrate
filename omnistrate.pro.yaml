@@ -905,7 +905,6 @@ services:
         defaultValue: "2"
         options:
           - "2"
-          - "3"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -1451,7 +1450,6 @@ services:
         defaultValue: "2"
         options:
           - "2"
-          - "3"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS

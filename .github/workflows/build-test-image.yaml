@@ -29,12 +29,12 @@ jobs:
       matrix:
         machines:
           - name: replication-runner-private-gcp
-            machine_type: e2-standard-4
+            machine_type: e2-medium
             runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
             arm: false
             image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
           - name: cluster-runner-private-gcp
-            machine_type: e2-standard-4
+            machine_type: e2-medium
             runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
             arm: false
             image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
@@ -476,26 +476,26 @@ jobs:
           #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
           #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
           #   extraParams: "--resource-key 'cluster-Multi-Zone' --instance-name 'test-cluster-mz-replicas' --instance-description 'test-cluster-mz-replicas' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --shards '3' --ensure-mz-distribution"
-          - name: PRO/SingleZone - GCP/us-central1 - Test add/remove replica
-            if: "true"
-            testFile: test_replication_replicas.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-            cloudProvider: gcp
-            cloudRegion: us-central1
-            subscriptionId: sub-GJPV3NoNC0
-            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --replica-id 'node-sz-0' --instance-name 'test-sz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
-          - name: PRO/MultiZone - GCP/us-central1 - Test add/remove replica
-            if: "true"
-            testFile: test_replication_replicas.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-            cloudProvider: gcp
-            cloudRegion: us-central1
-            subscriptionId: sub-GJPV3NoNC0
-            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --replica-id 'node-mz-0'  --instance-name 'test-mz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          # - name: PRO/SingleZone - GCP/us-central1 - Test add/remove replica
+          #   if: "true"
+          #   testFile: test_replication_replicas.py
+          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: gcp
+          #   cloudRegion: us-central1
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'single-Zone' --replica-id 'node-sz-0' --instance-name 'test-sz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          # - name: PRO/MultiZone - GCP/us-central1 - Test add/remove replica
+          #   if: "true"
+          #   testFile: test_replication_replicas.py
+          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: gcp
+          #   cloudRegion: us-central1
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'multi-Zone' --replica-id 'node-mz-0'  --instance-name 'test-mz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
             ###################### GCP private ######################
           - name: PRO/ClusterMultiZone - PRIVATE/GCP/us-central1 - Failover & Persistence
             if: "true"

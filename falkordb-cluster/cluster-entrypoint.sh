@@ -56,6 +56,7 @@ IS_MULTI_ZONE=${IS_MULTI_ZONE:-0}
 
 NODE_HOST=${NODE_HOST:-localhost}
 NODE_PORT=${NODE_PORT:-6379}
+BUS_PORT=${BUS_PORT:-16379}
 
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
@@ -202,7 +203,7 @@ update_ips_in_nodes_conf(){
     echo "The new ip is: $POD_IP"
     echo "The port is: $NODE_PORT"
 
-    sed -i "s/$res/$POD_IP:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf
+    sed -i "s/$res/$POD_IP:$NODE_PORT@$BUS_PORT/" $DATA_DIR/nodes.conf
     cat $DATA_DIR/nodes.conf
     
   else

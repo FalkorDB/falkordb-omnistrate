@@ -53,6 +53,7 @@ fi
 
 
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
+SENTINEL_RANDOM_PORT=''
 SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
 SENTINEL_FAILOVER=${SENTINEL_FAILOVER:-1000}
 
@@ -61,6 +62,7 @@ SENTINEL_HOST=sentinel-$(echo $RESOURCE_ALIAS | cut -d "-" -f 2)-0.$LOCAL_DNS_SU
 
 NODE_HOST=${NODE_HOST:-localhost}
 NODE_PORT=${NODE_PORT:-6379}
+NODE_RANDOM_PORT=''
 MASTER_NAME=${MASTER_NAME:-master}
 SENTINEL_QUORUM=${SENTINEL_QUORUM:-2}
 
@@ -91,6 +93,23 @@ AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'0 */12 * * *'}
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
   DEBUG=1
 fi
+
+
+get_node_port() {
+  if [[ -n $NODE_RANDOM_PORT ]]; then
+    echo $NODE_RANDOM_PORT
+  else
+    echo $NODE_PORT
+  fi
+}
+
+get_sentinel_port() {
+  if [[ -n $SENTINEL_RANDOM_PORT ]]; then
+    echo $SENTINEL_RANDOM_PORT
+  else
+    echo $SENTINEL_PORT
+  fi
+}
 
 rewrite_aof_cronjob(){
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
@@ -248,7 +267,7 @@ wait_until_sentinel_host_resolves() {
   while true; do
     log "Checking if sentinel host resolves $SENTINEL_HOST"
     if [[ $(getent hosts $SENTINEL_HOST) ]]; then
-      sentinel_response=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING ping)
+      sentinel_response=$(redis-cli -h $SENTINEL_HOST -p $(get_sentinel_port) --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING ping)
       
       log "Sentinel Response: $sentinel_response"
       if [[ $sentinel_response == "PONG" ]]; then
@@ -287,7 +306,7 @@ wait_until_node_host_resolves() {
 }
 
 get_master() {
-  master_info=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD $TLS_CONNECTION_STRING --no-auth-warning SENTINEL get-master-addr-by-name $MASTER_NAME)
+  master_info=$(redis-cli -h $SENTINEL_HOST -p $(get_sentinel_port) --user $FALKORDB_USER -a $FALKORDB_PASSWORD $TLS_CONNECTION_STRING --no-auth-warning SENTINEL get-master-addr-by-name $MASTER_NAME)
 
   echo "Master Info: $master_info"
 
@@ -404,8 +423,8 @@ get_self_host_ip
 
 if [ "$RUN_NODE" -eq "1" ]; then
 
-  sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_CONF_FILE
-  sed -i "s/\$NODE_PORT/$NODE_PORT/g" $NODE_CONF_FILE
+  sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_HOST
+  sed -i "s/\$NODE_PORT/$(get_node_port)/g" $NODE_CONF_FILE
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_CACHE_SIZE/$FALKORDB_CACHE_SIZE/g" $NODE_CONF_FILE
@@ -420,6 +439,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
   is_replica
   if [[ $IS_REPLICA -eq 1 ]]; then
+
     echo "replicaof $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER" >>$NODE_CONF_FILE
     echo "Starting Replica"
   else
@@ -450,15 +470,22 @@ if [ "$RUN_NODE" -eq "1" ]; then
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
     echo "Adding master to sentinel"
     wait_until_sentinel_host_resolves
-
-    wait_until_node_host_resolves $NODE_HOST $NODE_PORT
+    if [[ -n $NODE_RANDOM_PORT ]]; then
+      wait_until_node_host_resolves $NODE_HOST $NODE_RANDOM_PORT
+    else
+      wait_until_node_host_resolves $NODE_HOST $NODE_PORT
+    fi
     log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
-    res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
+    if [[ -n $SENTINEL_RANDOM_PORT ]]; then
+      res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_RANDOM_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_RANDOM_PORT $SENTINEL_QUORUM)
+    else
+      res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
+    fi
+
     if [[ $res == *"ERR"* && $res != *"Duplicate master name"* ]]; then
       echo "Could not add master to sentinel: $res"
       exit 1
     fi
-
     redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
     redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
     redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER

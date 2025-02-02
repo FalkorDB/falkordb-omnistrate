@@ -423,7 +423,7 @@ get_self_host_ip
 
 if [ "$RUN_NODE" -eq "1" ]; then
 
-  sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_HOST
+  sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_CONF_FILE
   sed -i "s/\$NODE_PORT/$(get_node_port)/g" $NODE_CONF_FILE
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
@@ -439,7 +439,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
   is_replica
   if [[ $IS_REPLICA -eq 1 ]]; then
-
+    #NOT SURE IF TO CHANGE
     echo "replicaof $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER" >>$NODE_CONF_FILE
     echo "Starting Replica"
   else
@@ -470,26 +470,19 @@ if [ "$RUN_NODE" -eq "1" ]; then
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
     echo "Adding master to sentinel"
     wait_until_sentinel_host_resolves
-    if [[ -n $NODE_RANDOM_PORT ]]; then
-      wait_until_node_host_resolves $NODE_HOST $NODE_RANDOM_PORT
-    else
-      wait_until_node_host_resolves $NODE_HOST $NODE_PORT
-    fi
+    wait_until_node_host_resolves $NODE_HOST $(get_node_port)
+    
     log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
-    if [[ -n $SENTINEL_RANDOM_PORT ]]; then
-      res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_RANDOM_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_RANDOM_PORT $SENTINEL_QUORUM)
-    else
-      res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
-    fi
+    res=$(redis-cli -h $SENTINEL_HOST -p $(get_sentinel_port) --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
 
     if [[ $res == *"ERR"* && $res != *"Duplicate master name"* ]]; then
       echo "Could not add master to sentinel: $res"
       exit 1
     fi
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
+    redis-cli -h $SENTINEL_HOST -p $(get_sentinel_port) --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
+    redis-cli -h $SENTINEL_HOST -p $(get_sentinel_port) --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
+    redis-cli -h $SENTINEL_HOST -p $(get_sentinel_port) --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
+    redis-cli -h $SENTINEL_HOST -p $(get_sentinel_port) --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
   fi
 
   # Set maxmemory based on instance type
@@ -543,6 +536,7 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   # If FALKORDB_MASTER_HOST is not empty, add monitor to sentinel
   if [[ ! -z $FALKORDB_MASTER_HOST ]]; then
     log "Master Name: $MASTER_NAME\Master Host: $FALKORDB_MASTER_HOST\Master Port: $FALKORDB_MASTER_PORT_NUMBER\nSentinel Quorum: $SENTINEL_QUORUM"
+    #NOT SURE IF TO CHANGE
     wait_until_node_host_resolves $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER
     response=$(redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER $SENTINEL_QUORUM)
 
@@ -579,7 +573,7 @@ fi
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
-  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
+  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$(get_node_port)"; else echo "redis://localhost:$NODE_PORT"; fi)
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -tls-server-min-version TLS1.3 &
   redis_exporter_pid=$!
 fi

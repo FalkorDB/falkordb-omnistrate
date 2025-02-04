@@ -286,7 +286,7 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "1G"
+        defaultValue: "1GB"
         labeledOptions:
           1GB: "1G"
           2GB: "2G"
@@ -452,7 +452,7 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "1G"
+        defaultValue: "1GB"
         labeledOptions:
           1GB: "1G"
           2GB: "2G"

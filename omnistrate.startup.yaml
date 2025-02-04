@@ -286,10 +286,10 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "1GB"
-        options:
-          - "1GB"
-          - "2GB"
+        defaultValue: "1G"
+        labeledOptions:
+          1GB: "1G"
+          2GB: "2G"
         parameterDependencyMap:
           node-s: memoryRequestsAndLimits
       - key: resourceRequestCPU
@@ -452,10 +452,10 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "1GB"
-        options:
-          - "1GB"
-          - "2GB"
+        defaultValue: "1G"
+        labeledOptions:
+          1GB: "1G"
+          2GB: "2G"
       - key: resourceRequestCPU
         name: CPU Request
         description: CPU Request for the Falkordb instance

@@ -103,6 +103,18 @@ x-falkordbMetrics: &metrics
 
 x-omnistrate-integrations:
   - omnistrateLogging:
+  - omnistrateMetrics:
+      additionalMetrics:
+        node-s:
+          <<: *metrics
+        node-sz:
+          <<: *metrics
+        node-mz:
+          <<: *metrics
+        cluster-sz:
+          <<: *metrics
+        cluster-mz:
+          <<: *metrics
 
 services:
   # Standalone
@@ -274,10 +286,10 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "1G"
+        defaultValue: "1GB"
         options:
-          - "1G"
-          - "2G"
+          - "1GB"
+          - "2GB"
         parameterDependencyMap:
           node-s: memoryRequestsAndLimits
       - key: resourceRequestCPU
@@ -440,10 +452,10 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "1G"
+        defaultValue: "1GB"
         options:
-          - "1G"
-          - "2G"
+          - "1GB"
+          - "2GB"
       - key: resourceRequestCPU
         name: CPU Request
         description: CPU Request for the Falkordb instance

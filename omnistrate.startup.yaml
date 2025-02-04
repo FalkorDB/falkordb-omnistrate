@@ -432,17 +432,17 @@ services:
         name: CPU Request
         description: CPU Request for the Falkordb instance
         type: String
-        modifiable: true
-        required: true
-        export: true
+        modifiable: false
+        required: false
+        export: false
         defaultValue: "0.2"
       - key: resourceLimitCPU
         name: CPU Limit
         description: CPU Limit for the Falkordb instance
         type: String
-        modifiable: true
-        required: true
-        export: true
+        modifiable: false
+        required: false
+        export: false
         defaultValue: "1"
     volumes:
       - source: ./data

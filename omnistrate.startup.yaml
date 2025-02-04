@@ -284,26 +284,6 @@ services:
           2GB: "2G"
         parameterDependencyMap:
           node-s: memoryRequestsAndLimits
-      - key: resourceRequestCPU
-        name: CPU Request
-        description: CPU Request for the Falkordb instance
-        type: String
-        modifiable: false
-        required: false
-        export: false
-        defaultValue: "0.2"
-        parameterDependencyMap:
-          node-s: resourceRequestCPU
-      - key: resourceLimitCPU
-        name: CPU Limit
-        description: CPU Limit for the Falkordb instance
-        type: String
-        modifiable: false
-        required: false
-        export: false
-        defaultValue: "1"
-        parameterDependencyMap:
-          node-s: resourceLimitCPU
     x-omnistrate-capabilities:
       backupConfiguration:
         backupRetentionInDays: 7

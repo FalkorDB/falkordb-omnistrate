@@ -107,14 +107,6 @@ x-omnistrate-integrations:
       additionalMetrics:
         node-s:
           <<: *metrics
-        node-sz:
-          <<: *metrics
-        node-mz:
-          <<: *metrics
-        cluster-sz:
-          <<: *metrics
-        cluster-mz:
-          <<: *metrics
 
 services:
   # Standalone
@@ -280,8 +272,8 @@ services:
         parameterDependencyMap:
           node-s: falkorDBQueryMemCapacity
       - key: memoryRequestsAndLimits
-        description: Memory Requests and Limits in Gigabytes
-        name: Memory Requests
+        description: Choose the memory amount for your database
+        name: Memory
         type: String
         modifiable: false
         required: false
@@ -446,8 +438,8 @@ services:
         min: 0
         max: 2000000000
       - key: memoryRequestsAndLimits
-        description: Memory Requests and Limits in Gigabytes
-        name: Memory Requests
+        description: Choose the memory amount for your database
+        name: Memory
         type: String
         modifiable: false
         required: false
@@ -479,10 +471,10 @@ services:
         x-omnistrate-storage:
           gcp:
             instanceStorageType: GCP::PD_BALANCED
-            instanceStorageSizeGi: 200
+            instanceStorageSizeGi: 20
           aws:
             instanceStorageType: AWS::EBS_GP3
-            instanceStorageSizeGi: 200
+            instanceStorageSizeGi: 20
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword

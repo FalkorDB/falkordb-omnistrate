@@ -74,6 +74,9 @@ jobs:
           - name: FalkorDB
             file: omnistrate.enterprise.yaml
             key: enterprise
+          - name: FalkorDB
+            file: omnistrate.startup.yaml
+            key: startup
     steps:
       - name: Checkout
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}

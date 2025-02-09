@@ -879,7 +879,7 @@ jobs:
 
   cleanup-runner:
     needs: test
-    if: ${{ always() }}
+    if: ${{ success() || cancelled() }}
     runs-on: ubuntu-latest
     strategy:
       matrix:

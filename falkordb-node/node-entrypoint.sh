@@ -28,7 +28,6 @@ RUN_HEALTH_CHECK_SENTINEL=${RUN_HEALTH_CHECK_SENTINEL:-1}
 TLS=${TLS:-false}
 NODE_INDEX=${NODE_INDEX:-0}
 INSTANCE_TYPE=${INSTANCE_TYPE:-''}
-USER_SET_MEMORY=${USER_SET_MEMORY:-''}
 PERSISTENCE_RDB_CONFIG_INPUT=${PERSISTENCE_RDB_CONFIG_INPUT:-'low'}
 PERSISTENCE_RDB_CONFIG=${PERSISTENCE_RDB_CONFIG:-'86400 1 21600 100 3600 10000'}
 PERSISTENCE_AOF_CONFIG=${PERSISTENCE_AOF_CONFIG:-'everysec'}
@@ -231,15 +230,10 @@ get_memory_limit() {
     ["c6i.4xlarge"]="30GB"
     ["c6i.8xlarge"]="62GB"
   )
-  
-  if [[ -z $INSTANCE_TYPE ]]; then
-    if [[ -n $USER_SET_MEMORY ]];then
-      echo "Memory is set by user"
-      MEMORY_LIMIT=$USER_SET_MEMORY
-    else
-      echo "INSTANCE_TYPE is not set"
-      MEMORY_LIMIT=$(get_default_memory_limit)
-    fi
+
+  if [[ -z $INSTANCE_TYPE && -z $MEMORY_LIMIT ]]; then
+    echo "INSTANCE_TYPE is not set"
+    MEMORY_LIMIT=$(get_default_memory_limit)
   fi
 
   instance_size_in_map=${memory_limit_instance_type_map[$INSTANCE_TYPE]}

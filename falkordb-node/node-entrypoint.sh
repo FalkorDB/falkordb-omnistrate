@@ -28,6 +28,7 @@ RUN_HEALTH_CHECK_SENTINEL=${RUN_HEALTH_CHECK_SENTINEL:-1}
 TLS=${TLS:-false}
 NODE_INDEX=${NODE_INDEX:-0}
 INSTANCE_TYPE=${INSTANCE_TYPE:-''}
+USER_SET_MEMORY=${USER_SET_MEMORY:-''}
 PERSISTENCE_RDB_CONFIG_INPUT=${PERSISTENCE_RDB_CONFIG_INPUT:-'low'}
 PERSISTENCE_RDB_CONFIG=${PERSISTENCE_RDB_CONFIG:-'86400 1 21600 100 3600 10000'}
 PERSISTENCE_AOF_CONFIG=${PERSISTENCE_AOF_CONFIG:-'everysec'}
@@ -214,6 +215,8 @@ get_memory_limit() {
 
   declare -A memory_limit_instance_type_map
   memory_limit_instance_type_map=(
+    ["e2-standard-2"]="6GB"
+    ["e2-standard-4"]="14GB"
     ["e2-custom-small-1024"]="100MB"
     ["e2-medium"]="2GB"
     ["e2-custom-4-8192"]="6GB"
@@ -221,6 +224,8 @@ get_memory_limit() {
     ["e2-custom-16-32768"]="30GB"
     ["e2-custom-32-65536"]="62GB"
     ["t2.medium"]="2GB"
+    ["m6i.large"]="6GB"
+    ["m6i.xlarge"]="14GB"
     ["c6i.xlarge"]="6GB"
     ["c6i.2xlarge"]="13GB"
     ["c6i.4xlarge"]="30GB"
@@ -228,8 +233,13 @@ get_memory_limit() {
   )
   
   if [[ -z $INSTANCE_TYPE ]]; then
-    echo "INSTANCE_TYPE is not set"
-    MEMORY_LIMIT=$(get_default_memory_limit)
+    if [[ -n $USER_SET_MEMORY ]];then
+      echo "Memory is set by user"
+      MEMORY_LIMIT=$USER_SET_MEMORY
+    else
+      echo "INSTANCE_TYPE is not set"
+      MEMORY_LIMIT=$(get_default_memory_limit)
+    fi
   fi
 
   instance_size_in_map=${memory_limit_instance_type_map[$INSTANCE_TYPE]}

@@ -471,7 +471,7 @@ services:
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
       - DATA_DIR=/data
-      - USER_SET_MEMORY=$var.memoryRequestsAndLimits
+      - MEMORY_LIMIT=$var.memoryRequestsAndLimits
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig

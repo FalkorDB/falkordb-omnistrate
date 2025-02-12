@@ -86,6 +86,8 @@ fn start_probes_check_server(is_sentinel: bool) {
 /// # Errors
 /// 
 /// The function returns a RedisError if there is an error connecting to the Redis server.
+/// 
+/// The healthcheck and readiness are boolean values which are used to determine the type of check to be performed.
 fn probes_check_handler(is_sentinel: bool,readiness: bool, healthcheck: bool) -> Result<bool, redis::RedisError> {
     let password = match env::var("ADMIN_PASSWORD") {
         Ok(password) => password,

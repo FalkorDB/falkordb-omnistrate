@@ -1,0 +1,144 @@
+---
+redisStandalone:
+  name: "standalone"
+  image: muhammadqadora/operator-cluster
+  tag: 1.1
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+  hostPort: 6379
+    # - name:  Secret with Registry credentials
+  redisSecret:
+    secretName: "redis-password"
+    secretKey: "password"
+  serviceType: ClusterIP
+  resources:
+    requests:
+      cpu: 400m
+      memory: 400Mi
+    limits:
+      cpu: 400m
+      memory: 2Gi
+  ignoreAnnotations: []
+    # - "redis.opstreelabs.in/ignore"
+  minReadySeconds: 0
+  # -- Some fields of statefulset are immutable, such as volumeClaimTemplates.
+  # When set to true, the operator will delete the statefulset and recreate it. Default is false.
+  recreateStatefulSetOnUpdateInvalid: false
+  terminationGracePeriodSeconds: 60
+labels: {}
+#   foo: bar
+#   test: echo
+
+externalConfig:
+  enabled: true
+  data: |
+    loadmodule /FalkorDB/bin/src/falkordb.so
+
+externalService:
+  enabled: true
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: $sys.network.externalClusterEndpoint
+  serviceType: LoadBalancer
+  port: 6379
+
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  scrapeTimeout: 10s
+  namespace: monitoring
+  # -- extraLabels are added to the servicemonitor when enabled set to true
+  extraLabels: {}
+    # foo: bar
+    # team: devops
+
+redisExporter:
+  enabled: false
+  image: quay.io/opstree/redis-exporter
+  tag: "v1.44.0"
+  imagePullPolicy: IfNotPresent
+  resources: {}
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+  env: []
+    # - name: VAR_NAME
+    #   value: "value1"
+
+initContainer:
+  enabled: false
+  image: ""
+  imagePullPolicy: "IfNotPresent"
+  resources: {}
+    # requests:
+    #   memory: "64Mi"
+    #   cpu: "250m"
+    # limits:
+    #   memory: "128Mi"
+    #   cpu: "500m"
+  env: []
+  command: []
+  args: []
+
+sidecars:
+  name: ""
+  image: ""
+  imagePullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: "100m"
+      memory: "128Mi"
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+  env: []
+    # - name: MY_ENV_VAR
+    #   value: "my-env-var-value"
+
+priorityClassName: ""
+
+nodeSelector: {}
+  # memory: medium
+
+storageSpec:
+  keepAfterDelete: true
+  volumeClaimTemplate:
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 1Gi
+  #   selector: {}
+
+podSecurityContext:
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext: {}
+
+affinity: null
+
+tolerations: []
+  # - key: "key"
+  #   operator: "Equal"
+  #   value: "value"
+  #   effect: "NoSchedule"
+
+serviceAccountName: ""
+
+TLS:
+  ca: ca.key
+  cert: tls.crt
+  key: tls.key
+  secret:
+    secretName: ""
+
+acl:
+  secret:
+    secretName: ""
+env:
+  - name: NODE_EXTERNAL_ENDPOINT
+    value: $sys.network.node.externalEndpoint
+

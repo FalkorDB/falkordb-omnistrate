@@ -1,0 +1,91 @@
+---
+# Source: redis/templates/extra-config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: standalone-ext-config
+  labels:
+    app.kubernetes.io/name: standalone
+    helm.sh/chart: redis-0.16.5
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: standalone
+    app.kubernetes.io/version: 0.16.5
+    app.kubernetes.io/component: middleware
+data:
+  redis-additional.conf: |
+    
+    loadmodule /FalkorDB/bin/src/falkordb.so
+---
+# Source: redis/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: standalone-external-service
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: $sys.network.externalClusterEndpoint
+  labels:
+    app.kubernetes.io/name: standalone
+    helm.sh/chart: redis-0.16.5
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: standalone
+    app.kubernetes.io/version: 0.16.5
+    app.kubernetes.io/component: middleware
+spec:
+  type: ClusterIP
+  selector:
+    app: standalone
+    redis_setup_type: standalone
+    role: standalone
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+      name: client
+---
+# Source: redis/templates/redis-standalone.yaml
+apiVersion: redis.redis.opstreelabs.in/v1beta2
+kind: Redis
+metadata:
+  name:  standalone
+  labels:
+    app.kubernetes.io/name: standalone
+    helm.sh/chart: redis-0.16.5
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: standalone
+    app.kubernetes.io/version: 0.16.5
+    app.kubernetes.io/component: middleware
+  annotations:
+    
+spec:
+  kubernetesConfig:
+    image: "muhammadqadora/operator-cluster:1.1"
+    imagePullPolicy: "IfNotPresent"
+    resources: 
+      limits:
+        cpu: 400m
+        memory: 2Gi
+      requests:
+        cpu: 400m
+        memory: 400Mi
+    redisSecret:
+      name: "redis-password"
+      key: "password"
+
+  redisExporter:
+    enabled: false
+    image: "quay.io/opstree/redis-exporter:v1.44.0"
+    imagePullPolicy: "IfNotPresent"
+  redisConfig:
+    additionalRedisConfig: "standalone-ext-config"
+  storage: 
+    keepAfterDelete: true
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  podSecurityContext: 
+    fsGroup: 1000
+    runAsUser: 1000

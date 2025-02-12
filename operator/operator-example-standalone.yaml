@@ -1,0 +1,160 @@
+# yaml-language-server: $schema=https://api.omnistrate.cloud/2022-09-01-00/schema/service-spec-schema.json
+name: Redis Operator # Service Plan Name
+deployment:
+  hostedDeployment:
+    GcpProjectId: ""
+    GcpProjectNumber: ""
+    GcpServiceAccountEmail: "" 
+
+services:
+  - name: Standalone
+    network:
+      ports:
+        - 6379
+    endpointConfiguration:
+      cluster:
+        host: "$sys.network.externalClusterEndpoint"
+        ports:
+          - 6379
+        primary: true
+        networkingType: PUBLIC
+    operatorCRDConfiguration:
+      template: |
+        # Source: redis/templates/redis-standalone.yaml
+        apiVersion: redis.redis.opstreelabs.in/v1beta2
+        kind: Redis
+        metadata:
+          name:  standalone
+          labels:
+            app.kubernetes.io/name: standalone
+            helm.sh/chart: redis-0.16.5
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/instance: standalone
+            app.kubernetes.io/version: 0.16.5
+            app.kubernetes.io/component: middleware
+          annotations:
+            
+        spec:
+          hostPort: 6379
+          kubernetesConfig:
+            image: "muhammadqadora/operator-cluster:1.1"
+            imagePullPolicy: "IfNotPresent"
+            resources: 
+              limits:
+                cpu: 400m
+                memory: 2Gi
+              requests:
+                cpu: 400m
+                memory: 400Mi
+            redisSecret:
+              name: "redis-password"
+              key: "password"
+
+          redisExporter:
+            enabled: false
+            image: "quay.io/opstree/redis-exporter:v1.44.0"
+            imagePullPolicy: "IfNotPresent"
+          redisConfig:
+            additionalRedisConfig: "standalone-ext-config"
+          storage: 
+            keepAfterDelete: false
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+          podSecurityContext: 
+            fsGroup: 1000
+            runAsUser: 1000
+          env: 
+            - name: NODE_EXTERNAL_ENDPOINT
+              value: {{$sys.network.node.externalEndpoint}}
+          affinity: 
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: omnistrate.com/managed-by
+                    operator: In
+                    values:
+                    - omnistrate
+                  - key: topology.kubernetes.io/region
+                    operator: In
+                    values:
+                    - {{$sys.deploymentCell.region}}
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                    - {{$sys.compute.node.instanceType}}
+                  - key: omnistrate.com/resource
+                    operator: In
+                    values:
+                    - {{$sys.deployment.resourceID}}
+
+          
+
+      
+      supplementalFiles:
+        - |
+          apiVersion: v1
+          data:
+            password: ZmFsa29yZGI=
+          kind: Secret
+          metadata:
+            name: redis-password
+            namespace: {{$sys.id}}
+          type: Opaque
+
+        - |
+          # Source: redis/templates/extra-config.yaml
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: standalone-ext-config
+            namespace: {{$sys.id}}
+            labels:
+              app.kubernetes.io/name: standalone
+              helm.sh/chart: redis-0.16.5
+              app.kubernetes.io/managed-by: Helm
+              app.kubernetes.io/instance: standalone
+              app.kubernetes.io/version: 0.16.5
+              app.kubernetes.io/component: middleware
+          data:
+            redis-additional.conf: |
+              loadmodule /FalkorDB/bin/src/falkordb.so
+        - |
+          # Source: redis/templates/service.yaml
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: standalone-external-service
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: {{$sys.network.externalClusterEndpoint}}
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+            labels:
+              app.kubernetes.io/name: standalone
+              helm.sh/chart: redis-0.16.5
+              app.kubernetes.io/managed-by: Helm
+              app.kubernetes.io/instance: standalone
+              app.kubernetes.io/version: 0.16.5
+              app.kubernetes.io/component: middleware
+          spec:
+            clusterIP: None
+            selector:
+              app: standalone
+              redis_setup_type: standalone
+              role: standalone
+            ports:
+              - protocol: TCP
+                port: 6379
+                targetPort: 6379
+                name: clients
+
+      helmChartDependencies:
+        - chartName: redis-operator
+          chartVersion: 0.19.2
+          chartRepoName: falkordb
+          chartRepoURL: "https://falkordb.github.io/helm-charts/"

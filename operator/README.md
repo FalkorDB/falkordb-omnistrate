@@ -34,3 +34,8 @@ RUN the follwing commands:
 9) - make sure to use the right syntax for variables in the operator-example-standalone.yaml
 10) - login to omnistrate-cli
 11) - build the release
+
+
+## relevant repos:
+1) - falkordb/helm-charts
+2) - falkordb/redis-operator

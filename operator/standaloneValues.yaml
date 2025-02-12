@@ -1,8 +1,8 @@
 ---
 redisStandalone:
   name: "standalone"
-  image: muhammadqadora/operator-cluster
-  tag: 1.1
+  image: falkordb/redis
+  tag: "latest"
   imagePullPolicy: IfNotPresent
   imagePullSecrets: []
   hostPort: 6379
@@ -138,7 +138,4 @@ TLS:
 acl:
   secret:
     secretName: ""
-env:
-  - name: NODE_EXTERNAL_ENDPOINT
-    value: $sys.network.node.externalEndpoint
 

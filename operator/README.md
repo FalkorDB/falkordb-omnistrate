@@ -20,3 +20,17 @@
 - [ ] We have to take care of POD distribution in multizone and zone enforcement in singlezone.
 - [ ] Data loss when doing a helm uninstall due to the FLUSHALL command (temp fix: rename the command)
 - [ ] We still need a CRON job to issue a BGRWRITEAOF
+
+## How to deploy:
+RUN the follwing commands:
+1) - `helm repo add ot-helm https://ot-container-kit.github.io/helm-charts/`
+2) - `helm repo update`
+3) - `helm show values ot-helm/redis > standaloneValues.yaml` (This can be skipped if we want to edit the standaloneCRD.yaml directly)
+4) - override the values you want
+5) - `helm template standalone ot-helm -f standaloneValues.yaml > standaloneCRD.yaml`
+6) - add `hostPort: 6379`,affinity and other setting to the spec in standaloneCRD.ymal
+7) - take the standaloneCRD.yaml and replace the relevant components in operator-example-standalone.yaml
+8) - add the secret to the supplementalFiles section in operator-example-standalone.yaml
+9) - make sure to use the right syntax for variables in the operator-example-standalone.yaml
+10) - login to omnistrate-cli
+11) - build the release

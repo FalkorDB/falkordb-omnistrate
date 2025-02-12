@@ -9,9 +9,9 @@ fn main() {
     let args: Vec<String> = args().collect();
 
     if args.len() > 1 && args[1] == "sentinel" {
-        start_health_check_server(true);
+        start_probes_check_server(true);
     } else {
-        start_health_check_server(false);
+        start_probes_check_server(false);
     }
 }
 
@@ -26,7 +26,7 @@ fn main() {
 /// # Arguments
 /// 
 /// * `is_sentinel` - A boolean that indicates whether the health check server is for a Redis Sentinel instance.
-fn start_health_check_server(is_sentinel: bool) {
+fn start_probes_check_server(is_sentinel: bool) {
     let port = if is_sentinel {
         env::var("HEALTH_CHECK_PORT_SENTINEL").unwrap_or_else(|_| "8082".to_string())
     } else {
@@ -38,8 +38,25 @@ fn start_health_check_server(is_sentinel: bool) {
     let server = Server::new(addr, move |request| {
         router!(request,
             (GET) (/healthcheck) => {
-                let health = health_check_handler(is_sentinel).unwrap_or_else(|_| false);
+                let health = probes_check_handler(is_sentinel,false,true).unwrap_or_else(|_| false);
 
+                if health {
+                    Response::text("OK")
+                } else {
+                    Response::text("Not ready").with_status_code(500)
+                }
+            },
+            (GET) (/readiness) => {
+                let health = probes_check_handler(is_sentinel,true,false).unwrap_or_else(|_| false);
+
+                if health {
+                    Response::text("OK")
+                } else {
+                    Response::text("Not ready").with_status_code(500)
+                }
+            },
+            (GET) (/startup) => {
+                let health = true;
                 if health {
                     Response::text("OK")
                 } else {
@@ -74,7 +91,7 @@ fn start_health_check_server(is_sentinel: bool) {
 /// # Errors
 /// 
 /// The function returns a RedisError if there is an error connecting to the Redis server.
-fn health_check_handler(is_sentinel: bool) -> Result<bool, redis::RedisError> {
+fn probes_check_handler(is_sentinel: bool,readiness: bool, healthcheck: bool) -> Result<bool, redis::RedisError> {
     let password = match env::var("ADMIN_PASSWORD") {
         Ok(password) => password,
         Err(_) => {
@@ -84,7 +101,7 @@ fn health_check_handler(is_sentinel: bool) -> Result<bool, redis::RedisError> {
                 .unwrap_or_else(|_| String::new())
         }
     };
-
+    
     let node_port = if is_sentinel {
         env::var("SENTINEL_PORT").unwrap_or_else(|_| "26379".to_string())
     } else {
@@ -130,9 +147,9 @@ fn health_check_handler(is_sentinel: bool) -> Result<bool, redis::RedisError> {
     let role = role_matches.unwrap().get(1).unwrap().as_str();
 
     if role == "master" {
-        get_status_from_master(&db_info)
+        get_status_from_master(&db_info,readiness,healthcheck)
     } else {
-        get_status_from_slave(&db_info)
+        get_status_from_slave(&db_info,readiness,healthcheck)
     }
 }
 
@@ -153,13 +170,29 @@ fn health_check_handler(is_sentinel: bool) -> Result<bool, redis::RedisError> {
 /// # Errors
 /// 
 /// The function returns a RedisError if there is an error querying the Redis server.
+
+//IAM NOT SURE ABOUT CHANGING THIS FUNCTION
 fn get_status_from_cluster_node(
     _db_info: String,
     con: &mut redis::Connection,
+    readiness: bool,
+    healthcheck: bool,
 ) -> Result<bool, redis::RedisError> {
     let cluster_info: String = redis::cmd("CLUSTER").arg("INFO").query(con)?;
 
-    Ok(cluster_info.contains("cluster_state:ok"))
+    if healthcheck {
+        let cluster_state: bool = cluster_info.contains("cluster_state:ok");
+        let loading: bool = cluster_info.contains("LOADING");
+        let busy: bool = cluster_info.contains("BUSY"); // This might not exist in Redis.
+        let master_down: bool = cluster_info.contains("MASTERDOWN");
+        if cluster_state || loading || busy || master_down {
+            return Ok(true);
+        }
+    } else if readiness {
+        return Ok(cluster_info.contains("cluster_state:ok"));
+    }
+
+    Ok(false) // Default return to avoid missing a return value
 }
 
 /// Checks the status of the Redis master.
@@ -174,11 +207,20 @@ fn get_status_from_cluster_node(
 /// # Returns
 /// 
 /// A boolean value that indicates whether the Redis master is ready
-fn get_status_from_master(db_info: &str) -> Result<bool, redis::RedisError> {
-    if db_info.contains("loading:1") {
-        return Ok(false);
+fn get_status_from_master(db_info: &str,readiness: bool, healthcheck: bool) -> Result<bool, redis::RedisError> {
+    let result : String = redis::cmd("PING").query(&mut con)?;
+    if healthcheck {
+        if result.contains("PONG") || result.contains("LOADING") || result.contains("BUSY") || result.contains("MASTERDOWN"){
+            return Ok(true);
+        }
+
+    } else if readiness {
+        if result.contains("PONG") && db_info.contains("loading:0") {
+            return Ok(true);
+        }
     }
-    Ok(true)
+
+    Ok(false)
 }
 
 /// Checks the status of the Redis slave.
@@ -193,16 +235,21 @@ fn get_status_from_master(db_info: &str) -> Result<bool, redis::RedisError> {
 /// # Returns
 /// 
 /// A boolean value that indicates whether the Redis slave is ready
-fn get_status_from_slave(db_info: &str) -> Result<bool, redis::RedisError> {
-    if db_info.contains("loading:1") {
-        return Ok(false);
-    }
-    
-    if !db_info.contains("master_link_status:up") || db_info.contains("master_sync_in_progress:1") {
-        return Ok(false);
+fn get_status_from_slave(db_info: &str,readiness: bool,healthcheck: bool) -> Result<bool, redis::RedisError> {
+
+    let result : String = redis::cmd("PING").query(&mut con)?;
+    if healthcheck {
+        if result.contains("PONG") || result.contains("LOADING") || result.contains("BUSY") || result.contains("MASTERDOWN") {
+            return Ok(true);
+        }
+
+    } else if readiness {
+        if result.contains("PONG") && db_info.contains("loading:0") && db_info.contains("master_link_status:up") && db_info.contains("master_sync_in_progress:0") {
+            return Ok(true);
+        }
     }
 
-    Ok(true)
+    Ok(false)
 }
 
 /// Resolves the host using the dns_lookup crate.

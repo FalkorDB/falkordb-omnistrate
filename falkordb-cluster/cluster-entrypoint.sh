@@ -295,6 +295,8 @@ get_default_memory_limit() {
 set_memory_limit() {
   declare -A memory_limit_instance_type_map
   memory_limit_instance_type_map=(
+    ["e2-standard-2"]="6GB"
+    ["e2-standard-4"]="14GB"
     ["e2-custom-small-1024"]="100MB"
     ["e2-medium"]="2GB"
     ["e2-custom-4-8192"]="6GB"
@@ -302,6 +304,8 @@ set_memory_limit() {
     ["e2-custom-16-32768"]="30GB"
     ["e2-custom-32-65536"]="62GB"
     ["t2.medium"]="2GB"
+    ["m6i.large"]="6GB"
+    ["m6i.xlarge"]="14GB"
     ["c6i.xlarge"]="6GB"
     ["c6i.2xlarge"]="13GB"
     ["c6i.4xlarge"]="30GB"

@@ -112,6 +112,7 @@ class OmnistrateFleetInstance:
         description: str,
         falkordb_user: str,
         falkordb_password: str,
+        network_type: str,
         product_tier_version: str | None = None,
         custom_network_id: str | None = None,
         **kwargs,
@@ -123,6 +124,7 @@ class OmnistrateFleetInstance:
         data = {
             "cloud_provider": deployment_cloud_provider,
             "region": deployment_region,
+            "network_type": network_type,
             "requestParams": {
                 "name": name,
                 "description": description,
@@ -389,7 +391,7 @@ class OmnistrateFleetInstance:
         source_version: str,
         target_version: str,
         wait_until_ready: bool = False,
-        upgrade_timeout: int = 1200,
+        upgrade_timeout: int = 2400,
     ):
 
         data = {
@@ -447,7 +449,7 @@ class OmnistrateFleetInstance:
                 logging.info("Upgrade pending")
                 time.sleep(10)
                 logging.info("Waiting for instance to be ready")
-            if status == "IN_PROGRESS":
+            elif status == "IN_PROGRESS":
                 logging.info("Upgrade in progress")
                 time.sleep(10)
                 logging.info("Waiting for instance to be ready")
@@ -493,7 +495,7 @@ class OmnistrateFleetInstance:
 
         return endpoints
 
-    def get_cluster_endpoint(self):
+    def get_cluster_endpoint(self, network_type="PUBLIC"):
         resources = self.get_network_topology()
 
         resources_keys = resources.keys()
@@ -504,7 +506,7 @@ class OmnistrateFleetInstance:
                 and len(resources[key]["clusterEndpoint"]) > 0
                 and "streamer." not in resources[key]["clusterEndpoint"]
                 and "clusterPorts" in resources[key]
-                and resources[key]["networkingType"] != "INTERNAL"
+                and resources[key]["networkingType"] == network_type
             ):
                 return {
                     "endpoint": resources[key]["clusterEndpoint"],
@@ -512,13 +514,13 @@ class OmnistrateFleetInstance:
                 }
 
     def create_connection(
-        self, ssl: bool = False, force_reconnect: bool = False, retries=5
+        self, ssl: bool = False, force_reconnect: bool = False, retries=5, network_type="PUBLIC"
     ):
 
         if self._connection is not None and not force_reconnect:
             return self._connection
 
-        endpoint = self.get_cluster_endpoint()
+        endpoint = self.get_cluster_endpoint(network_type=network_type)
 
         # Connect to the master node
         while retries > 0:

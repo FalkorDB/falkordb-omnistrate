@@ -16,7 +16,7 @@ env:
   NODE_IMAGE_NAME: falkordb-node
   CLUSTER_IMAGE_NAME: falkordb-cluster
   CLUSTER_REBALANCE_IMAGE_NAME: falkordb-cluster-rebalance
-  FALKORDB_VERSION: v4.2.1
+  FALKORDB_VERSION: v4.4.1
   FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
   PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
   ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
@@ -24,6 +24,38 @@ env:
   AWS_NETWORK_NAME: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
 jobs:
+  create-runners:
+    strategy:
+      matrix:
+        machines:
+          - name: replication-runner-private-gcp
+            machine_type: e2-medium
+            runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
+            arm: false
+            image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
+          - name: cluster-runner-private-gcp
+            machine_type: e2-medium
+            runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
+            arm: false
+            image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create runners
+        id: create-runner
+        uses: FalkorDB/gce-github-runner@install_docker
+        with:
+          token: ${{ secrets.GH_SA_TOKEN }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          machine_zone: ${{ vars.GCP_ZONE }}
+          network: n-hcjx5tis6bc
+          subnet: s-hcjx5tis6bc-pod
+          disk_size: 100
+          machine_type: ${{ matrix.machines.machine_type }}
+          runner_label: ${{ matrix.machines.runner_label }}
+          arm: ${{ matrix.machines.arm }}
+          image: ${{ matrix.machines.image }}
+
   build-and-push:
     runs-on: ubuntu-latest
     strategy:
@@ -83,6 +115,11 @@ jobs:
             file: omnistrate.enterprise.yaml
             key: enterprise
             tier-name: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref ||  github.ref_name }}
+          - service-name: FalkorDB
+            plan-name: FalkorDB Startup
+            file: omnistrate.startup.yaml
+            key: startup
+            tier-name: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -174,8 +211,8 @@ jobs:
           name: ${{ env.AWS_NETWORK_NAME }}
 
   test:
-    needs: create-custom-networks
-    runs-on: ubuntu-latest
+    needs: [create-custom-networks, create-runners]
+    runs-on: ${{ matrix.instances.runner_label || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -403,7 +440,87 @@ jobs:
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'  --instance-name 'test-cluster-mz-enterprise-failover' --instance-description 'test-cluster-mz-enterprise-failover' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
-
+            ############## GCP Startup tier ##############
+          - name: Startup/Standalone - GCP/us-central1 - Failover & Persistence
+            if: "true"
+            testFile: test_standalone.py
+            tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover-startup' --instance-description 'test-standalone-failover-startup' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          # - name: Startup/SingleZone - GCP/us-central1 - Failover & Persistence
+          #   if: "true"
+          #   testFile: test_replication.py
+          #   tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: gcp
+          #   cloudRegion: us-central1
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-startup'  --instance-description 'test-sz-failover-startup' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          # - name: Startup/MultiZone - GCP/us-central1 - Failover & Persistence
+          #   if: "true"
+          #   testFile: test_replication.py
+          #   tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: gcp
+          #   cloudRegion: us-central1
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-startup' --instance-description 'test-mz-failover-startup' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          - name: Startup/Standalone - GCP/us-central1 - Failover & Persistence With TLS
+            if: "true"
+            testFile: test_standalone.py
+            tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover-tls-startup' --instance-description 'test-standalone-failover-tls-startup' --instance-type 'none' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+          # - name: Startup/SingleZone - GCP/us-central1 - Failover & Persistence With TLS
+          #   if: "true"
+          #   testFile: test_replication.py
+          #   tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: gcp
+          #   cloudRegion: us-central1
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-tls-startup'  --instance-description 'test-sz-failover-tls-startup' --instance-type 'none' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+          # - name: Startup/MultiZone - GCP/us-central1 - Failover & Persistence With TLS
+          #   if: "true"
+          #   testFile: test_replication.py
+          #   tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: gcp
+          #   cloudRegion: us-central1
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-tls-startup' --instance-description 'test-mz-failover-tls-startup' --instance-type 'none' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+          # - name: Startup/SingleZone - GCP/us-central1 - Test add/remove replica
+          #   if: "true"
+          #   testFile: test_replication_replicas.py
+          #   tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: gcp
+          #   cloudRegion: us-central1
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'single-Zone' --replica-id 'node-sz-0' --instance-name 'test-sz-add-remove-replica-startup' --instance-description 'test-replication-add-remove-startup' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          # - name: Startup/MultiZone - GCP/us-central1 - Test add/remove replica
+          #   if: "true"
+          #   testFile: test_replication_replicas.py
+          #   tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: gcp
+          #   cloudRegion: us-central1
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'multi-Zone' --replica-id 'node-mz-0'  --instance-name 'test-mz-add-remove-replica-startup' --instance-description 'test-replication-add-remove-startup' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           # - name: PRO/ClusterSingleZone - GCP/us-central1 - Add/Remove Shards
           #   if: "true"
           #   testFile: test_cluster_shards.py
@@ -444,27 +561,49 @@ jobs:
           #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
           #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
           #   extraParams: "--resource-key 'cluster-Multi-Zone' --instance-name 'test-cluster-mz-replicas' --instance-description 'test-cluster-mz-replicas' --instance-type 'e2-custom-4-8192' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --shards '3' --ensure-mz-distribution"
-          - name: PRO/SingleZone - GCP/us-central1 - Test add/remove replica
+          # - name: PRO/SingleZone - GCP/us-central1 - Test add/remove replica
+          #   if: "true"
+          #   testFile: test_replication_replicas.py
+          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: gcp
+          #   cloudRegion: us-central1
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'single-Zone' --replica-id 'node-sz-0' --instance-name 'test-sz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          # - name: PRO/MultiZone - GCP/us-central1 - Test add/remove replica
+          #   if: "true"
+          #   testFile: test_replication_replicas.py
+          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: gcp
+          #   cloudRegion: us-central1
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'multi-Zone' --replica-id 'node-mz-0'  --instance-name 'test-mz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+            ###################### GCP private ######################
+          - name: PRO/ClusterMultiZone - PRIVATE/GCP/us-central1 - Failover & Persistence
             if: "true"
-            testFile: test_replication_replicas.py
+            testFile: test_cluster.py
+            runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
             tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --replica-id 'node-sz-0' --instance-name 'test-sz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
-          - name: PRO/MultiZone - GCP/us-central1 - Test add/remove replica
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4' --network-type INTERNAL --instance-name 'test-cluster-mz-failover-private' --instance-description 'test-cluster-mz-failover-private' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
+          - name: PRO/MultiZone - PRIVATE/GCP/us-central1 - Failover & Persistence
             if: "true"
-            testFile: test_replication_replicas.py
+            testFile: test_replication.py
+            runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
             tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
             cloudProvider: gcp
             cloudRegion: us-central1
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'multi-Zone' --replica-id 'node-mz-0'  --instance-name 'test-mz-add-remove-replica' --instance-description 'test-replication-add-remove' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
-
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-private' --network-type INTERNAL --instance-description 'test-mz-failover-private' --instance-type 'e2-medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
             ###################### AWS ######################
           - name: Free - AWS/us-east-2 - Failover & Persistence
             if: "true"
@@ -578,7 +717,87 @@ jobs:
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'   --instance-name 'test-cluster-mz-enterprise-failover' --instance-description 'test-cluster-mz-enterprise-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
-
+          ############### AWS startup tier ###############
+          - name: Startup/Standalone - AWS/us-east-2 - Failover & Persistence
+            if: "true"
+            testFile: test_standalone.py
+            tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover-startup' --instance-description 'test-standalone-failover-startup' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          # - name: Startup/SingleZone - AWS/us-east-2 - Failover & Persistence
+          #   if: "true"
+          #   testFile: test_replication.py
+          #   tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: aws
+          #   cloudRegion: us-east-2
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-startup'  --instance-description 'test-sz-failover-startup' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          # - name: Startup/MultiZone - AWS/us-east-2 - Failover & Persistence
+          #   if: "true"
+          #   testFile: test_replication.py
+          #   tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: aws
+          #   cloudRegion: us-east-2
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-startup' --instance-description 'test-mz-failover-startup' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          - name: Startup/Standalone - AWS/us-east-2 - Failover & Persistence With TLS
+            if: "true"
+            testFile: test_standalone.py
+            tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover-tls-startup' --instance-description 'test-standalone-failover-tls-startup' --instance-type 'none' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+          # - name: Startup/SingleZone - AWS/us-east-2 - Failover & Persistence With TLS
+          #   if: "true"
+          #   testFile: test_replication.py
+          #   tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: aws
+          #   cloudRegion: us-east-2
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-tls-startup'  --instance-description 'test-sz-failover-tls-startup' --instance-type 'none' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+          # - name: Startup/MultiZone - AWS/us-east-2 - Failover & Persistence With TLS
+          #   if: "true"
+          #   testFile: test_replication.py
+          #   tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: aws
+          #   cloudRegion: us-east-2
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-tls-startup' --instance-description 'test-mz-failover-tls-startup' --instance-type 'none' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always'"
+          # - name: Startup/SingleZone - AWS/us-east-2 - Test add/remove replica
+          #   if: "true"
+          #   testFile: test_replication_replicas.py
+          #   tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: aws
+          #   cloudRegion: us-east-2
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'single-Zone' --replica-id 'node-sz-0' --instance-name 'test-sz-add-remove-replica-startup' --instance-description 'test-replication-add-remove-startup' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          # - name: Startup/MultiZone - AWS/us-east-2 - Test add/remove replica
+          #   if: "true"
+          #   testFile: test_replication_replicas.py
+          #   tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: aws
+          #   cloudRegion: us-east-2
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'multi-Zone' --replica-id 'node-mz-0'  --instance-name 'test-mz-add-remove-replica-startup' --instance-description 'test-replication-add-remove-startup' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
     steps:
       - name: Checkout
         if: matrix.instances.if == 'true' || matrix.instances.if == true
@@ -587,7 +806,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup python
-        if: matrix.instances.if == 'true' || matrix.instances.if == true
+        if: ${{ (matrix.instances.if == 'true' || matrix.instances.if == true) && !matrix.instances.runner_label }}
         uses: actions/setup-python@v2
         with:
           python-version: "3.x"
@@ -613,7 +832,9 @@ jobs:
 
       - name: Install dependencies
         if: matrix.instances.if == 'true' || matrix.instances.if == true
-        run: poetry install
+        run: |
+          export PATH="~/.local/bin:$PATH"
+          poetry install
 
       - name: ${{ matrix.instances.name }}
         if: matrix.instances.if == 'true' || matrix.instances.if == true
@@ -626,6 +847,7 @@ jobs:
           SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
           REF_NAME: ${{ matrix.instances.tierName }}
         run: |
+          export PATH="~/.local/bin:$PATH"
           poetry run python -u ./omnistrate_tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
 
   # Runs only if the branch is 'main' or 'v*'
@@ -654,3 +876,21 @@ jobs:
           username: ${{ secrets.OMNISTRATE_USERNAME }}
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
           custom_network_name: ${{ env.AWS_NETWORK_NAME }}
+
+  cleanup-runner:
+    needs: test
+    if: ${{ success() || cancelled() }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform:
+          - machine_label: cluster-${{ github.run_id }}-${{ github.run_number }}
+          - machine_label: replication-${{ github.run_id }}-${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/cleanup-runner
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          zone: ${{ vars.GCP_ZONE }}
+          instance_label: ${{ matrix.platform.machine_label }}

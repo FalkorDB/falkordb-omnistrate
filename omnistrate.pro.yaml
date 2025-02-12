@@ -159,11 +159,15 @@ x-clusterparam: &clusterparam
       defaultValue: e2-custom-4-8192
       options:
         - e2-medium
+        - e2-standard-2
+        - e2-standard-4
         - e2-custom-4-8192
         - e2-custom-8-16384
         - e2-custom-16-32768
         - e2-custom-32-65536
         - t2.medium
+        - m6i.large
+        - m6i.xlarge
         - c6i.xlarge
         - c6i.2xlarge
         - c6i.4xlarge
@@ -317,11 +321,15 @@ services:
         export: true
         options:
           - e2-medium
+          - e2-standard-2
+          - e2-standard-4
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - m6i.large
+          - m6i.xlarge
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -495,11 +503,15 @@ services:
         export: true
         options:
           - e2-medium
+          - e2-standard-2
+          - e2-standard-4
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - m6i.large
+          - m6i.xlarge
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -696,11 +708,15 @@ services:
         export: true
         options:
           - e2-medium
+          - e2-standard-2
+          - e2-standard-4
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - m6i.large
+          - m6i.xlarge
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -711,13 +727,10 @@ services:
         description: Number of Replicas
         name: Number of Replicas
         type: Float64
-        modifiable: true
+        modifiable: false
         required: false
-        export: true
+        export: false
         defaultValue: "2"
-        options:
-          - "2"
-          - "3"
         parameterDependencyMap:
           node-sz: numReplicas
       - key: enableTLS
@@ -887,11 +900,15 @@ services:
         export: true
         options:
           - e2-medium
+          - e2-standard-2
+          - e2-standard-4
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - m6i.large
+          - m6i.xlarge
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -904,9 +921,6 @@ services:
         required: false
         export: true
         defaultValue: "2"
-        options:
-          - "2"
-          - "3"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -1243,11 +1257,15 @@ services:
         export: true
         options:
           - e2-medium
+          - e2-standard-2
+          - e2-standard-4
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - m6i.large
+          - m6i.xlarge
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -1258,13 +1276,10 @@ services:
         description: Number of Replicas
         name: Number of Replicas
         type: Float64
-        modifiable: true
+        modifiable: false
         required: false
-        export: true
+        export: false
         defaultValue: "2"
-        options:
-          - "2"
-          - "3"
         parameterDependencyMap:
           node-mz: numReplicas
       - key: enableTLS
@@ -1434,11 +1449,15 @@ services:
         export: true
         options:
           - e2-medium
+          - e2-standard-2
+          - e2-standard-4
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - m6i.large
+          - m6i.xlarge
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -1451,9 +1470,6 @@ services:
         required: false
         export: true
         defaultValue: "2"
-        options:
-          - "2"
-          - "3"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -1789,11 +1805,15 @@ services:
         defaultValue: e2-custom-4-8192
         options:
           - e2-medium
+          - e2-standard-2
+          - e2-standard-4
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - m6i.large
+          - m6i.xlarge
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
@@ -2104,11 +2124,15 @@ services:
         defaultValue: e2-custom-4-8192
         options:
           - e2-medium
+          - e2-standard-2
+          - e2-standard-4
           - e2-custom-4-8192
           - e2-custom-8-16384
           - e2-custom-16-32768
           - e2-custom-32-65536
           - t2.medium
+          - m6i.large
+          - m6i.xlarge
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge

@@ -56,12 +56,7 @@ fn start_probes_check_server(is_sentinel: bool) {
                 }
             },
             (GET) (/startup) => {
-                let health = true;
-                if health {
                     Response::text("OK")
-                } else {
-                    Response::text("Not ready").with_status_code(500)
-                }
             },
             _ => Response::empty_404()
         )
@@ -134,7 +129,7 @@ fn probes_check_handler(is_sentinel: bool,readiness: bool, healthcheck: bool) ->
     let is_cluster = db_info.contains("cluster_enabled:1");
 
     if is_cluster {
-        return get_status_from_cluster_node(db_info, &mut con);
+        return get_status_from_cluster_node(db_info, &mut con,readiness , healthcheck);
     }
 
     let role_regex = regex::Regex::new(r"role:(\w+)").unwrap();
@@ -147,9 +142,9 @@ fn probes_check_handler(is_sentinel: bool,readiness: bool, healthcheck: bool) ->
     let role = role_matches.unwrap().get(1).unwrap().as_str();
 
     if role == "master" {
-        get_status_from_master(&db_info,readiness,healthcheck)
+        get_status_from_master(&db_info,&mut con,readiness,healthcheck)
     } else {
-        get_status_from_slave(&db_info,readiness,healthcheck)
+        get_status_from_slave(&db_info,&mut con,readiness,healthcheck)
     }
 }
 
@@ -207,8 +202,8 @@ fn get_status_from_cluster_node(
 /// # Returns
 /// 
 /// A boolean value that indicates whether the Redis master is ready
-fn get_status_from_master(db_info: &str,readiness: bool, healthcheck: bool) -> Result<bool, redis::RedisError> {
-    let result : String = redis::cmd("PING").query(&mut con)?;
+fn get_status_from_master(db_info: &str,con: &mut redis::Connection,readiness: bool, healthcheck: bool) -> Result<bool, redis::RedisError> {
+    let result : String = redis::cmd("PING").query(con)?;
     if healthcheck {
         if result.contains("PONG") || result.contains("LOADING") || result.contains("BUSY") || result.contains("MASTERDOWN"){
             return Ok(true);
@@ -235,9 +230,9 @@ fn get_status_from_master(db_info: &str,readiness: bool, healthcheck: bool) -> R
 /// # Returns
 /// 
 /// A boolean value that indicates whether the Redis slave is ready
-fn get_status_from_slave(db_info: &str,readiness: bool,healthcheck: bool) -> Result<bool, redis::RedisError> {
+fn get_status_from_slave(db_info: &str, con: &mut redis::Connection, readiness: bool,healthcheck: bool) -> Result<bool, redis::RedisError> {
 
-    let result : String = redis::cmd("PING").query(&mut con)?;
+    let result : String = redis::cmd("PING").query(con)?;
     if healthcheck {
         if result.contains("PONG") || result.contains("LOADING") || result.contains("BUSY") || result.contains("MASTERDOWN") {
             return Ok(true);

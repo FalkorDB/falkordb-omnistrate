@@ -9,9 +9,9 @@ fn main() {
     let args: Vec<String> = args().collect();
 
     if args.len() > 1 && args[1] == "sentinel" {
-        start_probes_check_server(true);
+        start_health_check_server(true);
     } else {
-        start_probes_check_server(false);
+        start_health_check_server(false);
     }
 }
 
@@ -26,7 +26,7 @@ fn main() {
 /// # Arguments
 /// 
 /// * `is_sentinel` - A boolean that indicates whether the health check server is for a Redis Sentinel instance.
-fn start_probes_check_server(is_sentinel: bool) {
+fn start_health_check_server(is_sentinel: bool) {
     let port = if is_sentinel {
         env::var("HEALTH_CHECK_PORT_SENTINEL").unwrap_or_else(|_| "8082".to_string())
     } else {
@@ -37,7 +37,7 @@ fn start_probes_check_server(is_sentinel: bool) {
 
     let server = Server::new(addr, move |request| {
         router!(request,
-            (GET) (/healthcheck) => {
+            (GET) (/liveness) => {
                 let health = probes_check_handler(is_sentinel,false,true).unwrap_or_else(|_| false);
 
                 if health {

@@ -50,7 +50,6 @@ if [[ "$FALKORDB_TIMEOUT_DEFAULT" == "<nil>" ]]; then
   FALKORDB_TIMEOUT_DEFAULT=0
 fi
 
-
 CLUSTER_REPLICAS=${CLUSTER_REPLICAS:-1}
 IS_MULTI_ZONE=${IS_MULTI_ZONE:-0}
 
@@ -73,19 +72,18 @@ DATE_NOW=$(date +"%Y%m%d%H%M%S")
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo ""; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 
-if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
+if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
   DEBUG=1
 fi
 
-
-rewrite_aof_cronjob(){
+rewrite_aof_cronjob() {
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
   # The command is run every 12 hours to prevent the AOF file from growing too large.
   cron
-  crontab <<< "$AOF_CRON_EXPRESSION $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF"
+  crontab <<<"$AOF_CRON_EXPRESSION $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF"
 }
 
-meet_unknown_nodes(){
+meet_unknown_nodes() {
   # Had to add sleep until things are stable (nodes that can communicate should be given time to do so)
   # This fixes an issue where two nodes restart (ex: cluster-sz-1 (x.x.x.1) and cluster-sz-2 (x.x.x.2)) and their ips are switched
   # cluster-sz-1 gets (x.x.x.2) and cluster-sz-2 gets (x.x.x.1).
@@ -93,16 +91,16 @@ meet_unknown_nodes(){
   # To fix the issue we use the CLUSTER MEET command to update the ips of each node that is unknown (0:@0 or fail).
   # Now the nodes should communitcate as expected.
 
-  if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
+  if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]]; then
     discrepancy=0
-    while IFS= read -r line;do
-      if [[ $line =~ .*@0.* || $line =~ .*fail.* ]];then
+    while IFS= read -r line; do
+      if [[ $line =~ .*@0.* || $line =~ .*fail.* ]]; then
         discrepancy=$((discrepancy + 1))
-        hostname=$(echo "$line" | awk '{print $2}' | cut -d',' -f2| cut -d':' -f1)
+        hostname=$(echo "$line" | awk '{print $2}' | cut -d',' -f2 | cut -d':' -f1)
 
-        tout=$(( $(date +%s) + 300 ))
-        while true;do
-          if [[ $(date +%s) -gt $tout ]];then 
+        tout=$(($(date +%s) + 300))
+        while true; do
+          if [[ $(date +%s) -gt $tout ]]; then
             echo "Timedout after 5 minutes while trying to ping $ip"
             exit 1
           fi
@@ -120,11 +118,11 @@ meet_unknown_nodes(){
           fi
 
           PONG=$(redis-cli -h $hostname $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
-          
+
           echo "The answer to PING is: $PONG"
           echo "The ip is: $ip"
-          
-          if [[ -n $ip && $PONG == "PONG" ]];then
+
+          if [[ -n $ip && $PONG == "PONG" ]]; then
             break
           fi
 
@@ -135,9 +133,9 @@ meet_unknown_nodes(){
 
       fi
 
-    done <<< "$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER NODES)"
+    done <<<"$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER NODES)"
 
-    if [[ $discrepancy -eq 0 ]];then
+    if [[ $discrepancy -eq 0 ]]; then
       echo "Did not find IP discrepancies between nodes."
     fi
 
@@ -145,20 +143,20 @@ meet_unknown_nodes(){
   return 0
 }
 
-ensure_replica_connects_to_the_right_master_ip(){
+ensure_replica_connects_to_the_right_master_ip() {
   # This fixes an issue where a replica connects to the wrong ip of its master
   # the node does not update the ip of its master and gets stuck trying to connect to an incorrect ip.
   # To fix this we check for each slave if the master ip present (shown) using the "INFO REPLICATION"
   # is also found in the /data/nodes.conf or in the "CLUSTER NODES" output and if it is not
   # we update the new master using the CLUSTER REPLICATE command.
   info=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication)
-  if [[ "$info" =~ role:slave ]];then
+  if [[ "$info" =~ role:slave ]]; then
     echo "Making sure slave is connected to master using right ip."
-    master_ip=$(echo "$info" | grep master_host | cut -d':' -f2| tr -d '\r' )
+    master_ip=$(echo "$info" | grep master_host | cut -d':' -f2 | tr -d '\r')
     echo "the master ip is: $master_ip"
     ans=$(grep "$master_ip" "$DATA_DIR/nodes.conf")
     echo "The answer is: $ans"
-    if [[ -z $ans ]];then
+    if [[ -z $ans ]]; then
       echo "This instance is connected to its master using the wrong ip."
       myself=$(grep 'myself' "$DATA_DIR/nodes.conf")
       echo "The myself line is: $myself"
@@ -168,10 +166,10 @@ ensure_replica_connects_to_the_right_master_ip(){
     fi
 
   fi
-    
+
 }
 
-update_ips_in_nodes_conf(){
+update_ips_in_nodes_conf() {
   # Replace old ip with new one (external ip)
   # This fixes the issue where when a node restarts it does not update its own ip
   # this is fixed by getting the new public ip using the command "getent hosts $NODE_HOST" (NODE_HOST
@@ -179,25 +177,25 @@ update_ips_in_nodes_conf(){
 
   local NODE_PORT=$NODE_PORT
 
-  if [[ "$TLS" == "true" ]];then
+  if [[ "$TLS" == "true" ]]; then
     NODE_PORT=0
   fi
 
-  if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]];then
+  if [[ -f "$DATA_DIR/nodes.conf" && -s "$DATA_DIR/nodes.conf" ]]; then
     res=$(cat $DATA_DIR/nodes.conf | grep myself | awk '{print $2}' | cut -d',' -f1)
 
-    tout=$(( $(date +%s) + 300 ))
-    while true;do
-      if [[ $(date +%s) -gt $tout ]];then 
+    tout=$(($(date +%s) + 300))
+    while true; do
+      if [[ $(date +%s) -gt $tout ]]; then
         echo "Timedout trying to resolve ip for host: $HOSTNAME"
         exit 1
       fi
       ip=$(getent hosts $NODE_HOST | awk '{print $1}')
 
-      if [[ -n $ip ]];then
+      if [[ -n $ip ]]; then
         break
       fi
-    done 
+    done
 
     echo "The old ip is: $res"
     echo "The new ip is: $POD_IP"
@@ -205,7 +203,7 @@ update_ips_in_nodes_conf(){
 
     sed -i "s/$res/$POD_IP:$NODE_PORT@$BUS_PORT/" $DATA_DIR/nodes.conf
     cat $DATA_DIR/nodes.conf
-    
+
   else
     echo "First time running the node.."
   fi
@@ -213,7 +211,6 @@ update_ips_in_nodes_conf(){
 }
 
 update_ips_in_nodes_conf
-
 
 handle_sigterm() {
   echo "Caught SIGTERM"
@@ -318,13 +315,13 @@ set_memory_limit() {
 
   instance_size_in_map=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
 
-  if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]];then
+  if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
     MEMORY_LIMIT=$instance_size_in_map
-  elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]];then
+  elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
     MEMORY_LIMIT=$(get_default_memory_limit)
     echo "INSTANCE_TYPE is not set. Setting to default memory limit"
   fi
-  
+
   echo "Setting maxmemory to $MEMORY_LIMIT"
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
 }
@@ -466,7 +463,6 @@ fi
 meet_unknown_nodes
 ensure_replica_connects_to_the_right_master_ip
 
-
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   # Check if healthcheck binary exists
   if [ -f /usr/local/bin/healthcheck ]; then
@@ -479,8 +475,9 @@ fi
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
+  aof_metric_export=$(if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then echo "-include-aof-file-size"; else echo ""; fi)
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
-  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -is-cluster -tls-server-min-version TLS1.3 >>$FALKORDB_LOG_FILE_PATH &
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -is-cluster -tls-server-min-version TLS1.3 $aof_metric_export >>$FALKORDB_LOG_FILE_PATH &
   redis_exporter_pid=$!
 fi
 

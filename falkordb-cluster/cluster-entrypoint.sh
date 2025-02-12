@@ -37,6 +37,7 @@ FALKORDB_TIMEOUT_MAX=${FALKORDB_TIMEOUT_MAX:-0}
 FALKORDB_TIMEOUT_DEFAULT=${FALKORDB_TIMEOUT_DEFAULT:-0}
 FALKORDB_VKEY_MAX_ENTITY_COUNT=${FALKORDB_VKEY_MAX_ENTITY_COUNT:-4611686000000000000}
 MEMORY_LIMIT=${MEMORY_LIMIT:-''}
+AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'0 */12 * * *'}
 
 # If vars are <nil>, set it to 0
 if [[ "$FALKORDB_QUERY_MEM_CAPACITY" == "<nil>" ]]; then
@@ -55,6 +56,7 @@ IS_MULTI_ZONE=${IS_MULTI_ZONE:-0}
 
 NODE_HOST=${NODE_HOST:-localhost}
 NODE_PORT=${NODE_PORT:-6379}
+BUS_PORT=${BUS_PORT:-16379}
 
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
@@ -79,9 +81,15 @@ if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
 fi
 
 
+rewrite_aof_cronjob(){
+  # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
+  # The command is run every 12 hours to prevent the AOF file from growing too large.
+  cron
+  crontab <<< "$AOF_CRON_EXPRESSION $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF"
+}
+
 meet_unknown_nodes(){
   # Had to add sleep until things are stable (nodes that can communicate should be given time to do so)
-  sleep 120
   # This fixes an issue where two nodes restart (ex: cluster-sz-1 (x.x.x.1) and cluster-sz-2 (x.x.x.2)) and their ips are switched
   # cluster-sz-1 gets (x.x.x.2) and cluster-sz-2 gets (x.x.x.1).
   # This can be caught by looking for the lines in the /data/nodes.conf file which have either the "fail" state or the "0:@0".
@@ -105,7 +113,16 @@ meet_unknown_nodes(){
           sleep 3
 
           ip=$(getent hosts "$hostname" | awk '{print $1}')
-          PONG=$(redis-cli -h $(echo $hostname | cut -d'.' -f1) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
+
+          if [[ "$NETWORKING_TYPE" == "INTERNAL" ]]; then
+            echo "The hostname is: $hostname"
+            echo "The network type is: $NETWORKING_TYPE"
+            hostname=$NODE_HOST
+          else
+            hostname=$(echo $hostname | cut -d'.' -f1)
+          fi
+
+          PONG=$(redis-cli -h $hostname $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
           
           echo "The answer to PING is: $PONG"
           echo "The ip is: $ip"
@@ -121,7 +138,7 @@ meet_unknown_nodes(){
 
       fi
 
-    done < "$DATA_DIR/nodes.conf"
+    done <<< "$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER NODES)"
 
     if [[ $discrepancy -eq 0 ]];then
       echo "Did not find IP discrepancies between nodes."
@@ -137,16 +154,19 @@ ensure_replica_connects_to_the_right_master_ip(){
   # To fix this we check for each slave if the master ip present (shown) using the "INFO REPLICATION"
   # is also found in the /data/nodes.conf or in the "CLUSTER NODES" output and if it is not
   # we update the new master using the CLUSTER REPLICATE command.
-  echo "Making sure slave is connected to master using right ip."
   info=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication)
   if [[ "$info" =~ role:slave ]];then
+    echo "Making sure slave is connected to master using right ip."
     master_ip=$(echo "$info" | grep master_host | cut -d':' -f2| tr -d '\r' )
-
+    echo "the master ip is: $master_ip"
     ans=$(grep "$master_ip" "$DATA_DIR/nodes.conf")
+    echo "The answer is: $ans"
     if [[ -z $ans ]];then
       echo "This instance is connected to its master using the wrong ip."
       myself=$(grep 'myself' "$DATA_DIR/nodes.conf")
+      echo "The myself line is: $myself"
       master_id=$(echo "$myself" | awk '{print $4}')
+      echo "The master id is: $master_id"
       redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER REPLICATE $master_id
     fi
 
@@ -175,18 +195,18 @@ update_ips_in_nodes_conf(){
         echo "Timedout trying to resolve ip for host: $HOSTNAME"
         exit 1
       fi
-      external_ip=$(getent hosts $NODE_HOST | awk '{print $1}')
+      ip=$(getent hosts $NODE_HOST | awk '{print $1}')
 
-      if [[ -n $external_ip ]];then
+      if [[ -n $ip ]];then
         break
       fi
     done 
 
     echo "The old ip is: $res"
-    echo "The new ip is: $external_ip"
+    echo "The new ip is: $POD_IP"
     echo "The port is: $NODE_PORT"
 
-    sed -i "s/$res/$POD_IP:$NODE_PORT@1$NODE_PORT/" $DATA_DIR/nodes.conf
+    sed -i "s/$res/$POD_IP:$NODE_PORT@$BUS_PORT/" $DATA_DIR/nodes.conf
     cat $DATA_DIR/nodes.conf
     
   else
@@ -459,6 +479,8 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -is-cluster -tls-server-min-version TLS1.3 >>$FALKORDB_LOG_FILE_PATH &
   redis_exporter_pid=$!
 fi
+
+rewrite_aof_cronjob
 
 while true; do
   sleep 1

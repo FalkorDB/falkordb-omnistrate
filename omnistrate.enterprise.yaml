@@ -714,12 +714,10 @@ services:
         description: Number of Replicas
         name: Number of Replicas
         type: Float64
-        modifiable: true
+        modifiable: false
         required: false
-        export: true
+        export: false
         defaultValue: "2"
-        options:
-          - "2"
         parameterDependencyMap:
           node-sz: numReplicas
       - key: enableTLS
@@ -907,8 +905,6 @@ services:
         required: false
         export: true
         defaultValue: "2"
-        options:
-          - "2"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -1217,12 +1213,10 @@ services:
         description: Number of Replicas
         name: Number of Replicas
         type: Float64
-        modifiable: true
+        modifiable: false
         required: false
-        export: true
+        export: false
         defaultValue: "2"
-        options:
-          - "2"
         parameterDependencyMap:
           node-mz: numReplicas
       - key: enableTLS
@@ -1409,8 +1403,6 @@ services:
         required: false
         export: true
         defaultValue: "2"
-        options:
-          - "2"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS

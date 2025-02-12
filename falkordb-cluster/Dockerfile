@@ -1,4 +1,4 @@
-ARG FALKORDB_VERSION=v4.2.1
+ARG FALKORDB_VERSION=v4.4.1
 
 FROM oliver006/redis_exporter:alpine as redis_exporter
 
@@ -16,9 +16,13 @@ RUN cargo build --release
 
 FROM falkordb/falkordb:$FALKORDB_VERSION
 
-RUN apt-get update && apt-get install -y curl jq openssl
+RUN apt-get update && apt-get install -y curl jq openssl cron
 
-RUN mkdir -p /falkordb
+RUN useradd -u 1000 -m falkordb && usermod -aG crontab falkordb && \
+  touch /var/run/crond.pid && chown root:crontab /var/run/crond.pid \
+  && chmod 660 /var/run/crond.pid \
+  && chmod u+s /usr/sbin/cron
+
 
 WORKDIR /falkordb
 

@@ -40,6 +40,9 @@ x-internal-integrations:
 x-falkordbMetrics: &metrics
   prometheusEndpoint: "http://localhost:9121/metrics"
   metrics:
+    redis_aof_file_size_bytes:
+      "AOF File Size (Bytes)":
+        aggregationFunction: sum
     redis_commands_latencies_usec_bucket:
       "Command Latency (μs) Bucket":
         aggregationFunction: sum

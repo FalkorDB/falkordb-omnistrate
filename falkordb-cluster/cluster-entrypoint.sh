@@ -73,9 +73,6 @@ DATE_NOW=$(date +"%Y%m%d%H%M%S")
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo ""; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 
-
-sleep 10
-
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]];then
   DEBUG=1
 fi
@@ -465,6 +462,10 @@ else
   echo "Cluster does not exist. Waiting for it to be created"
 fi
 
+# Run this before health check to prevent client connections until discrepancies are resolved.
+meet_unknown_nodes
+ensure_replica_connects_to_the_right_master_ip
+
 
 if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
   # Check if healthcheck binary exists
@@ -475,7 +476,6 @@ if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
     echo "Healthcheck binary not found"
   fi
 fi
-
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"

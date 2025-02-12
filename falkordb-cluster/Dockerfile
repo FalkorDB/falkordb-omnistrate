@@ -1,6 +1,6 @@
 ARG FALKORDB_VERSION=v4.4.1
 
-FROM oliver006/redis_exporter:alpine as redis_exporter
+FROM falkordb/redis_exporter:v1.68.0-alpine as redis_exporter
 
 
 FROM rust:1-slim-buster as healthcheck_builder

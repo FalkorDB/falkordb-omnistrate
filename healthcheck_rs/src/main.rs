@@ -231,11 +231,13 @@ fn get_status_from_cluster_node(
 fn get_status_from_master(db_info: &str,con: &mut redis::Connection,readiness: bool, healthcheck: bool) -> Result<bool, redis::RedisError> {
     let result : String = redis::cmd("PING").query(con)?;
     if healthcheck {
+        println!("Inside the healthcheck block for master");
         if result.contains("PONG") || result.contains("LOADING") || result.contains("BUSY") || result.contains("MASTERDOWN"){
             return Ok(true);
         }
 
     } else if readiness {
+        println!("Inside the readiness block for master");
         if result.contains("PONG") && db_info.contains("loading:0") {
             return Ok(true);
         }
@@ -260,11 +262,13 @@ fn get_status_from_slave(db_info: &str, con: &mut redis::Connection, readiness: 
 
     let result : String = redis::cmd("PING").query(con)?;
     if healthcheck {
+        println!("Inside the healthcheck block for slave");
         if result.contains("PONG") || result.contains("LOADING") || result.contains("BUSY") || result.contains("MASTERDOWN") {
             return Ok(true);
         }
 
     } else if readiness {
+        println!("Inside the readiness block for slave");
         if result.contains("PONG") && db_info.contains("loading:0") && db_info.contains("master_link_status:up") && db_info.contains("master_sync_in_progress:0") {
             return Ok(true);
         }

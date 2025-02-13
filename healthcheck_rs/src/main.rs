@@ -202,17 +202,20 @@ fn get_status_from_cluster_node(
     let cluster_info: String = redis::cmd("CLUSTER").arg("INFO").query(con)?;
 
     if healthcheck {
+        println!("Inside the get_status_from_cluster_node function");
         let cluster_state: bool = cluster_info.contains("cluster_state:ok");
         let loading: bool = cluster_info.contains("LOADING");
         let busy: bool = cluster_info.contains("BUSY"); // This might not exist in Redis.
         let master_down: bool = cluster_info.contains("MASTERDOWN");
         if cluster_state || loading || busy || master_down {
+            println!("Healthcheck passed for cluster node");
             return Ok(true);
         }
     } else if readiness {
+        println!("Inside the readiness block for cluster node");
         return Ok(cluster_info.contains("cluster_state:ok"));
     }
-
+    print!("THIS MEANS THE HEALTHCHECK FAILED");
     Ok(false) // Default return to avoid missing a return value
 }
 
@@ -230,19 +233,22 @@ fn get_status_from_cluster_node(
 /// A boolean value that indicates whether the Redis master is ready
 fn get_status_from_master(db_info: &str,con: &mut redis::Connection,readiness: bool, healthcheck: bool) -> Result<bool, redis::RedisError> {
     let result : String = redis::cmd("PING").query(con)?;
+    println!("Inside the get_status_from_master function");
     if healthcheck {
         println!("Inside the healthcheck block for master");
         if result.contains("PONG") || result.contains("LOADING") || result.contains("BUSY") || result.contains("MASTERDOWN"){
+            println!("Healthcheck passed for master");
             return Ok(true);
         }
 
     } else if readiness {
         println!("Inside the readiness block for master");
         if result.contains("PONG") && db_info.contains("loading:0") {
+            println!("Healthcheck passed for master");
             return Ok(true);
         }
     }
-
+    println!("THIS MEANS THE HEALTHCHECK FAILED");
     Ok(false)
 }
 
@@ -259,21 +265,23 @@ fn get_status_from_master(db_info: &str,con: &mut redis::Connection,readiness: b
 /// 
 /// A boolean value that indicates whether the Redis slave is ready
 fn get_status_from_slave(db_info: &str, con: &mut redis::Connection, readiness: bool,healthcheck: bool) -> Result<bool, redis::RedisError> {
-
+    println!("Inside the get_status_from_slave function");
     let result : String = redis::cmd("PING").query(con)?;
     if healthcheck {
         println!("Inside the healthcheck block for slave");
         if result.contains("PONG") || result.contains("LOADING") || result.contains("BUSY") || result.contains("MASTERDOWN") {
+            println!("Healthcheck passed for slave");
             return Ok(true);
         }
 
     } else if readiness {
         println!("Inside the readiness block for slave");
         if result.contains("PONG") && db_info.contains("loading:0") && db_info.contains("master_link_status:up") && db_info.contains("master_sync_in_progress:0") {
+            println!("Healthcheck passed for slave");
             return Ok(true);
         }
     }
-
+    println!("THIS MEANS THE HEALTHCHECK FAILED");
     Ok(false)
 }
 

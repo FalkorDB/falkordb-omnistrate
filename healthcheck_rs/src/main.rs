@@ -203,6 +203,10 @@ fn get_status_from_cluster_node(
 
     if healthcheck {
         println!("Inside the get_status_from_cluster_node function");
+        println!("Inside the get_status_from_master function");
+        print!("The result of the ping command is: {}", cluster_info);
+        print!("the value of healthcheck is: {}", healthcheck);
+        print!("the value of readiness is: {}", readiness);
         let cluster_state: bool = cluster_info.contains("cluster_state:ok");
         let loading: bool = cluster_info.contains("LOADING");
         let busy: bool = cluster_info.contains("BUSY"); // This might not exist in Redis.
@@ -234,6 +238,9 @@ fn get_status_from_cluster_node(
 fn get_status_from_master(db_info: &str,con: &mut redis::Connection,readiness: bool, healthcheck: bool) -> Result<bool, redis::RedisError> {
     let result : String = redis::cmd("PING").query(con)?;
     println!("Inside the get_status_from_master function");
+    print!("The result of the ping command is: {}", result);
+    print!("the value of healthcheck is: {}", healthcheck);
+    print!("the value of readiness is: {}", readiness);
     if healthcheck {
         println!("Inside the healthcheck block for master");
         if result.contains("PONG") || result.contains("LOADING") || result.contains("BUSY") || result.contains("MASTERDOWN"){
@@ -265,8 +272,12 @@ fn get_status_from_master(db_info: &str,con: &mut redis::Connection,readiness: b
 /// 
 /// A boolean value that indicates whether the Redis slave is ready
 fn get_status_from_slave(db_info: &str, con: &mut redis::Connection, readiness: bool,healthcheck: bool) -> Result<bool, redis::RedisError> {
-    println!("Inside the get_status_from_slave function");
     let result : String = redis::cmd("PING").query(con)?;
+    print!("The result of the ping command is: {}", result);
+    println!("Inside the get_status_from_master function");
+    print!("The result of the ping command is: {}", result);
+    print!("the value of healthcheck is: {}", healthcheck);
+    print!("the value of readiness is: {}", readiness);
     if healthcheck {
         println!("Inside the healthcheck block for slave");
         if result.contains("PONG") || result.contains("LOADING") || result.contains("BUSY") || result.contains("MASTERDOWN") {

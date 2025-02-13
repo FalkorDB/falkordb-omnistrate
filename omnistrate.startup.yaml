@@ -505,7 +505,7 @@ services:
             fi
           }
 
-          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+          if [[ ! -z $RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
             call_startup_check
           fi
       - scope: NODE
@@ -525,7 +525,7 @@ services:
             fi
           }
 
-          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+          if [[ ! -z $RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
             call_readiness_check
           fi
 
@@ -546,7 +546,7 @@ services:
             fi
           }
 
-          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+          if [[ ! -z $RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
           call_liveness_check
           fi
 

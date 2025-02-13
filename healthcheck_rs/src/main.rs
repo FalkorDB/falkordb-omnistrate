@@ -148,6 +148,7 @@ fn get_redis_url(password: &str, node_port: &str) -> String {
             if tls == "true" {
                 let url: String = env::var("NODE_HOST").unwrap();
                 resolve_host(&url);
+                let node_port = env::var("RANDOM_NODE_PORT").unwrap_or_else(|_| node_port.to_string());
                 format!("rediss://:{password}@{url}:{node_port}")
             } else {
                 format!("redis://:{password}@localhost:{node_port}")

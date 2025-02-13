@@ -38,7 +38,7 @@ fn start_health_check_server(is_sentinel: bool) {
     let server = Server::new(addr, move |request| {
         router!(request,
             (GET) (/liveness) => {
-                let health = probes_check_handler(is_sentinel,false,true).unwrap_or_else(|_| false);
+                let health = liveness_check(is_sentinel).unwrap_or_else(|_| false);
 
                 if health {
                     Response::text("OK")
@@ -47,7 +47,7 @@ fn start_health_check_server(is_sentinel: bool) {
                 }
             },
             (GET) (/readiness) => {
-                let health = probes_check_handler(is_sentinel,true,false).unwrap_or_else(|_| false);
+                let health = readiness_check(is_sentinel).unwrap_or_else(|_| false);
 
                 if health {
                     Response::text("OK")
@@ -66,6 +66,13 @@ fn start_health_check_server(is_sentinel: bool) {
     server.run();
 }
 
+fn liveness_check(is_sentinel: bool) -> Result<bool, redis::RedisError> {
+    probes_check_handler(is_sentinel, false, true)
+}
+
+fn readiness_check(is_sentinel: bool) -> Result<bool, redis::RedisError> {
+    probes_check_handler(is_sentinel, true, false)
+}
 
 /// Checks the health of the Redis server.
 /// The function connects to the Redis server using the `ADMIN_PASSWORD`, `NODE_HOST`, `NODE_PORT`, and `TLS` environment variables.
@@ -88,8 +95,35 @@ fn start_health_check_server(is_sentinel: bool) {
 /// The function returns a RedisError if there is an error connecting to the Redis server.
 /// 
 /// The healthcheck and readiness are boolean values which are used to determine the type of check to be performed.
-fn probes_check_handler(is_sentinel: bool,readiness: bool, healthcheck: bool) -> Result<bool, redis::RedisError> {
-    let password = match env::var("ADMIN_PASSWORD") {
+fn probes_check_handler(is_sentinel: bool, readiness: bool, healthcheck: bool) -> Result<bool, redis::RedisError> {
+    let password = get_redis_password();
+    let node_port = get_node_port(is_sentinel);
+    let redis_url = get_redis_url(&password, &node_port);
+
+    let client: redis::Client = redis::Client::open(redis_url)?;
+    let mut con = client.get_connection()?;
+
+    if is_sentinel {
+        return check_sentinel(&mut con);
+    }
+
+    let db_info: String = redis::cmd("INFO").query(&mut con)?;
+    let is_cluster = db_info.contains("cluster_enabled:1");
+
+    if is_cluster {
+        return get_status_from_cluster_node(db_info, &mut con, readiness, healthcheck);
+    }
+
+    let role = get_redis_role(&db_info)?;
+    if role == "master" {
+        get_status_from_master(&db_info, &mut con, readiness, healthcheck)
+    } else {
+        get_status_from_slave(&db_info, &mut con, readiness, healthcheck)
+    }
+}
+
+fn get_redis_password() -> String {
+    match env::var("ADMIN_PASSWORD") {
         Ok(password) => password,
         Err(_) => {
             let path = "/run/secrets/adminpassword";
@@ -97,15 +131,19 @@ fn probes_check_handler(is_sentinel: bool,readiness: bool, healthcheck: bool) ->
                 .map(|s| s.trim().to_string())
                 .unwrap_or_else(|_| String::new())
         }
-    };
-    
-    let node_port = if is_sentinel {
+    }
+}
+
+fn get_node_port(is_sentinel: bool) -> String {
+    if is_sentinel {
         env::var("SENTINEL_PORT").unwrap_or_else(|_| "26379".to_string())
     } else {
         env::var("NODE_PORT").unwrap_or_else(|_| "6379".to_string())
-    };
+    }
+}
 
-    let redis_url = match env::var("TLS") {
+fn get_redis_url(password: &str, node_port: &str) -> String {
+    match env::var("TLS") {
         Ok(tls) => {
             if tls == "true" {
                 let url: String = env::var("NODE_HOST").unwrap();
@@ -116,37 +154,22 @@ fn probes_check_handler(is_sentinel: bool,readiness: bool, healthcheck: bool) ->
             }
         }
         Err(_) => format!("redis://:{password}@localhost:{node_port}"),
-    };
-
-    let client: redis::Client = redis::Client::open(redis_url)?;
-
-    let mut con = client.get_connection()?;
-
-    if is_sentinel {
-        let sentinel_info: String = redis::cmd("PING").query(&mut con)?;
-        return Ok(sentinel_info == "PONG");
     }
+}
 
-    let db_info: String = redis::cmd("INFO").query(&mut con)?;
-    let is_cluster = db_info.contains("cluster_enabled:1");
+fn check_sentinel(con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    let sentinel_info: String = redis::cmd("PING").query(con)?;
+    Ok(sentinel_info == "PONG")
+}
 
-    if is_cluster {
-        return get_status_from_cluster_node(db_info, &mut con,readiness , healthcheck);
-    }
-
+fn get_redis_role(db_info: &str) -> Result<&str, redis::RedisError> {
     let role_regex = regex::Regex::new(r"role:(\w+)").unwrap();
-    let role_matches = role_regex.captures(&db_info);
+    let role_matches = role_regex.captures(db_info);
 
-    if role_matches.is_none() {
-        return Ok(false);
-    }
-
-    let role = role_matches.unwrap().get(1).unwrap().as_str();
-
-    if role == "master" {
-        get_status_from_master(&db_info,&mut con,readiness,healthcheck)
+    if let Some(matches) = role_matches {
+        Ok(matches.get(1).unwrap().as_str())
     } else {
-        get_status_from_slave(&db_info,&mut con,readiness,healthcheck)
+        Err(redis::RedisError::from((redis::ErrorKind::ResponseError, "Role not found")))
     }
 }
 

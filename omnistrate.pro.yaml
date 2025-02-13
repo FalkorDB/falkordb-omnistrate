@@ -722,11 +722,11 @@ services:
         commandTemplate: |
           #!/bin/bash
 
-          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
-          call_health_check() {
+          LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+          call_liveness_check() {
 
-            echo "Health check URL: $HEALTH_CHECK_URL"
-            curl -sf $HEALTH_CHECK_URL
+            echo "Health check URL: $LIVENESS_CHECK_URL"
+            curl -sf $LIVENESS_CHECK_URL
             
             if [ $? -ne 0 ]; then
               echo "Health check failed"
@@ -735,7 +735,7 @@ services:
           }
 
           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-          call_health_check
+          call_liveness_check
           fi
 
 
@@ -1232,12 +1232,12 @@ services:
         commandTemplate: |
            #!/bin/bash
 
-            HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
-            SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
-            call_health_check() {
+            LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+            SENTINEL_LIVENESS_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/liveness"
+            call_liveness_check() {
 
-              echo "Health check URL: $HEALTH_CHECK_URL"
-              curl -sf $HEALTH_CHECK_URL
+              echo "Health check URL: $LIVENESS_CHECK_URL"
+              curl -sf $LIVENESS_CHECK_URL
               
               if [ $? -ne 0 ]; then
                 echo "Health check failed"
@@ -1245,10 +1245,10 @@ services:
               fi
             }
 
-            sentinel_call_health_check() {
+            sentinel_call_liveness_check() {
 
-              echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
-              curl -sf $SENTINEL_HEALTH_CHECK_URL
+              echo "Health check URL: $SENTINEL_LIVENESS_CHECK_URL"
+              curl -sf $SENTINEL_LIVENESS_CHECK_URL
               
               if [ $? -ne 0 ]; then
                 echo "Health check failed"
@@ -1257,11 +1257,11 @@ services:
             }
 
             if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-            call_health_check
+            call_liveness_check
             fi
 
             if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
-              sentinel_call_health_check
+              sentinel_call_liveness_check
             fi
           
       - scope: NODE
@@ -1386,11 +1386,11 @@ services:
         commandTemplate: |
           #!/bin/bash
 
-          SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
-          sentinel_call_health_check() {
+          SENTINEL_LIVENESS_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/liveness"
+          sentinel_call_liveness_check() {
 
-            echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
-            curl -sf $SENTINEL_HEALTH_CHECK_URL
+            echo "Health check URL: $SENTINEL_LIVENESS_CHECK_URL"
+            curl -sf $SENTINEL_LIVENESS_CHECK_URL
             
             if [ $? -ne 0 ]; then
               echo "Health check failed"
@@ -1399,7 +1399,7 @@ services:
           }
 
           if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]];then
-            sentinel_call_health_check
+            sentinel_call_liveness_check
           fi
 
   # Multi Zone
@@ -1896,12 +1896,12 @@ services:
         commandTemplate: |
            #!/bin/bash
 
-            HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
-            SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
-            call_health_check() {
+            LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+            SENTINEL_LIVENESS_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/liveness"
+            call_liveness_check() {
 
-              echo "Health check URL: $HEALTH_CHECK_URL"
-              curl -sf $HEALTH_CHECK_URL
+              echo "Health check URL: $LIVENESS_CHECK_URL"
+              curl -sf $LIVENESS_CHECK_URL
               
               if [ $? -ne 0 ]; then
                 echo "Health check failed"
@@ -1909,10 +1909,10 @@ services:
               fi
             }
 
-            sentinel_call_health_check() {
+            sentinel_call_liveness_check() {
 
-              echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
-              curl -sf $SENTINEL_HEALTH_CHECK_URL
+              echo "Health check URL: $SENTINEL_LIVENESS_CHECK_URL"
+              curl -sf $SENTINEL_LIVENESS_CHECK_URL
               
               if [ $? -ne 0 ]; then
                 echo "Health check failed"
@@ -1921,11 +1921,11 @@ services:
             }
 
             if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-            call_health_check
+            call_liveness_check
             fi
 
             if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
-              sentinel_call_health_check
+              sentinel_call_liveness_check
             fi
           
       - scope: NODE
@@ -2049,11 +2049,11 @@ services:
         commandTemplate: |
           #!/bin/bash
 
-          SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
-          sentinel_call_health_check() {
+          SENTINEL_LIVENESS_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/liveness"
+          sentinel_call_liveness_check() {
 
-            echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
-            curl -sf $SENTINEL_HEALTH_CHECK_URL
+            echo "Health check URL: $SENTINEL_LIVENESS_CHECK_URL"
+            curl -sf $SENTINEL_LIVENESS_CHECK_URL
             
             if [ $? -ne 0 ]; then
               echo "Health check failed"
@@ -2062,7 +2062,7 @@ services:
           }
 
           if [[ ! -z RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]];then
-            sentinel_call_health_check
+            sentinel_call_liveness_check
           fi
 
   Cluster-Single-Zone:
@@ -2362,11 +2362,11 @@ services:
         commandTemplate: |
           #!/bin/bash
 
-          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
-          call_health_check() {
+          LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+          call_liveness_check() {
 
-            echo "Health check URL: $HEALTH_CHECK_URL"
-            curl -sf $HEALTH_CHECK_URL
+            echo "Health check URL: $LIVENESS_CHECK_URL"
+            curl -sf $LIVENESS_CHECK_URL
             
             if [ $? -ne 0 ]; then
               echo "Health check failed"
@@ -2375,7 +2375,7 @@ services:
           }
 
           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-          call_health_check
+          call_liveness_check
           fi
   cluster-sz-rebalance:
     x-omnistrate-mode-internal: true
@@ -2407,12 +2407,12 @@ services:
         commandTemplate: |
           #!/bin/bash
 
-          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
+          LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
 
-          call_health_check() {
+          call_liveness_check() {
 
-            echo "Health check URL: $HEALTH_CHECK_URL"
-            curl -sf $HEALTH_CHECK_URL
+            echo "Health check URL: $LIVENESS_CHECK_URL"
+            curl -sf $LIVENESS_CHECK_URL
             
             if [ $? -ne 0 ]; then
               echo "Health check failed"
@@ -2421,7 +2421,7 @@ services:
           }
 
           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-          call_health_check
+          call_liveness_check
           fi
 
   Cluster-Multi-Zone:
@@ -2720,11 +2720,11 @@ services:
         commandTemplate: |
           #!/bin/bash
 
-          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
-          call_health_check() {
+          LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+          call_liveness_check() {
 
-            echo "Health check URL: $HEALTH_CHECK_URL"
-            curl -sf $HEALTH_CHECK_URL
+            echo "Health check URL: $LIVENESS_CHECK_URL"
+            curl -sf $LIVENESS_CHECK_URL
             
             if [ $? -ne 0 ]; then
               echo "Health check failed"
@@ -2733,7 +2733,7 @@ services:
           }
 
           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-          call_health_check
+          call_liveness_check
           fi
 
   cluster-mz-rebalance:
@@ -2766,12 +2766,12 @@ services:
         commandTemplate: |
           #!/bin/bash
 
-          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
+          LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
 
-          call_health_check() {
+          call_liveness_check() {
 
-            echo "Health check URL: $HEALTH_CHECK_URL"
-            curl -sf $HEALTH_CHECK_URL
+            echo "Health check URL: $LIVENESS_CHECK_URL"
+            curl -sf $LIVENESS_CHECK_URL
             
             if [ $? -ne 0 ]; then
               echo "Health check failed"
@@ -2780,7 +2780,7 @@ services:
           }
 
           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-          call_health_check
+          call_liveness_check
           fi
 secrets:
   adminpasspath:

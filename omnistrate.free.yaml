@@ -216,11 +216,11 @@ services:
         commandTemplate: |
           #!/bin/bash
 
-          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
-          call_health_check() {
+          LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+          call_liveness_check() {
 
-            echo "Health check URL: $HEALTH_CHECK_URL"
-            curl -sf $HEALTH_CHECK_URL
+            echo "Health check URL: $LIVENESS_CHECK_URL"
+            curl -sf $LIVENESS_CHECK_URL
             
             if [ $? -ne 0 ]; then
               echo "Health check failed"
@@ -229,7 +229,7 @@ services:
           }
 
           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-          call_health_check
+          call_liveness_check
           fi
 
 secrets:

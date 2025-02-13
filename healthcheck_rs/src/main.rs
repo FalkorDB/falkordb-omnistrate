@@ -113,7 +113,7 @@ fn probes_check_handler(is_sentinel: bool, readiness: bool, healthcheck: bool) -
     if is_cluster {
         return get_status_from_cluster_node(db_info, &mut con, readiness, healthcheck);
     }
-
+    println!("The function is now in the probes_check_handler function");
     let role = get_redis_role(&db_info)?;
     if role == "master" {
         get_status_from_master(&db_info, &mut con, readiness, healthcheck)
@@ -203,7 +203,6 @@ fn get_status_from_cluster_node(
 
     if healthcheck {
         println!("Inside the get_status_from_cluster_node function");
-        println!("Inside the get_status_from_master function");
         print!("The result of the ping command is: {}", cluster_info);
         print!("the value of healthcheck is: {}", healthcheck);
         print!("the value of readiness is: {}", readiness);
@@ -237,7 +236,6 @@ fn get_status_from_cluster_node(
 /// A boolean value that indicates whether the Redis master is ready
 fn get_status_from_master(db_info: &str,con: &mut redis::Connection,readiness: bool, healthcheck: bool) -> Result<bool, redis::RedisError> {
     let result : String = redis::cmd("PING").query(con)?;
-    println!("Inside the get_status_from_master function");
     print!("The result of the ping command is: {}", result);
     print!("the value of healthcheck is: {}", healthcheck);
     print!("the value of readiness is: {}", readiness);
@@ -273,8 +271,6 @@ fn get_status_from_master(db_info: &str,con: &mut redis::Connection,readiness: b
 /// A boolean value that indicates whether the Redis slave is ready
 fn get_status_from_slave(db_info: &str, con: &mut redis::Connection, readiness: bool,healthcheck: bool) -> Result<bool, redis::RedisError> {
     let result : String = redis::cmd("PING").query(con)?;
-    print!("The result of the ping command is: {}", result);
-    println!("Inside the get_status_from_master function");
     print!("The result of the ping command is: {}", result);
     print!("the value of healthcheck is: {}", healthcheck);
     print!("the value of readiness is: {}", readiness);

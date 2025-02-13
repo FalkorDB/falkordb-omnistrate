@@ -26,7 +26,7 @@ RUN the follwing commands:
 1) - `helm repo add ot-helm https://ot-container-kit.github.io/helm-charts/`
 2) - `helm repo update`
 3) - `helm show values ot-helm/redis > standaloneValues.yaml` (This can be skipped if we want to edit the standaloneCRD.yaml directly)
-4) - override the values you want
+4) - override the values you want (image: falkordb/redis:latest)
 5) - `helm template standalone ot-helm -f standaloneValues.yaml > standaloneCRD.yaml`
 6) - add `hostPort: 6379`,affinity and other setting to the spec in standaloneCRD.ymal
 7) - take the standaloneCRD.yaml and replace the relevant components in operator-example-standalone.yaml

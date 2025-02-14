@@ -210,7 +210,6 @@ fn get_status_from_cluster_node(
                     return Ok(true);
                 } else {
                     println!("Healthcheck failed for cluster node");
-                    return Ok(false);
                 }
             } else if readiness {
                 println!("Inside the readiness block for cluster node");
@@ -219,7 +218,6 @@ fn get_status_from_cluster_node(
                     return Ok(true);
                 } else {
                     println!("Readiness check failed for cluster node");
-                    return Ok(false);
                 }
             }
         }
@@ -274,7 +272,7 @@ fn get_status_from_master(db_info: &str, con: &mut redis::Connection, readiness:
                 println!("Inside the readiness block for master");
                 if result.contains("PONG") && db_info.contains("loading:0") {
                     println!("Readiness check passed for master");
-
+                    return Ok(true);
                 } else {
                     println!("Readiness check failed for master");
 

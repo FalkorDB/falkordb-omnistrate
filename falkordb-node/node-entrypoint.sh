@@ -235,7 +235,7 @@ get_memory_limit() {
     echo "INSTANCE_TYPE is not set"
     MEMORY_LIMIT=$(get_default_memory_limit)
   fi
-
+  
   instance_size_in_map=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
 
   if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]];then
@@ -243,6 +243,11 @@ get_memory_limit() {
   elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]];then
     MEMORY_LIMIT=$(get_default_memory_limit)
     echo "INSTANCE_TYPE is not set. Setting to default memory limit"
+  fi
+
+  if [[ $MEMORY_LIMIT =~ ^[0-9]+[Gg]$ ]]; then
+   echo "Moved $MEMORY_LIMIT to ${MEMORY_LIMIT}B"
+   MEMORY_LIMIT="${MEMORY_LIMIT}B"
   fi
 
   echo "Memory Limit: $MEMORY_LIMIT"

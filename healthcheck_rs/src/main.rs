@@ -38,7 +38,7 @@ fn start_health_check_server(is_sentinel: bool) {
     let server = Server::new(addr, move |request| {
         router!(request,
             (GET) (/liveness) => {
-                let health = liveness_check(is_sentinel).unwrap_or_else(|_| false);
+                let health = check_handler_liveness(is_sentinel).unwrap_or_else(|_| false);
 
                 if health {
                     Response::text("OK")
@@ -47,7 +47,7 @@ fn start_health_check_server(is_sentinel: bool) {
                 }
             },
             (GET) (/readiness) => {
-                let health = readiness_check(is_sentinel).unwrap_or_else(|_| false);
+                let health = check_handler_readiness(is_sentinel).unwrap_or_else(|_| false);
 
                 if health {
                     Response::text("OK")
@@ -66,13 +66,6 @@ fn start_health_check_server(is_sentinel: bool) {
     server.run();
 }
 
-fn liveness_check(is_sentinel: bool) -> Result<bool, redis::RedisError> {
-    check_handler_liveness(is_sentinel)
-}
-
-fn readiness_check(is_sentinel: bool) -> Result<bool, redis::RedisError> {
-    check_handler_readiness(is_sentinel)
-}
 
 /// Checks the health of the Redis server.
 /// The function connects to the Redis server using the `ADMIN_PASSWORD`, `NODE_HOST`, `NODE_PORT`, and `TLS` environment variables.
@@ -96,12 +89,7 @@ fn readiness_check(is_sentinel: bool) -> Result<bool, redis::RedisError> {
 /// 
 /// The healthcheck and readiness are boolean values which are used to determine the type of check to be performed.
 fn check_handler_liveness(is_sentinel: bool) -> Result<bool, redis::RedisError> {
-    let password = get_redis_password();
-    let node_port = get_node_port(is_sentinel);
-    let redis_url = get_redis_url(&password, &node_port);
-
-    let client: redis::Client = redis::Client::open(redis_url)?;
-    let mut con = client.get_connection()?;
+    let mut con = get_redis_connection(is_sentinel)?;
 
     if is_sentinel {
         return check_sentinel(&mut con);
@@ -117,12 +105,7 @@ fn check_handler_liveness(is_sentinel: bool) -> Result<bool, redis::RedisError> 
 }
 
 fn check_handler_readiness(is_sentinel: bool) -> Result<bool, redis::RedisError> {
-    let password = get_redis_password();
-    let node_port = get_node_port(is_sentinel);
-    let redis_url = get_redis_url(&password, &node_port);
-
-    let client: redis::Client = redis::Client::open(redis_url)?;
-    let mut con = client.get_connection()?;
+    let mut con = get_redis_connection(is_sentinel)?;
 
     if is_sentinel {
         return check_sentinel(&mut con);
@@ -135,6 +118,16 @@ fn check_handler_readiness(is_sentinel: bool) -> Result<bool, redis::RedisError>
         return check_cluster_node_readiness(db_info, &mut con);
     }
     check_node_readiness(db_info, &mut con)
+}
+
+fn get_redis_connection(is_sentinel: bool) -> Result<redis::Connection, redis::RedisError> {
+    let password = get_redis_password();
+    let node_port = get_node_port(is_sentinel);
+    let redis_url = get_redis_url(&password, &node_port);
+
+    let client: redis::Client = redis::Client::open(redis_url)?;
+    let con = client.get_connection()?;
+    Ok(con)
 }
 
 fn check_cluster_node_liveness(db_info: String, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {

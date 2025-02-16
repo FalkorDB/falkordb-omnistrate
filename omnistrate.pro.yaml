@@ -1368,11 +1368,11 @@ services:
         commandTemplate: |
           #!/bin/bash
 
-          READINESS_CHECK_URL="${READY_CHECK_HOST:-localhost}:${READY_CHECK_PORT:-8082}/readiness"
+          SENTINEL_READINESS_CHECK_URL="${READY_CHECK_HOST:-localhost}:${READY_CHECK_PORT:-8082}/readiness"
           sentinel_call_readiness_check() {
 
-            echo "Ready check URL: $READINESS_CHECK_URL"
-            curl -sf $READINESS_CHECK_URL
+            echo "Ready check URL: $SENTINEL_READINESS_CHECK_URL"
+            curl -sf $SENTINEL_READINESS_CHECK_URL
             
             if [ $? -ne 0 ]; then
               echo "Readiness check failed"
@@ -2404,28 +2404,6 @@ services:
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
-    x-omnistrate-actionhooks:
-      - scope: NODE
-        type: HEALTH_CHECK
-        commandTemplate: |
-          #!/bin/bash
-
-          LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
-
-          call_liveness_check() {
-
-            echo "Health check URL: $LIVENESS_CHECK_URL"
-            curl -sf $LIVENESS_CHECK_URL
-            
-            if [ $? -ne 0 ]; then
-              echo "Health check failed"
-              exit 1
-            fi
-          }
-
-          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-          call_liveness_check
-          fi
 
   Cluster-Multi-Zone:
     x-omnistrate-mode-internal: false
@@ -2763,28 +2741,7 @@ services:
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
-    x-omnistrate-actionhooks:
-      - scope: NODE
-        type: HEALTH_CHECK
-        commandTemplate: |
-          #!/bin/bash
 
-          LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
-
-          call_liveness_check() {
-
-            echo "Health check URL: $LIVENESS_CHECK_URL"
-            curl -sf $LIVENESS_CHECK_URL
-            
-            if [ $? -ne 0 ]; then
-              echo "Health check failed"
-              exit 1
-            fi
-          }
-
-          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-          call_liveness_check
-          fi
 secrets:
   adminpasspath:
     file: ./secrets/adminpassword

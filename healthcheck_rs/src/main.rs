@@ -67,11 +67,11 @@ fn start_health_check_server(is_sentinel: bool) {
 }
 
 fn liveness_check(is_sentinel: bool) -> Result<bool, redis::RedisError> {
-    probes_check_handler(is_sentinel, false, true)
+    check_handler_liveness(is_sentinel)
 }
 
 fn readiness_check(is_sentinel: bool) -> Result<bool, redis::RedisError> {
-    probes_check_handler(is_sentinel, true, false)
+    check_handler_readiness(is_sentinel)
 }
 
 /// Checks the health of the Redis server.
@@ -95,7 +95,7 @@ fn readiness_check(is_sentinel: bool) -> Result<bool, redis::RedisError> {
 /// The function returns a RedisError if there is an error connecting to the Redis server.
 /// 
 /// The healthcheck and readiness are boolean values which are used to determine the type of check to be performed.
-fn probes_check_handler(is_sentinel: bool, readiness: bool, healthcheck: bool) -> Result<bool, redis::RedisError> {
+fn check_handler_liveness(is_sentinel: bool) -> Result<bool, redis::RedisError> {
     let password = get_redis_password();
     let node_port = get_node_port(is_sentinel);
     let redis_url = get_redis_url(&password, &node_port);
@@ -111,13 +111,55 @@ fn probes_check_handler(is_sentinel: bool, readiness: bool, healthcheck: bool) -
     let is_cluster = db_info.contains("cluster_enabled:1");
 
     if is_cluster {
-        return get_status_from_cluster_node(db_info, &mut con, readiness, healthcheck);
+        return check_cluster_node_liveness(db_info, &mut con);
     }
+    check_node_liveness(db_info, &mut con)
+}
+
+fn check_handler_readiness(is_sentinel: bool) -> Result<bool, redis::RedisError> {
+    let password = get_redis_password();
+    let node_port = get_node_port(is_sentinel);
+    let redis_url = get_redis_url(&password, &node_port);
+
+    let client: redis::Client = redis::Client::open(redis_url)?;
+    let mut con = client.get_connection()?;
+
+    if is_sentinel {
+        return check_sentinel(&mut con);
+    }
+
+    let db_info: String = redis::cmd("INFO").query(&mut con)?;
+    let is_cluster = db_info.contains("cluster_enabled:1");
+
+    if is_cluster {
+        return check_cluster_node_readiness(db_info, &mut con);
+    }
+    check_node_readiness(db_info, &mut con)
+}
+
+fn check_cluster_node_liveness(db_info: String, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    get_status_from_cluster_node_liveness(db_info, con)
+}
+
+fn check_cluster_node_readiness(db_info: String, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    get_status_from_cluster_node_readiness(db_info, con)
+}
+
+fn check_node_liveness(db_info: String, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
     let role = get_redis_role(&db_info)?;
     if role == "master" {
-        get_status_from_master(&db_info, &mut con, readiness, healthcheck)
+        get_status_from_master_liveness(con)
     } else {
-        get_status_from_slave(&db_info, &mut con, readiness, healthcheck)
+        get_status_from_slave_liveness(con)
+    }
+}
+
+fn check_node_readiness(db_info: String, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    let role = get_redis_role(&db_info)?;
+    if role == "master" {
+        get_status_from_master_readiness(&db_info, con)
+    } else {
+        get_status_from_slave_readiness(&db_info, con)
     }
 }
 
@@ -191,39 +233,46 @@ fn get_redis_role(db_info: &str) -> Result<&str, redis::RedisError> {
 /// 
 /// The function returns a RedisError if there is an error querying the Redis server.
 
-fn get_status_from_cluster_node(
+fn get_status_from_cluster_node_liveness(
     _db_info: String,
     con: &mut redis::Connection,
-    readiness: bool,
-    healthcheck: bool,
 ) -> Result<bool, redis::RedisError> {
-    match redis::cmd("CLUSTER").arg("INFO").query::<String>(con){
+    match redis::cmd("CLUSTER").arg("INFO").query::<String>(con) {
         Ok(result) => {
-            if healthcheck {
-                if result.contains("cluster_state:ok") {
-                    return Ok(true);
-                } else {
-                    println!("Healthcheck failed for cluster node");
-                }
-            } else if readiness {
-                if result.contains("cluster_state:ok") {
-                    return Ok(true);
-                } else {
-                    println!("Readiness check failed for cluster node");
-                }
+            if result.contains("cluster_state:ok") {
+                return Ok(true);
+            } else {
+                println!("Liveness check failed for cluster node");
             }
         }
         Err(err) => {
-            if healthcheck {
-                match err.kind() {
-                    redis::ErrorKind::BusyLoadingError => {
-                        return Ok(true);
-                    }
-                    _ => {
-                        println!("Healthcheck failed for master (Other Error): {}", err);
-                    }
+            match err.kind() {
+                redis::ErrorKind::BusyLoadingError => {
+                    return Ok(true);
+                }
+                _ => {
+                    println!("Liveness check failed for cluster node (Other Error): {}", err);
                 }
             }
+        }
+    }
+    Ok(false) // Default return to avoid missing a return value
+}
+
+fn get_status_from_cluster_node_readiness(
+    _db_info: String,
+    con: &mut redis::Connection,
+) -> Result<bool, redis::RedisError> {
+    match redis::cmd("CLUSTER").arg("INFO").query::<String>(con) {
+        Ok(result) => {
+            if result.contains("cluster_state:ok") {
+                return Ok(true);
+            } else {
+                println!("Readiness check failed for cluster node");
+            }
+        }
+        Err(err) => {
+            println!("Readiness check failed for cluster node (Other Error): {}", err);
         }
     }
     Ok(false) // Default return to avoid missing a return value
@@ -241,40 +290,42 @@ fn get_status_from_cluster_node(
 /// # Returns
 /// 
 /// A boolean value that indicates whether the Redis master is ready
-fn get_status_from_master(db_info: &str, con: &mut redis::Connection, readiness: bool, healthcheck: bool) -> Result<bool, redis::RedisError> {
+fn get_status_from_master_liveness(con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
     match redis::cmd("PING").query::<String>(con) {
         Ok(result) => {
-
-            if healthcheck {
-                if result.contains("PONG") {
-                    return Ok(true);
-                } else {
-                    println!("Healthcheck failed for master");
-
-                }
-            } else if readiness {
-                if result.contains("PONG") && db_info.contains("loading:0") {
-                    return Ok(true);
-                } else {
-                    println!("Readiness check failed for master");
-
-                }
+            if result.contains("PONG") {
+                return Ok(true);
+            } else {
+                println!("Liveness check failed for master");
             }
         }
         Err(err) => {
-            if healthcheck {
-                match err.kind() {
-                    redis::ErrorKind::BusyLoadingError => {
-                        return Ok(true);
-                    }
-                    _ => {
-                        println!("Healthcheck failed for master (Other Error): {}", err);
-                    }
+            match err.kind() {
+                redis::ErrorKind::BusyLoadingError => {
+                    return Ok(true);
+                }
+                _ => {
+                    println!("Liveness check failed for master (Other Error): {}", err);
                 }
             }
         }
     }
+    Ok(false)
+}
 
+fn get_status_from_master_readiness(db_info: &str, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    match redis::cmd("PING").query::<String>(con) {
+        Ok(result) => {
+            if result.contains("PONG") && db_info.contains("loading:0") {
+                return Ok(true);
+            } else {
+                println!("Readiness check failed for master");
+            }
+        }
+        Err(err) => {
+            println!("Readiness check failed for master (Other Error): {}", err);
+        }
+    }
     Ok(false)
 }
 
@@ -291,44 +342,46 @@ fn get_status_from_master(db_info: &str, con: &mut redis::Connection, readiness:
 /// # Returns
 /// 
 /// A boolean value that indicates whether the Redis slave is ready
-fn get_status_from_slave(db_info: &str, con: &mut redis::Connection, readiness: bool,healthcheck: bool) -> Result<bool, redis::RedisError> {
-
+fn get_status_from_slave_liveness(con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
     match redis::cmd("PING").query::<String>(con) {
         Ok(result) => {
-
-            if healthcheck {
-                if result.contains("PONG") {
-                    return Ok(true);
-                } else {
-                    println!("Healthcheck failed for master");
-                }
-            } else if readiness {
-                if result.contains("PONG") && db_info.contains("loading:0") && db_info.contains("master_link_status:up") && db_info.contains("master_sync_in_progress:0") {
-                    return Ok(true);
-                } else {
-                    println!("Readiness check failed for master");
-                }
+            if result.contains("PONG") {
+                return Ok(true);
+            } else {
+                println!("Liveness check failed for slave");
             }
         }
         Err(err) => {
-            if healthcheck {
-                match err.kind() {
-                    redis::ErrorKind::BusyLoadingError => {
-                        return Ok(true);
-                    }
-                    redis::ErrorKind::MasterDown => {
-                        return Ok(true);
-                    }
-                    _ => {
-                        println!("Healthcheck failed for master (Other Error)");
-                    }
+            match err.kind() {
+                redis::ErrorKind::BusyLoadingError => {
+                    return Ok(true);
+                }
+                redis::ErrorKind::MasterDown => {
+                    return Ok(true);
+                }
+                _ => {
+                    println!("Liveness check failed for slave (Other Error)");
                 }
             }
         }
     }
-
     Ok(false)
-    
+}
+
+fn get_status_from_slave_readiness(db_info: &str, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    match redis::cmd("PING").query::<String>(con) {
+        Ok(result) => {
+            if result.contains("PONG") && db_info.contains("loading:0") && db_info.contains("master_link_status:up") && db_info.contains("master_sync_in_progress:0") {
+                return Ok(true);
+            } else {
+                println!("Readiness check failed for slave");
+            }
+        }
+        Err(_) => {
+            println!("Readiness check failed for slave (Other Error)");
+        }
+    }
+    Ok(false)
 }
 
 /// Resolves the host using the dns_lookup crate.

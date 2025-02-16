@@ -233,7 +233,7 @@ fn get_status_from_cluster_node_liveness(
     match redis::cmd("CLUSTER").arg("INFO").query::<String>(con) {
         Ok(result) => {
             if result.contains("cluster_state:ok") {
-                return Ok(true);
+                // Do not return anything, continue execution
             } else {
                 println!("Liveness check failed for cluster node");
             }
@@ -259,7 +259,7 @@ fn get_status_from_cluster_node_readiness(
     match redis::cmd("CLUSTER").arg("INFO").query::<String>(con) {
         Ok(result) => {
             if result.contains("cluster_state:ok") {
-                return Ok(true);
+                // Do not return anything, continue execution
             } else {
                 println!("Readiness check failed for cluster node");
             }

@@ -97,9 +97,11 @@ fn check_handler_liveness(is_sentinel: bool) -> Result<bool, redis::RedisError> 
 
     let db_info: String = redis::cmd("INFO").query(&mut con)?;
     let is_cluster = db_info.contains("cluster_enabled:1");
-
+    
     if is_cluster {
-        return check_cluster_node_liveness(db_info, &mut con);
+        if !check_cluster_node_liveness(db_info.clone(), &mut con)? {
+            return Ok(false);
+        }
     }
     check_node_liveness(db_info, &mut con)
 }
@@ -115,7 +117,9 @@ fn check_handler_readiness(is_sentinel: bool) -> Result<bool, redis::RedisError>
     let is_cluster = db_info.contains("cluster_enabled:1");
 
     if is_cluster {
-        return check_cluster_node_readiness(db_info, &mut con);
+        if !check_cluster_node_readiness(db_info.clone(), &mut con)? {
+            return Ok(false);
+        }
     }
     check_node_readiness(db_info, &mut con)
 }
@@ -233,7 +237,7 @@ fn get_status_from_cluster_node_liveness(
     match redis::cmd("CLUSTER").arg("INFO").query::<String>(con) {
         Ok(result) => {
             if result.contains("cluster_state:ok") {
-                // Do not return anything, continue execution
+                return Ok(true);
             } else {
                 println!("Liveness check failed for cluster node");
             }
@@ -259,7 +263,7 @@ fn get_status_from_cluster_node_readiness(
     match redis::cmd("CLUSTER").arg("INFO").query::<String>(con) {
         Ok(result) => {
             if result.contains("cluster_state:ok") {
-                // Do not return anything, continue execution
+                return Ok(true);
             } else {
                 println!("Readiness check failed for cluster node");
             }

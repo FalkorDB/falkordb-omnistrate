@@ -679,6 +679,68 @@ services:
       enableMultiZone: false
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
+      - scope: NODE
+        type: STARTUP_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          STARTUP_CHECK_URL="${STARTUP_CHECK_HOST:-localhost}:${STARTUP_CHECK_PORT:-8081}/startup"
+          call_startup_check() {
+
+            echo "Startup check URL: $STARTUP_CHECK_URL"
+            curl -sf $STARTUP_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Startup check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_startup_check
+          fi
+      - scope: NODE
+        type: READINESS_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          READINESS_CHECK_URL="${READY_CHECK_HOST:-localhost}:${READY_CHECK_PORT:-8081}/readiness"
+          call_readiness_check() {
+
+            echo "Ready check URL: $READINESS_CHECK_URL"
+            curl -sf $READINESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Readiness check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_readiness_check
+          fi
+
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+          call_liveness_check() {
+
+            echo "Health check URL: $LIVENESS_CHECK_URL"
+            curl -sf $LIVENESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+          call_liveness_check
+          fi
+
 
   # Single Zone
 
@@ -1096,41 +1158,115 @@ services:
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
       - scope: NODE
-        type: HEALTH_CHECK
+        type: STARTUP_CHECK
         commandTemplate: |
           #!/bin/bash
 
-          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
-          SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
-          call_health_check() {
+          STARTUP_CHECK_URL="${STARTUP_CHECK_HOST:-localhost}:${STARTUP_CHECK_PORT:-8081}/startup"
+          SENTINEL_STARTUP_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/startup"
+          call_startup_check() {
 
-            echo "Health check URL: $HEALTH_CHECK_URL"
-            curl -sf $HEALTH_CHECK_URL
+            echo "Startup check URL: $STARTUP_CHECK_URL"
+            curl -sf $STARTUP_CHECK_URL
             
             if [ $? -ne 0 ]; then
-              echo "Health check failed"
-              exit 1
-            fi
-          }
-
-          sentinel_call_health_check() {
-
-            echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
-            curl -sf $SENTINEL_HEALTH_CHECK_URL
-            
-            if [ $? -ne 0 ]; then
-              echo "Health check failed"
+              echo "Startup check failed"
               exit 1
             fi
           }
 
           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-          call_health_check
+            call_startup_check
           fi
 
+
+          sentinel_call_startup_check() {
+
+            echo "Health check URL: $SENTINEL_STARTUP_CHECK_URL"
+            curl -sf $SENTINEL_STARTUP_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
           if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
-            sentinel_call_health_check
+            sentinel_call_startup_check
           fi
+      - scope: NODE
+        type: READINESS_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          READINESS_CHECK_URL="${READY_CHECK_HOST:-localhost}:${READY_CHECK_PORT:-8081}/readiness"
+          SENTINEL_READINESS_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/readiness"
+          call_readiness_check() {
+
+            echo "Ready check URL: $READINESS_CHECK_URL"
+            curl -sf $READINESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Readiness check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_readiness_check
+          fi
+          
+          sentinel_call_readiness_check() {
+
+            echo "Health check URL: $SENTINEL_READINESS_CHECK_URL"
+            curl -sf $SENTINEL_READINESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
+            sentinel_call_readiness_check
+          fi
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: |
+           #!/bin/bash
+
+            LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+            SENTINEL_LIVENESS_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/liveness"
+            call_liveness_check() {
+
+              echo "Health check URL: $LIVENESS_CHECK_URL"
+              curl -sf $LIVENESS_CHECK_URL
+              
+              if [ $? -ne 0 ]; then
+                echo "Health check failed"
+                exit 1
+              fi
+            }
+
+            sentinel_call_liveness_check() {
+
+              echo "Health check URL: $SENTINEL_LIVENESS_CHECK_URL"
+              curl -sf $SENTINEL_LIVENESS_CHECK_URL
+              
+              if [ $? -ne 0 ]; then
+                echo "Health check failed"
+                exit 1
+              fi
+            }
+
+            if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_liveness_check
+            fi
+
+            if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
+              sentinel_call_liveness_check
+            fi
+          
       - scope: NODE
         type: REMOVE
         commandTemplate: |
@@ -1161,7 +1297,6 @@ services:
       - RUN_NODE=0
       - RUN_SENTINEL=1
       - RUN_METRICS=0
-      - RUN_HEALTH_CHECK=1
       - RUN_HEALTH_CHECK_SENTINEL=1
       - DEBUG=0
       - REDIS_EXPORTER_DEBUG=false
@@ -1209,15 +1344,56 @@ services:
         export: false
     x-omnistrate-actionhooks:
       - scope: NODE
+        type: STARTUP_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          STARTUP_CHECK_URL="${STARTUP_CHECK_HOST:-localhost}:${STARTUP_CHECK_PORT:-8082}/startup"
+          sentinel_call_startup_check() {
+
+            echo "Startup check URL: $STARTUP_CHECK_URL"
+            curl -sf $STARTUP_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Startup check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]];then
+            sentinel_call_startup_check
+          fi
+      - scope: NODE
+        type: READINESS_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          SENTINEL_READINESS_CHECK_URL="${READY_CHECK_HOST:-localhost}:${READY_CHECK_PORT:-8082}/readiness"
+          sentinel_call_readiness_check() {
+
+            echo "Ready check URL: $SENTINEL_READINESS_CHECK_URL"
+            curl -sf $SENTINEL_READINESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Readiness check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]];then
+            sentinel_call_readiness_check
+          fi
+
+      - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: |
           #!/bin/bash
 
-          SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
-          sentinel_call_health_check() {
+          SENTINEL_LIVENESS_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/liveness"
+          sentinel_call_liveness_check() {
 
-            echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
-            curl -sf $SENTINEL_HEALTH_CHECK_URL
+            echo "Health check URL: $SENTINEL_LIVENESS_CHECK_URL"
+            curl -sf $SENTINEL_LIVENESS_CHECK_URL
             
             if [ $? -ne 0 ]; then
               echo "Health check failed"
@@ -1225,8 +1401,8 @@ services:
             fi
           }
 
-          if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
-            sentinel_call_health_check
+          if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]];then
+            sentinel_call_liveness_check
           fi
 
   # Multi Zone
@@ -1646,41 +1822,115 @@ services:
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
       - scope: NODE
-        type: HEALTH_CHECK
+        type: STARTUP_CHECK
         commandTemplate: |
           #!/bin/bash
 
-          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
-          SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
-          call_health_check() {
+          STARTUP_CHECK_URL="${STARTUP_CHECK_HOST:-localhost}:${STARTUP_CHECK_PORT:-8081}/startup"
+          SENTINEL_STARTUP_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/startup"
+          call_startup_check() {
 
-            echo "Health check URL: $HEALTH_CHECK_URL"
-            curl -sf $HEALTH_CHECK_URL
+            echo "Startup check URL: $STARTUP_CHECK_URL"
+            curl -sf $STARTUP_CHECK_URL
             
             if [ $? -ne 0 ]; then
-              echo "Health check failed"
-              exit 1
-            fi
-          }
-
-          sentinel_call_health_check() {
-
-            echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
-            curl -sf $SENTINEL_HEALTH_CHECK_URL
-            
-            if [ $? -ne 0 ]; then
-              echo "Health check failed"
+              echo "Startup check failed"
               exit 1
             fi
           }
 
           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-          call_health_check
+            call_startup_check
           fi
 
+
+          sentinel_call_startup_check() {
+
+            echo "Health check URL: $SENTINEL_STARTUP_CHECK_URL"
+            curl -sf $SENTINEL_STARTUP_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
           if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
-            sentinel_call_health_check
+            sentinel_call_startup_check
           fi
+      - scope: NODE
+        type: READINESS_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          READINESS_CHECK_URL="${READY_CHECK_HOST:-localhost}:${READY_CHECK_PORT:-8081}/readiness"
+          SENTINEL_READINESS_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/readiness"
+          call_readiness_check() {
+
+            echo "Ready check URL: $READINESS_CHECK_URL"
+            curl -sf $READINESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Readiness check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_readiness_check
+          fi
+          
+          sentinel_call_readiness_check() {
+
+            echo "Health check URL: $SENTINEL_READINESS_CHECK_URL"
+            curl -sf $SENTINEL_READINESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
+            sentinel_call_readiness_check
+          fi
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: |
+           #!/bin/bash
+
+            LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+            SENTINEL_LIVENESS_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/liveness"
+            call_liveness_check() {
+
+              echo "Health check URL: $LIVENESS_CHECK_URL"
+              curl -sf $LIVENESS_CHECK_URL
+              
+              if [ $? -ne 0 ]; then
+                echo "Health check failed"
+                exit 1
+              fi
+            }
+
+            sentinel_call_liveness_check() {
+
+              echo "Health check URL: $SENTINEL_LIVENESS_CHECK_URL"
+              curl -sf $SENTINEL_LIVENESS_CHECK_URL
+              
+              if [ $? -ne 0 ]; then
+                echo "Health check failed"
+                exit 1
+              fi
+            }
+
+            if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_liveness_check
+            fi
+
+            if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
+              sentinel_call_liveness_check
+            fi
+          
       - scope: NODE
         type: REMOVE
         commandTemplate: |
@@ -1710,7 +1960,6 @@ services:
       - RUN_NODE=0
       - RUN_SENTINEL=1
       - RUN_METRICS=0
-      - RUN_HEALTH_CHECK=1
       - RUN_HEALTH_CHECK_SENTINEL=1
       - DEBUG=0
       - REDIS_EXPORTER_DEBUG=false
@@ -1758,15 +2007,56 @@ services:
         export: false
     x-omnistrate-actionhooks:
       - scope: NODE
+        type: STARTUP_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          STARTUP_CHECK_URL="${STARTUP_CHECK_HOST:-localhost}:${STARTUP_CHECK_PORT:-8082}/startup"
+          sentinel_call_startup_check() {
+
+            echo "Startup check URL: $STARTUP_CHECK_URL"
+            curl -sf $STARTUP_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Startup check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]];then
+            sentinel_call_startup_check
+          fi
+      - scope: NODE
+        type: READINESS_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          READINESS_CHECK_URL="${READY_CHECK_HOST:-localhost}:${READY_CHECK_PORT:-8082}/readiness"
+          sentinel_call_readiness_check() {
+
+            echo "Ready check URL: $READINESS_CHECK_URL"
+            curl -sf $READINESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Readiness check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]];then
+            sentinel_call_readiness_check
+          fi
+          
+      - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: |
           #!/bin/bash
 
-          SENTINEL_HEALTH_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/healthcheck"
-          sentinel_call_health_check() {
+          SENTINEL_LIVENESS_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/liveness"
+          sentinel_call_liveness_check() {
 
-            echo "Health check URL: $SENTINEL_HEALTH_CHECK_URL"
-            curl -sf $SENTINEL_HEALTH_CHECK_URL
+            echo "Health check URL: $SENTINEL_LIVENESS_CHECK_URL"
+            curl -sf $SENTINEL_LIVENESS_CHECK_URL
             
             if [ $? -ne 0 ]; then
               echo "Health check failed"
@@ -1774,8 +2064,8 @@ services:
             fi
           }
 
-          if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
-            sentinel_call_health_check
+          if [[ ! -z RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]];then
+            sentinel_call_liveness_check
           fi
 
   Cluster-Single-Zone:
@@ -2030,16 +2320,56 @@ services:
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
       - scope: NODE
+        type: STARTUP_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          STARTUP_CHECK_URL="${STARTUP_CHECK_HOST:-localhost}:${STARTUP_CHECK_PORT:-8081}/startup"
+          call_startup_check() {
+
+            echo "Startup check URL: $STARTUP_CHECK_URL"
+            curl -sf $STARTUP_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Startup check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_startup_check
+          fi
+      - scope: NODE
+        type: READINESS_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          READINESS_CHECK_URL="${READY_CHECK_HOST:-localhost}:${READY_CHECK_PORT:-8081}/readiness"
+          call_readiness_check() {
+
+            echo "Ready check URL: $READINESS_CHECK_URL"
+            curl -sf $READINESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Readiness check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_readiness_check
+          fi
+
+      - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: |
           #!/bin/bash
 
-          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
+          LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+          call_liveness_check() {
 
-          call_health_check() {
-
-            echo "Health check URL: $HEALTH_CHECK_URL"
-            curl -sf $HEALTH_CHECK_URL
+            echo "Health check URL: $LIVENESS_CHECK_URL"
+            curl -sf $LIVENESS_CHECK_URL
             
             if [ $? -ne 0 ]; then
               echo "Health check failed"
@@ -2048,7 +2378,7 @@ services:
           }
 
           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-          call_health_check
+          call_liveness_check
           fi
   cluster-sz-rebalance:
     x-omnistrate-mode-internal: true
@@ -2074,28 +2404,6 @@ services:
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
-    x-omnistrate-actionhooks:
-      - scope: NODE
-        type: HEALTH_CHECK
-        commandTemplate: |
-          #!/bin/bash
-
-          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
-
-          call_health_check() {
-
-            echo "Health check URL: $HEALTH_CHECK_URL"
-            curl -sf $HEALTH_CHECK_URL
-            
-            if [ $? -ne 0 ]; then
-              echo "Health check failed"
-              exit 1
-            fi
-          }
-
-          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-          call_health_check
-          fi
 
   Cluster-Multi-Zone:
     x-omnistrate-mode-internal: false
@@ -2348,16 +2656,56 @@ services:
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
       - scope: NODE
+        type: STARTUP_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          STARTUP_CHECK_URL="${STARTUP_CHECK_HOST:-localhost}:${STARTUP_CHECK_PORT:-8081}/startup"
+          call_startup_check() {
+
+            echo "Startup check URL: $STARTUP_CHECK_URL"
+            curl -sf $STARTUP_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Startup check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_startup_check
+          fi
+      - scope: NODE
+        type: READINESS_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          READINESS_CHECK_URL="${READY_CHECK_HOST:-localhost}:${READY_CHECK_PORT:-8081}/readiness"
+          call_readiness_check() {
+
+            echo "Ready check URL: $READINESS_CHECK_URL"
+            curl -sf $READINESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Readiness check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_readiness_check
+          fi
+
+      - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: |
           #!/bin/bash
 
-          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
+          LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+          call_liveness_check() {
 
-          call_health_check() {
-
-            echo "Health check URL: $HEALTH_CHECK_URL"
-            curl -sf $HEALTH_CHECK_URL
+            echo "Health check URL: $LIVENESS_CHECK_URL"
+            curl -sf $LIVENESS_CHECK_URL
             
             if [ $? -ne 0 ]; then
               echo "Health check failed"
@@ -2366,7 +2714,7 @@ services:
           }
 
           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-          call_health_check
+          call_liveness_check
           fi
 
   cluster-mz-rebalance:
@@ -2393,28 +2741,7 @@ services:
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
-    x-omnistrate-actionhooks:
-      - scope: NODE
-        type: HEALTH_CHECK
-        commandTemplate: |
-          #!/bin/bash
 
-          HEALTH_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/healthcheck"
-
-          call_health_check() {
-
-            echo "Health check URL: $HEALTH_CHECK_URL"
-            curl -sf $HEALTH_CHECK_URL
-            
-            if [ $? -ne 0 ]; then
-              echo "Health check failed"
-              exit 1
-            fi
-          }
-
-          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-          call_health_check
-          fi
 secrets:
   adminpasspath:
     file: ./secrets/adminpassword

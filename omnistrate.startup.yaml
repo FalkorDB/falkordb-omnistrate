@@ -474,6 +474,7 @@ services:
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
       - DATA_DIR=/data
+      - RANDOM_NODE_PORT=$sys.network.node.externalPorts["6379"]
       - MEMORY_LIMIT=$var.memoryRequestsAndLimits
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
@@ -491,6 +492,67 @@ services:
       enableMultiZone: false
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
+      - scope: NODE
+        type: STARTUP_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          STARTUP_CHECK_URL="${STARTUP_CHECK_HOST:-localhost}:${STARTUP_CHECK_PORT:-8081}/startup"
+          call_startup_check() {
+
+            echo "Startup check URL: $STARTUP_CHECK_URL"
+            curl -sf $STARTUP_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Startup check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z $RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_startup_check
+          fi
+      - scope: NODE
+        type: READINESS_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          READINESS_CHECK_URL="${READY_CHECK_HOST:-localhost}:${READY_CHECK_PORT:-8081}/readiness"
+          call_readiness_check() {
+
+            echo "Ready check URL: $READINESS_CHECK_URL"
+            curl -sf $READINESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Readiness check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z $RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_readiness_check
+          fi
+
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+          call_liveness_check() {
+
+            echo "Health check URL: $LIVENESS_CHECK_URL"
+            curl -sf $LIVENESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z $RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+          call_liveness_check
+          fi
 
 secrets:
   adminpasspath:

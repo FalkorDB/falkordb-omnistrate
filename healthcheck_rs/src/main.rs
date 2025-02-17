@@ -99,7 +99,7 @@ fn check_handler_liveness(is_sentinel: bool) -> Result<bool, redis::RedisError> 
     let is_cluster = db_info.contains("cluster_enabled:1");
     
     if is_cluster {
-        if !check_cluster_node_liveness(db_info.clone(), &mut con)? {
+        if !get_status_from_cluster_node_liveness(db_info.clone(), &mut con)? {
             return Ok(false);
         }
     }
@@ -117,7 +117,7 @@ fn check_handler_readiness(is_sentinel: bool) -> Result<bool, redis::RedisError>
     let is_cluster = db_info.contains("cluster_enabled:1");
 
     if is_cluster {
-        if !check_cluster_node_readiness(db_info.clone(), &mut con)? {
+        if !get_status_from_cluster_node_readiness(db_info.clone(), &mut con)? {
             return Ok(false);
         }
     }
@@ -132,14 +132,6 @@ fn get_redis_connection(is_sentinel: bool) -> Result<redis::Connection, redis::R
     let client: redis::Client = redis::Client::open(redis_url)?;
     let con = client.get_connection()?;
     Ok(con)
-}
-
-fn check_cluster_node_liveness(db_info: String, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
-    get_status_from_cluster_node_liveness(db_info, con)
-}
-
-fn check_cluster_node_readiness(db_info: String, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
-    get_status_from_cluster_node_readiness(db_info, con)
 }
 
 fn check_node_liveness(db_info: String, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {

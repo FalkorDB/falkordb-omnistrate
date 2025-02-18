@@ -59,7 +59,17 @@ BUS_PORT=${BUS_PORT:-16379}
 
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
-DATA_DIR=${DATA_DIR:-/data}
+DATA_DIR=${DATA_DIR:-"${FALKORDB_HOME}/data"}
+
+# Add backward compatibility for /data folder
+if [[ "$DATA_DIR" != '/data' ]]; then
+  mkdir -p $DATA_DIR
+  if [[ -d '/data' ]]; then
+    # create simlink
+    ln -s /data/* $DATA_DIR
+  fi
+fi
+
 DEBUG=${DEBUG:-0}
 REPLACE_NODE_CONF=${REPLACE_NODE_CONF:-0}
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
@@ -87,7 +97,7 @@ meet_unknown_nodes() {
   # Had to add sleep until things are stable (nodes that can communicate should be given time to do so)
   # This fixes an issue where two nodes restart (ex: cluster-sz-1 (x.x.x.1) and cluster-sz-2 (x.x.x.2)) and their ips are switched
   # cluster-sz-1 gets (x.x.x.2) and cluster-sz-2 gets (x.x.x.1).
-  # This can be caught by looking for the lines in the /data/nodes.conf file which have either the "fail" state or the "0:@0".
+  # This can be caught by looking for the lines in the $DATA_DIR/nodes.conf file which have either the "fail" state or the "0:@0".
   # To fix the issue we use the CLUSTER MEET command to update the ips of each node that is unknown (0:@0 or fail).
   # Now the nodes should communitcate as expected.
 
@@ -147,7 +157,7 @@ ensure_replica_connects_to_the_right_master_ip() {
   # This fixes an issue where a replica connects to the wrong ip of its master
   # the node does not update the ip of its master and gets stuck trying to connect to an incorrect ip.
   # To fix this we check for each slave if the master ip present (shown) using the "INFO REPLICATION"
-  # is also found in the /data/nodes.conf or in the "CLUSTER NODES" output and if it is not
+  # is also found in the $DATA_DIR/nodes.conf or in the "CLUSTER NODES" output and if it is not
   # we update the new master using the CLUSTER REPLICATE command.
   info=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication)
   if [[ "$info" =~ role:slave ]]; then
@@ -371,7 +381,7 @@ create_cluster() {
     echo "Failed to create cluster"
     exit 1
   else
-    touch /data/cluster_initialized
+    touch $DATA_DIR/cluster_initialized
   fi
 }
 
@@ -447,7 +457,7 @@ set_aof_persistence_config
 
 config_rewrite
 
-if [[ $NODE_INDEX -eq 0 && ! -f "/data/cluster_initialized" ]]; then
+if [[ $NODE_INDEX -eq 0 && ! -f "$DATA_DIR/cluster_initialized" ]]; then
   # Create cluster
   echo "Creating cluster"
   create_cluster

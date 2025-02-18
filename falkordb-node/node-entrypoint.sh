@@ -69,7 +69,17 @@ FALKORDB_MASTER_PORT_NUMBER=${MASTER_PORT:-6379}
 IS_REPLICA=${IS_REPLICA:-0}
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
-DATA_DIR=${DATA_DIR:-/data}
+DATA_DIR=${DATA_DIR:-"${FALKORDB_HOME}/data"}
+
+# Add backward compatibility for /data folder
+if [[ "$DATA_DIR" != '/data' ]]; then
+  mkdir -p $DATA_DIR
+  if [[ -d '/data' ]]; then
+    # create simlink
+    ln -s /data/* $DATA_DIR
+  fi
+fi
+
 DEBUG=${DEBUG:-0}
 REPLACE_NODE_CONF=${REPLACE_NODE_CONF:-0}
 REPLACE_SENTINEL_CONF=${REPLACE_SENTINEL_CONF:-0}

@@ -133,7 +133,10 @@ def test_password_change():
         except TimeoutError as e:
             logging.error(f"DNS resolution failed: {e}")
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
-        
+        # Change password
+        change_password(instance=instance, password=instance.falkordb_password)
+        # Test connectivity after password change
+        test_connectivity_after_password_change(instance=instance, password=instance.falkordb_password)
     except Exception as e:
         logging.exception(e)
         if not args.persist_instance_on_fail:
@@ -162,7 +165,14 @@ def change_password(instance: OmnistrateFleetInstance, password: str):
 def test_connectivity_after_password_change(instance: OmnistrateFleetInstance, password: str):
     """Test Connectivity between nodes after password change by creating different keys."""
     logging.info("Testing connectivity after password change")
-    instance.create_connection()
+    client = instance.create_connection(ssl=args.tls)
+    db = client.select_graph('test')
+    try:
+        db.query("CREATE (n:Person {name: 'Bob'})")
+    except Exception as e:
+        logging.error(e)
+    
+    logging.info("Connectivity test passed")
 
 def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     """Check if the instance's main endpoint is resolvable.

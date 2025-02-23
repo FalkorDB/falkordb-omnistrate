@@ -562,7 +562,9 @@ fi
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
   aof_metric_export=$(if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then echo "-include-aof-file-size"; else echo ""; fi)
-  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
+  # When TLS is enabled, use RANDOM_NODE_PORT to get the external port if defined (multi tenancy tiers)
+  node_external_port=$(if [[ $TLS == "true" && -z $RANDOM_NODE_PORT ]]; then echo $NODE_PORT; else echo $RANDOM_NODE_PORT; fi)
+  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$node_external_port"; else echo "redis://localhost:$NODE_PORT"; fi)
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -tls-server-min-version TLS1.3 -include-system-metrics $aof_metric_export &
   redis_exporter_pid=$!
 fi

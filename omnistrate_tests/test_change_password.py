@@ -69,7 +69,7 @@ if not args.persist_instance_on_fail:
     signal.signal(signal.SIGINT, signal_handler)
 
 
-def test_password_change():
+def test_change_password():
     global instance
 
     omnistrate = OmnistrateFleetAPI(
@@ -211,4 +211,4 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     raise TimeoutError(f"Unable to resolve hostname '{hostname}' within {timeout} seconds.")
 
 if __name__ == "__main__":
-    test_password_change()
+    test_change_password()

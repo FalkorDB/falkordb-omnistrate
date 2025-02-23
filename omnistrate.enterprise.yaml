@@ -197,7 +197,7 @@ x-clusterparam: &clusterparam
       description: Choose a default password for your database
       name: FalkorDB Password
       type: Password
-      modifiable: false
+      modifiable: true
       required: true
       export: false
     - key: RDBPersistenceConfig
@@ -359,7 +359,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -531,7 +531,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
       - key: RDBPersistenceConfig
@@ -808,7 +808,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -991,7 +991,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -1329,7 +1329,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
     x-omnistrate-actionhooks:
@@ -1461,7 +1461,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -1643,7 +1643,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -1980,7 +1980,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
     x-omnistrate-actionhooks:
@@ -2101,7 +2101,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -2435,7 +2435,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:

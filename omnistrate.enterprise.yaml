@@ -194,10 +194,10 @@ x-clusterparam: &clusterparam
       export: true
       defaultValue: "falkordb"
     - key: falkordbPassword
-      description: Choose a default password for your database
+      description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
       name: FalkorDB Password
       type: Password
-      modifiable: false
+      modifiable: true
       required: true
       export: false
     - key: RDBPersistenceConfig
@@ -356,7 +356,7 @@ services:
         parameterDependencyMap:
           node-s: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -528,7 +528,7 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -805,10 +805,10 @@ services:
         parameterDependencyMap:
           node-sz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -988,10 +988,10 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -1326,10 +1326,10 @@ services:
         export: true
         defaultValue: "false"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
     x-omnistrate-actionhooks:
@@ -1458,10 +1458,10 @@ services:
         parameterDependencyMap:
           node-mz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -1640,10 +1640,10 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -1977,10 +1977,10 @@ services:
         export: true
         defaultValue: "false"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
     x-omnistrate-actionhooks:
@@ -2098,10 +2098,10 @@ services:
         parameterDependencyMap:
           cluster-sz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -2432,10 +2432,10 @@ services:
         parameterDependencyMap:
           cluster-mz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:

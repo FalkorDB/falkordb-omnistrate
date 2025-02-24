@@ -59,7 +59,7 @@ services:
         parameterDependencyMap:
           node-f: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -101,7 +101,7 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
         name: FalkorDB Password
         type: Password
         modifiable: true

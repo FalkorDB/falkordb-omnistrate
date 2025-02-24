@@ -194,7 +194,7 @@ x-clusterparam: &clusterparam
       export: true
       defaultValue: "falkordb"
     - key: falkordbPassword
-      description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
+      description: "Choose a default password for your database. ATTENTION: Updating the password will cause downtime while the database is synchronized!"
       name: FalkorDB Password
       type: Password
       modifiable: true
@@ -356,7 +356,7 @@ services:
         parameterDependencyMap:
           node-s: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
+        description: "Choose a default password for your database. ATTENTION: Updating the password will cause downtime while the database is synchronized!"
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -528,7 +528,7 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
+        description: "Choose a default password for your database. ATTENTION: Updating the password will cause downtime while the database is synchronized!"
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -805,7 +805,7 @@ services:
         parameterDependencyMap:
           node-sz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
+        description: "Choose a default password for your database. ATTENTION: Updating the password will cause downtime while the database is synchronized!"
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -988,7 +988,7 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
+        description: "Choose a default password for your database. ATTENTION: Updating the password will cause downtime while the database is synchronized!"
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -1326,7 +1326,7 @@ services:
         export: true
         defaultValue: "false"
       - key: falkordbPassword
-        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
+        description: "Choose a default password for your database. ATTENTION: Updating the password will cause downtime while the database is synchronized!"
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -1458,7 +1458,7 @@ services:
         parameterDependencyMap:
           node-mz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
+        description: "Choose a default password for your database. ATTENTION: Updating the password will cause downtime while the database is synchronized!"
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -1640,7 +1640,7 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
+        description: "Choose a default password for your database. ATTENTION: Updating the password will cause downtime while the database is synchronized!"
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -1977,7 +1977,7 @@ services:
         export: true
         defaultValue: "false"
       - key: falkordbPassword
-        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
+        description: "Choose a default password for your database. ATTENTION: Updating the password will cause downtime while the database is synchronized!"
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -2098,7 +2098,7 @@ services:
         parameterDependencyMap:
           cluster-sz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
+        description: "Choose a default password for your database. ATTENTION: Updating the password will cause downtime while the database is synchronized!"
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -2432,7 +2432,7 @@ services:
         parameterDependencyMap:
           cluster-mz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database !!!! WARNING changing password will require a restart of the database !!!
+        description: "Choose a default password for your database. ATTENTION: Updating the password will cause downtime while the database is synchronized!"
         name: FalkorDB Password
         type: Password
         modifiable: true

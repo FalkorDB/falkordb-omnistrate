@@ -3,7 +3,8 @@ import signal
 from random import randbytes
 from pathlib import Path  # if you haven't already done so
 import socket
-
+import threading
+from redis.exceptions import AuthenticationError
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
 sys.path.append(str(root))
@@ -134,9 +135,23 @@ def test_change_password():
             logging.error(f"DNS resolution failed: {e}")
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
         # Change password
+        is_cluster = args.resource_key in ["cluster-Single-Zone", "cluster-Multi-Zone"]
+        
+        if is_cluster:
+            thread_signal = threading.Event()
+            error_signal = threading.Event()
+            thread = threading.Thread(
+            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+            )
+            thread.start()
+
         change_password(instance=instance, password=instance.falkordb_password)
         # Test connectivity after password change
         test_connectivity_after_password_change(instance=instance, password=instance.falkordb_password)
+        
+        if is_cluster:
+            thread_signal.set()
+            thread.join()
     except Exception as e:
         logging.exception(e)
         if not args.persist_instance_on_fail:
@@ -155,12 +170,14 @@ def change_password(instance: OmnistrateFleetInstance, password: str):
         instance: The OmnistrateFleetInstance to change the password for
         password: The new password to set
     """
+    instance.falkordb_password = password + "abc"
+
     logging.info("Password changed successfully")
     instance.update_params(
         falkordbPassword=password + "abc",
         wait_for_ready=True,
     )
-    instance.falkordb_password = password + "abc"
+
 
 def test_connectivity_after_password_change(instance: OmnistrateFleetInstance, password: str):
     """Test Connectivity between nodes after password change by creating different keys."""
@@ -173,6 +190,35 @@ def test_connectivity_after_password_change(instance: OmnistrateFleetInstance, p
         logging.error(e)
     
     logging.info("Connectivity test passed")
+
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a memory update happens"""
+    count = 0
+    try:
+
+        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+
+        graph = db.select_graph("test")
+
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        if e is AuthenticationError and count <= 5:
+            count += 1
+            db = instance.create_connection(ssl=ssl, force_reconnect=True)
+        else:
+            error_signal.set()
+            raise e
+    
 
 def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     """Check if the instance's main endpoint is resolvable.

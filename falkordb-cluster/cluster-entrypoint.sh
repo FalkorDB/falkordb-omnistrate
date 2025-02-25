@@ -85,7 +85,7 @@ rewrite_aof_cronjob() {
 
 check_if_to_remove_old_pass() {
   if [[ "$NODE_INDEX" == "0" ]]; then
-    CURRENT_PASSWORD_FILE="/var/lib/falkordb/secrets/currentpassword"
+    CURRENT_PASSWORD_FILE="/data/currentpassword"
     echo "Checking if to remove old password"
     # Ensure the password file exists
     if [[ ! -f "$CURRENT_PASSWORD_FILE" ]]; then

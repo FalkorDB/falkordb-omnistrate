@@ -101,7 +101,7 @@ rewrite_aof_cronjob(){
 
 check_if_to_remove_old_pass() {
   if [[ "$NODE_INDEX" == "0" && "$RESOURCE_ALIAS" =~ node.* ]]; then
-    CURRENT_PASSWORD_FILE="/var/lib/falkordb/secrets/currentpassword"
+    CURRENT_PASSWORD_FILE="/data/currentpassword"
     echo """
       The node $HOSTNAME is the first node in the cluster. The password will be updated in the sentinel and all nodes.
       The old password will be removed from the ACL.

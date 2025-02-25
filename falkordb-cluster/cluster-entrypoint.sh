@@ -84,7 +84,7 @@ rewrite_aof_cronjob() {
 }
 
 check_if_to_remove_old_pass() {
-  if [[ "$NODE_INDEX" == "0" && "$RESOURCE_ALIAS" =~ node.* ]]; then
+  if [[ "$NODE_INDEX" == "0" ]]; then
     CURRENT_PASSWORD_FILE="/run/secrets/currentpass"
 
     # Ensure the password file exists
@@ -97,7 +97,7 @@ check_if_to_remove_old_pass() {
 
     # Only proceed if passwords differ
     if [[ "$FALKORDB_PASSWORD" != "$CURRENT_PASSWORD" ]]; then
-      redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING --cluster call $NODE_HOST:$NODE_PORT "ACL SETUSER $FALKORDB_USER <$CURRENT_PASSWORD "
+      redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING --cluster call $NODE_HOST:$NODE_PORT ACL SETUSER $FALKORDB_USER <$CURRENT_PASSWORD
       # Update the current password file
       echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
     fi

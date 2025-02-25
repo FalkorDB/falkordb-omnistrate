@@ -105,6 +105,7 @@ check_if_to_remove_old_pass() {
 
     # Ensure the password file exists
     if [[ ! -f "$CURRENT_PASSWORD_FILE" ]]; then
+      echo "Creating password file"
       echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
       return
     fi
@@ -113,7 +114,12 @@ check_if_to_remove_old_pass() {
 
     # Only proceed if passwords differ
     if [[ "$FALKORDB_PASSWORD" != "$CURRENT_PASSWORD" ]]; then
+        echo "Password has changed"
       if [[ "$RUN_SENTINEL" == "1" ]]; then
+        echo """
+          The password for the node $HOSTNAME has changed. The password will be updated in the sentinel and all nodes.
+          The old password will be removed from the ACL.
+        """
         master_count=$(redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters | grep -c name)
         replica_count=$(redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL REPLICAS "$MASTER_NAME" | grep -c name)
         node_count=$(($master_count + $replica_count))
@@ -121,18 +127,20 @@ check_if_to_remove_old_pass() {
         # Consolidate ACL updates for all nodes
         for index in $(seq 0 "$node_count"); do
           for port in "$SENTINEL_PORT" "$NODE_PORT"; do
-            redis-cli -h "$RESOURCE_ALIAS-$index" -p "$port" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" <"$CURRENT_PASSWORD"
+            redis-cli -h "$RESOURCE_ALIAS-$index" -p "$port" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
           done
         done
 
         # Update Sentinel itself
-        redis-cli -h "$SENTINEL_HOST" -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" <"$CURRENT_PASSWORD"
+        redis-cli -h "$SENTINEL_HOST" -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
 
       else
-        redis-cli -p "$NODE_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" <"$CURRENT_PASSWORD"
+        echo "Updating password for node $HOSTNAME"
+        redis-cli -p "$NODE_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
       fi
 
       # Update the current password file
+      echo "updating password file"
       echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
     fi
   fi

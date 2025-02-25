@@ -21,8 +21,7 @@ RUN apt-get update && apt-get install -y curl jq openssl cron
 RUN useradd -u 1000 -m falkordb && usermod -aG crontab falkordb && \
   touch /var/run/crond.pid && chown root:crontab /var/run/crond.pid \
   && chmod 660 /var/run/crond.pid \
-  && chmod u+s /usr/sbin/cron \
-  && touch /run/secrets/currentpass
+  && chmod u+s /usr/sbin/cron 
 
 
 RUN mkdir -p /falkordb
@@ -35,7 +34,6 @@ COPY falkordb-node/node-entrypoint.sh /usr/local/bin/
 COPY --from=redis_exporter /redis_exporter /usr/local/bin/
 COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/local/bin/healthcheck
 
-RUN chown redis:redis /falkordb/* && \
-  chmod +x /usr/local/bin/node-entrypoint.sh \
-  && chown falkordb:falkordb /run/secrets/currentpass
+RUN chown falkordb:falkordb /falkordb/* && \
+  chmod +x /usr/local/bin/node-entrypoint.sh 
 CMD [ "node-entrypoint.sh" ]

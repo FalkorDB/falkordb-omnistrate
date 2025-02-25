@@ -102,7 +102,10 @@ rewrite_aof_cronjob(){
 check_if_to_remove_old_pass() {
   if [[ "$NODE_INDEX" == "0" && "$RESOURCE_ALIAS" =~ node.* ]]; then
     CURRENT_PASSWORD_FILE="/var/lib/falkordb/secrets/currentpassword"
-
+    echo """
+      The node $HOSTNAME is the first node in the cluster. The password will be updated in the sentinel and all nodes.
+      The old password will be removed from the ACL.
+    """
     # Ensure the password file exists
     if [[ ! -f "$CURRENT_PASSWORD_FILE" ]]; then
       echo "Creating password file"
@@ -111,7 +114,8 @@ check_if_to_remove_old_pass() {
     fi
 
     CURRENT_PASSWORD=$(<"$CURRENT_PASSWORD_FILE")
-
+    echo "Current password: $CURRENT_PASSWORD"
+    echo "New password: $FALKORDB_PASSWORD"
     # Only proceed if passwords differ
     if [[ "$FALKORDB_PASSWORD" != "$CURRENT_PASSWORD" ]]; then
         echo "Password has changed"
@@ -123,15 +127,20 @@ check_if_to_remove_old_pass() {
         master_count=$(redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters | grep -c name)
         replica_count=$(redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL REPLICAS "$MASTER_NAME" | grep -c name)
         node_count=$(($master_count + $replica_count))
+        echo "Master count: $master_count"
+        echo "Replica count: $replica_count"
+        echo "Node count: $node_count"
 
         # Consolidate ACL updates for all nodes
         for index in $(seq 0 "$node_count"); do
           for port in "$SENTINEL_PORT" "$NODE_PORT"; do
+            echo "Updating password for node $RESOURCE_ALIAS-$index"
             redis-cli -h "$RESOURCE_ALIAS-$index" -p "$port" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
           done
         done
 
         # Update Sentinel itself
+        echo "Updating password for sentinel"
         redis-cli -h "$SENTINEL_HOST" -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
 
       else

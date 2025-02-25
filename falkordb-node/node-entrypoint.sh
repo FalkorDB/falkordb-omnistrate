@@ -101,7 +101,7 @@ rewrite_aof_cronjob(){
 
 check_if_to_remove_old_pass() {
   if [[ "$NODE_INDEX" == "0" && "$RESOURCE_ALIAS" =~ node.* ]]; then
-    CURRENT_PASSWORD_FILE="/falkordb/currentpassword"
+    CURRENT_PASSWORD_FILE="/var/lib/falkordb/secrets/currentpassword"
 
     # Ensure the password file exists
     if [[ ! -f "$CURRENT_PASSWORD_FILE" ]]; then
@@ -116,7 +116,7 @@ check_if_to_remove_old_pass() {
       if [[ "$RUN_SENTINEL" == "1" ]]; then
         master_count=$(redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters | grep -c name)
         replica_count=$(redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL REPLICAS "$MASTER_NAME" | grep -c name)
-        node_count=$((master_count + replica_count))
+        node_count=$(($master_count + $replica_count))
 
         # Consolidate ACL updates for all nodes
         for index in $(seq 0 "$node_count"); do

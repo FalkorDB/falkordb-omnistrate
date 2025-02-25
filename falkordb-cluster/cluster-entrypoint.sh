@@ -83,6 +83,27 @@ rewrite_aof_cronjob() {
   crontab <<<"$AOF_CRON_EXPRESSION $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF"
 }
 
+check_if_to_remove_old_pass() {
+  if [[ "$NODE_INDEX" == "0" && "$RESOURCE_ALIAS" =~ node.* ]]; then
+    CURRENT_PASSWORD_FILE="/run/secrets/currentpass"
+
+    # Ensure the password file exists
+    if [[ ! -f "$CURRENT_PASSWORD_FILE" ]]; then
+      echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
+      return
+    fi
+
+    CURRENT_PASSWORD=$(<"$CURRENT_PASSWORD_FILE")
+
+    # Only proceed if passwords differ
+    if [[ "$FALKORDB_PASSWORD" != "$CURRENT_PASSWORD" ]]; then
+      redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING --cluster call $NODE_HOST:$NODE_PORT "ACL SETUSER $FALKORDB_USER <$CURRENT_PASSWORD "
+      # Update the current password file
+      echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
+    fi
+  fi
+}
+
 meet_unknown_nodes() {
   # Had to add sleep until things are stable (nodes that can communicate should be given time to do so)
   # This fixes an issue where two nodes restart (ex: cluster-sz-1 (x.x.x.1) and cluster-sz-2 (x.x.x.2)) and their ips are switched
@@ -441,6 +462,7 @@ run_node
 sleep 10
 
 create_user
+check_if_to_remove_old_pass
 set_memory_limit
 set_rdb_persistence_config
 set_aof_persistence_config

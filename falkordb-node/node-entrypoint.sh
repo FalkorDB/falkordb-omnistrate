@@ -99,6 +99,44 @@ rewrite_aof_cronjob(){
   crontab <<< "$AOF_CRON_EXPRESSION $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF"
 }
 
+check_if_to_remove_old_pass() {
+  if [[ "$NODE_INDEX" == "0" && "$RESOURCE_ALIAS" =~ node.* ]]; then
+    CURRENT_PASSWORD_FILE="/run/secrets/currentpass"
+
+    # Ensure the password file exists
+    if [[ ! -f "$CURRENT_PASSWORD_FILE" ]]; then
+      echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
+      return
+    fi
+
+    CURRENT_PASSWORD=$(<"$CURRENT_PASSWORD_FILE")
+
+    # Only proceed if passwords differ
+    if [[ "$FALKORDB_PASSWORD" != "$CURRENT_PASSWORD" ]]; then
+      if [[ "$RUN_SENTINEL" == "1" ]]; then
+        master_count=$(redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters | grep -c name)
+        replica_count=$(redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL REPLICAS "$MASTER_NAME" | grep -c name)
+        node_count=$((master_count + replica_count))
+
+        # Consolidate ACL updates for all nodes
+        for index in $(seq 0 "$node_count"); do
+          for port in "$SENTINEL_PORT" "$NODE_PORT"; do
+            redis-cli -h "$RESOURCE_ALIAS-$index" -p "$port" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" <"$CURRENT_PASSWORD"
+          done
+        done
+
+        # Update Sentinel itself
+        redis-cli -h "$SENTINEL_HOST" -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" <"$CURRENT_PASSWORD"
+
+      else
+        redis-cli -p "$NODE_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" <"$CURRENT_PASSWORD"
+      fi
+
+      # Update the current password file
+      echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
+    fi
+  fi
+}
 
 dump_conf_files() {
   echo "Dumping configuration files"
@@ -454,6 +492,8 @@ if [ "$RUN_NODE" -eq "1" ]; then
   sleep 10
 
   create_user
+  
+  check_if_to_remove_old_pass
 
   # If node should be master, add it to sentinel
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then

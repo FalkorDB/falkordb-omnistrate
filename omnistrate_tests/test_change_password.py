@@ -157,7 +157,7 @@ def test_change_password():
             thread_signal = threading.Event()
             error_signal = threading.Event()
             thread = threading.Thread(
-            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
+            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls, instance.falkordb_password)
             )
             thread.start()
 
@@ -186,14 +186,12 @@ def change_password(instance: OmnistrateFleetInstance, password: str):
         instance: The OmnistrateFleetInstance to change the password for
         password: The new password to set
     """
-    instance.falkordb_password = password + "abc"
-
-    logging.info("Password changed successfully")
     instance.update_params(
         falkordbPassword=password + "abc",
         wait_for_ready=True,
     )
-
+    instance.falkordb_password = password + "abc"
+    logging.info("Password changed successfully")
 
 def test_connectivity_after_password_change(instance: OmnistrateFleetInstance, password: str):
     """Test Connectivity between nodes after password change by creating different keys."""
@@ -211,6 +209,7 @@ def test_zero_downtime(
     thread_signal: threading.Event,
     error_signal: threading.Event,
     instance: OmnistrateFleetInstance,
+    password: str,
     ssl=False,
 ):
     """This function should test the ability to read and write while a memory update happens"""
@@ -230,6 +229,8 @@ def test_zero_downtime(
         logging.exception(e)
         if e is AuthenticationError and count <= 5:
             count += 1
+            time.sleep(3)
+            instance.falkordb_password = password + "abc"
             db = instance.create_connection(ssl=ssl, force_reconnect=True)
         else:
             error_signal.set()

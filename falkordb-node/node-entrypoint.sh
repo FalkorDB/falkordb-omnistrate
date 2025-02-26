@@ -589,24 +589,6 @@ if [[ ! "$NODE_NAME" =~ sentinel.* ]]; then
   rewrite_aof_cronjob
 fi
 
-if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]] && [[ "$NODE_INDEX" == "1" || "$NODE_INDEX" == "0" ]]; then
-  # Check for crossed namespace
-  echo "Checking for crossed namespace"
-  while true; do
-    sentinels=$(redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL sentinels $MASTER_NAME)
-    # Check if the hostname contains`instance-X` where is not equal to INSTANCE_ID
-    for text in $sentinels; do
-      if [[ $text == *"instance-"* && $text != *"$INSTANCE_ID"* ]]; then
-        echo "Crossed namespace detected"
-        # Dump config files
-        echo "Sentinels: $sentinels"
-        dump_conf_files
-      fi
-    done
-    sleep 5
-  done
-fi
-
 # If TLS=true, create a job to rotate the certificate
 if [[ "$TLS" == "true" ]]; then
   if [[ $RUN_SENTINEL -eq 1 ]]; then

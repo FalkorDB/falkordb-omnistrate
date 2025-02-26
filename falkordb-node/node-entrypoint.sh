@@ -531,9 +531,9 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   " >/etc/systemd/system/redis-sentinel.service
 
   tail -F $SENTINEL_LOG_FILE_PATH &
-  sudo systemctl daemon-reload
-  sudo systemctl enable redis-sentinel
-  sudo systemctl start redis-sentinel
+  systemctl --falkordb user daemon-reload
+  systemctl --falkordb enable redis-sentinel
+  systemctl --falkordb start redis-sentinel
 
   sleep 10
 
@@ -616,10 +616,10 @@ if [[ "$TLS" == "true" ]]; then
     #!/bin/bash
     set -e
     echo 'Restarting sentinel'
-    systemctl restart redis-sentinel
+    systemctl --falkordb restart redis-sentinel
     " >$DATA_DIR/cert_rotate_sentinel.sh
     chmod +x $DATA_DIR/cert_rotate_sentinel.sh
-    echo "$cron $DATA_DIR/cert_rotate_sentinel.sh" | sudo crontab -
+    echo "$cron $DATA_DIR/cert_rotate_sentinel.sh" | crontab -
   fi
 
   if [[ $RUN_NODE -eq 1 ]]; then
@@ -631,7 +631,7 @@ if [[ "$TLS" == "true" ]]; then
     redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-cert-file $TLS_MOUNT_PATH/tls.crt
     " >$DATA_DIR/cert_rotate_node.sh
     chmod +x $DATA_DIR/cert_rotate_node.sh
-    echo "0 0 * * * $DATA_DIR/cert_rotate_node.sh" | sudo crontab -
+    echo "0 0 * * * $DATA_DIR/cert_rotate_node.sh" | crontab -
   fi
 fi
 

@@ -494,7 +494,7 @@ if [[ "$TLS" == "true" ]]; then
     redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-cert-file $TLS_MOUNT_PATH/tls.crt
     " >$DATA_DIR/cert_rotate_node.sh
     chmod +x $DATA_DIR/cert_rotate_node.sh
-    echo "0 0 * * * $DATA_DIR/cert_rotate_node.sh" | sudo crontab -
+    echo "0 0 * * * $DATA_DIR/cert_rotate_node.sh" | crontab -
   fi
 fi
 

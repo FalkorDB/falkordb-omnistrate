@@ -520,6 +520,7 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   stdout_logfile_maxbytes=0
   stderr_logfile=/dev/stderr
   stderr_logfile_maxbytes=0
+  pidfile=/var/run/supervisord.pid
 
   [supervisorctl]
   serverurl=unix:///tmp/supervisor.sock
@@ -533,7 +534,7 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
 
   tail -F $SENTINEL_LOG_FILE_PATH &
   
-  supervisord -c $DATA_DIR/supervisord.conf
+  supervisord -c $DATA_DIR/supervisord.conf &
 
   sleep 10
 

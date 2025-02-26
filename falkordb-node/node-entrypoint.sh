@@ -566,22 +566,8 @@ fi
 if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" == "1" ]]); then
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
-
-  if [[ -z $(grep '$FALKORDB_PASSWORD' $SENTINEL_CONF_FILE) ]];then
-    echo " The password should change here but its not"
-    redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER ">$FALKORDB_PASSWORD"
-    redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
-  fi
-  pas=$(grep '$FALKORDB_PASSWORD' $SENTINEL_CONF_FILE)
-  if [[ -z "$pas" ]];then
-    echo " Seems i have to make a variable for the password"
-    redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER ">$FALKORDB_PASSWORD"
-    redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
-  fi
-
   sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $SENTINEL_CONF_FILE
-
   sed -i "s/\$SENTINEL_HOST/$NODE_HOST/g" $SENTINEL_CONF_FILE
 
   echo "Starting Sentinel"
@@ -603,6 +589,11 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   tail -F $SENTINEL_LOG_FILE_PATH &
 
   sleep 10
+  
+  if [[ -z $(grep '$FALKORDB_PASSWORD' $SENTINEL_CONF_FILE) ]];then
+    redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER ">$FALKORDB_PASSWORD"
+    redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
+  fi
 
   # If FALKORDB_MASTER_HOST is not empty, add monitor to sentinel
   if [[ ! -z $FALKORDB_MASTER_HOST ]]; then

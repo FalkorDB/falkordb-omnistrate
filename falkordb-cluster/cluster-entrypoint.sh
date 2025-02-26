@@ -377,7 +377,7 @@ set_aof_persistence_config() {
 config_rewrite() {
   echo "Rewriting configuration"
   local mode=$1
-  if [[ $mode == "cluster"]];then
+  if [[ $mode == "cluster" ]];then
     redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING --cluster call $NODE_HOST:$NODE_PORT CONFIG REWRITE
   else
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG REWRITE

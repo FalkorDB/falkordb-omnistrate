@@ -102,41 +102,26 @@ rewrite_aof_cronjob(){
 check_if_to_remove_old_pass() {
   if [[ "$NODE_INDEX" == "0" && "$RESOURCE_ALIAS" =~ node.* ]]; then
     CURRENT_PASSWORD_FILE="/data/currentpassword"
-    echo """
-      The node $HOSTNAME is the first node in the cluster. The password will be updated in the sentinel and all nodes.
-      The old password will be removed from the ACL.
-    """
     # Ensure the password file exists
     if [[ ! -f "$CURRENT_PASSWORD_FILE" ]]; then
-      echo "Creating password file"
       echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
       return
     fi
 
     CURRENT_PASSWORD=$(<"$CURRENT_PASSWORD_FILE")
-    echo "Current password: $CURRENT_PASSWORD"
-    echo "New password: $FALKORDB_PASSWORD"
+
     # Only proceed if passwords differ
     if [[ "$FALKORDB_PASSWORD" != "$CURRENT_PASSWORD" ]]; then
-        echo "Password has changed"
       if [[ "$RUN_SENTINEL" == "1" ]]; then
-        echo """
-          The password for the node $HOSTNAME has changed. The password will be updated in the sentinel and all nodes.
-          The old password will be removed from the ACL.
-        """
         redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters 
 
         master_count=$(redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters | grep -c name)
         replica_count=$(redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL REPLICAS "$MASTER_NAME" | grep -c name)
         node_count=$(($master_count + $replica_count - 1))
-        echo "Master count: $master_count"
-        echo "Replica count: $replica_count"
-        echo "Node count: $node_count"
 
         # Consolidate ACL updates for all nodes
         for index in $(seq 0 "$node_count"); do
           for port in "$SENTINEL_PORT" "$NODE_PORT"; do
-            echo "Updating password for node $RESOURCE_ALIAS-$index"
             redis-cli -h "$RESOURCE_ALIAS-$index" -p "$port" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
             config_rewrite "node"
             config_rewrite "sentinel"
@@ -145,17 +130,14 @@ check_if_to_remove_old_pass() {
         done
 
         # Update Sentinel itself
-        echo "Updating password for sentinel"
         redis-cli -h "$SENTINEL_HOST" -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
         config_rewrite "sentinel"
       else
-        echo "Updating password for node $HOSTNAME"
         redis-cli -p "$NODE_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
         config_rewrite
       fi
 
       # Update the current password file
-      echo "updating password file"
       echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
     fi
   fi
@@ -589,7 +571,7 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   tail -F $SENTINEL_LOG_FILE_PATH &
 
   sleep 10
-  
+
   if [[ -z $(grep '$FALKORDB_PASSWORD' $SENTINEL_CONF_FILE) ]];then
     redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER ">$FALKORDB_PASSWORD"
     redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG

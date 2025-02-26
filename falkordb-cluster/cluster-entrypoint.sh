@@ -86,24 +86,19 @@ rewrite_aof_cronjob() {
 check_if_to_remove_old_pass() {
   if [[ "$NODE_INDEX" == "0" ]]; then
     CURRENT_PASSWORD_FILE="/data/currentpassword"
-    echo "Checking if to remove old password"
     # Ensure the password file exists
     if [[ ! -f "$CURRENT_PASSWORD_FILE" ]]; then
-      echo "File does not exist, creating it"
       echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
       return
     fi
 
     CURRENT_PASSWORD=$(<"$CURRENT_PASSWORD_FILE")
-    echo "The current password is: $CURRENT_PASSWORD"
-    echo "The new password is: $FALKORDB_PASSWORD"
+
     # Only proceed if passwords differ
     if [[ "$FALKORDB_PASSWORD" != "$CURRENT_PASSWORD" ]]; then
-      echo "Removing old password"
       redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING --cluster call $NODE_HOST:$NODE_PORT ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
       config_rewrite "cluster"
       # Update the current password file
-      echo "updating password file"
       echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
     fi
   fi

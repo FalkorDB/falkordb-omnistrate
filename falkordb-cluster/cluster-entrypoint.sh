@@ -466,7 +466,6 @@ run_node
 sleep 10
 
 create_user
-check_if_to_remove_old_pass
 set_memory_limit
 set_rdb_persistence_config
 set_aof_persistence_config
@@ -508,6 +507,7 @@ if [[ $RUN_METRICS -eq 1 ]]; then
 fi
 
 rewrite_aof_cronjob
+check_if_to_remove_old_pass
 
 while true; do
   sleep 1

@@ -124,9 +124,11 @@ check_if_to_remove_old_pass() {
           The password for the node $HOSTNAME has changed. The password will be updated in the sentinel and all nodes.
           The old password will be removed from the ACL.
         """
+        redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters 
+
         master_count=$(redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters | grep -c name)
         replica_count=$(redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL REPLICAS "$MASTER_NAME" | grep -c name)
-        node_count=$(($master_count + $replica_count))
+        node_count=$(($master_count + $replica_count - 1))
         echo "Master count: $master_count"
         echo "Replica count: $replica_count"
         echo "Node count: $node_count"
@@ -509,8 +511,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   sleep 10
 
   create_user
-  
-  check_if_to_remove_old_pass
+
 
   # If node should be master, add it to sentinel
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
@@ -647,6 +648,7 @@ if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]] && [[ "$NODE_INDEX" == "1" || "$NOD
   done
 fi
 
+ check_if_to_remove_old_pass
 
 while true; do
   sleep 1

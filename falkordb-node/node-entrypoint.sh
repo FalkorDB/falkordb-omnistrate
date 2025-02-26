@@ -515,6 +515,11 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   echo "
   [supervisord]
   nodaemon=true
+  logfile=/dev/null
+  stdout_logfile=/dev/stdout
+  stdout_logfile_maxbytes=0
+  stderr_logfile=/dev/stderr
+  stderr_logfile_maxbytes=0
 
   [supervisorctl]
   serverurl=unix:///tmp/supervisor.sock

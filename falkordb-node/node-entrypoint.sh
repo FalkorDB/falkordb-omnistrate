@@ -138,16 +138,20 @@ check_if_to_remove_old_pass() {
           for port in "$SENTINEL_PORT" "$NODE_PORT"; do
             echo "Updating password for node $RESOURCE_ALIAS-$index"
             redis-cli -h "$RESOURCE_ALIAS-$index" -p "$port" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
+            config_rewrite "node"
+            config_rewrite "sentinel"
+
           done
         done
 
         # Update Sentinel itself
         echo "Updating password for sentinel"
         redis-cli -h "$SENTINEL_HOST" -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
-
+        config_rewrite "sentinel"
       else
         echo "Updating password for node $HOSTNAME"
         redis-cli -p "$NODE_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
+        config_rewrite
       fi
 
       # Update the current password file
@@ -430,8 +434,15 @@ create_user() {
 
 config_rewrite() {
   # Config rewrite
+  local mode=$1
   echo "Rewriting config"
-  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
+  if [[ $mode == "sentinel" ]]; then
+    redis-cli -h "$RESOURCE_ALIAS-$index" -p "$port" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
+  elif [[ $mode == "node" ]]; then
+    redis-cli -h "$RESOURCE_ALIAS-$index" -p "$port" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
+  else
+    redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
+  fi
 }
 
 if [ -f $NODE_CONF_FILE ]; then
@@ -555,6 +566,12 @@ fi
 if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" == "1" ]]); then
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
+
+  if [[ -z $(grep '$FALKORDB_PASSWORD' $SENTINEL_CONF_FILE) ]];then
+    redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER ">$FALKORDB_PASSWORD"
+    redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
+  fi
+
   sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $SENTINEL_CONF_FILE
 

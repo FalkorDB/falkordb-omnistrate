@@ -101,6 +101,7 @@ check_if_to_remove_old_pass() {
     if [[ "$FALKORDB_PASSWORD" != "$CURRENT_PASSWORD" ]]; then
       echo "Removing old password"
       redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING --cluster call $NODE_HOST:$NODE_PORT ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
+      config_rewrite "cluster"
       # Update the current password file
       echo "updating password file"
       echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
@@ -375,7 +376,12 @@ set_aof_persistence_config() {
 
 config_rewrite() {
   echo "Rewriting configuration"
-  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG REWRITE
+  local mode=$1
+  if [[ $mode == "cluster"]];then
+    redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING --cluster call $NODE_HOST:$NODE_PORT CONFIG REWRITE
+  else
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG REWRITE
+  fi
 }
 
 create_cluster() {

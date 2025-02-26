@@ -520,12 +520,11 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   serverurl=unix:///tmp/supervisor.sock
 
   [program:redis-sentinel]
-  command=redis-server $SENTINEL_CONF_FILE
+  command=redis-server $SENTINEL_CONF_FILE --sentinel
   autorestart=true
   stdout_logfile=$SENTINEL_LOG_FILE_PATH
   stderr_logfile=$SENTINEL_LOG_FILE_PATH
   " > $DATA_DIR/supervisord.conf
-
 
   tail -F $SENTINEL_LOG_FILE_PATH &
   

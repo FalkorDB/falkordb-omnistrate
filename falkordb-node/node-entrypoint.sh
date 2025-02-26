@@ -628,7 +628,7 @@ fi
 if [[ ! "$NODE_NAME" =~ sentinel.* ]]; then
   rewrite_aof_cronjob
 fi
-
+ check_if_to_remove_old_pass
 
 if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]] && [[ "$NODE_INDEX" == "1" || "$NODE_INDEX" == "0" ]]; then
   # Check for crossed namespace
@@ -648,7 +648,6 @@ if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]] && [[ "$NODE_INDEX" == "1" || "$NOD
   done
 fi
 
- check_if_to_remove_old_pass
 
 while true; do
   sleep 1

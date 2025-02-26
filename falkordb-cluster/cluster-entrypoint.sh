@@ -483,6 +483,21 @@ fi
 
 rewrite_aof_cronjob
 
+# If TLS=true, create a job to rotate the certificate
+if [[ "$TLS" == "true" ]]; then
+  if [[ $RUN_NODE -eq 1 ]]; then
+    echo "Creating node certificate rotation job"
+    echo "
+    #!/bin/bash
+    set -e
+    echo 'Refreshing node certificate'
+    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-cert-file $TLS_MOUNT_PATH/tls.crt
+    " >$DATA_DIR/cert_rotate_node.sh
+    chmod +x $DATA_DIR/cert_rotate_node.sh
+    echo "0 0 * * * $DATA_DIR/cert_rotate_node.sh" | sudo crontab -
+  fi
+fi
+
 while true; do
   sleep 1
 done

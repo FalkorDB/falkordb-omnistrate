@@ -511,29 +511,25 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
     echo "port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
   fi
 
-  # Start Sentinel system service
+  # Start Sentinel supervisord service
   echo "
-  [Unit]
-  Description=Redis Sentinel
-  After=network.target
+  [supervisord]
+  nodaemon=true
 
-  [Service]
-  Type=simple
-  WorkingDirectory=/data
-  ExecStart=/usr/local/bin/redis-server $SENTINEL_CONF_FILE --sentinel --logfile $SENTINEL_LOG_FILE_PATH
-  ExecStop=/bin/kill -s QUIT \$MAINPID
-  Restart=always
-  User=redis
-  Group=redis
+  [supervisorctl]
+  serverurl=unix:///tmp/supervisor.sock
 
-  [Install]
-  WantedBy=multi-user.target
-  " >/etc/systemd/system/redis-sentinel.service
+  [program:redis-sentinel]
+  command=redis-server $SENTINEL_CONF_FILE
+  autorestart=true
+  stdout_logfile=$SENTINEL_LOG_FILE_PATH
+  stderr_logfile=$SENTINEL_LOG_FILE_PATH
+  " > $DATA_DIR/supervisord.conf
+
 
   tail -F $SENTINEL_LOG_FILE_PATH &
-  systemctl --falkordb user daemon-reload
-  systemctl --falkordb enable redis-sentinel
-  systemctl --falkordb start redis-sentinel
+  
+  supervisord -c $DATA_DIR/supervisord.conf
 
   sleep 10
 
@@ -616,7 +612,7 @@ if [[ "$TLS" == "true" ]]; then
     #!/bin/bash
     set -e
     echo 'Restarting sentinel'
-    systemctl --falkordb restart redis-sentinel
+    supervisorctl restart redis-sentinel
     " >$DATA_DIR/cert_rotate_sentinel.sh
     chmod +x $DATA_DIR/cert_rotate_sentinel.sh
     echo "$cron $DATA_DIR/cert_rotate_sentinel.sh" | crontab -

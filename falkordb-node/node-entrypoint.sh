@@ -93,7 +93,7 @@ rewrite_aof_cronjob() {
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
   # The command is run every 12 hours to prevent the AOF file from growing too large.
   cron
-  crontab <<<"$AOF_CRON_EXPRESSION $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF"
+  echo "$AOF_CRON_EXPRESSION $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF" | crontab -
 }
 
 dump_conf_files() {
@@ -513,6 +513,9 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
 
   # Start Sentinel supervisord service
   echo "
+  [inet_http_server]
+  port = 127.0.0.1:9001
+
   [supervisord]
   nodaemon=true
   logfile=/dev/null
@@ -523,7 +526,7 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   pidfile=/var/run/supervisord.pid
 
   [supervisorctl]
-  serverurl=unix:///tmp/supervisor.sock
+  serverurl=http://127.0.0.1:9001
 
   [program:redis-sentinel]
   command=redis-server $SENTINEL_CONF_FILE --sentinel
@@ -587,12 +590,13 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter_pid=$!
 fi
 
-if [[ ! "$NODE_NAME" =~ sentinel.* ]]; then
+if [[ ! "$NODE_NAME" =~ sentinel.* && ! -f "/data/rewrite_aof_cronjob" ]]; then
   rewrite_aof_cronjob
+  touch /data/rewrite_aof_cronjob
 fi
 
 # If TLS=true, create a job to rotate the certificate
-if [[ "$TLS" == "true" ]]; then
+if [[ "$TLS" == "true" && ! -f "/data/tls_rotate_cronjob" ]]; then
   if [[ $RUN_SENTINEL -eq 1 ]]; then
     backoff=$(shuf -i 1-59 -n 1)
     cron="$backoff 0 * * *"
@@ -618,6 +622,7 @@ if [[ "$TLS" == "true" ]]; then
     chmod +x $DATA_DIR/cert_rotate_node.sh
     echo "0 0 * * * $DATA_DIR/cert_rotate_node.sh" | crontab -
   fi
+  touch /data/tls_rotate_cronjob
 fi
 
 while true; do

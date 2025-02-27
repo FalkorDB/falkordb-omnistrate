@@ -31,7 +31,7 @@ COPY falkordb-cluster/cluster-entrypoint.sh /usr/local/bin/
 COPY --from=redis_exporter /redis_exporter /usr/local/bin/
 COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/local/bin/healthcheck
 
-RUN chown redis:redis /falkordb/* && \
+RUN chown falkordb:falkordb /falkordb/* && \
   chmod +x /usr/local/bin/cluster-entrypoint.sh
 
 CMD ["cluster-entrypoint.sh"]

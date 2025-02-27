@@ -540,7 +540,8 @@ class OmnistrateFleetInstance:
                         socket.timeout,
                         redis_exceptions.ConnectionError,
                         ResponseError,
-                        ReadOnlyError
+                        ReadOnlyError,
+                        AuthenticationError
                     ],
                     cluster_error_retry_attempts=20,
                     retry=retry.Retry(

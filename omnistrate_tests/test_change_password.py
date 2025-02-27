@@ -151,7 +151,8 @@ def test_change_password():
             logging.error(f"DNS resolution failed: {e}")
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
         # Change password
-        is_cluster = args.resource_key in ["cluster-Single-Zone", "cluster-Multi-Zone"]
+        
+        is_cluster = args.resource_key != "standalone"
         
         if is_cluster:
             thread_signal = threading.Event()

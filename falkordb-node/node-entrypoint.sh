@@ -92,8 +92,7 @@ fi
 rewrite_aof_cronjob() {
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
   # The command is run every 12 hours to prevent the AOF file from growing too large.
-  cron
-  echo "$AOF_CRON_EXPRESSION $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF" | crontab -
+  (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF") | crontab -
 }
 
 dump_conf_files() {
@@ -591,13 +590,12 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter_pid=$!
 fi
 
-if [[ ! "$NODE_NAME" =~ sentinel.* && ! -f "/data/rewrite_aof_cronjob" ]]; then
+if [[ ! "$NODE_NAME" =~ sentinel.* ]]; then
   rewrite_aof_cronjob
-  touch /data/rewrite_aof_cronjob
 fi
 
 # If TLS=true, create a job to rotate the certificate
-if [[ "$TLS" == "true" && ! -f "/data/tls_rotate_cronjob" ]]; then
+if [[ "$TLS" == "true" ]]; then
   if [[ $RUN_SENTINEL -eq 1 ]]; then
     backoff=$(shuf -i 1-59 -n 1)
     cron="$backoff 0 * * *"
@@ -609,7 +607,7 @@ if [[ "$TLS" == "true" && ! -f "/data/tls_rotate_cronjob" ]]; then
     supervisorctl -c $DATA_DIR/supervisord.conf restart redis-sentinel
     " >$DATA_DIR/cert_rotate_sentinel.sh
     chmod +x $DATA_DIR/cert_rotate_sentinel.sh
-    echo "$cron $DATA_DIR/cert_rotate_sentinel.sh" | crontab -
+    (crontab -l 2>/dev/null; echo "$cron $DATA_DIR/cert_rotate_sentinel.sh") | crontab -
   fi
 
   if [[ $RUN_NODE -eq 1 ]]; then
@@ -621,9 +619,8 @@ if [[ "$TLS" == "true" && ! -f "/data/tls_rotate_cronjob" ]]; then
     redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-cert-file $TLS_MOUNT_PATH/tls.crt
     " >$DATA_DIR/cert_rotate_node.sh
     chmod +x $DATA_DIR/cert_rotate_node.sh
-    echo "0 0 * * * $DATA_DIR/cert_rotate_node.sh" | crontab -
+    (crontab -l 2>/dev/null; echo "0 0 * * * $DATA_DIR/cert_rotate_node.sh") | crontab -
   fi
-  touch /data/tls_rotate_cronjob
 fi
 
 while true; do

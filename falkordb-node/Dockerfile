@@ -22,7 +22,7 @@ RUN useradd -u 1000 -m falkordb && usermod -aG crontab falkordb && \
   touch /var/run/crond.pid && chown root:crontab /var/run/crond.pid && \
   touch /var/run/supervisord.pid && chown redis:redis /var/run/supervisord.pid && \
   chmod 660 /var/run/crond.pid && \
-  chmod 660 /var/run/supervisor.pid && \
+  chmod 660 /var/run/supervisord.pid && \
   chmod u+s /usr/sbin/cron
 
 

@@ -95,6 +95,7 @@ rewrite_aof_cronjob() {
   (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION $(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF") | crontab -
 }
 
+
 check_if_to_remove_old_pass() {
   if [[ "$NODE_INDEX" == "0" && "$RESOURCE_ALIAS" =~ node.* ]]; then
     CURRENT_PASSWORD_FILE="/data/currentpassword"
@@ -652,16 +653,32 @@ fi
 
 check_if_to_remove_old_pass
 
-if [[ $RUN_NODE -eq 1 ]]; then
-  echo "Creating node certificate rotation job"
-  echo "
-  #!/bin/bash
-  set -e
-  echo 'Refreshing node certificate'
-  redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-cert-file $TLS_MOUNT_PATH/tls.crt
-  " >$DATA_DIR/cert_rotate_node.sh
-  chmod +x $DATA_DIR/cert_rotate_node.sh
-  (crontab -l 2>/dev/null; echo "0 0 * * * $DATA_DIR/cert_rotate_node.sh") | crontab -
+# If TLS=true, create a job to rotate the certificate
+if [[ "$TLS" == "true" ]]; then
+  if [[ $RUN_SENTINEL -eq 1 ]]; then
+    backoff=$(shuf -i 1-59 -n 1)
+    cron="$backoff 0 * * *"
+    echo "Creating sentinel certificate rotation job. Cron: $cron"
+    echo "
+    #!/bin/bash
+    set -e
+    echo 'Restarting sentinel'
+    supervisorctl -c $DATA_DIR/supervisord.conf restart redis-sentinel
+    " >$DATA_DIR/cert_rotate_sentinel.sh
+    chmod +x $DATA_DIR/cert_rotate_sentinel.sh
+    (crontab -l 2>/dev/null; echo "$cron $DATA_DIR/cert_rotate_sentinel.sh") | crontab -
+  fi
+
+  if [[ $RUN_NODE -eq 1 ]]; then
+    echo "Creating node certificate rotation job"
+    echo "
+    #!/bin/bash
+    set -e
+    echo 'Refreshing node certificate'
+    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-cert-file $TLS_MOUNT_PATH/tls.crt
+    " >$DATA_DIR/cert_rotate_node.sh
+    chmod +x $DATA_DIR/cert_rotate_node.sh
+    (crontab -l 2>/dev/null; echo "0 0 * * * $DATA_DIR/cert_rotate_node.sh") | crontab -
   fi
 fi
 

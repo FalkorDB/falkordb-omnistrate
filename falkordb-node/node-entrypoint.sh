@@ -528,6 +528,9 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   [supervisorctl]
   serverurl=http://127.0.0.1:9001
 
+  [rpcinterface:supervisor]
+  supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
   [program:redis-sentinel]
   command=redis-server $SENTINEL_CONF_FILE --sentinel
   autorestart=true
@@ -538,8 +541,6 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   tail -F $SENTINEL_LOG_FILE_PATH &
   
   supervisord -c $DATA_DIR/supervisord.conf &
-  service supervisor stop
-  service supervisor start
 
   sleep 10
 
@@ -605,7 +606,7 @@ if [[ "$TLS" == "true" && ! -f "/data/tls_rotate_cronjob" ]]; then
     #!/bin/bash
     set -e
     echo 'Restarting sentinel'
-    supervisorctl restart redis-sentinel
+    supervisorctl -c $DATA_DIR/supervisord.conf restart redis-sentinel
     " >$DATA_DIR/cert_rotate_sentinel.sh
     chmod +x $DATA_DIR/cert_rotate_sentinel.sh
     echo "$cron $DATA_DIR/cert_rotate_sentinel.sh" | crontab -

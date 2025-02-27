@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y curl jq openssl cron supervisor
 
 RUN useradd -u 1000 -m falkordb && usermod -aG crontab falkordb && \
   touch /var/run/crond.pid && chown root:crontab /var/run/crond.pid && \
-  touch /var/run/supervisor.pid && chown redis:redis /var/run/supervisor.pid && \
+  touch /var/run/supervisord.pid && chown redis:redis /var/run/supervisord.pid && \
   chmod 660 /var/run/crond.pid && \
   chmod 660 /var/run/supervisor.pid && \
   chmod u+s /usr/sbin/cron

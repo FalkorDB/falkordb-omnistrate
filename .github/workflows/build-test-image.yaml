@@ -889,7 +889,7 @@ jobs:
 
   cleanup-runner:
     needs: test
-    if: ${{ success() || cancelled() }}
+    if: ${{ success() || cancelled() || needs.test.result == 'skipped' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:

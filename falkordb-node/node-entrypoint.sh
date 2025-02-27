@@ -535,6 +535,8 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   tail -F $SENTINEL_LOG_FILE_PATH &
   
   supervisord -c $DATA_DIR/supervisord.conf &
+  service supervisor stop
+  service supervisor start
 
   sleep 10
 

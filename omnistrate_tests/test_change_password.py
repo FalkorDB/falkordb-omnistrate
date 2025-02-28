@@ -228,9 +228,9 @@ def test_zero_downtime(
             time.sleep(3)
     except Exception as e:
         logging.exception(e)
-        if e is AuthenticationError and count <= 5:
+        if isinstance(e, AuthenticationError) and count <= 5:
             count += 1
-            time.sleep(3)
+            time.sleep(5)
             instance.falkordb_password = password + "abc"
             db = instance.create_connection(ssl=ssl, force_reconnect=True)
         else:

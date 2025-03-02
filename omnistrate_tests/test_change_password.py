@@ -211,13 +211,14 @@ def test_zero_downtime(
     instance: OmnistrateFleetInstance,
     password: str,
     ssl=False,
+    max_retries=2,
+    retry_delay=5,
 ):
     """This function should test the ability to read and write while a memory update happens"""
-    count = 0
-    try:
+    retries = 0
+    while retries < max_retries:
         try:
             db = instance.create_connection(ssl=ssl, force_reconnect=False)
-
             graph = db.select_graph("test")
 
             while not thread_signal.is_set():
@@ -225,19 +226,22 @@ def test_zero_downtime(
                 graph.query("CREATE (n:Person {name: 'Alice'})")
                 graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
                 time.sleep(3)
+            break  # Exit the retry loop if successful
         except Exception as e:
             logging.exception(e)
-            if isinstance(e, AuthenticationError) and count <= 5:
-                count += 1
-                time.sleep(5)
-                instance.falkordb_password = password + "abc"
-                db = instance.create_connection(ssl=ssl, force_reconnect=False)
+            if isinstance(e, AuthenticationError):
+                time.sleep(retry_delay)
+                if instance.falkordb_password != password + "abc":
+                    instance.falkordb_password = password + "abc"
+                retries += 1
+                db.connection.close()
+                logging.info(f"Retrying test_zero_downtime (attempt {retries}/{max_retries})")
             else:
+                error_signal.set()
                 raise e
-    except Exception as e:
+    else:
         error_signal.set()
-        raise e
-    
+        raise Exception("Max retries reached")
 
 def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     """Check if the instance's main endpoint is resolvable.

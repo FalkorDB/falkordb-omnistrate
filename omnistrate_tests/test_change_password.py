@@ -217,7 +217,7 @@ def test_zero_downtime(
     count = 0
     try:
 
-        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+        db = instance.create_connection(ssl=ssl, force_reconnect=False)
 
         graph = db.select_graph("test")
 

@@ -55,7 +55,7 @@ SENTINEL_PORT=${SENTINEL_PORT:-26379}
 SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
 SENTINEL_FAILOVER=${SENTINEL_FAILOVER:-1000}
 
-# SENTINEL_HOST=${SENTINEL_HOST:-localhost}
+#SENTINEL_HOST=${SENTINEL_HOST:-localhost}
 SENTINEL_HOST=sentinel-$(echo $RESOURCE_ALIAS | cut -d "-" -f 2)-0.$LOCAL_DNS_SUFFIX
 
 NODE_HOST=${NODE_HOST:-localhost}
@@ -93,6 +93,51 @@ rewrite_aof_cronjob() {
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
   # The command is run every 12 hours to prevent the AOF file from growing too large.
   (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION $(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF") | crontab -
+}
+
+
+check_if_to_remove_old_pass() {
+  if [[ "$NODE_INDEX" == "0" && "$RESOURCE_ALIAS" =~ node.* ]]; then
+    CURRENT_PASSWORD_FILE="/data/currentpassword"
+    # Ensure the password file exists
+    if [[ ! -f "$CURRENT_PASSWORD_FILE" ]]; then
+      echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
+      return
+    fi
+
+    CURRENT_PASSWORD=$(<"$CURRENT_PASSWORD_FILE")
+
+    # Only proceed if passwords differ
+    if [[ "$FALKORDB_PASSWORD" != "$CURRENT_PASSWORD" ]]; then
+      if [[ "$RUN_SENTINEL" == "1" ]]; then
+        redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters 
+
+        master_count=$(redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL masters | grep -c name)
+        replica_count=$(redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL REPLICAS "$MASTER_NAME" | grep -c name)
+        node_count=$(($master_count + $replica_count - 1))
+
+        # Consolidate ACL updates for all nodes
+        for index in $(seq 0 "$node_count"); do
+          for port in "$SENTINEL_PORT" "$NODE_PORT"; do
+            redis-cli -h "$RESOURCE_ALIAS-$index" -p "$port" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
+            config_rewrite "node" "$RESOURCE_ALIAS-$index" "$NODE_PORT"
+            config_rewrite "sentinel" "$RESOURCE_ALIAS-$index" "$SENTINEL_PORT"
+
+          done
+        done
+
+        # Update Sentinel itself
+        redis-cli -h "$SENTINEL_HOST" -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
+        config_rewrite "sentinel" "$RESOURCE_ALIAS-$index" "$SENTINEL_PORT"
+      else
+        redis-cli -p "$NODE_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
+        config_rewrite
+      fi
+
+      # Update the current password file
+      echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
+    fi
+  fi
 }
 
 dump_conf_files() {
@@ -367,8 +412,17 @@ create_user() {
 
 config_rewrite() {
   # Config rewrite
+  local MODE=$1
+  local HOST=$2
+  local PORT=$3
   echo "Rewriting config"
-  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG REWRITE
+  if [[ $MODE == "sentinel" ]]; then
+    redis-cli -h "$HOST" -p "$PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
+  elif [[ $MODE == "node" ]]; then
+    redis-cli -h "$HOST" -p "$PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
+  else
+    redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
+  fi
 }
 
 if [ -f $NODE_CONF_FILE ]; then
@@ -449,6 +503,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
   create_user
 
+
   # If node should be master, add it to sentinel
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
     echo "Adding master to sentinel"
@@ -493,7 +548,6 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $SENTINEL_CONF_FILE
-
   sed -i "s/\$SENTINEL_HOST/$NODE_HOST/g" $SENTINEL_CONF_FILE
 
   echo "Starting Sentinel"
@@ -542,6 +596,11 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   supervisord -c $DATA_DIR/supervisord.conf &
 
   sleep 10
+
+  if [[ -z $(grep '$FALKORDB_PASSWORD' $SENTINEL_CONF_FILE) ]];then
+    redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER ">$FALKORDB_PASSWORD"
+    config_rewrite "sentinel" "localhost" "$SENTINEL_PORT"
+  fi
 
   # If FALKORDB_MASTER_HOST is not empty, add monitor to sentinel
   if [[ ! -z $FALKORDB_MASTER_HOST ]]; then
@@ -593,6 +652,8 @@ fi
 if [[ ! "$NODE_NAME" =~ sentinel.* ]]; then
   rewrite_aof_cronjob
 fi
+
+check_if_to_remove_old_pass
 
 # If TLS=true, create a job to rotate the certificate
 if [[ "$TLS" == "true" ]]; then

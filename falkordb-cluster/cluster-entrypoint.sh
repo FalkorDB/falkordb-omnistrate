@@ -82,6 +82,27 @@ rewrite_aof_cronjob() {
   (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION $(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF") | crontab -
 }
 
+check_if_to_remove_old_pass() {
+  if [[ "$NODE_INDEX" == "0" ]]; then
+    CURRENT_PASSWORD_FILE="/data/currentpassword"
+    # Ensure the password file exists
+    if [[ ! -f "$CURRENT_PASSWORD_FILE" ]]; then
+      echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
+      return
+    fi
+
+    CURRENT_PASSWORD=$(<"$CURRENT_PASSWORD_FILE")
+
+    # Only proceed if passwords differ
+    if [[ "$FALKORDB_PASSWORD" != "$CURRENT_PASSWORD" ]]; then
+      redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING --cluster call $NODE_HOST:$NODE_PORT ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
+      config_rewrite "cluster"
+      # Update the current password file
+      echo "$FALKORDB_PASSWORD" > "$CURRENT_PASSWORD_FILE"
+    fi
+  fi
+}
+
 meet_unknown_nodes() {
   # Had to add sleep until things are stable (nodes that can communicate should be given time to do so)
   # This fixes an issue where two nodes restart (ex: cluster-sz-1 (x.x.x.1) and cluster-sz-2 (x.x.x.2)) and their ips are switched
@@ -349,7 +370,12 @@ set_aof_persistence_config() {
 
 config_rewrite() {
   echo "Rewriting configuration"
-  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG REWRITE
+  local mode=$1
+  if [[ $mode == "cluster" ]];then
+    redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING --cluster call $NODE_HOST:$NODE_PORT CONFIG REWRITE
+  else
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG REWRITE
+  fi
 }
 
 create_cluster() {
@@ -481,6 +507,7 @@ if [[ $RUN_METRICS -eq 1 ]]; then
 fi
 
 rewrite_aof_cronjob
+check_if_to_remove_old_pass
 
 # If TLS=true, create a job to rotate the certificate
 if [[ "$TLS" == "true" ]]; then

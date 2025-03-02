@@ -163,7 +163,7 @@ def test_change_password():
 
         change_password(instance=instance, password=instance.falkordb_password)
         # Test connectivity after password change
-        test_connectivity_after_password_change(instance=instance, password=instance.falkordb_password)
+        test_connectivity_after_password_change(instance=instance)
         
         if not args.is_standalone:
             thread_signal.set()
@@ -193,7 +193,7 @@ def change_password(instance: OmnistrateFleetInstance, password: str):
     instance.falkordb_password = password + "abc"
     logging.info("Password changed successfully")
 
-def test_connectivity_after_password_change(instance: OmnistrateFleetInstance, password: str):
+def test_connectivity_after_password_change(instance: OmnistrateFleetInstance):
     """Test Connectivity between nodes after password change by creating different keys."""
     logging.info("Testing connectivity after password change")
     client = instance.create_connection(ssl=args.tls)

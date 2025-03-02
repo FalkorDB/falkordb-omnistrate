@@ -54,7 +54,7 @@ parser.add_argument("--cluster-replicas", required=False, default="1")
 parser.add_argument("--ensure-mz-distribution", action="store_true")
 parser.add_argument("--custom-network", required=False)
 parser.add_argument("--network-type", required=False, default="PUBLIC")
-
+parser.add_argument("--is-standalone", action="store_true")
 
 parser.add_argument(
     "--deployment-create-timeout-seconds", required=False, default=2600, type=int
@@ -69,6 +69,7 @@ parser.add_argument(
 parser.add_argument("--persist-instance-on-fail",action="store_true")
 
 parser.set_defaults(tls=False)
+parser.set_defaults(is_standalone=False)
 args = parser.parse_args()
 
 instance: OmnistrateFleetInstance = None
@@ -152,9 +153,7 @@ def test_change_password():
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
         # Change password
         
-        is_cluster = args.resource_key != "standalone"
-        
-        if is_cluster:
+        if not args.is_standalone:
             thread_signal = threading.Event()
             error_signal = threading.Event()
             thread = threading.Thread(
@@ -166,7 +165,7 @@ def test_change_password():
         # Test connectivity after password change
         test_connectivity_after_password_change(instance=instance, password=instance.falkordb_password)
         
-        if is_cluster:
+        if not args.is_standalone:
             thread_signal.set()
             thread.join()
     except Exception as e:

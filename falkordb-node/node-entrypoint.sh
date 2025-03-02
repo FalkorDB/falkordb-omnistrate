@@ -55,8 +55,8 @@ SENTINEL_PORT=${SENTINEL_PORT:-26379}
 SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
 SENTINEL_FAILOVER=${SENTINEL_FAILOVER:-1000}
 
-SENTINEL_HOST=${SENTINEL_HOST:-localhost}
-#SENTINEL_HOST=sentinel-$(echo $RESOURCE_ALIAS | cut -d "-" -f 2)-0.$LOCAL_DNS_SUFFIX
+#SENTINEL_HOST=${SENTINEL_HOST:-localhost}
+SENTINEL_HOST=sentinel-$(echo $RESOURCE_ALIAS | cut -d "-" -f 2)-0.$LOCAL_DNS_SUFFIX
 
 NODE_HOST=${NODE_HOST:-localhost}
 NODE_PORT=${NODE_PORT:-6379}
@@ -120,15 +120,15 @@ check_if_to_remove_old_pass() {
         for index in $(seq 0 "$node_count"); do
           for port in "$SENTINEL_PORT" "$NODE_PORT"; do
             redis-cli -h "$RESOURCE_ALIAS-$index" -p "$port" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
-            config_rewrite "node"
-            config_rewrite "sentinel"
+            config_rewrite "node" "$RESOURCE_ALIAS-$index" "$NODE_PORT"
+            config_rewrite "sentinel" "$RESOURCE_ALIAS-$index" "$SENTINEL_PORT"
 
           done
         done
 
         # Update Sentinel itself
         redis-cli -h "$SENTINEL_HOST" -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
-        config_rewrite "sentinel"
+        config_rewrite "sentinel" "$RESOURCE_ALIAS-$index" "$SENTINEL_PORT"
       else
         redis-cli -p "$NODE_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
         config_rewrite
@@ -412,12 +412,14 @@ create_user() {
 
 config_rewrite() {
   # Config rewrite
-  local mode=$1
+  local MODE=$1
+  local HOST=$2
+  local PORT=$3
   echo "Rewriting config"
-  if [[ $mode == "sentinel" ]]; then
-    redis-cli -h "$RESOURCE_ALIAS-$index" -p "$port" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
-  elif [[ $mode == "node" ]]; then
-    redis-cli -h "$RESOURCE_ALIAS-$index" -p "$port" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
+  if [[ $MODE == "sentinel" ]]; then
+    redis-cli -h "$HOST" -p "$PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
+  elif [[ $MODE == "node" ]]; then
+    redis-cli -h "$HOST" -p "$PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
   else
     redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
   fi
@@ -597,7 +599,7 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
 
   if [[ -z $(grep '$FALKORDB_PASSWORD' $SENTINEL_CONF_FILE) ]];then
     redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER ">$FALKORDB_PASSWORD"
-    redis-cli -p "$SENTINEL_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
+    config_rewrite "sentinel" "localhost" "$SENTINEL_PORT"
   fi
 
   # If FALKORDB_MASTER_HOST is not empty, add monitor to sentinel

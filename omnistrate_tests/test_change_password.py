@@ -216,26 +216,28 @@ def test_zero_downtime(
     """This function should test the ability to read and write while a memory update happens"""
     count = 0
     try:
+        try:
+            db = instance.create_connection(ssl=ssl, force_reconnect=False)
 
-        db = instance.create_connection(ssl=ssl, force_reconnect=False)
+            graph = db.select_graph("test")
 
-        graph = db.select_graph("test")
-
-        while not thread_signal.is_set():
-            # Write some data to the DB
-            graph.query("CREATE (n:Person {name: 'Alice'})")
-            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
-            time.sleep(3)
+            while not thread_signal.is_set():
+                # Write some data to the DB
+                graph.query("CREATE (n:Person {name: 'Alice'})")
+                graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+                time.sleep(3)
+        except Exception as e:
+            logging.exception(e)
+            if isinstance(e, AuthenticationError) and count <= 5:
+                count += 1
+                time.sleep(5)
+                instance.falkordb_password = password + "abc"
+                db = instance.create_connection(ssl=ssl, force_reconnect=False)
+            else:
+                raise e
     except Exception as e:
-        logging.exception(e)
-        if isinstance(e, AuthenticationError) and count <= 5:
-            count += 1
-            time.sleep(5)
-            instance.falkordb_password = password + "abc"
-            db = instance.create_connection(ssl=ssl, force_reconnect=True)
-        else:
-            error_signal.set()
-            raise e
+        error_signal.set()
+        raise e
     
 
 def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):

@@ -131,7 +131,7 @@ check_if_to_remove_old_pass() {
         config_rewrite "sentinel" "$RESOURCE_ALIAS-$index" "$SENTINEL_PORT"
       else
         redis-cli -p "$NODE_PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER "$FALKORDB_USER" "<$CURRENT_PASSWORD"
-        config_rewrite
+        config_rewrite "node" "localhost" "$NODE_PORT"
       fi
 
       # Update the current password file
@@ -407,7 +407,7 @@ create_user() {
 
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG
 
-  config_rewrite
+  config_rewrite "node" "localhost" "$NODE_PORT"
 }
 
 config_rewrite() {
@@ -420,8 +420,6 @@ config_rewrite() {
     redis-cli -h "$HOST" -p "$PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
   elif [[ $MODE == "node" ]]; then
     redis-cli -h "$HOST" -p "$PORT" -a "$ADMIN_PASSWORD" --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
-  else
-    redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
   fi
 }
 
@@ -540,7 +538,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET appendfsync $PERSISTENCE_AOF_CONFIG
   fi
 
-  config_rewrite
+  config_rewrite "node" "localhost" "$NODE_PORT"
 fi
 
 if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" == "1" ]]); then

@@ -145,6 +145,7 @@ def test_change_password():
             custom_network_id=network.network_id if network else None,
         )
         
+        new_password = instance.falkordb_password + "abc"
         try:
             ip = resolve_hostname(instance=instance)
             logging.info(f"Instance endpoint {instance.get_cluster_endpoint()['endpoint']} resolved to {ip}")
@@ -157,11 +158,11 @@ def test_change_password():
             thread_signal = threading.Event()
             error_signal = threading.Event()
             thread = threading.Thread(
-            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls, instance.falkordb_password)
+            target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls, new_password)
             )
             thread.start()
 
-        change_password(instance=instance, password=instance.falkordb_password)
+        change_password(instance=instance, password=new_password)
         # Test connectivity after password change
         test_connectivity_after_password_change(instance=instance)
         
@@ -187,10 +188,10 @@ def change_password(instance: OmnistrateFleetInstance, password: str):
         password: The new password to set
     """
     instance.update_params(
-        falkordbPassword=password + "abc",
+        falkordbPassword=password,
         wait_for_ready=True,
     )
-    instance.falkordb_password = password + "abc"
+    instance.falkordb_password = password
     logging.info("Password changed successfully")
 
 def test_connectivity_after_password_change(instance: OmnistrateFleetInstance):
@@ -216,6 +217,7 @@ def test_zero_downtime(
 ):
     """This function should test the ability to read and write while a memory update happens"""
     retries = 0
+    db = None
     while retries < max_retries:
         try:
             db = instance.create_connection(ssl=ssl, force_reconnect=False)
@@ -230,16 +232,21 @@ def test_zero_downtime(
         except Exception as e:
             logging.exception(e)
             if isinstance(e, AuthenticationError):
-                time.sleep(retry_delay)
-                if instance.falkordb_password != password + "abc":
-                    instance.falkordb_password = password + "abc"
+                backoff_time = min(retry_delay * (2 ** retries), 30)
+                logging.info(f"Authentication error, retrying in {backoff_time} seconds")
+                time.sleep(backoff_time)
+                if instance.falkordb_password != password:
+                    instance.falkordb_password = password
                 retries += 1
-                db.connection.close()
+                if db is not None:
+                    db.connection.close()
                 logging.info(f"Retrying test_zero_downtime (attempt {retries}/{max_retries})")
             else:
+                logging.error(f"Non-authentication error occurred: {str(e)}")
                 error_signal.set()
                 raise e
     else:
+        logging.error(f"Failed after {max_retries} authentication retry attempts")
         error_signal.set()
         raise Exception("Max retries reached")
 

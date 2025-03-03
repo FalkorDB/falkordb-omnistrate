@@ -144,7 +144,7 @@ def test_change_password():
             AOFPersistenceConfig=args.aof_config,
             custom_network_id=network.network_id if network else None,
         )
-        
+        old_password = instance.falkordb_password
         new_password = instance.falkordb_password + "abc"
         try:
             ip = resolve_hostname(instance=instance)
@@ -164,7 +164,7 @@ def test_change_password():
 
         change_password(instance=instance, password=new_password)
         # Test connectivity after password change
-        test_connectivity_after_password_change(instance=instance)
+        test_connectivity_after_password_change(instance=instance, old_password=old_password)
         
         if not args.is_standalone:
             thread_signal.set()
@@ -194,7 +194,7 @@ def change_password(instance: OmnistrateFleetInstance, password: str):
     instance.falkordb_password = password
     logging.info("Password changed successfully")
 
-def test_connectivity_after_password_change(instance: OmnistrateFleetInstance):
+def test_connectivity_after_password_change(instance: OmnistrateFleetInstance,old_password: str):
     """Test Connectivity between nodes after password change by creating different keys."""
     logging.info("Testing connectivity after password change")
     client = instance.create_connection(ssl=args.tls)
@@ -203,9 +203,22 @@ def test_connectivity_after_password_change(instance: OmnistrateFleetInstance):
         db.query("CREATE (n:Person {name: 'Bob'})")
     except Exception as e:
         logging.error(e)
-    
-    logging.info("Connectivity test passed")
 
+    logging.info("New password works successfully")
+    client.connection.close()
+    instance.falkordb_password = old_password
+    try:
+        client = instance.create_connection(ssl=args.tls)
+        db = client.select_graph('test')
+        db.query("CREATE (n:Person {name: 'Charlie'})")
+        raise Exception("Old password should not work")
+    except Exception as e:
+        if isinstance(e, AuthenticationError):
+            logging.info("Old password failed as expected")
+        else:
+            logging.error(e)
+            raise e
+    
 def test_zero_downtime(
     thread_signal: threading.Event,
     error_signal: threading.Event,

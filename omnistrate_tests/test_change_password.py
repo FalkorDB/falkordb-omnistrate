@@ -164,7 +164,7 @@ def test_change_password():
 
         change_password(instance=instance, password=new_password)
         # Test connectivity after password change
-        test_connectivity_after_password_change(instance=instance, old_password=old_password)
+        test_connectivity_after_password_change(instance=instance, old_password=old_password, ssl=args.tls)
         
         if not args.is_standalone:
             thread_signal.set()
@@ -194,10 +194,10 @@ def change_password(instance: OmnistrateFleetInstance, password: str):
     instance.falkordb_password = password
     logging.info("Password changed successfully")
 
-def test_connectivity_after_password_change(instance: OmnistrateFleetInstance,old_password: str):
+def test_connectivity_after_password_change(instance: OmnistrateFleetInstance,old_password: str,ssl=False):
     """Test Connectivity between nodes after password change by creating different keys."""
     logging.info("Testing connectivity after password change")
-    client = instance.create_connection(ssl=args.tls)
+    client = instance.create_connection(ssl=ssl)
     db = client.select_graph('test')
     try:
         db.query("CREATE (n:Person {name: 'Bob'})")
@@ -207,18 +207,19 @@ def test_connectivity_after_password_change(instance: OmnistrateFleetInstance,ol
     logging.info("New password works successfully")
     client.connection.close()
     instance.falkordb_password = old_password
+
     try:
-        client = instance.create_connection(ssl=args.tls)
+        client = instance.create_connection(ssl=ssl)
         db = client.select_graph('test')
         db.query("CREATE (n:Person {name: 'Charlie'})")
-        raise Exception("Old password should not work")
     except Exception as e:
         if isinstance(e, AuthenticationError):
             logging.info("Old password failed as expected")
         else:
             logging.error(e)
             raise e
-    
+    raise Exception("Old password should not work after password change")
+
 def test_zero_downtime(
     thread_signal: threading.Event,
     error_signal: threading.Event,

@@ -163,12 +163,12 @@ def test_change_password():
             thread.start()
 
         change_password(instance=instance, password=new_password)
-        # Test connectivity after password change
-        test_connectivity_after_password_change(instance=instance, old_password=old_password, ssl=args.tls)
-        
         if not args.is_standalone:
             thread_signal.set()
             thread.join()
+        # Test connectivity after password change
+        test_connectivity_after_password_change(instance=instance, old_password=old_password, ssl=args.tls)
+        
     except Exception as e:
         logging.exception(e)
         if not args.persist_instance_on_fail:
@@ -210,11 +210,10 @@ def test_connectivity_after_password_change(instance: OmnistrateFleetInstance,ol
 
     try:
         client = instance.create_connection(ssl=ssl)
-        db = client.select_graph('test')
-        db.query("CREATE (n:Person {name: 'Charlie'})")
     except Exception as e:
         if isinstance(e, AuthenticationError):
             logging.info("Old password failed as expected")
+            return
         else:
             logging.error(e)
             raise e

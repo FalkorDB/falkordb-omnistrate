@@ -27,6 +27,7 @@ RUN useradd -u 1000 -m falkordb && usermod -aG crontab falkordb && \
 WORKDIR /falkordb
 
 COPY falkordb-cluster/node.conf .
+COPY falkordb-cluster/acl.conf .
 COPY falkordb-cluster/cluster-entrypoint.sh /usr/local/bin/
 COPY --from=redis_exporter /redis_exporter /usr/local/bin/
 COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/local/bin/healthcheck

@@ -32,6 +32,7 @@ WORKDIR /falkordb
 
 COPY falkordb-node/sentinel.conf .
 COPY falkordb-node/node.conf .
+COPY falkordb-node/acl.conf .
 COPY falkordb-node/node-entrypoint.sh /usr/local/bin/
 COPY --from=redis_exporter /redis_exporter /usr/local/bin/
 COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/local/bin/healthcheck

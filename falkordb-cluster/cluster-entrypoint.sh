@@ -20,6 +20,8 @@ else
   export ADMIN_PASSWORD=''
 fi
 
+export ADMIN_PASSWORD_HASH=$(echo -n $ADMIN_PASSWORD | sha256sum | awk '{print $1}')
+
 RUN_METRICS=${RUN_METRICS:-1}
 RUN_HEALTH_CHECK=${RUN_HEALTH_CHECK:-1}
 TLS=${TLS:-false}
@@ -62,6 +64,7 @@ TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
 DATA_DIR=${DATA_DIR:-/data}
 DEBUG=${DEBUG:-0}
 REPLACE_NODE_CONF=${REPLACE_NODE_CONF:-0}
+REPLACE_ACL_CONF=${REPLACE_ACL_CONF:-0}
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
 AUTH_CONNECTION_STRING="-a $ADMIN_PASSWORD --no-auth-warning"
 SAVE_LOGS_TO_FILE=${SAVE_LOGS_TO_FILE:-1}
@@ -71,6 +74,7 @@ RESOURCE_ALIAS=${RESOURCE_ALIAS:-""}
 DATE_NOW=$(date +"%Y%m%d%H%M%S")
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo ""; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
+ACL_CONF_FILE=$DATA_DIR/acl.conf
 
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
   DEBUG=1
@@ -279,9 +283,9 @@ wait_for_hosts() {
   done
 }
 
-create_user() {
-  echo "Creating falkordb user"
-  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +CLUSTER +COMMAND
+ACL_SAVE() {
+  echo "Saving ACLs"
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SAVE
 }
 
 get_default_memory_limit() {
@@ -396,6 +400,7 @@ join_cluster() {
 run_node() {
 
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
+  sed -i "s|\$FALKORDB_ACL_FILE|$ACL_CONF_FILE|g" $NODE_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
   sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_CACHE_SIZE/$FALKORDB_CACHE_SIZE/g" $NODE_CONF_FILE
@@ -406,6 +411,9 @@ run_node() {
   sed -i "s/\$FALKORDB_RESULT_SET_SIZE/$FALKORDB_RESULT_SET_SIZE/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_QUERY_MEM_CAPACITY/$FALKORDB_QUERY_MEM_CAPACITY/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_VKEY_MAX_ENTITY_COUNT/$FALKORDB_VKEY_MAX_ENTITY_COUNT/g" $NODE_CONF_FILE
+  sed -i "s/\$FALKORDB_PASSWORD/#$FALKORDB_PASSWORD/g" $ACL_CONF_FILE
+  sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $ACL_CONF_FILE
+  sed -i "s/\$ADMIN_PASSWORD/#$ADMIN_PASSWORD_HASH/g" $ACL_CONF_FILE
   echo "dir $DATA_DIR/$i" >>$NODE_CONF_FILE
 
   if [[ $TLS == "true" ]]; then
@@ -432,6 +440,11 @@ if [ ! -f $NODE_CONF_FILE ] || [ "$REPLACE_NODE_CONF" -eq "1" ]; then
   cp /falkordb/node.conf $NODE_CONF_FILE
 fi
 
+if [ ! -f $ACL_CONF_FILE ] || [ "$REPLACE_ACL_CONF" -eq "1" ]; then
+  echo "Copying acl.conf from /falkordb"
+  cp /falkordb/acl.conf $ACL_CONF_FILE
+fi
+
 # Create log file
 touch $FALKORDB_LOG_FILE_PATH
 
@@ -439,7 +452,7 @@ run_node
 
 sleep 10
 
-create_user
+ACL_SAVE
 set_memory_limit
 set_rdb_persistence_config
 set_aof_persistence_config

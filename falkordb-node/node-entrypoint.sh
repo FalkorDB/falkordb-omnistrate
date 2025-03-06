@@ -20,6 +20,8 @@ else
   export ADMIN_PASSWORD=''
 fi
 
+export ADMIN_HASH=$(echo -n $ADMIN_PASSWORD | sha256sum | awk '{print $1}')
+
 RUN_SENTINEL=${RUN_SENTINEL:-0}
 RUN_NODE=${RUN_NODE:-1}
 RUN_METRICS=${RUN_METRICS:-1}
@@ -364,12 +366,8 @@ create_user() {
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER default on "<$CURRENT_ADMIN_PASSWORD"
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SAVE
   fi
-  #check if acl.conf is empty
-  if [[ ! -s $ACL_CONF_FILE ]]; then
-    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER default on ">$ADMIN_PASSWORD"
-    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SAVE
-  fi
   #We still need it if RESET_ADMIN_PASSWORD is 1
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SAVE
   config_rewrite
 }
 
@@ -428,6 +426,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   sed -i "s|\$FALKORDB_ACL_FILE|$ACL_CONF_FILE|g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $ACL_CONF_FILE
   sed -i "s/\$FALKORDB_PASSWORD/#$FALKORDB_PASSWORD/g" $ACL_CONF_FILE
+  sed -i "s/\$ADMIN_PASSWORD/#$ADMIN_HASH/g" $ACL_CONF_FILE
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" $NODE_CONF_FILE
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
@@ -516,13 +515,10 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_ACL_CONF
   sed -i "s/\$FALKORDB_PASSWORD/#$FALKORDB_PASSWORD/g" $SENTINEL_ACL_CONF
+  sed -i "s/\$ADMIN_PASSWORD/#$ADMIN_HASH/g" $SENTINEL_ACL_CONF
 
   sed -i "s/\$SENTINEL_HOST/$NODE_HOST/g" $SENTINEL_CONF_FILE
 
-  if [[ ! -s $SENTINEL_ACL_CONF ]];then
-    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER default on ">$ADMIN_PASSWORD"
-    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SAVE
-  fi
   echo "Starting Sentinel"
 
   if [[ $TLS == "true" ]]; then
@@ -569,7 +565,7 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   supervisord -c $DATA_DIR/supervisord.conf &
 
   sleep 10
-
+  redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SAVE
   # If FALKORDB_MASTER_HOST is not empty, add monitor to sentinel
   if [[ ! -z $FALKORDB_MASTER_HOST ]]; then
     log "Master Name: $MASTER_NAME\Master Host: $FALKORDB_MASTER_HOST\Master Port: $FALKORDB_MASTER_PORT_NUMBER\nSentinel Quorum: $SENTINEL_QUORUM"

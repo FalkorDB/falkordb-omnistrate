@@ -20,7 +20,7 @@ else
   export ADMIN_PASSWORD=''
 fi
 
-export ADMIN_HASH=$(echo -n $ADMIN_PASSWORD | sha256sum | awk '{print $1}')
+export ADMIN_PASSWORD_HASH=$(echo -n $ADMIN_PASSWORD | sha256sum | awk '{print $1}')
 
 RUN_METRICS=${RUN_METRICS:-1}
 RUN_HEALTH_CHECK=${RUN_HEALTH_CHECK:-1}
@@ -284,7 +284,7 @@ wait_for_hosts() {
 }
 
 ACL_SAVE() {
-  echo "Creating falkordb user"
+  echo "Saving ACLs"
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SAVE
 }
 
@@ -413,7 +413,7 @@ run_node() {
   sed -i "s/\$FALKORDB_VKEY_MAX_ENTITY_COUNT/$FALKORDB_VKEY_MAX_ENTITY_COUNT/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_PASSWORD/#$FALKORDB_PASSWORD/g" $ACL_CONF_FILE
   sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $ACL_CONF_FILE
-  sed -i "s/\$ADMIN_PASSWORD/#$ADMIN_HASH/g" $ACL_CONF_FILE
+  sed -i "s/\$ADMIN_PASSWORD/#$ADMIN_PASSWORD_HASH/g" $ACL_CONF_FILE
   echo "dir $DATA_DIR/$i" >>$NODE_CONF_FILE
 
   if [[ $TLS == "true" ]]; then

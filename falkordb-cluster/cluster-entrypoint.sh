@@ -475,7 +475,7 @@ fi
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
   aof_metric_export=$(if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then echo "-include-aof-file-size"; else echo ""; fi)
-  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
+  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://localhost:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -is-cluster -tls-server-min-version TLS1.3 -include-system-metrics $aof_metric_export >>$FALKORDB_LOG_FILE_PATH &
   redis_exporter_pid=$!
 fi

@@ -1,5 +1,6 @@
 use rouille::{router, Response, Server};
 use std::env;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 fn main() {
@@ -13,10 +14,13 @@ fn start_health_check_server(is_sentinel: bool) {
         .unwrap_or_else(|_| if is_sentinel { "8082".to_string() } else { "8081".to_string() });
 
     let addr = format!("localhost:{}", port);
+    let redis_connection = Arc::new(Mutex::new(get_redis_connection(is_sentinel).unwrap()));
+
     let server = Server::new(addr, move |request| {
+        let redis_connection = Arc::clone(&redis_connection);
         router!(request,
-            (GET) (/liveness) => { handle_health_check(is_sentinel, check_handler_liveness) },
-            (GET) (/readiness) => { handle_health_check(is_sentinel, check_handler_readiness) },
+            (GET) (/liveness) => { handle_health_check(is_sentinel, check_handler_liveness, &redis_connection) },
+            (GET) (/readiness) => { handle_health_check(is_sentinel, check_handler_readiness, &redis_connection) },
             (GET) (/startup) => { Response::text("OK") },
             _ => Response::empty_404()
         )
@@ -26,40 +30,40 @@ fn start_health_check_server(is_sentinel: bool) {
     server.run();
 }
 
-fn handle_health_check<F>(is_sentinel: bool, check_fn: F) -> Response
+fn handle_health_check<F>(is_sentinel: bool, check_fn: F, redis_connection: &Arc<Mutex<redis::Connection>>) -> Response
 where
-    F: Fn(bool) -> Result<bool, redis::RedisError>,
+    F: Fn(bool, &Arc<Mutex<redis::Connection>>) -> Result<bool, redis::RedisError>,
 {
-    match check_fn(is_sentinel) {
+    match check_fn(is_sentinel, redis_connection) {
         Ok(true) => Response::text("OK"),
         _ => Response::text("Not ready").with_status_code(500),
     }
 }
 
-fn check_handler_liveness(is_sentinel: bool) -> Result<bool, redis::RedisError> {
-    let mut con = get_redis_connection(is_sentinel)?;
+fn check_handler_liveness(is_sentinel: bool, redis_connection: &Arc<Mutex<redis::Connection>>) -> Result<bool, redis::RedisError> {
+    let mut con = redis_connection.lock().unwrap();
     if is_sentinel {
         return check_sentinel(&mut con);
     }
 
-    let db_info: String = redis::cmd("INFO").query(&mut con)?;
+    let db_info: String = redis::cmd("INFO").query(&mut *con)?;
     if db_info.contains("cluster_enabled:1") {
-        return get_status_from_cluster_node_liveness(&mut con);
+        return get_status_from_cluster_node_liveness(&mut *con);
     }
-    check_node_liveness(&db_info, &mut con)
+    check_node_liveness(&db_info, &mut *con)
 }
 
-fn check_handler_readiness(is_sentinel: bool) -> Result<bool, redis::RedisError> {
-    let mut con = get_redis_connection(is_sentinel)?;
+fn check_handler_readiness(is_sentinel: bool, redis_connection: &Arc<Mutex<redis::Connection>>) -> Result<bool, redis::RedisError> {
+    let mut con = redis_connection.lock().unwrap();
     if is_sentinel {
         return check_sentinel(&mut con);
     }
 
-    let db_info: String = redis::cmd("INFO").query(&mut con)?;
+    let db_info: String = redis::cmd("INFO").query(&mut *con)?;
     if db_info.contains("cluster_enabled:1") {
-        return get_status_from_cluster_node_readiness(&mut con);
+        return get_status_from_cluster_node_readiness(&mut *con);
     }
-    check_node_readiness(&db_info, &mut con)
+    check_node_readiness(&db_info, &mut *con)
 }
 
 fn get_redis_connection(is_sentinel: bool) -> Result<redis::Connection, redis::RedisError> {

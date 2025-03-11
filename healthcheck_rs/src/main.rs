@@ -9,14 +9,15 @@ fn main() {
 }
 
 fn start_health_check_server(is_sentinel: bool) {
+    let redis_pool = get_redis_connection_pool(is_sentinel).unwrap();
     let port = env::var(if is_sentinel { "HEALTH_CHECK_PORT_SENTINEL" } else { "HEALTH_CHECK_PORT" })
         .unwrap_or_else(|_| if is_sentinel { "8082".to_string() } else { "8081".to_string() });
 
     let addr = format!("localhost:{}", port);
     let server = Server::new(addr, move |request| {
         router!(request,
-            (GET) (/liveness) => { handle_health_check(is_sentinel, check_handler_liveness) },
-            (GET) (/readiness) => { handle_health_check(is_sentinel, check_handler_readiness) },
+            (GET) (/liveness) => { handle_health_check(is_sentinel, check_handler_liveness, &redis_pool) },
+            (GET) (/readiness) => { handle_health_check(is_sentinel, check_handler_readiness, &redis_pool) },
             (GET) (/startup) => { Response::text("OK") },
             _ => Response::empty_404()
         )
@@ -26,49 +27,58 @@ fn start_health_check_server(is_sentinel: bool) {
     server.run();
 }
 
-fn handle_health_check<F>(is_sentinel: bool, check_fn: F) -> Response
+fn handle_health_check<F>(is_sentinel: bool, check_fn: F, redis_pool: &r2d2::Pool<redis::Client>) -> Response
 where
-    F: Fn(bool) -> Result<bool, redis::RedisError>,
+    F: Fn(bool,&r2d2::Pool<redis::Client>) -> Result<bool, redis::RedisError>,
 {
-    match check_fn(is_sentinel) {
+    match check_fn(is_sentinel,redis_pool) {
         Ok(true) => Response::text("OK"),
         _ => Response::text("Not ready").with_status_code(500),
     }
 }
 
-fn check_handler_liveness(is_sentinel: bool) -> Result<bool, redis::RedisError> {
-    let mut con = get_redis_connection(is_sentinel)?;
-    if is_sentinel {
-        return check_sentinel(&mut con);
+fn check_handler_liveness(is_sentinel: bool,redis_pool: &r2d2::Pool<redis::Client>) -> Result<bool, redis::RedisError> {
+    if let Ok(mut con) = redis_pool.get(){
+        if is_sentinel {
+            return check_sentinel(&mut con);
+        }
+    
+        let db_info: String = redis::cmd("INFO").query(&mut con)?;
+        if db_info.contains("cluster_enabled:1") {
+            return get_status_from_cluster_node_liveness(&mut con);
+        }
+        check_node_liveness(&db_info, &mut con)
+    } else {
+        Err(redis::RedisError::from((redis::ErrorKind::IoError, "Failed to get connection from pool")))
     }
-
-    let db_info: String = redis::cmd("INFO").query(&mut con)?;
-    if db_info.contains("cluster_enabled:1") {
-        return get_status_from_cluster_node_liveness(&mut con);
-    }
-    check_node_liveness(&db_info, &mut con)
 }
 
-fn check_handler_readiness(is_sentinel: bool) -> Result<bool, redis::RedisError> {
-    let mut con = get_redis_connection(is_sentinel)?;
-    if is_sentinel {
-        return check_sentinel(&mut con);
+fn check_handler_readiness(is_sentinel: bool,redis_pool: &r2d2::Pool<redis::Client>) -> Result<bool, redis::RedisError> {
+    if let Ok(mut con) = redis_pool.get() {
+        if is_sentinel {
+            return check_sentinel(&mut con);
+        }
+    
+        let db_info: String = redis::cmd("INFO").query(&mut con)?;
+        if db_info.contains("cluster_enabled:1") {
+            return get_status_from_cluster_node_readiness(&mut con);
+        }
+        check_node_readiness(&db_info, &mut con)
+    } else {
+        Err(redis::RedisError::from((redis::ErrorKind::IoError, "Failed to get connection from pool")))
     }
-
-    let db_info: String = redis::cmd("INFO").query(&mut con)?;
-    if db_info.contains("cluster_enabled:1") {
-        return get_status_from_cluster_node_readiness(&mut con);
-    }
-    check_node_readiness(&db_info, &mut con)
+    
 }
 
-fn get_redis_connection(is_sentinel: bool) -> Result<redis::Connection, redis::RedisError> {
+fn get_redis_connection_pool(is_sentinel: bool) -> Result<r2d2::Pool<redis::Client>, redis::RedisError> {
     let password = get_redis_password();
     let node_port = get_node_port(is_sentinel);
     let redis_url = get_redis_url(&password, &node_port);
-
     let client = redis::Client::open(redis_url)?;
-    client.get_connection()
+    if let Ok(pool) = r2d2::Pool::builder().build(client){
+        return Ok(pool);
+    }
+    Err(redis::RedisError::from((redis::ErrorKind::IoError, "Failed to create connection pool")))
 }
 
 fn check_node_liveness(db_info: &str, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {

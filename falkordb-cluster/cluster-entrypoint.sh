@@ -480,6 +480,9 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter_pid=$!
 fi
 
+#Start cron
+cron
+
 rewrite_aof_cronjob
 
 # If TLS=true, create a job to rotate the certificate

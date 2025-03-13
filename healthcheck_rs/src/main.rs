@@ -75,7 +75,7 @@ fn get_redis_connection_pool(is_sentinel: bool) -> Result<r2d2::Pool<redis::Clie
     let node_port = get_node_port(is_sentinel);
     let redis_url = get_redis_url(&password, &node_port);
     let client = redis::Client::open(redis_url)?;
-    if let Ok(pool) = r2d2::Pool::builder().build(client){
+    if let Ok(pool) = r2d2::Pool::builder().max_size(1).build(client){
         return Ok(pool);
     }
     Err(redis::RedisError::from((redis::ErrorKind::IoError, "Failed to create connection pool")))

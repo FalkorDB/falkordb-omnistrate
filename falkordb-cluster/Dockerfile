@@ -1,4 +1,4 @@
-ARG FALKORDB_VERSION=v4.8.0
+ARG FALKORDB_VERSION=v4.8.4
 
 FROM falkordb/redis_exporter:v1.68.0-alpine as redis_exporter
 
@@ -31,7 +31,7 @@ COPY falkordb-cluster/cluster-entrypoint.sh /usr/local/bin/
 COPY --from=redis_exporter /redis_exporter /usr/local/bin/
 COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/local/bin/healthcheck
 
-RUN chown redis:redis /falkordb/* && \
+RUN chown falkordb:falkordb /falkordb/* && \
   chmod +x /usr/local/bin/cluster-entrypoint.sh
 
 ENV FALKORDB_HOME=/var/lib/falkordb

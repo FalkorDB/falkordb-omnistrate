@@ -89,8 +89,7 @@ fi
 rewrite_aof_cronjob() {
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
   # The command is run every 12 hours to prevent the AOF file from growing too large.
-  cron
-  crontab <<<"$AOF_CRON_EXPRESSION $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF"
+  (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION $(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF") | crontab -
 }
 
 meet_unknown_nodes() {
@@ -486,12 +485,30 @@ fi
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
   aof_metric_export=$(if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then echo "-include-aof-file-size"; else echo ""; fi)
-  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
+  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://localhost:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -is-cluster -tls-server-min-version TLS1.3 -include-system-metrics $aof_metric_export >>$FALKORDB_LOG_FILE_PATH &
   redis_exporter_pid=$!
 fi
 
+#Start cron
+cron
+
 rewrite_aof_cronjob
+
+# If TLS=true, create a job to rotate the certificate
+if [[ "$TLS" == "true" ]]; then
+  if [[ $RUN_NODE -eq 1 ]]; then
+    echo "Creating node certificate rotation job"
+    echo "
+    #!/bin/bash
+    set -e
+    echo 'Refreshing node certificate'
+    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-cert-file $TLS_MOUNT_PATH/tls.crt
+    " >$DATA_DIR/cert_rotate_node.sh
+    chmod +x $DATA_DIR/cert_rotate_node.sh
+    (crontab -l 2>/dev/null; echo "0 0 * * * $DATA_DIR/cert_rotate_node.sh") | crontab -
+  fi
+fi
 
 while true; do
   sleep 1

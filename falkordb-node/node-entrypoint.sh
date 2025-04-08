@@ -51,9 +51,6 @@ if [[ "$FALKORDB_TIMEOUT_DEFAULT" == "<nil>" ]]; then
   FALKORDB_TIMEOUT_DEFAULT=0
 fi
 
-if [[ "$RESOURCE_ALIAS" == "node-f" ]]; then
-  FALKORDB_QUERY_MEM_CAPACITY=10000000 # 10MB
-fi
 
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
@@ -105,7 +102,7 @@ fi
 
 # Function to convert GiB to MB and subtract reserved memory
 gib_to_mb_minus_reserved() {
-  if [ -z "$1" || -z "$2" ]; then
+  if [[ -z "$1" || -z "$2" ]]; then
     echo "Usage: gib_to_mb_minus_100 <gibibytes>"
     return 1
   fi

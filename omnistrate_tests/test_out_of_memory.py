@@ -95,7 +95,7 @@ def test_out_of_memory():
 
     instance = omnistrate.instance(
         service_id=args.service_id,
-        service_provider_id=service.service_provider_id,
+        service_provider_id='sp-JvkxkPhinN',
         service_key=service.key,
         service_environment_id=args.environment_id,
         service_environment_key=service.get_environment(args.environment_id).key,
@@ -167,7 +167,7 @@ def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: st
     if resource_key == 'free':
         logging.info("Free instance detected. Executing large query")
         try:
-            response = graph.query(largeQuery)
+            graph.query(largeQuery)
         except Exception as e:
             if isinstance(e,ResponseError) and 'exceeded' in str(e):
                 logging.info("The free instance raised an error as expected")

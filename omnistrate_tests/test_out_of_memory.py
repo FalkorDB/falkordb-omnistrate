@@ -23,7 +23,7 @@ import os
 from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
 from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
 import argparse
-from redis.exceptions import ResponseError
+from redis.exceptions import ResponseError, OutOfMemoryError
 parser = argparse.ArgumentParser()
 parser.add_argument("omnistrate_user")
 parser.add_argument("omnistrate_password")

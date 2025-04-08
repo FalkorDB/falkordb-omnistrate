@@ -14,7 +14,7 @@ COPY ../healthcheck_rs/ /healthcheck
 RUN cargo build --release
 
 
-FROM falkordb/falkordb:$FALKORDB_VERSION
+FROM falkordb/falkordb:edge
 
 RUN apt-get update && apt-get install -y curl jq openssl cron
 
@@ -23,8 +23,6 @@ RUN useradd -u 1000 -m falkordb && usermod -aG crontab falkordb && \
   && chmod 660 /var/run/crond.pid \
   && chmod u+s /usr/sbin/cron
 
-
-ENV BROWSER=0
 
 WORKDIR /falkordb
 
@@ -39,4 +37,4 @@ RUN chown falkordb:falkordb /falkordb/* && \
 
 ENV FALKORDB_HOME=/var/lib/falkordb
 
-CMD ["cluster-entrypoint.sh"]
+ENTRYPOINT ["cluster-entrypoint.sh"]

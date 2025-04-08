@@ -23,7 +23,7 @@ import os
 from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
 from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
 import argparse
-
+from redis.exceptions import ResponseError
 parser = argparse.ArgumentParser()
 parser.add_argument("omnistrate_user")
 parser.add_argument("omnistrate_password")
@@ -135,7 +135,7 @@ def test_out_of_memory():
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
         
         # Stress test the instance
-        stress_test_out_of_memory(instance)
+        stress_test_out_of_memory(instance,resource_key=args.resource_key)
     except Exception as e:
         logging.exception(e)
         if not args.persist_instance_on_fail:
@@ -149,20 +149,35 @@ def test_out_of_memory():
 
 
 
-def stress_test_out_of_memory(instance: OmnistrateFleetInstance):
+def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: str = None):
     """Stress test the instance by allocating memory until it runs out of memory.
     Should return this: '(error) OOM command not allowed when used memory > 'maxmemory''
     Args:
         instance: The OmnistrateFleetInstance to stress test
     """
+    largeQuery = "UNWIND RANGE(1, 1000000) AS id CREATE (n:Person {name: 'Alice'})"
+    medQuery = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
+
     logging.info("Starting stress test")
     db = instance.create_connection(
         ssl=args.tls,
     )
     graph = db.select_graph("test")
+
+    if resource_key == 'free':
+        logging.info("Free instance detected. Executing large query")
+        try:
+            response = graph.query(largeQuery)
+        except Exception as e:
+            if isinstance(e,ResponseError) and 'exceeded' in str(e):
+                logging.info("The free instance raised an error as expected")
+                q = medQuery
+    else:
+        q = largeQuery
+    
     while True:
         try:
-            response = graph.query("UNWIND RANGE(1, 1000000) AS id CREATE (n:Person {name: 'Alice'})")
+            response = graph.query(q)
             logging.info(f"Response: {response}")
             if 'OOM' in response:
                 logging.info("Out of memory error detected")

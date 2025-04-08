@@ -14,7 +14,7 @@ COPY ../healthcheck_rs/ /healthcheck
 RUN cargo build --release
 
 
-FROM falkordb/falkordb:edge
+FROM falkordb/falkordb:$FALKORDB_VERSION
 
 RUN apt-get update && apt-get install -y curl jq openssl cron
 

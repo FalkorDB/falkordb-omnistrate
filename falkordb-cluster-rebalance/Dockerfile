@@ -14,7 +14,7 @@ RUN apt-get update && \
 RUN python3 -m venv /rebalance/venv && \
   . /rebalance/venv/bin/activate && \
   pip install --upgrade pip && \
-  pip install -r /rebalance/src/requirements.txt
+  python3 -m pip install -r /rebalance/src/requirements.txt
 
 
 CMD ["venv/bin/python", "-u", "/rebalance/src/main.py"]

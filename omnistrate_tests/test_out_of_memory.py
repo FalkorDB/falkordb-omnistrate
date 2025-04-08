@@ -179,10 +179,10 @@ def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: st
         try:
             response = graph.query(q)
             logging.info(f"Response: {response}")
-            if 'OOM' in response:
+        except Exception as e:
+            if isinstance(e, OutOfMemoryError) and 'memory' in str(e):
                 logging.info("Out of memory error detected")
                 break
-        except Exception as e:
             logging.error(f"{e}")
             logging.error("Failed to detect out of memory error")
             raise e

@@ -263,6 +263,8 @@ get_memory_limit() {
   if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
     if [[ ! $instance_size_in_map =~ ^[0-9]+[Mm][Bb]$ ]]; then
       MEMORY_LIMIT=$(gib_to_mb_minus_reserved $instance_size_in_map 100)
+    else
+      MEMORY_LIMIT=$instance_size_in_map
     fi
   elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
     MEMORY_LIMIT=$(get_default_memory_limit)

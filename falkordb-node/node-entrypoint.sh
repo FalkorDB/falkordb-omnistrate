@@ -261,7 +261,9 @@ get_memory_limit() {
   instance_size_in_map=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
 
   if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
-    MEMORY_LIMIT=$(gib_to_mb_minus_reserved $instance_size_in_map 100)
+    if [[ ! $instance_size_in_map =~ ^[0-9]+[Mm][Bb]$ ]]; then
+      MEMORY_LIMIT=$(gib_to_mb_minus_reserved $instance_size_in_map 100)
+    fi
   elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
     MEMORY_LIMIT=$(get_default_memory_limit)
     echo "INSTANCE_TYPE is not set. Setting to default memory limit"

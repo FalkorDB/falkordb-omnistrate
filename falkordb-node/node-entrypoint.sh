@@ -70,7 +70,17 @@ FALKORDB_MASTER_PORT_NUMBER=${MASTER_PORT:-6379}
 IS_REPLICA=${IS_REPLICA:-0}
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
-DATA_DIR=${DATA_DIR:-/data}
+DATA_DIR=${DATA_DIR:-"${FALKORDB_HOME}/data"}
+
+# Add backward compatibility for /data folder
+if [[ "$DATA_DIR" != '/data' ]]; then
+  mkdir -p $DATA_DIR
+  if [[ -d '/data' ]]; then
+    # create simlink
+    ln -s /data/* $DATA_DIR
+  fi
+fi
+
 DEBUG=${DEBUG:-0}
 REPLACE_NODE_CONF=${REPLACE_NODE_CONF:-0}
 REPLACE_ACL_CONF=${REPLACE_ACL_CONF:-0}
@@ -598,10 +608,13 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   aof_metric_export=$(if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then echo "-include-aof-file-size"; else echo ""; fi)
   # When TLS is enabled, use RANDOM_NODE_PORT to get the external port if defined (multi tenancy tiers)
   node_external_port=$(if [[ $TLS == "true" && -z $RANDOM_NODE_PORT ]]; then echo $NODE_PORT; else echo $RANDOM_NODE_PORT; fi)
-  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$node_external_port"; else echo "redis://localhost:$NODE_PORT"; fi)
+  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://localhost:$node_external_port"; else echo "redis://localhost:$NODE_PORT"; fi)
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -tls-server-min-version TLS1.3 -include-system-metrics $aof_metric_export &
   redis_exporter_pid=$!
 fi
+
+#Start cron
+cron
 
 if [[ ! "$NODE_NAME" =~ sentinel.* ]]; then
   rewrite_aof_cronjob

@@ -283,8 +283,8 @@ services:
         export: true
         defaultValue: "1GB"
         labeledOptions:
-          1GB: "1G"
-          2GB: "2G"
+          1GB: "1.1G"
+          2GB: "2.1G"
         parameterDependencyMap:
           node-s: memoryRequestsAndLimits
     x-omnistrate-capabilities:
@@ -429,8 +429,8 @@ services:
         export: true
         defaultValue: "1GB"
         labeledOptions:
-          1GB: "1G"
-          2GB: "2G"
+          1GB: "1.1G"
+          2GB: "2.1G"
       - key: resourceRequestCPU
         name: CPU Request
         description: CPU Request for the Falkordb instance
@@ -449,7 +449,7 @@ services:
         defaultValue: "1"
     volumes:
       - source: ./data
-        target: /data
+        target: /var/lib/falkordb/data
         type: bind
         x-omnistrate-storage:
           gcp:
@@ -473,7 +473,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/data
+      - DATA_DIR=/var/lib/falkordb/data
       - RANDOM_NODE_PORT=$sys.network.node.externalPorts["6379"]
       - MEMORY_LIMIT=$var.memoryRequestsAndLimits
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem

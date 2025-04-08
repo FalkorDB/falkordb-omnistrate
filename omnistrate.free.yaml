@@ -117,7 +117,7 @@ services:
       #   defaultValue: "false"
     volumes:
       - source: ./data
-        target: /data
+        target: /var/lib/falkordb/data
         type: bind
         x-omnistrate-storage:
           gcp:
@@ -144,7 +144,7 @@ services:
       # Disable TLS for free tier
       - TLS=false
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/data
+      - DATA_DIR=/var/lib/falkordb/data
       - INSTANCE_TYPE=e2-custom-small-1024
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - FALKORDB_CACHE_SIZE=25

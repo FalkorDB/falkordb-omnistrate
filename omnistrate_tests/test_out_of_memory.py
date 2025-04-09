@@ -50,6 +50,8 @@ parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--persist-instance-on-fail",action="store_true")
 parser.add_argument("--custom-network", required=False)
 parser.add_argument("--network-type", required=False, default="PUBLIC")
+parser.add_argument("--host-count", required=False, default="6")
+parser.add_argument("--cluster-replicas", required=False, default="1")
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()

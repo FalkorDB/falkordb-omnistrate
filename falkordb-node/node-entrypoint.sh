@@ -262,7 +262,7 @@ get_memory_limit() {
 
   if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
     if [[ ! $instance_size_in_map =~ ^[0-9]+[Mm][Bb]$ ]]; then
-      MEMORY_LIMIT=$(gib_to_mb_minus_reserved $instance_size_in_map 100)
+      MEMORY_LIMIT=$(gib_to_mb_minus_reserved $instance_size_in_map 147)
     else
       MEMORY_LIMIT=$instance_size_in_map
     fi
@@ -274,7 +274,7 @@ get_memory_limit() {
   if [[ $MEMORY_LIMIT =~ ^[0-9]+[Gg]$ ]]; then
     # echo "Moved $MEMORY_LIMIT to ${MEMORY_LIMIT}B"
     # MEMORY_LIMIT="${MEMORY_LIMIT}B"
-    MEMORY_LIMIT=$(gib_to_mb_minus_reserved $MEMORY_LIMIT 100)
+    MEMORY_LIMIT=$(gib_to_mb_minus_reserved $MEMORY_LIMIT 147)
   fi
   echo "Memory Limit: $MEMORY_LIMIT"
 }

@@ -164,7 +164,7 @@ def test_graph_acl():
 
 
 
-def get_user_commands(self, user_details):
+def get_user_commands(user_details):
     """
     Extracts and returns the list of commands from Redis ACL GETUSER response.
 

@@ -265,7 +265,7 @@ def set_user_off(instance: OmnistrateFleetInstance):
             info = db.execute_command("GRAPH.ACL", "GETUSER", "testuser2")
             user_dict = dict(zip(info[::2], info[1::2]))
             flags= user_dict.get('flags', '')
-            if not 'off' in flags:
+            if 'off' in flags:
                 logging.info("User set to off successfully")
                 return
             else:

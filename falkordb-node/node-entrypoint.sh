@@ -451,9 +451,8 @@ if [ "$RUN_NODE" -eq "1" ]; then
     echo "port $NODE_PORT" >>$NODE_CONF_FILE
   fi
 
-  redis-server $NODE_CONF_FILE --logfile $FALKORDB_LOG_FILE_PATH &
+  redis-server $NODE_CONF_FILE &
   falkordb_pid=$!
-  tail -F $FALKORDB_LOG_FILE_PATH &
 
   sleep 10
 
@@ -543,11 +542,9 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   [program:redis-sentinel]
   command=redis-server $SENTINEL_CONF_FILE --sentinel
   autorestart=true
-  stdout_logfile=$SENTINEL_LOG_FILE_PATH
-  stderr_logfile=$SENTINEL_LOG_FILE_PATH
+  stdout_logfile=/dev/stdout
+  stderr_logfile=/dev/stderr
   " > $DATA_DIR/supervisord.conf
-
-  tail -F $SENTINEL_LOG_FILE_PATH &
   
   supervisord -c $DATA_DIR/supervisord.conf &
 

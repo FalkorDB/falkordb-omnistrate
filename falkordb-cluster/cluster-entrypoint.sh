@@ -431,9 +431,8 @@ run_node() {
     echo "port $NODE_PORT" >>$NODE_CONF_FILE
   fi
 
-  redis-server $NODE_CONF_FILE --logfile $FALKORDB_LOG_FILE_PATH &
+  redis-server $NODE_CONF_FILE &
   falkordb_pid=$!
-  tail -F $FALKORDB_LOG_FILE_PATH &
 }
 
 # If node.conf doesn't exist or $REPLACE_NODE_CONF=1, copy it from /falkordb

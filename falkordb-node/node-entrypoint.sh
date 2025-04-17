@@ -51,6 +51,7 @@ if [[ "$FALKORDB_TIMEOUT_DEFAULT" == "<nil>" ]]; then
   FALKORDB_TIMEOUT_DEFAULT=0
 fi
 
+
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
 SENTINEL_FAILOVER=${SENTINEL_FAILOVER:-1000}
@@ -100,6 +101,22 @@ AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'0 */12 * * *'}
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
   DEBUG=1
 fi
+
+# Function to convert GiB to MB and subtract reserved memory
+gib_to_mb_minus_reserved() {
+  if [[ -z "$1" || -z "$2" ]]; then
+    echo "Usage: gib_to_mb_minus_100 <gibibytes>"
+    return 1
+  fi
+  local reserved="$2"
+  local gib="$1"
+  #strip the GB/G/MB suffix
+  gib=$(echo "$gib" | sed 's/[^0-9]*//g')
+  # Convert GiB to MB (1 GiB = 1024 MiB, 1 MiB = 1.048576 MB → 1 GiB ≈ 1073.741824 MB)
+  mb=$(echo "$gib * 1073.741824 - $reserved" | bc)
+  echo "${mb%.*}mb"  # Strip decimal part for an integer result
+}
+
 
 rewrite_aof_cronjob() {
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
@@ -246,17 +263,21 @@ get_memory_limit() {
   instance_size_in_map=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
 
   if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
-    MEMORY_LIMIT=$instance_size_in_map
+    if [[ ! $instance_size_in_map =~ ^[0-9]+[Mm][Bb]$ ]]; then
+      MEMORY_LIMIT=$(gib_to_mb_minus_reserved $instance_size_in_map 147)
+    else
+      MEMORY_LIMIT=$instance_size_in_map
+    fi
   elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
     MEMORY_LIMIT=$(get_default_memory_limit)
     echo "INSTANCE_TYPE is not set. Setting to default memory limit"
   fi
 
   if [[ $MEMORY_LIMIT =~ ^[0-9]+[Gg]$ ]]; then
-    echo "Moved $MEMORY_LIMIT to ${MEMORY_LIMIT}B"
-    MEMORY_LIMIT="${MEMORY_LIMIT}B"
+    # echo "Moved $MEMORY_LIMIT to ${MEMORY_LIMIT}B"
+    # MEMORY_LIMIT="${MEMORY_LIMIT}B"
+    MEMORY_LIMIT=$(gib_to_mb_minus_reserved $MEMORY_LIMIT 147)
   fi
-
   echo "Memory Limit: $MEMORY_LIMIT"
 }
 

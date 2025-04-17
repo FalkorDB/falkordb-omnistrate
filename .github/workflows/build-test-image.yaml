@@ -228,6 +228,16 @@ jobs:
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'free' --replica-id 'node-f-0' --instance-name 'test-free-failover' --instance-description 'test-free-failover' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          - name: Free - AWS/us-east-2 - Out of memory
+            if: "true"
+            testFile: test_out_of_memory.py
+            tierName: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'free' --replica-id 'node-f-0' --instance-name 'test-free-oom' --instance-description 'test-free-oom' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - AWS/us-east-2 - Change Password
             if: "true"
             testFile: test_change_password.py
@@ -248,6 +258,16 @@ jobs:
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover' --instance-description 'test-standalone-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          - name: PRO/Standalone - AWS/us-east-2 - Out of memory
+            if: "true"
+            testFile: test_out_of_memory.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-oom' --instance-description 'test-standalone-oom' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/SingleZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
@@ -258,6 +278,16 @@ jobs:
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover'  --instance-description 'test-sz-failover' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          - name: PRO/SingleZone - AWS/us-east-2 - Out of memory
+            if: "true"
+            testFile: test_out_of_memory.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'single-Zone' --replica-id 'node-sz-0' --instance-name 'test-sz-oomr'  --instance-description 'test-sz-oom' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/MultiZone - AWS/us-east-2 - Failover & Persistence
             if: "true"
             testFile: test_replication.py
@@ -328,6 +358,16 @@ jobs:
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-update-memory'  --instance-description 'test-cluster-update-memory' --instance-type 't2.medium' --new-instance-type 'm6i.large' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
+          - name: PRO/ClusterSingleZone - AWS/us-east-2 - Out of memory
+            if: "true"
+            testFile: test_out_of_memory.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-0' --instance-name 'test-cluster-oom'  --instance-description 'test-cluster-oom' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
           - name: PRO/Standalone - AWS/us-east-2 - Upgrade Version
             if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
             testFile: test_upgrade_version.py

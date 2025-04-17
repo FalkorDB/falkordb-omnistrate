@@ -661,7 +661,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/data
+      - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
@@ -1128,7 +1128,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/data
+      - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
@@ -1292,7 +1292,7 @@ services:
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
-      - DATA_DIR=/data
+      - DATA_DIR=/var/lib/falkordb
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - NODE_HOST=$sys.network.node.externalEndpoint
     ports:
@@ -1780,7 +1780,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/data
+      - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
@@ -1943,7 +1943,7 @@ services:
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
-      - DATA_DIR=/data
+      - DATA_DIR=/var/lib/falkordb
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - NODE_HOST=$sys.network.node.externalEndpoint
     ports:
@@ -2271,7 +2271,7 @@ services:
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/data
+      - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
@@ -2605,7 +2605,7 @@ services:
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/data
+      - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig

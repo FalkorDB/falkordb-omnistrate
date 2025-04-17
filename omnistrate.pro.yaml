@@ -661,7 +661,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
@@ -1138,7 +1138,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
@@ -1302,7 +1302,7 @@ services:
       - REDIS_EXPORTER_DEBUG=false
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/var/lib/falkordb
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - NODE_HOST=$sys.network.node.externalEndpoint
     ports:
@@ -1802,7 +1802,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
@@ -1965,7 +1965,7 @@ services:
       - REDIS_EXPORTER_DEBUG=false
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/var/lib/falkordb
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - NODE_HOST=$sys.network.node.externalEndpoint
     ports:
@@ -2299,7 +2299,7 @@ services:
       - IS_MULTI_ZONE=0
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
@@ -2635,7 +2635,7 @@ services:
       - IS_MULTI_ZONE=1
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig

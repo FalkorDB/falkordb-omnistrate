@@ -637,7 +637,7 @@ services:
         defaultValue: "6GB"
     volumes:
       - source: ./data
-        target: /var/lib/falkordb/data
+        target: /data
         type: bind
         x-omnistrate-storage:
           gcp:
@@ -661,7 +661,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
@@ -1100,7 +1100,7 @@ services:
 
     volumes:
       - source: ./data
-        target: /var/lib/falkordb/data
+        target: /data
         type: bind
         x-omnistrate-storage:
           gcp:
@@ -1128,7 +1128,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
@@ -1292,14 +1292,14 @@ services:
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/data
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - NODE_HOST=$sys.network.node.externalEndpoint
     ports:
       - "26379:26379"
     volumes:
       - source: ./data
-        target: /var/lib/falkordb/data
+        target: /data
         type: bind
         x-omnistrate-storage:
           gcp:
@@ -1751,7 +1751,7 @@ services:
         defaultValue: "6GB"
     volumes:
       - source: ./data
-        target: /var/lib/falkordb/data
+        target: /data
         type: bind
         x-omnistrate-storage:
           gcp:
@@ -1780,7 +1780,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
@@ -1943,14 +1943,14 @@ services:
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/data
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - NODE_HOST=$sys.network.node.externalEndpoint
     ports:
       - "26379:26379"
     volumes:
       - source: ./data
-        target: /var/lib/falkordb/data
+        target: /data
         type: bind
         x-omnistrate-storage:
           gcp:
@@ -2248,7 +2248,7 @@ services:
     <<: *clusterparam
     volumes:
       - source: ./data
-        target: /var/lib/falkordb/data
+        target: /data
         type: bind
         x-omnistrate-storage:
           gcp:
@@ -2271,7 +2271,7 @@ services:
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
@@ -2582,7 +2582,7 @@ services:
     <<: *clusterparam
     volumes:
       - source: ./data
-        target: /var/lib/falkordb/data
+        target: /data
         type: bind
         x-omnistrate-storage:
           gcp:
@@ -2605,7 +2605,7 @@ services:
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/data
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig

@@ -144,7 +144,7 @@ services:
       # Disable TLS for free tier
       - TLS=false
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/var/lib/falkordb/data
+      - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=e2-custom-small-1024
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - FALKORDB_CACHE_SIZE=25

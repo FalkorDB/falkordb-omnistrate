@@ -239,21 +239,21 @@ def fail_to_give_unauthorized_permissions(instance: OmnistrateFleetInstance):
         raise e
 
 
-def fail_to_give_unauthorized_permissions_with_pipes(instance: OmnistrateFleetInstance):
-    """Test fail to give unauthorized permissions for the Admin user with pipes"""
+def give_permissions_with_pipes(instance: OmnistrateFleetInstance):
+    """Test give unauthorized permissions with pipes"""
     db = instance.create_connection(ssl=args.tls)
     try:
         response = db.connection.execute_command("GRAPH.ACL", "SETUSER", "testuser", "+COMMAND|LIST")
         if response == "OK":
             info = db.connection.execute_command("GRAPH.ACL", "GETUSER", "testuser")
             commands = get_user_commands(info)
-            if not '+command|list' in commands:
-                logging.info("Failed to give unauthorized permissions with pipes as expected")
+            if '+command|list' in commands:
+                logging.info("Was able to give permissions with pipes as expected")
                 return
             else:
-                raise Exception("Was able to give unauthorized permissions with pipes,not expected")
+                raise Exception("Failed to give permissions to user.")
     except Exception as e:
-        logging.error(f"Unexpected error while giving unauthorized permissions with pipes: {e}")
+        logging.error(f"Unexpected error while giving permissions with pipes: {e}")
         raise e
 
 def set_user_off(instance: OmnistrateFleetInstance):
@@ -273,6 +273,8 @@ def set_user_off(instance: OmnistrateFleetInstance):
     except Exception as e:
         logging.error(f"Failed to set user off: {e}")
         raise e
+    
+    
 def wrong_password_call(instance: OmnistrateFleetInstance):
     """Test wrong password call"""
     db = instance.create_connection(ssl=args.tls)

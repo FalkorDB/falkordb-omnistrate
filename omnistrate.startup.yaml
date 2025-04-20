@@ -473,7 +473,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/data
+      - DATA_DIR=/var/lib/falkordb
       - RANDOM_NODE_PORT=$sys.network.node.externalPorts["6379"]
       - MEMORY_LIMIT=$var.memoryRequestsAndLimits
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem

@@ -73,9 +73,11 @@ if [[ "$DATA_DIR" != '/data' ]]; then
   mkdir -p $DATA_DIR
   if [[ -d '/data' ]]; then
     # create simlink
-    ln -s /data/* $DATA_DIR
+    ln -s /data $DATA_DIR
   fi
 fi
+
+if [[ $(basename "$DATA_DIR") != 'data' ]];then DATA_DIR=$DATA_DIR/data;fi 
 
 DEBUG=${DEBUG:-0}
 REPLACE_NODE_CONF=${REPLACE_NODE_CONF:-0}

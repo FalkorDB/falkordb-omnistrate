@@ -1,6 +1,6 @@
-ARG FALKORDB_VERSION=v4.4.1
+ARG FALKORDB_VERSION=v4.8.6
 
-FROM oliver006/redis_exporter:alpine as redis_exporter
+FROM falkordb/redis_exporter:v1.68.0-alpine as redis_exporter
 
 
 FROM rust:1-slim-buster as healthcheck_builder
@@ -16,12 +16,14 @@ RUN cargo build --release
 
 FROM falkordb/falkordb:$FALKORDB_VERSION
 
-RUN apt-get update && apt-get install -y curl jq openssl cron
+RUN apt-get update && apt-get install -y curl jq openssl cron supervisor
 
 RUN useradd -u 1000 -m falkordb && usermod -aG crontab falkordb && \
-  touch /var/run/crond.pid && chown root:crontab /var/run/crond.pid \
-  && chmod 660 /var/run/crond.pid \
-  && chmod u+s /usr/sbin/cron
+  touch /var/run/crond.pid && chown root:crontab /var/run/crond.pid && \
+  touch /var/run/supervisord.pid && chown falkordb:falkordb /var/run/supervisord.pid && \
+  chmod 660 /var/run/crond.pid && \
+  chmod 660 /var/run/supervisord.pid && \
+  chmod u+s /usr/sbin/cron
 
 
 RUN mkdir -p /falkordb
@@ -34,7 +36,12 @@ COPY falkordb-node/node-entrypoint.sh /usr/local/bin/
 COPY --from=redis_exporter /redis_exporter /usr/local/bin/
 COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/local/bin/healthcheck
 
-RUN chown redis:redis /falkordb/* && \
-  chmod +x /usr/local/bin/node-entrypoint.sh
+RUN chown falkordb:falkordb /falkordb/* && \
+  chmod +x /usr/local/bin/node-entrypoint.sh && \
+  mkdir -p /var/lib/falkordb && \
+  chown falkordb:falkordb /var/lib/falkordb && \
+  chmod 700 /var/lib/falkordb
+
+ENV FALKORDB_HOME=/var/lib/falkordb
 
 CMD [ "node-entrypoint.sh" ]

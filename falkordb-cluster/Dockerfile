@@ -1,6 +1,6 @@
-ARG FALKORDB_VERSION=v4.4.1
+ARG FALKORDB_VERSION=v4.8.6
 
-FROM oliver006/redis_exporter:alpine as redis_exporter
+FROM falkordb/redis_exporter:v1.68.0-alpine as redis_exporter
 
 
 FROM rust:1-slim-buster as healthcheck_builder
@@ -31,7 +31,12 @@ COPY falkordb-cluster/cluster-entrypoint.sh /usr/local/bin/
 COPY --from=redis_exporter /redis_exporter /usr/local/bin/
 COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/local/bin/healthcheck
 
-RUN chown redis:redis /falkordb/* && \
-  chmod +x /usr/local/bin/cluster-entrypoint.sh
+RUN chown falkordb:falkordb /falkordb/* && \
+  chmod +x /usr/local/bin/cluster-entrypoint.sh && \
+  mkdir -p /var/lib/falkordb && \
+  chown falkordb:falkordb /var/lib/falkordb && \
+  chmod 700 /var/lib/falkordb
+
+ENV FALKORDB_HOME=/var/lib/falkordb
 
 CMD ["cluster-entrypoint.sh"]

@@ -1,234 +1,186 @@
-use rouille::router;
-use rouille::Response;
-use rouille::Server;
+use rouille::{router, Response, Server};
 use std::env;
-use std::env::args;
 use std::time::{Duration, Instant};
 
 fn main() {
-    let args: Vec<String> = args().collect();
-
-    if args.len() > 1 && args[1] == "sentinel" {
-        start_health_check_server(true);
-    } else {
-        start_health_check_server(false);
-    }
+    let args: Vec<String> = env::args().collect();
+    let is_sentinel = args.get(1).map_or(false, |arg| arg == "sentinel");
+    start_health_check_server(is_sentinel);
 }
 
-/// Starts the health check server
-/// The server listens on the port specified by the `HEALTH_CHECK_PORT` environment variable.
-/// If the `HEALTH_CHECK_PORT` environment variable is not set, the server listens on port 8081.
-/// The server responds to the `/healthcheck` endpoint.
-/// The server returns a 200 status code with the body "OK" if the health check is successful.
-/// The server returns a 500 status code with the body "Not ready" if the health check is unsuccessful.
-/// The health check is successful if the Redis server is ready to accept connections.
-/// 
-/// # Arguments
-/// 
-/// * `is_sentinel` - A boolean that indicates whether the health check server is for a Redis Sentinel instance.
 fn start_health_check_server(is_sentinel: bool) {
-    let port = if is_sentinel {
-        env::var("HEALTH_CHECK_PORT_SENTINEL").unwrap_or_else(|_| "8082".to_string())
-    } else {
-        env::var("HEALTH_CHECK_PORT").unwrap_or_else(|_| "8081".to_string())
-    };
+    let redis_pool = get_redis_connection_pool(is_sentinel).unwrap();
+    let port = env::var(if is_sentinel { "HEALTH_CHECK_PORT_SENTINEL" } else { "HEALTH_CHECK_PORT" })
+        .unwrap_or_else(|_| if is_sentinel { "8082".to_string() } else { "8081".to_string() });
 
-    let addr = format!("localhost:{port}");
-
+    let addr = format!("localhost:{}", port);
     let server = Server::new(addr, move |request| {
         router!(request,
-            (GET) (/healthcheck) => {
-                let health = health_check_handler(is_sentinel).unwrap_or_else(|_| false);
-
-                if health {
-                    Response::text("OK")
-                } else {
-                    Response::text("Not ready").with_status_code(500)
-                }
-            },
+            (GET) (/liveness) => { handle_health_check(is_sentinel, check_handler_liveness, &redis_pool) },
+            (GET) (/readiness) => { handle_health_check(is_sentinel, check_handler_readiness, &redis_pool) },
+            (GET) (/startup) => { Response::text("OK") },
             _ => Response::empty_404()
         )
-    })
-    .unwrap();
+    }).unwrap();
+
     println!("Listening on {}", server.server_addr());
     server.run();
 }
 
+fn handle_health_check<F>(is_sentinel: bool, check_fn: F, redis_pool: &r2d2::Pool<redis::Client>) -> Response
+where
+    F: Fn(bool,&r2d2::Pool<redis::Client>) -> Result<bool, redis::RedisError>,
+{
+    match check_fn(is_sentinel,redis_pool) {
+        Ok(true) => Response::text("OK"),
+        _ => Response::text("Not ready").with_status_code(500),
+    }
+}
 
-/// Checks the health of the Redis server.
-/// The function connects to the Redis server using the `ADMIN_PASSWORD`, `NODE_HOST`, `NODE_PORT`, and `TLS` environment variables.
-/// If the `ADMIN_PASSWORD` environment variable is not set, the function reads the password from the `/run/secrets/adminpassword` file.
-/// If the `TLS` environment variable is set to "true", the function connects to the Redis server using the rediss:// scheme.
-/// The function sends a PING command to the Redis server to check if it is ready to accept connections.
-/// If the Redis server is a Sentinel instance, the function sends a PING command to the Sentinel instance.
-/// If the Redis server is a cluster node, the function sends a CLUSTER INFO command to the Redis server.
-/// 
-/// # Arguments
-/// 
-/// * `is_sentinel` - A boolean that indicates whether the Redis server is a Sentinel instance.
-/// 
-/// # Returns
-/// 
-/// A boolean value that indicates whether the Redis server is ready to accept connections.
-/// 
-/// # Errors
-/// 
-/// The function returns a RedisError if there is an error connecting to the Redis server.
-fn health_check_handler(is_sentinel: bool) -> Result<bool, redis::RedisError> {
-    let password = match env::var("ADMIN_PASSWORD") {
-        Ok(password) => password,
-        Err(_) => {
-            let path = "/run/secrets/adminpassword";
-            std::fs::read_to_string(path)
-                .map(|s| s.trim().to_string())
-                .unwrap_or_else(|_| String::new())
+fn check_handler_liveness(is_sentinel: bool,redis_pool: &r2d2::Pool<redis::Client>) -> Result<bool, redis::RedisError> {
+    if let Ok(mut con) = redis_pool.get(){
+        if is_sentinel {
+            return check_sentinel(&mut con);
         }
-    };
-
-    let node_port = if is_sentinel {
-        env::var("SENTINEL_PORT").unwrap_or_else(|_| "26379".to_string())
-    } else {
-        env::var("NODE_PORT").unwrap_or_else(|_| "6379".to_string())
-    };
-
-    let redis_url = match env::var("TLS") {
-        Ok(tls) => {
-            if tls == "true" {
-                let url: String = env::var("NODE_HOST").unwrap();
-                resolve_host(&url);
-                format!("rediss://:{password}@{url}:{node_port}")
-            } else {
-                format!("redis://:{password}@localhost:{node_port}")
-            }
+    
+        let db_info: String = redis::cmd("INFO").query(&mut con)?;
+        if db_info.contains("cluster_enabled:1") {
+            return get_status_from_cluster_node_liveness(&mut con);
         }
-        Err(_) => format!("redis://:{password}@localhost:{node_port}"),
-    };
-
-    let client: redis::Client = redis::Client::open(redis_url)?;
-
-    let mut con = client.get_connection()?;
-
-    if is_sentinel {
-        let sentinel_info: String = redis::cmd("PING").query(&mut con)?;
-        return Ok(sentinel_info == "PONG");
-    }
-
-    let db_info: String = redis::cmd("INFO").query(&mut con)?;
-    let is_cluster = db_info.contains("cluster_enabled:1");
-
-    if is_cluster {
-        return get_status_from_cluster_node(db_info, &mut con);
-    }
-
-    let role_regex = regex::Regex::new(r"role:(\w+)").unwrap();
-    let role_matches = role_regex.captures(&db_info);
-
-    if role_matches.is_none() {
-        return Ok(false);
-    }
-
-    let role = role_matches.unwrap().get(1).unwrap().as_str();
-
-    if role == "master" {
-        get_status_from_master(&db_info)
+        check_node_liveness(&db_info, &mut con)
     } else {
-        get_status_from_slave(&db_info)
+        Err(redis::RedisError::from((redis::ErrorKind::IoError, "Failed to get connection from pool")))
     }
 }
 
-/// Checks the status of the Redis cluster node.
-/// The function checks the `cluster_state` field in the Redis CLUSTER INFO output.
-/// If the `cluster_state` field is "ok", the function returns true.
-/// Otherwise, the function returns false.
-/// 
-/// # Arguments
-/// 
-/// * `db_info` - A string slice that represents the Redis CLUSTER INFO output.
-/// * `con` - A mutable reference to a Redis connection.
-/// 
-/// # Returns
-/// 
-/// A boolean value that indicates whether the Redis cluster node is ready
-/// 
-/// # Errors
-/// 
-/// The function returns a RedisError if there is an error querying the Redis server.
-fn get_status_from_cluster_node(
-    _db_info: String,
-    con: &mut redis::Connection,
-) -> Result<bool, redis::RedisError> {
-    let cluster_info: String = redis::cmd("CLUSTER").arg("INFO").query(con)?;
-
-    Ok(cluster_info.contains("cluster_state:ok"))
-}
-
-/// Checks the status of the Redis master.
-/// The function checks the `role` field in the Redis INFO output.
-/// If the `role` field is "master", the function returns true.
-/// Otherwise, the function returns false.
-/// 
-/// # Arguments
-/// 
-/// * `db_info` - A string slice that represents the Redis INFO output.
-/// 
-/// # Returns
-/// 
-/// A boolean value that indicates whether the Redis master is ready
-fn get_status_from_master(db_info: &str) -> Result<bool, redis::RedisError> {
-    if db_info.contains("loading:1") {
-        return Ok(false);
-    }
-    Ok(true)
-}
-
-/// Checks the status of the Redis slave.
-/// The function checks the `master_link_status` and `master_sync_in_progress` fields in the Redis INFO output.
-/// If the `master_link_status` field is not "up" or the `master_sync_in_progress` field is "1", the function returns false.
-/// Otherwise, the function returns true.
-/// 
-/// # Arguments
-/// 
-/// * `db_info` - A string slice that represents the Redis INFO output.
-/// 
-/// # Returns
-/// 
-/// A boolean value that indicates whether the Redis slave is ready
-fn get_status_from_slave(db_info: &str) -> Result<bool, redis::RedisError> {
-    if db_info.contains("loading:1") {
-        return Ok(false);
+fn check_handler_readiness(is_sentinel: bool,redis_pool: &r2d2::Pool<redis::Client>) -> Result<bool, redis::RedisError> {
+    if let Ok(mut con) = redis_pool.get() {
+        if is_sentinel {
+            return check_sentinel(&mut con);
+        }
+    
+        let db_info: String = redis::cmd("INFO").query(&mut con)?;
+        if db_info.contains("cluster_enabled:1") {
+            return get_status_from_cluster_node_readiness(&mut con);
+        }
+        check_node_readiness(&db_info, &mut con)
+    } else {
+        Err(redis::RedisError::from((redis::ErrorKind::IoError, "Failed to get connection from pool")))
     }
     
-    if !db_info.contains("master_link_status:up") || db_info.contains("master_sync_in_progress:1") {
-        return Ok(false);
-    }
-
-    Ok(true)
 }
 
-/// Resolves the host using the dns_lookup crate.
-/// The function retries resolving the host every second until the host is resolved or the total timeout of 300 seconds is reached.
-/// 
-/// # Arguments
-/// 
-/// * `host` - A string slice that represents the host to resolve.
-/// 
-/// # Panics
-/// 
-/// The function panics if the host is not resolved within 300 seconds.
+fn get_redis_connection_pool(is_sentinel: bool) -> Result<r2d2::Pool<redis::Client>, redis::RedisError> {
+    let password = get_redis_password();
+    let node_port = get_node_port(is_sentinel);
+    let redis_url = get_redis_url(&password, &node_port);
+    let client = redis::Client::open(redis_url)?;
+    if let Ok(pool) = r2d2::Pool::builder().max_size(1).build(client){
+        return Ok(pool);
+    }
+    Err(redis::RedisError::from((redis::ErrorKind::IoError, "Failed to create connection pool")))
+}
+
+fn check_node_liveness(db_info: &str, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    match get_redis_role(db_info)? {
+        "master" => get_status_from_master_liveness(con),
+        _ => get_status_from_slave_liveness(con),
+    }
+}
+
+fn check_node_readiness(db_info: &str, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    match get_redis_role(db_info)? {
+        "master" => get_status_from_master_readiness(db_info, con),
+        _ => get_status_from_slave_readiness(db_info, con),
+    }
+}
+
+fn get_redis_password() -> String {
+    env::var("ADMIN_PASSWORD").unwrap_or_else(|_| {
+        std::fs::read_to_string("/run/secrets/adminpassword")
+            .map(|s| s.trim().to_string())
+            .unwrap_or_default()
+    })
+}
+
+fn get_node_port(is_sentinel: bool) -> String {
+    env::var(if is_sentinel { "SENTINEL_PORT" } else { "NODE_PORT" })
+        .unwrap_or_else(|_| if is_sentinel { "26379".to_string() } else { "6379".to_string() })
+}
+
+fn get_redis_url(password: &str, node_port: &str) -> String {
+    let tls = env::var("TLS").unwrap_or_default();
+    let host = env::var("NODE_HOST").unwrap_or_else(|_| "localhost".to_string());
+    if tls == "true" {
+        resolve_host(&host);
+        let node_port = env::var("RANDOM_NODE_PORT").unwrap_or_else(|_| node_port.to_string());
+        format!("rediss://:{}@{}:{}", password, host, node_port)
+    } else {
+        format!("redis://:{}@localhost:{}", password, node_port)
+    }
+}
+
+fn check_sentinel(con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    Ok(redis::cmd("PING").query::<String>(con)? == "PONG")
+}
+
+fn get_redis_role(db_info: &str) -> Result<&str, redis::RedisError> {
+    let role_regex = regex::Regex::new(r"role:(\w+)").unwrap();
+    role_regex.captures(db_info)
+        .and_then(|caps| caps.get(1).map(|m| m.as_str()))
+        .ok_or_else(|| redis::RedisError::from((redis::ErrorKind::ResponseError, "Role not found")))
+}
+
+fn get_status_from_cluster_node_liveness(con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    match redis::cmd("CLUSTER").arg("INFO").query::<String>(con) {
+        Ok(result) if result.contains("cluster_state:ok") => Ok(true),
+        Err(err) if err.kind() == redis::ErrorKind::BusyLoadingError => Ok(true),
+        _ => Ok(false),
+    }
+}
+
+fn get_status_from_cluster_node_readiness(con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    Ok(redis::cmd("CLUSTER").arg("INFO").query::<String>(con)?.contains("cluster_state:ok"))
+}
+
+fn get_status_from_master_liveness(con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    match redis::cmd("PING").query::<String>(con) {
+        Ok(result) if result.contains("PONG") => Ok(true),
+        Err(err) if err.kind() == redis::ErrorKind::BusyLoadingError => Ok(true),
+        _ => Ok(false),
+    }
+}
+
+fn get_status_from_master_readiness(db_info: &str, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    Ok(redis::cmd("PING").query::<String>(con)?.contains("PONG") && db_info.contains("loading:0"))
+}
+
+fn get_status_from_slave_liveness(con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    match redis::cmd("PING").query::<String>(con) {
+        Ok(result) if result.contains("PONG") => Ok(true),
+        Err(err) if err.kind() == redis::ErrorKind::BusyLoadingError || err.kind() == redis::ErrorKind::MasterDown => Ok(true),
+        _ => Ok(false),
+    }
+}
+
+fn get_status_from_slave_readiness(db_info: &str, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+    Ok(redis::cmd("PING").query::<String>(con)?.contains("PONG")
+        && db_info.contains("loading:0")
+        && db_info.contains("master_link_status:up")
+        && db_info.contains("master_sync_in_progress:0"))
+}
+
 fn resolve_host(host: &str) {
-    let mut resolved = false;
-    let timeout = Duration::from_secs(300); // Total timeout: 300 seconds
+    let timeout = Duration::from_secs(300);
     let start_time = Instant::now();
 
-    while !resolved && start_time.elapsed() < timeout {
-        match dns_lookup::lookup_host(host) {
-            Ok(_) => resolved = true,
-            Err(_) => {
-                println!("Host not resolved yet!");
-                std::thread::sleep(Duration::from_secs(1));
-            }
+    while start_time.elapsed() < timeout {
+        if dns_lookup::lookup_host(host).is_ok() {
+            return;
         }
+        println!("Host not resolved yet!");
+        std::thread::sleep(Duration::from_secs(1));
     }
 
-    assert!(resolved, "Failed to resolve host: {host}");
+    panic!("Failed to resolve host: {}", host);
 }

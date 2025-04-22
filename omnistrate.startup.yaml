@@ -20,6 +20,9 @@ x-internal-integrations:
 x-falkordbMetrics: &metrics
   prometheusEndpoint: "http://localhost:9121/metrics"
   metrics:
+    redis_aof_file_size_bytes:
+      "AOF File Size (Bytes)":
+        aggregationFunction: sum
     redis_commands_latencies_usec_bucket:
       "Command Latency (μs) Bucket":
         aggregationFunction: sum
@@ -155,7 +158,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -280,8 +283,8 @@ services:
         export: true
         defaultValue: "1GB"
         labeledOptions:
-          1GB: "1G"
-          2GB: "2G"
+          1GB: "1.1G"
+          2GB: "2.1G"
         parameterDependencyMap:
           node-s: memoryRequestsAndLimits
     x-omnistrate-capabilities:
@@ -321,7 +324,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
       - key: RDBPersistenceConfig
@@ -426,8 +429,8 @@ services:
         export: true
         defaultValue: "1GB"
         labeledOptions:
-          1GB: "1G"
-          2GB: "2G"
+          1GB: "1.1G"
+          2GB: "2.1G"
       - key: resourceRequestCPU
         name: CPU Request
         description: CPU Request for the Falkordb instance
@@ -470,7 +473,8 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - DATA_DIR=/data
+      - DATA_DIR=/var/lib/falkordb
+      - RANDOM_NODE_PORT=$sys.network.node.externalPorts["6379"]
       - MEMORY_LIMIT=$var.memoryRequestsAndLimits
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
@@ -488,6 +492,67 @@ services:
       enableMultiZone: false
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
+      - scope: NODE
+        type: STARTUP_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          STARTUP_CHECK_URL="${STARTUP_CHECK_HOST:-localhost}:${STARTUP_CHECK_PORT:-8081}/startup"
+          call_startup_check() {
+
+            echo "Startup check URL: $STARTUP_CHECK_URL"
+            curl -sf $STARTUP_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Startup check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z $RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_startup_check
+          fi
+      - scope: NODE
+        type: READINESS_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          READINESS_CHECK_URL="${READY_CHECK_HOST:-localhost}:${READY_CHECK_PORT:-8081}/readiness"
+          call_readiness_check() {
+
+            echo "Ready check URL: $READINESS_CHECK_URL"
+            curl -sf $READINESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Readiness check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z $RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_readiness_check
+          fi
+
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+          call_liveness_check() {
+
+            echo "Health check URL: $LIVENESS_CHECK_URL"
+            curl -sf $LIVENESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z $RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+          call_liveness_check
+          fi
 
 secrets:
   adminpasspath:

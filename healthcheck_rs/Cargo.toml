@@ -6,11 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-redis = { version = "0.25.2", features = ["tls-native-tls"] }
+redis = { version = "0.29.1", features = ["tls-native-tls","r2d2"] }
 regex = "1.10.3"
 rouille = "3.6.2"
 openssl-sys = "0.9.98"
 dns-lookup = "2.0.4"
+r2d2 = "0.8.10"
 
 [dependencies.openssl]
 version = "0.10.29"

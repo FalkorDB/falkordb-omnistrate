@@ -51,7 +51,6 @@ if [[ "$FALKORDB_TIMEOUT_DEFAULT" == "<nil>" ]]; then
   FALKORDB_TIMEOUT_DEFAULT=0
 fi
 
-
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
 SENTINEL_FAILOVER=${SENTINEL_FAILOVER:-1000}
@@ -69,7 +68,19 @@ FALKORDB_MASTER_PORT_NUMBER=${MASTER_PORT:-6379}
 IS_REPLICA=${IS_REPLICA:-0}
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
-DATA_DIR=${DATA_DIR:-/data}
+DATA_DIR=${DATA_DIR:-"${FALKORDB_HOME}/data"}
+
+# Add backward compatibility for /data folder
+if [[ "$DATA_DIR" != '/data' ]]; then
+  mkdir -p $DATA_DIR
+  if [[ -d '/data' ]]; then
+    # create simlink
+    ln -s /data $DATA_DIR
+  fi
+fi
+
+if [[ $(basename "$DATA_DIR") != 'data' ]];then DATA_DIR=$DATA_DIR/data;fi
+
 DEBUG=${DEBUG:-0}
 REPLACE_NODE_CONF=${REPLACE_NODE_CONF:-0}
 REPLACE_SENTINEL_CONF=${REPLACE_SENTINEL_CONF:-0}
@@ -86,19 +97,15 @@ NODE_CONF_FILE=$DATA_DIR/node.conf
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'0 */12 * * *'}
 
-
-
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
   DEBUG=1
 fi
 
-rewrite_aof_cronjob(){
+rewrite_aof_cronjob() {
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
   # The command is run every 12 hours to prevent the AOF file from growing too large.
-  cron
-  crontab <<< "$AOF_CRON_EXPRESSION $(which redis-cli) $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF"
+  (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION $(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF") | crontab -
 }
-
 
 dump_conf_files() {
   echo "Dumping configuration files"
@@ -116,11 +123,11 @@ remove_master_from_group() {
   # If it's master and sentinel is running, trigger and wait for failover
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
     echo "Removing master from sentinel"
-    redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL failover $MASTER_NAME
+    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL failover $MASTER_NAME
     sleep 5
     tries=5
     while true; do
-      master_info=$(redis-cli -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING info replication | grep role)
+      master_info=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication | grep role)
       if [[ $master_info == *"role:master"* ]]; then
         echo "Master is still alive"
         sleep 2
@@ -140,10 +147,10 @@ remove_master_from_group() {
 get_sentinels_list() {
   echo "Getting sentinels list"
 
-  sentinels_list=$(redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL sentinels $MASTER_NAME)
+  sentinels_list=$(redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL sentinels $MASTER_NAME)
   echo $sentinels_list >/tmp/sentinels_list.txt
   sentinels_list=$(IFS=' ' read -r -a sentinels <<<$(cat /tmp/sentinels_list.txt))
-  sentinels_count=$(echo -n ${sentinels[@]} | grep -Fo name | wc -l)
+  sentinels_count=$(echo -n "${sentinels[@]}" | grep -Fo name | wc -l)
   # Parse sentinels into an array of "{ip} {port}"
   sentinels_list=''
   for ((i = 0; i < $sentinels_count; i++)); do
@@ -163,15 +170,15 @@ handle_sigterm() {
 
   if [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
     #DO NOT USE is_replica FUNCTION
-    role=$(redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING info replication | grep role)
-    if [[ "$role" =~ ^role:master ]];then IS_REPLICA=0 ;fi
+    role=$(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication | grep role)
+    if [[ "$role" =~ ^role:master ]]; then IS_REPLICA=0; fi
     remove_master_from_group
-    redis-cli -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SHUTDOWN
+    redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SHUTDOWN
   fi
 
-  if [[ $RUN_SENTINEL -eq 1 && ! -z $sentinel_pid ]]; then
-    redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
-    redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SHUTDOWN
+  if [[ $RUN_SENTINEL -eq 1 ]]; then
+    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
+    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SHUTDOWN
   fi
 
   if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
@@ -238,11 +245,16 @@ get_memory_limit() {
 
   instance_size_in_map=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
 
-  if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]];then
+  if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
     MEMORY_LIMIT=$instance_size_in_map
-  elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]];then
+  elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
     MEMORY_LIMIT=$(get_default_memory_limit)
     echo "INSTANCE_TYPE is not set. Setting to default memory limit"
+  fi
+
+  if [[ $MEMORY_LIMIT =~ ^[0-9]+[Gg]$ ]]; then
+    echo "Moved $MEMORY_LIMIT to ${MEMORY_LIMIT}B"
+    MEMORY_LIMIT="${MEMORY_LIMIT}B"
   fi
 
   echo "Memory Limit: $MEMORY_LIMIT"
@@ -252,7 +264,7 @@ wait_until_sentinel_host_resolves() {
   while true; do
     log "Checking if sentinel host resolves $SENTINEL_HOST"
     if [[ $(getent hosts $SENTINEL_HOST) ]]; then
-      sentinel_response=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING ping)
+      sentinel_response=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ping)
       
       log "Sentinel Response: $sentinel_response"
       if [[ $sentinel_response == "PONG" ]]; then
@@ -276,8 +288,8 @@ wait_until_node_host_resolves() {
   while true; do
     log "Checking if node host resolves $1"
     if [[ $(getent hosts $1) ]]; then
-      host_response=$(redis-cli -h $1 -p $2 -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING PING)
-      
+      host_response=$(redis-cli -h $1 -p $2 $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
+
       log "Host Response: $host_response"
       if [[ $host_response == "PONG" ]]; then
         echo "Node host resolved"
@@ -291,7 +303,7 @@ wait_until_node_host_resolves() {
 }
 
 get_master() {
-  master_info=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD $TLS_CONNECTION_STRING --no-auth-warning SENTINEL get-master-addr-by-name $MASTER_NAME)
+  master_info=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD $TLS_CONNECTION_STRING --no-auth-warning SENTINEL get-master-addr-by-name $MASTER_NAME)
 
   echo "Master Info: $master_info"
 
@@ -356,27 +368,26 @@ create_user() {
   if [[ $RESET_ADMIN_PASSWORD -eq 1 ]]; then
     echo "Resetting admin password"
     redis-cli -p $NODE_PORT -a $CURRENT_ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET requirepass $ADMIN_PASSWORD
-    redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET masterauth $ADMIN_PASSWORD
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET masterauth $ADMIN_PASSWORD
 
   fi
 
-  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG
 
   config_rewrite
 }
 
-
 config_rewrite() {
   # Config rewrite
   echo "Rewriting config"
-  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG REWRITE
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG REWRITE
 }
 
 if [ -f $NODE_CONF_FILE ]; then
   # Get current admin password
   CURRENT_ADMIN_PASSWORD=$(cat $NODE_CONF_FILE | grep -oP '(?<=requirepass ).*' | sed 's/\"//g')
   # If current admin password is different from the new one, reset it
-  if [[ $CURRENT_ADMIN_PASSWORD != $ADMIN_PASSWORD ]]; then
+  if [[ "$CURRENT_ADMIN_PASSWORD" != "$ADMIN_PASSWORD" ]]; then
     RESET_ADMIN_PASSWORD=1
   fi
 fi
@@ -457,33 +468,33 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
     wait_until_node_host_resolves $NODE_HOST $NODE_PORT
     log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
-    res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
+    res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
     if [[ $res == *"ERR"* && $res != *"Duplicate master name"* ]]; then
       echo "Could not add master to sentinel: $res"
       exit 1
     fi
 
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
+    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
+    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
+    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
+    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
   fi
 
   # Set maxmemory based on instance type
   get_memory_limit
   if [[ ! -z $MEMORY_LIMIT ]]; then
     echo "Setting maxmemory to $MEMORY_LIMIT"
-    redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
   fi
 
   # Set persistence config
   echo "Setting persistence config: CONFIG SET save '$PERSISTENCE_RDB_CONFIG'"
-  redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET save "$PERSISTENCE_RDB_CONFIG"
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET save "$PERSISTENCE_RDB_CONFIG"
 
   if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then
     echo "Setting AOF persistence: $PERSISTENCE_AOF_CONFIG"
-    redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET appendonly yes
-    redis-cli -p $NODE_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET appendfsync $PERSISTENCE_AOF_CONFIG
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET appendonly yes
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET appendfsync $PERSISTENCE_AOF_CONFIG
   fi
 
   config_rewrite
@@ -511,9 +522,36 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
     echo "port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
   fi
 
-  redis-server $SENTINEL_CONF_FILE --sentinel --logfile $SENTINEL_LOG_FILE_PATH &
-  sentinel_pid=$!
+  # Start Sentinel supervisord service
+  echo "
+  [inet_http_server]
+  port = 127.0.0.1:9001
+
+  [supervisord]
+  nodaemon=true
+  logfile=/dev/null
+  stdout_logfile=/dev/stdout
+  stdout_logfile_maxbytes=0
+  stderr_logfile=/dev/stderr
+  stderr_logfile_maxbytes=0
+  pidfile=/var/run/supervisord.pid
+
+  [supervisorctl]
+  serverurl=http://127.0.0.1:9001
+
+  [rpcinterface:supervisor]
+  supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+  [program:redis-sentinel]
+  command=redis-server $SENTINEL_CONF_FILE --sentinel
+  autorestart=true
+  stdout_logfile=$SENTINEL_LOG_FILE_PATH
+  stderr_logfile=$SENTINEL_LOG_FILE_PATH
+  " > $DATA_DIR/supervisord.conf
+
   tail -F $SENTINEL_LOG_FILE_PATH &
+  
+  supervisord -c $DATA_DIR/supervisord.conf &
 
   sleep 10
 
@@ -521,9 +559,9 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   if [[ ! -z $FALKORDB_MASTER_HOST ]]; then
     log "Master Name: $MASTER_NAME\Master Host: $FALKORDB_MASTER_HOST\Master Port: $FALKORDB_MASTER_PORT_NUMBER\nSentinel Quorum: $SENTINEL_QUORUM"
     wait_until_node_host_resolves $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER
-    response=$(redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER $SENTINEL_QUORUM)
+    response=$(redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER $SENTINEL_QUORUM)
 
-    if [[ "$response" == "ERR Invalid IP address or hostname specified" ]];then
+    if [[ "$response" == "ERR Invalid IP address or hostname specified" ]]; then
       echo """
         The hostname $NODE_HOST for the node $HOSTNAME was resolved successfully the first time but failed to do so a second time,
         this  caused the SENTINEL MONITOR command failed.
@@ -531,10 +569,10 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
       exit 1
     fi
 
-    redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
-    redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
-    redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
-    redis-cli -p $SENTINEL_PORT --user $FALKORDB_USER -a $FALKORDB_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
+    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
+    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
+    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
+    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
   fi
 fi
 
@@ -556,34 +594,49 @@ fi
 
 if [[ $RUN_METRICS -eq 1 ]]; then
   echo "Starting Metrics"
-  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
-  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -tls-server-min-version TLS1.3 &
+  aof_metric_export=$(if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then echo "-include-aof-file-size"; else echo ""; fi)
+  # When TLS is enabled, use RANDOM_NODE_PORT to get the external port if defined (multi tenancy tiers)
+  node_external_port=$(if [[ $TLS == "true" && -z $RANDOM_NODE_PORT ]]; then echo $NODE_PORT; else echo $RANDOM_NODE_PORT; fi)
+  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://localhost:$node_external_port"; else echo "redis://localhost:$NODE_PORT"; fi)
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -tls-server-min-version TLS1.3 -include-system-metrics $aof_metric_export &
   redis_exporter_pid=$!
 fi
+
+#Start cron
+cron
 
 if [[ ! "$NODE_NAME" =~ sentinel.* ]]; then
   rewrite_aof_cronjob
 fi
 
+# If TLS=true, create a job to rotate the certificate
+if [[ "$TLS" == "true" ]]; then
+  if [[ $RUN_SENTINEL -eq 1 ]]; then
+    backoff=$(shuf -i 1-59 -n 1)
+    cron="$backoff 0 * * *"
+    echo "Creating sentinel certificate rotation job. Cron: $cron"
+    echo "
+    #!/bin/bash
+    set -e
+    echo 'Restarting sentinel'
+    supervisorctl -c $DATA_DIR/supervisord.conf restart redis-sentinel
+    " >$DATA_DIR/cert_rotate_sentinel.sh
+    chmod +x $DATA_DIR/cert_rotate_sentinel.sh
+    (crontab -l 2>/dev/null; echo "$cron $DATA_DIR/cert_rotate_sentinel.sh") | crontab -
+  fi
 
-if [[ $DEBUG -eq 1 && $RUN_SENTINEL -eq 1 ]] && [[ "$NODE_INDEX" == "1" || "$NODE_INDEX" == "0" ]]; then
-  # Check for crossed namespace
-  echo "Checking for crossed namespace"
-  while true; do
-    sentinels=$(redis-cli -p $SENTINEL_PORT -a $ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING SENTINEL sentinels $MASTER_NAME)
-    # Check if the hostname contains`instance-X` where is not equal to INSTANCE_ID
-    for text in $sentinels; do
-      if [[ $text == *"instance-"* && $text != *"$INSTANCE_ID"* ]]; then
-        echo "Crossed namespace detected"
-        # Dump config files
-        echo "Sentinels: $sentinels"
-        dump_conf_files
-      fi
-    done
-    sleep 5
-  done
+  if [[ $RUN_NODE -eq 1 ]]; then
+    echo "Creating node certificate rotation job"
+    echo "
+    #!/bin/bash
+    set -e
+    echo 'Refreshing node certificate'
+    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-cert-file $TLS_MOUNT_PATH/tls.crt
+    " >$DATA_DIR/cert_rotate_node.sh
+    chmod +x $DATA_DIR/cert_rotate_node.sh
+    (crontab -l 2>/dev/null; echo "0 0 * * * $DATA_DIR/cert_rotate_node.sh") | crontab -
+  fi
 fi
-
 
 while true; do
   sleep 1

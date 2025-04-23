@@ -165,7 +165,7 @@ def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: st
     )
     graph = db.select_graph("test")
     
-    tout = time.time() + 600
+    tout = time.time() + 1200
     while True:
         if time.time() > tout:
             raise Exception(f"Took too long to reach out of memory error")

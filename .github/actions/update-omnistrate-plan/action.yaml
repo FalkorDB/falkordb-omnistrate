@@ -26,7 +26,7 @@ inputs:
 
 runs:
   using: docker
-  image: ghcr.io/omnistrate/ctl:0.9.89
+  image: ghcr.io/omnistrate/ctl:0.11.3
   entrypoint: /bin/sh
   args:
     - -c

@@ -417,7 +417,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'   --instance-name 'test-cluster-mz-oom' --instance-description 'test-cluster-mz-oom' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1'
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'   --instance-name 'test-cluster-mz-oom' --instance-description 'test-cluster-mz-oom' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' "
           - name: PRO/ClusterSingleZone - AWS/us-east-2 - Failover & Persistence With TLS
             if: "true"
             testFile: test_cluster.py

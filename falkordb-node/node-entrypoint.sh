@@ -236,6 +236,13 @@ get_memory_limit() {
     ["c6i.2xlarge"]="13GB"
     ["c6i.4xlarge"]="30GB"
     ["c6i.8xlarge"]="62GB"
+    ["B2ls_v2"]="2GB"
+    ["D2s_v5"]="6GB"
+    ["D4s_v5"]="14GB"
+    ["F4s_v2"]="6GB"
+    ["F8s_v2"]="13GB"
+    ["F16s_v2"]="30GB"
+    ["F32s_v2"]="62GB"
   )
 
   if [[ -z $INSTANCE_TYPE && -z $MEMORY_LIMIT ]]; then

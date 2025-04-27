@@ -2,14 +2,16 @@
 name: operator
 deployment:
   hostedDeployment:
-    GcpProjectId: "app-plane-dev-f7a2434f"
-    GcpProjectNumber: "747498641488"
-    GcpServiceAccountEmail: "omni-btstrp-org-q9h5kjuc0n@app-plane-dev-f7a2434f.iam.gserviceaccount.com"
-    AwsAccountId: "637423310747"
-    AWSBootstrapRoleAccountArn: "arn:aws:iam::637423310747:role/omnistrate-bootstrap-role"
+    GcpProjectId: ""
+    GcpProjectNumber: ""
+    GcpServiceAccountEmail: ""
+    AwsAccountId: ""
+    AWSBootstrapRoleAccountArn: ""
 
 services:
-  - name: replication
+  - name: replication-mz
+    capabilities:
+      enableMultiZone: true
     network:
       ports:
         - 6379
@@ -44,7 +46,12 @@ services:
                 command:
                 - /bin/bash
                 - -c
-                - "redis-cli -a $REDIS_PASSWORD -p $REDIS_PORT --tls ping "
+                - |
+                  if [[ {{ $var.TLS }} == "true" ]]; then
+                    tlsString="--tls"
+                  fi
+                  redis-cli -a $REDIS_PASSWORD -p $REDIS_PORT $tlsString ping
+                
               initialDelaySeconds: 5
               periodSeconds: 5
               timeoutSeconds: 5
@@ -55,7 +62,12 @@ services:
               command:
               - /bin/bash
               - -c
-              - "redis-cli -a $REDIS_PASSWORD -p $REDIS_PORT --tls ping "
+              - |
+                if [[ {{ $var.TLS }} == "true" ]]; then
+                    tlsString="--tls"
+                fi
+                redis-cli -a $REDIS_PASSWORD -p $REDIS_PORT $tlsString ping
+            
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 5
@@ -64,13 +76,6 @@ services:
           kubernetesConfig:
             image: "falkordb/redis:latest"
             imagePullPolicy: "IfNotPresent"
-            resources: 
-              limits:
-                cpu: 400m
-                memory: 400Mi
-              requests:
-                cpu: 400m
-                memory: 400Mi
             redisSecret:
               name: "redis-secret"
               key: "password"
@@ -115,6 +120,7 @@ services:
             secret:
               secretName: "replication-acl"
           TLS:
+            enabled: {{ $var.TLS }}
             ca: "ca.crt"
             cert: "tls.crt"
             key: "tls.key"
@@ -123,6 +129,8 @@ services:
           env:
             - name: POD_HOSTNAME
               value: {{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+            - name: TLS_MODE
+              value: "{{ $var.TLS }}"
           affinity: 
             nodeAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
@@ -139,16 +147,25 @@ services:
                   - key: node.kubernetes.io/instance-type
                     operator: In
                     values:
-                    - {{$sys.compute.node.instanceType}}
+                    - {{$var.instanceType}}
                   - key: omnistrate.com/resource
                     operator: In
                     values:
                     - {{$sys.deployment.resourceID}}
+
+          topologySpreadConstraints:
+            - maxSkew: 1
+              minDomains: 3
+              topologyKey: topology.kubernetes.io/zone
+              whenUnsatisfiable: DoNotSchedule
+              labelSelector:
+                matchLabels:
+                  role: replication
       supplementalFiles:
         - |
           apiVersion: v1
-          data:
-            password: ZmFsa29yZGI=
+          stringData:
+            password: {{ $var.replicationPassword }}
           kind: Secret
           metadata:
             name: redis-secret
@@ -157,11 +174,27 @@ services:
         
         - |
           apiVersion: v1
-          data:
-            user.acl: dXNlciBmYWxrb3JkYiBvbiA+dXNlcnBhc3MgfiogcmVzZXRjaGFubmVscyAtQGFsbCAraW5mbyArY2xpZW50ICtkYnNpemUgK3BpbmcgK2hlbGxvICthdXRoICtyZXN0b3JlICtkdW1wICtkZWwgK2V4aXN0cyArdW5saW5rICt0eXBlICtmbHVzaGFsbCArdG91Y2ggK2V4cGlyZSArcGV4cGlyZWF0ICt0dGwgK3B0dGwgK2V4cGlyZXRpbWUgK3JlbmFtZSArcmVuYW1lbnggK3NjYW4gK2Rpc2NhcmQgK2V4ZWMgK211bHRpICt1bndhdGNoICt3YXRjaCArZWNobyArc2xvd2xvZyArd2FpdCArd2FpdGFvZiArZ3JhcGguaW5mbyArZ3JhcGgubGlzdCArZ3JhcGgucXVlcnkgK2dyYXBoLnJvX3F1ZXJ5ICtncmFwaC5leHBsYWluICtncmFwaC5wcm9maWxlICtncmFwaC5kZWxldGUgK2dyYXBoLmNvbnN0cmFpbnQgK2dyYXBoLnNsb3dsb2cgK2dyYXBoLmJ1bGsgK2dyYXBoLmNvbmZpZwp1c2VyIGRlZmF1bHQgb24gPmZhbGtvcmRiIGFsbGNoYW5uZWxzICttdWx0aSArc2xhdmVvZiArcGluZyArZXhlYyArc3Vic2NyaWJlICtjb25maWd8cmV3cml0ZSArcm9sZSArcHVibGlzaCAraW5mbyArY2xpZW50fHNldG5hbWUgK2NsaWVudHxraWxsICtzY3JpcHR8a2lsbCArcHN5bmMgK3JlcGxjb25mICtwaW5nICtjbHVzdGVyCnVzZXIgYWRtaW4gb24gPnN1cGVycGFzcyB+KiArQGFsbCAmKg==
+          stringData:
+            user.acl: |
+              user {{ $var.falkordbUser }} on >{{ $var.falkordbPassword }} ~* resetchannels -@all +info +client +dbsize +ping +hello +auth +restore +dump +del +exists +unlink +type +flushall +touch +expire +pexpireat +ttl +pttl +expiretime +rename +renamenx +scan +discard +exec +multi +unwatch +watch +echo +slowlog +wait +waitaof +graph.info +graph.list +graph.query +graph.ro_query +graph.explain +graph.profile +graph.delete +graph.constraint +graph.slowlog +graph.bulk +graph.config
+              user default on >{{ $var.replicationPassword }} allchannels +multi +slaveof +ping +exec +subscribe +config|rewrite +role +publish +info +client|setname +client|kill +script|kill +psync +replconf +ping +cluster
+              user admin on >{{ $var.adminPassword }} ~* +@all
           kind: Secret
           metadata:
             name: replication-acl
+            namespace: {{$sys.id}}
+          type: Opaque
+
+        - |
+          apiVersion: v1
+          stringData:
+            user.acl: |
+              user {{ $var.falkordbUser }} on >{{ $var.falkordbPassword }} -@all +auth +client|getname +client|id +client|setname +command +hello +ping +role +sentinel|get-master-addr-by-name +sentinel|master +sentinel|myid +sentinel|replicas +sentinel|sentinels +sentinel|masters
+              user default  >{{ $var.replicationPassword }} ~* +@all
+              user admin on >{{ $var.adminPassword }} ~* +@all
+          kind: Secret
+          metadata:
+            name: sentinel-acl
             namespace: {{$sys.id}}
           type: Opaque
 
@@ -192,7 +225,7 @@ services:
             redis-additional.conf: |
               tls-auth-clients no
               tls-ca-cert-file /ca/ca.crt
-              masterauth "falkordb"
+              masterauth {{ $var.replicationPassword }}
               masteruser "default"
               loadmodule /FalkorDB/bin/src/falkordb.so
         - |
@@ -323,7 +356,7 @@ services:
           apiVersion: v1
           kind: Service
           metadata:
-            name: sentinel-0
+            name: sentinel-2
             namespace: {{$sys.id}}
             annotations:
               external-dns.alpha.kubernetes.io/hostname: sentinel-sentinel-2.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
@@ -331,7 +364,7 @@ services:
           spec:
             clusterIP: None
             selector:
-              statefulset.kubernetes.io/pod-name: sentinel-sentinel-0
+              statefulset.kubernetes.io/pod-name: sentinel-sentinel-2
             ports:
               - protocol: TCP
                 port: 26379
@@ -354,9 +387,12 @@ services:
             redis-sentinel-additional.conf: |
               tls-ca-cert-file /ca/ca.crt
               tls-auth-clients no
+              sentinel down-after-milliseconds master 50
+              sentinel failover-timeout master 50
+              sentinel sentinel-user "{{ $var.falkordbUser }}"
+              sentinel sentinel-pass "{{ $var.falkordbPassword}}"
+              sentinel auth-pass master "{{ $var.replicationPassword }}"
               sentinel auth-user master "default"
-              sentinel auth-pass master "falkordb"
-              tls-replication yes
         - |
           apiVersion: redis.redis.opstreelabs.in/v1beta2
           kind: RedisSentinel
@@ -380,9 +416,15 @@ services:
                 - name: ca-certificate
                   secret:
                     secretName: "ca-cert"
+                - name: "sentinel-acl"
+                  secret:
+                    secretName: "sentinel-acl"
               mountPath:
                 - mountPath: "/ca"
                   name: "ca-certificate"
+                  readOnly: true
+                - mountPath: "/data"
+                  name: "sentinel-acl"
                   readOnly: true
             redisSentinelConfig:
               redisReplicationName: replication
@@ -394,8 +436,8 @@ services:
               redisPort:  "6379"
               quorum: "2"
               parallelSyncs: "1"
-              failoverTimeout: "500"
-              downAfterMilliseconds:  "500"
+              failoverTimeout: "50"
+              downAfterMilliseconds:  "50"
               resolveHostnames : "yes"
               announceHostnames : "yes"
               additionalSentinelConfig: sentinel-ext-config
@@ -432,6 +474,7 @@ services:
               fsGroup: 1000
               runAsUser: 1000
             TLS:
+              enabled: {{ $var.TLS }}
               ca: "ca.crt"
               cert: "tls.crt"
               key: "tls.key"
@@ -440,6 +483,10 @@ services:
             env:
               - name: EXTERNAL_IP
                 value: replication-0.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+              - name: TLS_MODE
+                value: "{{ $var.TLS }}"
+              - name: ACL_MODE
+                value: "true"
             affinity: 
               nodeAffinity:
                 requiredDuringSchedulingIgnoredDuringExecution:
@@ -453,20 +500,33 @@ services:
                       operator: In
                       values:
                       - {{$sys.deploymentCell.region}}
-                    - key: node.kubernetes.io/instance-type
-                      operator: In
-                      values:
-                      - {{$sys.compute.node.instanceType}}
                     - key: omnistrate.com/resource
                       operator: In
                       values:
                       - {{$sys.deployment.resourceID}}
+              podAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchExpressions:
+                    - key: role
+                      operator: In
+                      values:
+                      - replication
+                  topologyKey: kubernetes.io/hostname
+                  namespaces:
+                    - {{$sys.id}}
+                  
             livenessProbe:
               exec:
                 command:
                 - /bin/bash
                 - -c
-                - "redis-cli -a $REDIS_PASSWORD -p 26379 --tls ping "
+                - |
+                  if [[ {{ $var.TLS }} == "true" ]]; then
+                    tlsString="--tls"
+                  fi
+                  redis-cli -a $REDIS_PASSWORD -p 26379 $tlsString ping
+
               initialDelaySeconds: 5
               periodSeconds: 5
               timeoutSeconds: 5
@@ -477,7 +537,11 @@ services:
                 command:
                 - /bin/bash
                 - -c
-                - "redis-cli -a $REDIS_PASSWORD -p 26379 --tls ping "
+                - |
+                  if [[ {{ $var.TLS }} == "true" ]]; then
+                    tlsString="--tls"
+                  fi
+                  redis-cli -a $REDIS_PASSWORD -p 26379 $tlsString ping
               initialDelaySeconds: 5
               periodSeconds: 5
               timeoutSeconds: 5
@@ -487,9 +551,684 @@ services:
 
       helmChartDependencies:
         - chartName: operator
-          chartVersion: 0.19.6
+          chartVersion: 0.20.0
           chartRepoName: falkordb-helm
           chartRepoURL: "https://falkordb.github.io/helm-charts/"
+
+    apiParameters:
+      - key: replicas
+        description: Number of Replicas
+        name: Replica Count
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "3"
+      - key: instanceType
+        description: Instance Type
+        name: Instance Type
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "t3.medium"
+        options:
+          - t3.medium
+          - m6i.large
+          - m6i.xlarge
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
+      - key: TLS
+        description: Enable TLS
+        name: Enable TLS
+        type: Boolean
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "false"
+      - key: falkordbUser
+        description: FalkorDB User
+        name: FalkorDB User
+        type: String
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "falkordb"
+      - key: falkordbPassword
+        description: FalkorDB Password
+        name: FalkorDB Password
+        type: String
+        modifiable: true
+        required: true
+        export: true
+      - key: adminPassword
+        description: Admin Password
+        name: Admin Password
+        type: String
+        modifiable: false
+        required: true
+        export: false
+        defaultValue: "{{ $func.random(string,16,10) }}"
+      - key: replicationPassword
+        description: Replication Password
+        name: Replication Password
+        type: String
+        modifiable: false
+        required: true
+        export: false
+        defaultValue: "{{ $func.random(string,16,$sys.deterministicSeedValue) }}"
+
+
+
+  - name: replication-sz
+    capabilities:
+      enableMultiZone: false
+    network:
+      ports:
+        - 6379
+        - 26379
+    endpointConfiguration:
+      cluster:
+        host: "$sys.network.externalClusterEndpoint"
+        ports:
+          - 26379
+        primary: true
+        networkingType: PUBLIC
+    operatorCRDConfiguration:
+      template: |
+        apiVersion: redis.redis.opstreelabs.in/v1beta2
+        kind: RedisReplication
+        metadata:
+          name: replication
+          labels:
+            app.kubernetes.io/name: replication
+            helm.sh/chart: replication-0.17.2
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/instance: replication
+            app.kubernetes.io/version: 0.16.7
+            app.kubernetes.io/component: middleware
+          annotations:
+            
+        spec:
+          hostPort: 6379
+          clusterSize: 3
+          livenessProbe:
+              exec:
+                command:
+                - /bin/bash
+                - -c
+                - |
+                  if [[ {{ $var.TLS }} == "true" ]]; then
+                    tlsString="--tls"
+                  fi
+                  redis-cli -a $REDIS_PASSWORD -p $REDIS_PORT $tlsString ping
+                
+              initialDelaySeconds: 5
+              periodSeconds: 5
+              timeoutSeconds: 5
+              successThreshold: 1
+              failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+              - /bin/bash
+              - -c
+              - |
+                if [[ {{ $var.TLS }} == "true" ]]; then
+                    tlsString="--tls"
+                fi
+                redis-cli -a $REDIS_PASSWORD -p $REDIS_PORT $tlsString ping
+            
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          kubernetesConfig:
+            image: "falkordb/redis:latest"
+            imagePullPolicy: "IfNotPresent"
+            redisSecret:
+              name: "redis-secret"
+              key: "password"
+
+          redisExporter:
+            enabled: true
+            image: "falkordb/redis_exporter:v1.68.0"
+            imagePullPolicy: "IfNotPresent"
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
+            env:
+              - name: REDIS_EXPORTER_TLS_CA_CERT_FILE
+                value: "/ca/ca.crt"
+          redisConfig:
+            additionalRedisConfig: "replication-ext-config"
+          storage:
+            volumeMount:
+              volume:
+                - name: ca-certificate
+                  secret:
+                    secretName: "ca-cert"
+              mountPath:
+                - mountPath: "/ca"
+                  name: "ca-certificate"
+                  readOnly: true
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+          podSecurityContext: 
+            fsGroup: 1000
+            runAsUser: 1000
+          acl:
+            secret:
+              secretName: "replication-acl"
+          TLS:
+            enabled: {{ $var.TLS }}
+            ca: "ca.crt"
+            cert: "tls.crt"
+            key: "tls.key"
+            secret:
+              secretName: "falkordb-crt"
+          env:
+            - name: POD_HOSTNAME
+              value: {{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+            - name: TLS_MODE
+              value: "{{ $var.TLS }}"
+          affinity: 
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: omnistrate.com/managed-by
+                    operator: In
+                    values:
+                    - omnistrate
+                  - key: topology.kubernetes.io/region
+                    operator: In
+                    values:
+                    - {{$sys.deploymentCell.region}}
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                    - {{$var.instanceType}}
+                  - key: omnistrate.com/resource
+                    operator: In
+                    values:
+                    - {{$sys.deployment.resourceID}}
+        topologySpreadConstraints:
+          - maxSkew: 1
+            topologyKey: kubernetes.io/hostname
+            whenUnsatisfiable: DoNotSchedule
+            labelSelector:
+              matchLabels:
+                role: replication
+        
+      supplementalFiles:
+        - |
+          apiVersion: v1
+          stringData:
+            password: {{ $var.replicationPassword }}
+          kind: Secret
+          metadata:
+            name: redis-secret
+            namespace: {{$sys.id}}
+          type: Opaque
+        
+        - |
+          apiVersion: v1
+          stringData:
+            user.acl: |
+              user {{ $var.falkordbUser }} on >{{ $var.falkordbPassword }} ~* resetchannels -@all +info +client +dbsize +ping +hello +auth +restore +dump +del +exists +unlink +type +flushall +touch +expire +pexpireat +ttl +pttl +expiretime +rename +renamenx +scan +discard +exec +multi +unwatch +watch +echo +slowlog +wait +waitaof +graph.info +graph.list +graph.query +graph.ro_query +graph.explain +graph.profile +graph.delete +graph.constraint +graph.slowlog +graph.bulk +graph.config
+              user default on >{{ $var.replicationPassword }} allchannels +multi +slaveof +ping +exec +subscribe +config|rewrite +role +publish +info +client|setname +client|kill +script|kill +psync +replconf +ping +cluster
+              user admin on >{{ $var.adminPassword }} ~* +@all
+          kind: Secret
+          metadata:
+            name: replication-acl
+            namespace: {{$sys.id}}
+          type: Opaque
+
+        - |
+          apiVersion: v1
+          stringData:
+            user.acl: |
+              user {{ $var.falkordbUser }} on >{{ $var.falkordbPassword }} ~* +AUTH +SENTINEL|GET-MASTER-ADDR-BY-NAME +SENTINEL|MASTERS +SENTINEL|MASTER +SENTINEL|REPLICAS +SENTINEL|SENTINELS +SENTINEL|FAILOVER +INFO
+              user default on >{{ $var.replicationPassword }} ~* +@all
+              user admin on >{{ $var.adminPassword }} ~* +@all
+          kind: Secret
+          metadata:
+            name: sentinel-acl
+            namespace: {{$sys.id}}
+          type: Opaque
+
+        - |
+          apiVersion: v1
+          data:
+            ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZhekNDQTFPZ0F3SUJBZ0lSQUlJUXo3RFNRT05aUkdQZ3UyT0Npd0F3RFFZSktvWklodmNOQVFFTEJRQXcKVHpFTE1Ba0dBMVVFQmhNQ1ZWTXhLVEFuQmdOVkJBb1RJRWx1ZEdWeWJtVjBJRk5sWTNWeWFYUjVJRkpsYzJWaApjbU5vSUVkeWIzVndNUlV3RXdZRFZRUURFd3hKVTFKSElGSnZiM1FnV0RFd0hoY05NVFV3TmpBME1URXdORE00CldoY05NelV3TmpBME1URXdORE00V2pCUE1Rc3dDUVlEVlFRR0V3SlZVekVwTUNjR0ExVUVDaE1nU1c1MFpYSnUKWlhRZ1UyVmpkWEpwZEhrZ1VtVnpaV0Z5WTJnZ1IzSnZkWEF4RlRBVEJnTlZCQU1UREVsVFVrY2dVbTl2ZENCWQpNVENDQWlJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dJUEFEQ0NBZ29DZ2dJQkFLM29KSFAwRkRmem01NHJWeWdjCmg3N2N0OTg0a0l4dVBPWlhvSGozZGNLaS92VnFidllBVHlqYjNtaUdiRVNUdHJGai9SUVNhNzhmMHVveG15RisKMFRNOHVrajEzWG5mczdqL0V2RWhta3ZCaW9aeGFVcG1abXlQZmp4d3Y2MHBJZ2J6NU1EbWdLN2lTNCszbVg2VQpBNS9UUjVkOG1VZ2pVK2c0cms4S2I0TXUwVWxYaklCMHR0b3YwRGlOZXdOd0lSdDE4akE4K28rdTNkcGpxK3NXClQ4S09FVXQrend2by83VjNMdlN5ZTByZ1RCSWxESENOQXltZzRWTWs3QlBaN2htL0VMTktqRCtKbzJGUjNxeUgKQjVUMFkzSHNMdUp2VzVpQjRZbGNOSGxzZHU4N2tHSjU1dHVrbWk4bXhkQVE0UTdlMlJDT0Z2dTM5NmozeCtVQwpCNWlQTmdpVjUrSTNsZzAyZFo3N0RuS3hIWnU4QS9sSkJkaUIzUVcwS3RaQjZhd0JkcFVLRDlqZjFiMFNIelV2CktCZHMwcGpCcUFsa2QyNUhON3JPckZsZWFKMS9jdGFKeFFaQktUNVpQdDBtOVNUSkVhZGFvMHhBSDBhaG1iV24KT2xGdWhqdWVmWEtuRWdWNFdlMCtVWGdWQ3dPUGpkQXZCYkkrZTBvY1MzTUZFdnpHNnVCUUUzeERrM1N6eW5UbgpqaDhCQ05BdzFGdHhOclFIdXNFd01GeEl0NEk3bUtaOVlJcWlveW1DekxxOWd3UWJvb01EUWFIV0JmRWJ3cmJ3CnFIeUdPMGFvU0NxSTNIYWFkcjhmYXFVOUdZL3JPUE5rM3NnckRRb28vL2ZiNGhWQzFDTFFKMTNoZWY0WTUzQ0kKclU3bTJZczZ4dDBuVVc3L3ZHVDFNME5QQWdNQkFBR2pRakJBTUE0R0ExVWREd0VCL3dRRUF3SUJCakFQQmdOVgpIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJSNXRGbm1lN2JsNUFGemdBaUl5QnBZOXVtYmJqQU5CZ2txCmhraUc5dzBCQVFzRkFBT0NBZ0VBVlI5WXFieXlxRkRRRExIWUdta2dKeWtJckdGMVhJcHUrSUxsYVMvVjlsWkwKdWJoekVGblRJWmQrNTB4eCs3TFNZSzA1cUF2cUZ5RldoZkZRRGxucnp1Qlo2YnJKRmUrR25ZK0VnUGJrNlpHUQozQmViWWh0RjhHYVYwbnh2d3VvNzd4L1B5OWF1Si9HcHNNaXUvWDErbXZvaUJPdi8yWC9xa1NzaXNSY09qL0tLCk5GdFkyUHdCeVZTNXVDYk1pb2d6aVV3dGhEeUMzKzZXVndXNkxMdjN4TGZIVGp1Q3ZqSElJbk56a3RIQ2dLUTUKT1JBekk0Sk1QSitHc2xXWUhiNHBob3dpbTU3aWF6dFhPb0p3VGR3Sng0bkxDZ2ROYk9oZGpzbnZ6cXZIdTdVcgpUa1hXU3RBbXpPVnl5Z2hxcFpYakZhSDNwTzNKTEYrbCsvK3NLQUl1dnRkN3UrTnhlNUFXMHdkZVJsTjhOd2RDCmpOUEVscHpWbWJVcTRKVWFnRWl1VERrSHpzeEhwRktWSzdxNCs2M1NNMU45NVIxTmJkV2hzY2RDYitaQUp6VmMKb3lpM0I0M25qVE9RNXlPZisxQ2NlV3hHMWJRVnM1WnVmcHNNbGpxNFVpMC8xbHZoK3dqQ2hQNGtxS09KMnF4cQo0Umdxc2FoRFlWdlRIOXc3alhieUxlaU5kZDhYTTJ3OVUvdDd5MEZmLzl5aTBHRTQ0WmE0ckYyTE45ZDExVFBBCm1SR3VuVUhCY25XRXZnSkJRbDluSkVpVTBac252Z2MvdWJoUGdYUlI0WHEzN1owajRyN2cxU2dFRXp3eEE1N2QKZW15UHhnY1l4bi9lUjQ0L0tKNEVCcytsVkRSM3ZleUptK2tYUTk5YjIxLytqaDVYb3MxQW5YNWlJdHJlR0NjPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+          kind: Secret
+          metadata:
+            name: ca-cert
+            namespace: {{$sys.id}}
+          type: Opaque
+        
+        - |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: replication-ext-config
+            namespace: {{$sys.id}}
+            labels:
+              app.kubernetes.io/name: replication
+              helm.sh/chart: replication-0.17.2
+              app.kubernetes.io/managed-by: Helm
+              app.kubernetes.io/instance: replication
+              app.kubernetes.io/version: 0.16.7
+              app.kubernetes.io/component: middleware
+          data:
+            redis-additional.conf: |
+              tls-auth-clients no
+              tls-ca-cert-file /ca/ca.crt
+              masterauth {{ $var.replicationPassword }}
+              masteruser "default"
+              loadmodule /FalkorDB/bin/src/falkordb.so
+        - |
+          apiVersion: cert-manager.io/v1
+          kind: Certificate
+          metadata:
+            name: replication-certificate
+            namespace: {{$sys.id}}
+          spec:
+            secretName: falkordb-crt
+            duration:  2160h # 90d
+            renewBefore: 360h # 15d
+            issuerRef:
+              name: letsencrypt-prod
+              kind: ClusterIssuer
+            dnsNames:
+              - "*.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud"
+        - |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: replica-0-external-service
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: replication-0.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+          spec:
+            clusterIP: None
+            selector:
+              statefulset.kubernetes.io/pod-name: replication-0
+            ports:
+              - protocol: TCP
+                port: 6379
+                targetPort: 6379
+                name: client
+        - |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: replica-1-external-service
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: replication-1.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+          spec:
+            clusterIP: None
+            selector:
+              statefulset.kubernetes.io/pod-name: replication-1
+            ports:
+              - protocol: TCP
+                port: 6379
+                targetPort: 6379
+                name: client
+        - |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: replica-2-external-service
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: replication-2.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+          spec:
+            clusterIP: None
+            selector:
+              statefulset.kubernetes.io/pod-name: replication-2
+            ports:
+              - protocol: TCP
+                port: 6379
+                targetPort: 6379
+                name: client
+        - |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: sentinel-external-service
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: {{$sys.network.externalClusterEndpoint}}
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+          spec:
+            clusterIP: None
+            selector:
+              redis_setup_type: sentinel
+              role: sentinel
+            ports:
+              - protocol: TCP
+                port: 26379
+                targetPort: 26379
+                name: client
+        - |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: sentinel-0
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: sentinel-sentinel-0.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+          spec:
+            clusterIP: None
+            selector:
+              statefulset.kubernetes.io/pod-name: sentinel-sentinel-0
+            ports:
+              - protocol: TCP
+                port: 26379
+                targetPort: 26379
+                name: client
+        - |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: sentinel-1
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: sentinel-sentinel-1.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+          spec:
+            clusterIP: None
+            selector:
+              statefulset.kubernetes.io/pod-name: sentinel-sentinel-1
+            ports:
+              - protocol: TCP
+                port: 26379
+                targetPort: 26379
+                name: client
+        - |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: sentinel-2
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: sentinel-sentinel-2.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+          spec:
+            clusterIP: None
+            selector:
+              statefulset.kubernetes.io/pod-name: sentinel-sentinel-2
+            ports:
+              - protocol: TCP
+                port: 26379
+                targetPort: 26379
+                name: client
+        - |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: sentinel-ext-config
+            namespace: {{$sys.id}}
+            labels:
+              app.kubernetes.io/name: sentinel
+              helm.sh/chart: sentinel-0.17.3
+              app.kubernetes.io/managed-by: Helm
+              app.kubernetes.io/instance: sentinel
+              app.kubernetes.io/version: 0.16.9
+              app.kubernetes.io/component: middleware
+          data:
+            redis-sentinel-additional.conf: |
+              tls-ca-cert-file /ca/ca.crt
+              tls-auth-clients no
+              sentinel auth-user master "default"
+              sentinel auth-pass master {{ $var.replicationPassword }}
+              sentinel sentinel-user "default"
+              sentinel sentinel-pass {{ $var.replicationPassword}}
+        - |
+          apiVersion: redis.redis.opstreelabs.in/v1beta2
+          kind: RedisSentinel
+          metadata:
+            name: sentinel
+            namespace: {{$sys.id}}
+            labels:
+              app.kubernetes.io/name: sentinel
+              helm.sh/chart: sentinel-0.17.3
+              app.kubernetes.io/managed-by: Helm
+              app.kubernetes.io/instance: sentinel
+              app.kubernetes.io/version: 0.16.9
+              app.kubernetes.io/component: middleware
+            annotations:
+              
+          spec:
+            hostPort: 26379
+            clusterSize: 3
+            volumeMount:
+              volume:
+                - name: ca-certificate
+                  secret:
+                    secretName: "ca-cert"
+                - name: sentinel-acl
+                  secret:
+                    secretName: "sentinel-acl"
+              mountPath:
+                - mountPath: "/ca"
+                  name: "ca-certificate"
+                  readOnly: true
+                - mountPath: "/data"
+                  name: "sentinel-acl"
+                  readOnly: true
+            redisSentinelConfig:
+              redisReplicationName: replication
+              redisReplicationPassword:
+                secretKeyRef:
+                  name: "redis-secret"
+                  key: "password"
+              masterGroupName : "master"
+              redisPort:  "6379"
+              quorum: "2"
+              parallelSyncs: "1"
+              failoverTimeout: "50"
+              downAfterMilliseconds:  "50"
+              resolveHostnames : "yes"
+              announceHostnames : "yes"
+              additionalSentinelConfig: sentinel-ext-config
+
+            kubernetesConfig:
+              image: "falkordb/redis-sentinel:latest"
+              imagePullPolicy: "IfNotPresent"
+              resources: 
+                limits:
+                  cpu: 200m
+                  memory: 400Mi
+                requests:
+                  cpu: 200m
+                  memory: 200Mi
+              redisSecret:
+                name: "redis-secret"
+                key: "password"
+
+            redisExporter:
+              enabled: true
+              image: "falkordb/redis_exporter:v1.68.0"
+              imagePullPolicy: "IfNotPresent"
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+              env:
+                - name: REDIS_EXPORTER_TLS_CA_CERT_FILE
+                  value: "/ca/ca.crt"
+            podSecurityContext: 
+              fsGroup: 1000
+              runAsUser: 1000
+            TLS:
+              enabled: {{ $var.TLS }}
+              ca: "ca.crt"
+              cert: "tls.crt"
+              key: "tls.key"
+              secret:
+                secretName: "falkordb-crt"
+            env:
+              - name: EXTERNAL_IP
+                value: replication-0.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+              - name: TLS_MODE
+                value: "{{ $var.TLS }}"
+              - name: ACL_MODE
+                value: "true"
+            affinity: 
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                  - matchExpressions:
+                    - key: omnistrate.com/managed-by
+                      operator: In
+                      values:
+                      - omnistrate
+                    - key: topology.kubernetes.io/region
+                      operator: In
+                      values:
+                      - {{$sys.deploymentCell.region}}
+                    - key: omnistrate.com/resource
+                      operator: In
+                      values:
+                      - {{$sys.deployment.resourceID}}
+              podAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchExpressions:
+                    - key: role
+                      operator: In
+                      values:
+                      - replication
+                  topologyKey: kubernetes.io/hostname
+                  namespaces:
+                    - {{$sys.id}}
+                  
+            livenessProbe:
+              exec:
+                command:
+                - /bin/bash
+                - -c
+                - |
+                  if [[ {{ $var.TLS }} == "true" ]]; then
+                    tlsString="--tls"
+                  fi
+                  redis-cli -a $REDIS_PASSWORD -p 26379 $tlsString ping
+
+              initialDelaySeconds: 5
+              periodSeconds: 5
+              timeoutSeconds: 5
+              successThreshold: 1
+              failureThreshold: 3
+            readinessProbe:
+              exec:
+                command:
+                - /bin/bash
+                - -c
+                - |
+                  if [[ {{ $var.TLS }} == "true" ]]; then
+                    tlsString="--tls"
+                  fi
+                  redis-cli -a $REDIS_PASSWORD -p 26379 $tlsString ping
+              initialDelaySeconds: 5
+              periodSeconds: 5
+              timeoutSeconds: 5
+              successThreshold: 1
+              failureThreshold: 3
+
+
+      helmChartDependencies:
+        - chartName: operator
+          chartVersion: 0.20.0
+          chartRepoName: falkordb-helm
+          chartRepoURL: "https://falkordb.github.io/helm-charts/"
+
+    apiParameters:
+      - key: replicas
+        description: Number of Replicas
+        name: Replica Count
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "3"
+      - key: instanceType
+        description: Instance Type
+        name: Instance Type
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "t3.medium"
+        options:
+          - t3.medium
+          - m6i.large
+          - m6i.xlarge
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
+      - key: TLS
+        description: Enable TLS
+        name: Enable TLS
+        type: Boolean
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "false"
+      - key: falkordbUser
+        description: FalkorDB User
+        name: FalkorDB User
+        type: String
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "falkordb"
+      - key: falkordbPassword
+        description: FalkorDB Password
+        name: FalkorDB Password
+        type: String
+        modifiable: true
+        required: true
+        export: true
+      - key: adminPassword
+        description: Admin Password
+        name: Admin Password
+        type: String
+        modifiable: false
+        required: true
+        export: false
+        defaultValue: "{{ $func.random(string,16,10) }}"
+      - key: replicationPassword
+        description: Replication Password
+        name: Replication Password
+        type: String
+        modifiable: false
+        required: true
+        export: false
+        defaultValue: "{{ $func.random(string,16,$sys.deterministicSeedValue) }}"
 
   - name: Standalone
     network:
@@ -618,11 +1357,13 @@ services:
 
       helmChartDependencies:
         - chartName: operator
-          chartVersion: 0.19.6
+          chartVersion: 0.20.0
           chartRepoName: falkordb
           chartRepoURL: "https://falkordb.github.io/helm-charts/"
 
-  - name: clustermz
+  - name: cluster-mz
+    capabilities:
+      enableMultiZone: true
     network:
       ports:
         - 6379
@@ -708,18 +1449,25 @@ services:
                       operator: In
                       values:
                       - {{$sys.deployment.resourceID}}
-              podAntiAffinity:
-                requiredDuringSchedulingIgnoredDuringExecution:
-                  - labelSelector:
-                      matchExpressions:
-                        - key: role
-                          operator: In
-                          values:
-                            - leader
-                    topologyKey: topology.kubernetes.io/zone
-                    namespace:
-                      - {{$sys.id}}
-
+              # podAntiAffinity:
+              #   requiredDuringSchedulingIgnoredDuringExecution:
+              #     - labelSelector:
+              #         matchExpressions:
+              #           - key: role
+              #             operator: In
+              #             values:
+              #               - leader
+              #       topologyKey: topology.kubernetes.io/zone
+              #       namespace:
+              #         - {{$sys.id}}
+            topologySpreadConstraints:
+              - maxSkew: 1
+                minDomains: 3
+                topologyKey: topology.kubernetes.io/zone
+                whenUnsatisfiable: DoNotSchedule
+                labelSelector:
+                  matchLabels:
+                    role: leader
             replicas: 3
             redisConfig:
               additionalRedisConfig: "falkordb-cluster-ext-config"
@@ -777,18 +1525,25 @@ services:
                       operator: In
                       values:
                       - {{$sys.deployment.resourceID}}
-              podAntiAffinity:
-                requiredDuringSchedulingIgnoredDuringExecution:
-                  - labelSelector:
-                      matchExpressions:
-                        - key: role
-                          operator: In
-                          values:
-                            - follower
-                    topologyKey: topology.kubernetes.io/zone
-                    namespace:
-                      - {{$sys.id}}
-
+              # podAntiAffinity:
+              #   requiredDuringSchedulingIgnoredDuringExecution:
+              #     - labelSelector:
+              #         matchExpressions:
+              #           - key: role
+              #             operator: In
+              #             values:
+              #               - follower
+              #       topologyKey: topology.kubernetes.io/zone
+              #       namespace:
+              #         - {{$sys.id}}
+            topologySpreadConstraints:
+              - maxSkew: 1
+                minDomains: 3
+                topologyKey: topology.kubernetes.io/zone
+                whenUnsatisfiable: DoNotSchedule
+                labelSelector:
+                  matchLabels:
+                    role: follower
             replicas: 3
             redisConfig:
               additionalRedisConfig: "falkordb-cluster-ext-config"
@@ -846,7 +1601,7 @@ services:
             secret:
               secretName: "cluster-acl"
           TLS:
-            enabled: true
+            enabled: {{ $var.TLS }}
             ca: "/ca/ca.crt"
             cert: "tls.crt"
             key: "tls.key"
@@ -855,7 +1610,8 @@ services:
           env:
             - name: POD_HOSTNAME
               value: {{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
-
+            - name: TLS_MODE
+              value: "{{ $var.TLS }}"
 
       supplementalFiles:
         - |
@@ -872,7 +1628,7 @@ services:
           apiVersion: v1
           stringData:
             user.acl: |
-              user falkorbdb on >{{ $var.falkordbPassword }} ~* resetchannels -@all +info +client +dbsize +ping +hello +auth +restore +dump +del +exists +unlink +type +flushall +touch +expire +pexpireat +ttl +pttl +expiretime +rename +renamenx +scan +discard +exec +multi +unwatch +watch +echo +slowlog +wait +waitaof +graph.info +graph.list +graph.query +graph.ro_query +graph.explain +graph.profile +graph.delete +graph.constraint +graph.slowlog +graph.bulk +graph.config
+              user {{ $var.falkordbUser }} on >{{ $var.falkordbPassword }} ~* resetchannels -@all +info +client +dbsize +ping +hello +auth +restore +dump +del +exists +unlink +type +flushall +touch +expire +pexpireat +ttl +pttl +expiretime +rename +renamenx +scan +discard +exec +multi +unwatch +watch +echo +slowlog +wait +waitaof +graph.info +graph.list +graph.query +graph.ro_query +graph.explain +graph.profile +graph.delete +graph.constraint +graph.slowlog +graph.bulk +graph.config
               user default on >{{ $var.replicationPassword }} allchannels +multi +slaveof +ping +exec +subscribe +config|rewrite +role +publish +info +client|setname +client|kill +script|kill +psync +replconf +ping +cluster
               user admin on >{{ $var.adminPassword }} ~* +@all
           kind: Secret
@@ -1134,7 +1890,7 @@ services:
 
       helmChartDependencies:
         - chartName: operator
-          chartVersion: 0.19.6
+          chartVersion: 0.20.0
           chartRepoName: falkordb-helm
           chartRepoURL: "https://falkordb.github.io/helm-charts/"
 
@@ -1171,6 +1927,608 @@ services:
         required: false
         export: true
         defaultValue: "false"
+      - key: falkordbUser
+        description: FalkorDB User
+        name: FalkorDB User
+        type: String
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "falkordb"
+      - key: falkordbPassword
+        description: FalkorDB Password
+        name: FalkorDB Password
+        type: String
+        modifiable: true
+        required: true
+        export: true
+      - key: adminPassword
+        description: Admin Password
+        name: Admin Password
+        type: String
+        modifiable: false
+        required: true
+        export: false
+        defaultValue: "{{ $func.random(string,16,10) }}"
+      - key: replicationPassword
+        description: Replication Password
+        name: Replication Password
+        type: String
+        modifiable: false
+        required: true
+        export: false
+        defaultValue: "{{ $func.random(string,16,$sys.deterministicSeedValue) }}"
+
+  - name: cluster-sz
+    capabilities:
+      enableMultiZone: false
+    network:
+      ports:
+        - 6379
+        - 16379
+    endpointConfiguration:
+      cluster:
+        host: "$sys.network.externalClusterEndpoint"
+        ports:
+          - 6379
+        primary: true
+        networkingType: PUBLIC
+    operatorCRDConfiguration:
+      template: |
+        apiVersion: redis.redis.opstreelabs.in/v1beta2
+        kind: RedisCluster
+        metadata:
+          name: falkordb-cluster
+          labels:
+            app.kubernetes.io/name: falkordb-cluster
+            helm.sh/chart: cluster-0.16.8
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/instance: falkordb-cluster
+            app.kubernetes.io/version: 0.16.5
+            app.kubernetes.io/component: middleware
+          annotations:
+            
+        spec:
+          hostPort: 6379
+          clusterSize: 3
+          persistenceEnabled: true
+          clusterVersion: v7
+          redisLeader:
+            livenessProbe:
+              exec:
+                command:
+                - /bin/bash
+                - -c
+                - |
+                  if [[ {{ $var.TLS }} == "true" ]]; then
+                    echo "TLS is enabled"
+                    tlsString="--tls"
+                  fi
+                  redis-cli -a $REDIS_PASSWORD -p $REDIS_PORT $tlsString ping
+              initialDelaySeconds: 5
+              periodSeconds: 5
+              timeoutSeconds: 5
+              successThreshold: 1
+              failureThreshold: 3
+            readinessProbe:
+              exec:
+                command:
+                - /bin/bash
+                - -c
+                - |
+                  if [[ {{ $var.TLS }} == "true" ]]; then
+                    echo "TLS is enabled"
+                    tlsString="--tls"
+                  fi
+                  redis-cli -a $REDIS_PASSWORD -p $REDIS_PORT $tlsString ping
+              initialDelaySeconds: 5
+              periodSeconds: 5
+              timeoutSeconds: 5
+              successThreshold: 1
+              failureThreshold: 3
+            affinity: 
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                  - matchExpressions:
+                    - key: omnistrate.com/managed-by
+                      operator: In
+                      values:
+                      - omnistrate
+                    - key: topology.kubernetes.io/region
+                      operator: In
+                      values:
+                      - {{$sys.deploymentCell.region}}
+                    - key: node.kubernetes.io/instance-type
+                      operator: In
+                      values:
+                      - {{$var.instanceType}}
+                    - key: omnistrate.com/resource
+                      operator: In
+                      values:
+                      - {{$sys.deployment.resourceID}}
+              # podAntiAffinity:
+              #   requiredDuringSchedulingIgnoredDuringExecution:
+              #     - labelSelector:
+              #         matchExpressions:
+              #           - key: role
+              #             operator: In
+              #             values:
+              #               - leader
+              #       topologyKey: kubernetes.io/hostname
+            topologySpreadConstraints:
+              - maxSkew: 1
+                topologyKey: kubernetes.io/hostname
+                whenUnsatisfiable: DoNotSchedule
+                labelSelector:
+                  matchLabels:
+                    role: leader
+            replicas: 3
+            redisConfig:
+              additionalRedisConfig: "falkordb-cluster-ext-config"
+          
+          redisFollower:
+            livenessProbe:
+              exec:
+                command:
+                - /bin/bash
+                - -c
+                - |
+                  if [[ {{ $var.TLS }} == "true" ]]; then
+                    echo "TLS is enabled"
+                    tlsString="--tls"
+                  fi
+                  redis-cli -a $REDIS_PASSWORD -p $REDIS_PORT $tlsString ping
+              initialDelaySeconds: 5
+              periodSeconds: 5
+              timeoutSeconds: 5
+              successThreshold: 1
+              failureThreshold: 3
+            readinessProbe:
+              exec:
+                command:
+                - /bin/bash
+                - -c
+                - |
+                  if [[ {{ $var.TLS }} == "true" ]]; then
+                    tlsString="--tls"
+                  fi
+                  redis-cli -a $REDIS_PASSWORD -p $REDIS_PORT $tlsString ping
+              initialDelaySeconds: 5
+              periodSeconds: 5
+              timeoutSeconds: 5
+              successThreshold: 1
+              failureThreshold: 3
+            affinity: 
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                  - matchExpressions:
+                    - key: omnistrate.com/managed-by
+                      operator: In
+                      values:
+                      - omnistrate
+                    - key: topology.kubernetes.io/region
+                      operator: In
+                      values:
+                      - {{$sys.deploymentCell.region}}
+                    - key: node.kubernetes.io/instance-type
+                      operator: In
+                      values:
+                      - {{$var.instanceType}}
+                    - key: omnistrate.com/resource
+                      operator: In
+                      values:
+                      - {{$sys.deployment.resourceID}}
+              # podAntiAffinity:
+              #   requiredDuringSchedulingIgnoredDuringExecution:
+              #     - labelSelector:
+              #         matchExpressions:
+              #           - key: role
+              #             operator: In
+              #             values:
+              #               - follower
+              #       topologyKey: kubernetes.io/hostname
+              #       namespace:
+              #         - {{$sys.id}}
+            topologySpreadConstraints:
+              - maxSkew: 1
+                topologyKey: kubernetes.io/hostname
+                whenUnsatisfiable: DoNotSchedule
+                labelSelector:
+                  matchLabels:
+                    role: follower
+            replicas: 3
+            redisConfig:
+              additionalRedisConfig: "falkordb-cluster-ext-config"
+
+          redisExporter:
+            enabled: true
+            image: "falkordb/redis_exporter:v1.68.0"
+            imagePullPolicy: "IfNotPresent"
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
+            env:
+              - name: REDIS_EXPORTER_TLS_CA_CERT_FILE
+                value: "/ca/ca.crt"
+            
+          kubernetesConfig:
+            image: "falkordb/redis:latest"
+            imagePullPolicy: "IfNotPresent"
+            redisSecret:
+              name: "redis-secret"
+              key: "password"
+          storage:
+            volumeMount:
+              volume:
+                - name: ca-certificate
+                  secret:
+                    secretName: "ca-cert"
+              mountPath:
+                - mountPath: "/ca"
+                  name: "ca-certificate"
+                  readOnly: true
+            nodeConfVolume: true
+            nodeConfVolumeClaimTemplate:
+              spec:
+                accessModes:
+                - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+          podSecurityContext: 
+            fsGroup: 1000
+            runAsUser: 1000
+          acl:
+            secret:
+              secretName: "cluster-acl"
+          TLS:
+            enabled: {{ $var.TLS }}
+            ca: "/ca/ca.crt"
+            cert: "tls.crt"
+            key: "tls.key"
+            secret:
+              secretName: "falkordb-tls-secret"
+          env:
+            - name: POD_HOSTNAME
+              value: {{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+            - name: TLS_MODE
+              value: "{{ $var.TLS }}"
+
+      supplementalFiles:
+        - |
+          apiVersion: v1
+          stringData:
+            password: {{ $var.replicationPassword }}
+          kind: Secret
+          metadata:
+            name: redis-secret
+            namespace: {{$sys.id}}
+          type: Opaque
+
+        - |
+          apiVersion: v1
+          stringData:
+            user.acl: |
+              user {{ $var.falkordbUser }} on >{{ $var.falkordbPassword }} ~* resetchannels -@all +info +client +dbsize +ping +hello +auth +restore +dump +del +exists +unlink +type +flushall +touch +expire +pexpireat +ttl +pttl +expiretime +rename +renamenx +scan +discard +exec +multi +unwatch +watch +echo +slowlog +wait +waitaof +graph.info +graph.list +graph.query +graph.ro_query +graph.explain +graph.profile +graph.delete +graph.constraint +graph.slowlog +graph.bulk +graph.config
+              user default on >{{ $var.replicationPassword }} allchannels +multi +slaveof +ping +exec +subscribe +config|rewrite +role +publish +info +client|setname +client|kill +script|kill +psync +replconf +ping +cluster
+              user admin on >{{ $var.adminPassword }} ~* +@all
+          kind: Secret
+          metadata:
+            name: cluster-acl
+            namespace: {{$sys.id}}
+          type: Opaque
+
+        - |
+          apiVersion: v1
+          data:
+            ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZhekNDQTFPZ0F3SUJBZ0lSQUlJUXo3RFNRT05aUkdQZ3UyT0Npd0F3RFFZSktvWklodmNOQVFFTEJRQXcKVHpFTE1Ba0dBMVVFQmhNQ1ZWTXhLVEFuQmdOVkJBb1RJRWx1ZEdWeWJtVjBJRk5sWTNWeWFYUjVJRkpsYzJWaApjbU5vSUVkeWIzVndNUlV3RXdZRFZRUURFd3hKVTFKSElGSnZiM1FnV0RFd0hoY05NVFV3TmpBME1URXdORE00CldoY05NelV3TmpBME1URXdORE00V2pCUE1Rc3dDUVlEVlFRR0V3SlZVekVwTUNjR0ExVUVDaE1nU1c1MFpYSnUKWlhRZ1UyVmpkWEpwZEhrZ1VtVnpaV0Z5WTJnZ1IzSnZkWEF4RlRBVEJnTlZCQU1UREVsVFVrY2dVbTl2ZENCWQpNVENDQWlJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dJUEFEQ0NBZ29DZ2dJQkFLM29KSFAwRkRmem01NHJWeWdjCmg3N2N0OTg0a0l4dVBPWlhvSGozZGNLaS92VnFidllBVHlqYjNtaUdiRVNUdHJGai9SUVNhNzhmMHVveG15RisKMFRNOHVrajEzWG5mczdqL0V2RWhta3ZCaW9aeGFVcG1abXlQZmp4d3Y2MHBJZ2J6NU1EbWdLN2lTNCszbVg2VQpBNS9UUjVkOG1VZ2pVK2c0cms4S2I0TXUwVWxYaklCMHR0b3YwRGlOZXdOd0lSdDE4akE4K28rdTNkcGpxK3NXClQ4S09FVXQrend2by83VjNMdlN5ZTByZ1RCSWxESENOQXltZzRWTWs3QlBaN2htL0VMTktqRCtKbzJGUjNxeUgKQjVUMFkzSHNMdUp2VzVpQjRZbGNOSGxzZHU4N2tHSjU1dHVrbWk4bXhkQVE0UTdlMlJDT0Z2dTM5NmozeCtVQwpCNWlQTmdpVjUrSTNsZzAyZFo3N0RuS3hIWnU4QS9sSkJkaUIzUVcwS3RaQjZhd0JkcFVLRDlqZjFiMFNIelV2CktCZHMwcGpCcUFsa2QyNUhON3JPckZsZWFKMS9jdGFKeFFaQktUNVpQdDBtOVNUSkVhZGFvMHhBSDBhaG1iV24KT2xGdWhqdWVmWEtuRWdWNFdlMCtVWGdWQ3dPUGpkQXZCYkkrZTBvY1MzTUZFdnpHNnVCUUUzeERrM1N6eW5UbgpqaDhCQ05BdzFGdHhOclFIdXNFd01GeEl0NEk3bUtaOVlJcWlveW1DekxxOWd3UWJvb01EUWFIV0JmRWJ3cmJ3CnFIeUdPMGFvU0NxSTNIYWFkcjhmYXFVOUdZL3JPUE5rM3NnckRRb28vL2ZiNGhWQzFDTFFKMTNoZWY0WTUzQ0kKclU3bTJZczZ4dDBuVVc3L3ZHVDFNME5QQWdNQkFBR2pRakJBTUE0R0ExVWREd0VCL3dRRUF3SUJCakFQQmdOVgpIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJSNXRGbm1lN2JsNUFGemdBaUl5QnBZOXVtYmJqQU5CZ2txCmhraUc5dzBCQVFzRkFBT0NBZ0VBVlI5WXFieXlxRkRRRExIWUdta2dKeWtJckdGMVhJcHUrSUxsYVMvVjlsWkwKdWJoekVGblRJWmQrNTB4eCs3TFNZSzA1cUF2cUZ5RldoZkZRRGxucnp1Qlo2YnJKRmUrR25ZK0VnUGJrNlpHUQozQmViWWh0RjhHYVYwbnh2d3VvNzd4L1B5OWF1Si9HcHNNaXUvWDErbXZvaUJPdi8yWC9xa1NzaXNSY09qL0tLCk5GdFkyUHdCeVZTNXVDYk1pb2d6aVV3dGhEeUMzKzZXVndXNkxMdjN4TGZIVGp1Q3ZqSElJbk56a3RIQ2dLUTUKT1JBekk0Sk1QSitHc2xXWUhiNHBob3dpbTU3aWF6dFhPb0p3VGR3Sng0bkxDZ2ROYk9oZGpzbnZ6cXZIdTdVcgpUa1hXU3RBbXpPVnl5Z2hxcFpYakZhSDNwTzNKTEYrbCsvK3NLQUl1dnRkN3UrTnhlNUFXMHdkZVJsTjhOd2RDCmpOUEVscHpWbWJVcTRKVWFnRWl1VERrSHpzeEhwRktWSzdxNCs2M1NNMU45NVIxTmJkV2hzY2RDYitaQUp6VmMKb3lpM0I0M25qVE9RNXlPZisxQ2NlV3hHMWJRVnM1WnVmcHNNbGpxNFVpMC8xbHZoK3dqQ2hQNGtxS09KMnF4cQo0Umdxc2FoRFlWdlRIOXc3alhieUxlaU5kZDhYTTJ3OVUvdDd5MEZmLzl5aTBHRTQ0WmE0ckYyTE45ZDExVFBBCm1SR3VuVUhCY25XRXZnSkJRbDluSkVpVTBac252Z2MvdWJoUGdYUlI0WHEzN1owajRyN2cxU2dFRXp3eEE1N2QKZW15UHhnY1l4bi9lUjQ0L0tKNEVCcytsVkRSM3ZleUptK2tYUTk5YjIxLytqaDVYb3MxQW5YNWlJdHJlR0NjPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+          kind: Secret
+          metadata:
+            name: ca-cert
+            namespace: {{$sys.id}}
+          type: Opaque
+        - |
+          apiVersion: cert-manager.io/v1
+          kind: Certificate
+          metadata:
+            name: redis-tls
+            namespace: {{$sys.id}}
+          spec:
+            secretName: falkordb-tls-secret
+            duration:  2160h # 90d
+            renewBefore: 360h # 15d
+            issuerRef:
+              name: letsencrypt-prod
+              kind: ClusterIssuer
+            dnsNames:
+              - "*.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud"
+        
+        - |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: falkordb-cluster-ext-config
+            namespace: {{$sys.id}}
+            labels:
+              app.kubernetes.io/name: falkordb-cluster
+              helm.sh/chart: cluster-0.16.8
+              app.kubernetes.io/managed-by: Helm
+              app.kubernetes.io/instance: falkordb-cluster
+              app.kubernetes.io/version: 0.16.5
+              app.kubernetes.io/component: middleware
+          data:
+            redis-additional.conf: |
+              loadmodule /FalkorDB/bin/src/falkordb.so
+              tls-auth-clients no
+              tls-ca-cert-file /ca/ca.crt
+              masterauth {{ $var.replicationPassword }}
+              masteruser "default"
+              cluster-preferred-endpoint-type hostname
+              rename-command FLUSHALL ""
+        - |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: redis-cluster-leader-external-service
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: {{$sys.network.externalClusterEndpoint}}
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+            labels:
+              app.kubernetes.io/name: redis-cluster
+              helm.sh/chart: cluster-0.16.8
+              app.kubernetes.io/managed-by: Helm
+              app.kubernetes.io/instance: redis-cluster
+              app.kubernetes.io/version: 0.16.5
+              app.kubernetes.io/component: middleware
+          spec:
+            clusterIP: None
+            selector:
+              redis_setup_type: cluster
+            ports:
+              - protocol: TCP
+                port: 6379
+                targetPort: 6379
+                name: client
+              - protocol: TCP
+                port: 16379
+                targetPort: 16379
+                name: gossip
+        - |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: falkordb-cluster-leader-0
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: falkordb-cluster-leader-0.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+            labels:
+              app.kubernetes.io/name: redis-cluster
+              helm.sh/chart: cluster-0.16.8
+              app.kubernetes.io/managed-by: Helm
+              app.kubernetes.io/instance: redis-cluster
+              app.kubernetes.io/version: 0.16.5
+              app.kubernetes.io/component: middleware
+          spec:
+            clusterIP: None
+            selector:
+              statefulset.kubernetes.io/pod-name: falkordb-cluster-leader-0
+            ports:
+              - protocol: TCP
+                port: 6379
+                targetPort: 6379
+                name: client
+              - protocol: TCP
+                port: 16379
+                targetPort: 16379
+                name: gossip
+        - |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: falkordb-cluster-leader-1
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: falkordb-cluster-leader-1.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+            labels:
+              app.kubernetes.io/name: redis-cluster
+              helm.sh/chart: cluster-0.16.8
+              app.kubernetes.io/managed-by: Helm
+              app.kubernetes.io/instance: redis-cluster
+              app.kubernetes.io/version: 0.16.5
+              app.kubernetes.io/component: middleware
+          spec:
+            clusterIP: None
+            selector:
+              statefulset.kubernetes.io/pod-name: falkordb-cluster-leader-1
+            ports:
+              - protocol: TCP
+                port: 6379
+                targetPort: 6379
+                name: client
+              - protocol: TCP
+                port: 16379
+                targetPort: 16379
+                name: gossip
+        - |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: falkordb-cluster-leader-2
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: falkordb-cluster-leader-2.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+            labels:
+              app.kubernetes.io/name: redis-cluster
+              helm.sh/chart: cluster-0.16.8
+              app.kubernetes.io/managed-by: Helm
+              app.kubernetes.io/instance: redis-cluster
+              app.kubernetes.io/version: 0.16.5
+              app.kubernetes.io/component: middleware
+          spec:
+            clusterIP: None
+            selector:
+              statefulset.kubernetes.io/pod-name: falkordb-cluster-leader-2
+            ports:
+              - protocol: TCP
+                port: 6379
+                targetPort: 6379
+                name: client
+              - protocol: TCP
+                port: 16379
+                targetPort: 16379
+                name: gossip
+        - |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: falkordb-cluster-follower-0
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: falkordb-cluster-follower-0.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+            labels:
+              app.kubernetes.io/name: redis-cluster
+              helm.sh/chart: cluster-0.16.8
+              app.kubernetes.io/managed-by: Helm
+              app.kubernetes.io/instance: redis-cluster
+              app.kubernetes.io/version: 0.16.5
+              app.kubernetes.io/component: middleware
+          spec:
+            clusterIP: None
+            selector:
+              statefulset.kubernetes.io/pod-name: falkordb-cluster-follower-0
+            ports:
+              - protocol: TCP
+                port: 6379
+                targetPort: 6379
+                name: client
+              - protocol: TCP
+                port: 16379
+                targetPort: 16379
+                name: gossip
+        - |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: falkordb-cluster-follower-1
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: falkordb-cluster-follower-1.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+            labels:
+              app.kubernetes.io/name: redis-cluster
+              helm.sh/chart: cluster-0.16.8
+              app.kubernetes.io/managed-by: Helm
+              app.kubernetes.io/instance: redis-cluster
+              app.kubernetes.io/version: 0.16.5
+              app.kubernetes.io/component: middleware
+          spec:
+            clusterIP: None
+            selector:
+              statefulset.kubernetes.io/pod-name: falkordb-cluster-follower-1
+            ports:
+              - protocol: TCP
+                port: 6379
+                targetPort: 6379
+                name: client
+              - protocol: TCP
+                port: 16379
+                targetPort: 16379
+                name: gossip
+        - |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: falkordb-cluster-follower-2
+            namespace: {{$sys.id}}
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: falkordb-cluster-follower-2.{{ $sys.id }}.hc-vqoxdmrqs.{{ $sys.deploymentCell.region }}.{{ $sys.deploymentCell.cloudProviderName }}.f2e0a955bb84.cloud
+              external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+            labels:
+              app.kubernetes.io/name: redis-cluster
+              helm.sh/chart: cluster-0.16.8
+              app.kubernetes.io/managed-by: Helm
+              app.kubernetes.io/instance: redis-cluster
+              app.kubernetes.io/version: 0.16.5
+              app.kubernetes.io/component: middleware
+          spec:
+            clusterIP: None
+            selector:
+              statefulset.kubernetes.io/pod-name: falkordb-cluster-follower-2
+            ports:
+              - protocol: TCP
+                port: 6379
+                targetPort: 6379
+                name: client
+              - protocol: TCP
+                port: 16379
+                targetPort: 16379
+                name: gossip
+
+      helmChartDependencies:
+        - chartName: operator
+          chartVersion: 0.20.0
+          chartRepoName: falkordb-helm
+          chartRepoURL: "https://falkordb.github.io/helm-charts/"
+
+    apiParameters:
+      - key: replicas
+        description: Number of Replicas
+        name: Replica Count
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "3"
+      - key: instanceType
+        description: Instance Type
+        name: Instance Type
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "t3.medium"
+        options:
+          - t3.medium
+          - m6i.large
+          - m6i.xlarge
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
+      - key: TLS
+        description: Enable TLS
+        name: Enable TLS
+        type: Boolean
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "false"
+      - key: falkordbUser
+        description: FalkorDB User
+        name: FalkorDB User
+        type: String
+        modifiable: true
+        required: true
+        export: true
+        defaultValue: "falkordb"
       - key: falkordbPassword
         description: FalkorDB Password
         name: FalkorDB Password

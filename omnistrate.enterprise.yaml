@@ -10,6 +10,8 @@ x-omnistrate-service-plan:
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
       AwsAccountId: "$AwsAccountId"
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+      AzureSubscriptionId: "$AzureSubscriptionId"
+      AzureTenantId: "$AzureTenantId"
   features:
     CUSTOM_NETWORKS:
 

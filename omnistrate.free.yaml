@@ -128,6 +128,9 @@ services:
           aws:
             instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 10
+          azure:
+            instanceStorageType: AZURE::PREMEIUM_SSD
+            instanceStorageSizeGi: 10
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword

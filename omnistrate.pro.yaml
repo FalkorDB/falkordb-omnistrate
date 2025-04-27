@@ -177,6 +177,13 @@ x-clusterparam: &clusterparam
         - c6i.2xlarge
         - c6i.4xlarge
         - c6i.8xlarge
+        - B2ls_v2
+        - D2s_v5
+        - D4s_v5
+        - F4s_v2
+        - F8s_v2
+        - F16s_v2
+        - F32s_v2
     - key: enableTLS
       description: Whether to enable TLS for the database
       name: Enable TLS
@@ -339,6 +346,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
+          - B2ls_v2
+          - D2s_v5
+          - D4s_v5
+          - F4s_v2
+          - F8s_v2
+          - F16s_v2
+          - F32s_v2
         parameterDependencyMap:
           node-s: nodeInstanceType
       - key: enableTLS
@@ -521,6 +535,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
+          - B2ls_v2
+          - D2s_v5
+          - D4s_v5
+          - F4s_v2
+          - F8s_v2
+          - F16s_v2
+          - F32s_v2
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -648,6 +669,7 @@ services:
           aws:
             instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
+          azure:
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -788,6 +810,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
+          - B2ls_v2
+          - D2s_v5
+          - D4s_v5
+          - F4s_v2
+          - F8s_v2
+          - F16s_v2
+          - F32s_v2
         parameterDependencyMap:
           node-sz: nodeInstanceType
       - key: numReplicas
@@ -980,6 +1009,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
+          - B2ls_v2
+          - D2s_v5
+          - D4s_v5
+          - F4s_v2
+          - F8s_v2
+          - F16s_v2
+          - F32s_v2
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1451,6 +1487,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
+          - B2ls_v2
+          - D2s_v5
+          - D4s_v5
+          - F4s_v2
+          - F8s_v2
+          - F16s_v2
+          - F32s_v2
         parameterDependencyMap:
           node-mz: nodeInstanceType
       - key: numReplicas
@@ -1643,6 +1686,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
+          - B2ls_v2
+          - D2s_v5
+          - D4s_v5
+          - F4s_v2
+          - F8s_v2
+          - F16s_v2
+          - F32s_v2
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -2113,6 +2163,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
+          - B2ls_v2
+          - D2s_v5
+          - D4s_v5
+          - F4s_v2
+          - F8s_v2
+          - F16s_v2
+          - F32s_v2
         parameterDependencyMap:
           cluster-sz: nodeInstanceType
       - key: enableTLS
@@ -2450,6 +2507,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
+          - B2ls_v2
+          - D2s_v5
+          - D4s_v5
+          - F4s_v2
+          - F8s_v2
+          - F16s_v2
+          - F32s_v2
         parameterDependencyMap:
           cluster-mz: nodeInstanceType
       - key: enableTLS

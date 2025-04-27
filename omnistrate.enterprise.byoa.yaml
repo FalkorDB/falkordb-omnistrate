@@ -4,11 +4,12 @@ x-omnistrate-service-plan:
   name: "FalkorDB Enterprise BYOA"
   deployment:
     byoaDeployment:
-      GcpProjectId: "$GcpProjectId"
-      GcpProjectNumber: "$GcpProjectNumber"
-      GcpServiceAccountEmail: "$GcpServiceAccountEmail"
-      AwsAccountId: "$AwsAccountId"
-      AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+      x-omnistrate-byoa:
+        GcpProjectId: "$GcpProjectId"
+        GcpProjectNumber: "$GcpProjectNumber"
+        GcpServiceAccountEmail: "$GcpServiceAccountEmail"
+        AwsAccountId: "$AwsAccountId"
+        AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
 
 
 x-omnistrate-load-balancer:

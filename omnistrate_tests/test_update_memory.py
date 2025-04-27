@@ -28,7 +28,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("omnistrate_user")
 parser.add_argument("omnistrate_password")
-parser.add_argument("cloud_provider", choices=["aws", "gcp"])
+parser.add_argument("cloud_provider", choices=["aws", "gcp", "azure"])
 parser.add_argument("region")
 
 parser.add_argument(

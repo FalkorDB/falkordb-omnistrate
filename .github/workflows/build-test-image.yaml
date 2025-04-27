@@ -120,6 +120,11 @@ jobs:
             file: omnistrate.startup.yaml
             key: startup
             tier-name: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - service-name: FalkorDB
+            plan-name: FalkorDB Enterprise BYOA
+            file: omnistrate.enterprise.byoa.yaml
+            key: enterprise-byoa
+            tier-name: enterprise-byoa-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -4,9 +4,8 @@ x-omnistrate-service-plan:
   name: "FalkorDB Enterprise BYOA"
   deployment:
     byoaDeployment:
-      x-omnistrate-byoa:
-        AwsAccountId: "$AwsAccountId"
-        AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+      AwsAccountId: "$AwsAccountId"
+      AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
 
 x-omnistrate-load-balancer:
   tcp:

@@ -5,13 +5,8 @@ x-omnistrate-service-plan:
   deployment:
     byoaDeployment:
       x-omnistrate-byoa:
-        GcpProjectId: "$GcpProjectId"
-        GcpProjectNumber: "$GcpProjectNumber"
-        GcpServiceAccountEmail: "$GcpServiceAccountEmail"
         AwsAccountId: "$AwsAccountId"
         AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
-        AzureSubscriptionId: "$AzureSubscriptionId"
-        AzureTenantId: "$AzureTenantId"
 
 x-omnistrate-load-balancer:
   tcp:

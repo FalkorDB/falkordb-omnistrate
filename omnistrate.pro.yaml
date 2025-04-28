@@ -177,7 +177,7 @@ x-clusterparam: &clusterparam
         - c6i.2xlarge
         - c6i.4xlarge
         - c6i.8xlarge
-        - standard_d2ls_v6
+        - standard_b2ms
         - standard_d2s_v5
         - standard_d4s_v5
         - standard_f4s_v2
@@ -346,7 +346,7 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - standard_d2ls_v6
+          - standard_b2ms
           - standard_d2s_v5
           - standard_d4s_v5
           - standard_f4s_v2
@@ -537,7 +537,7 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - standard_d2ls_v6
+          - standard_b2ms
           - standard_d2s_v5
           - standard_d4s_v5
           - standard_f4s_v2
@@ -814,7 +814,7 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - standard_d2ls_v6
+          - standard_b2ms
           - standard_d2s_v5
           - standard_d4s_v5
           - standard_f4s_v2
@@ -1015,7 +1015,7 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - standard_d2ls_v6
+          - standard_b2ms
           - standard_d2s_v5
           - standard_d4s_v5
           - standard_f4s_v2
@@ -1341,7 +1341,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: standard_d2ls_v6
+          name: standard_b2ms
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
@@ -1501,7 +1501,7 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - standard_d2ls_v6
+          - standard_b2ms
           - standard_d2s_v5
           - standard_d4s_v5
           - standard_f4s_v2
@@ -1702,7 +1702,7 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - standard_d2ls_v6
+          - standard_b2ms
           - standard_d2s_v5
           - standard_d4s_v5
           - standard_f4s_v2
@@ -2028,7 +2028,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: standard_d2ls_v6
+          name: standard_b2ms
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
@@ -2187,7 +2187,7 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - standard_d2ls_v6
+          - standard_b2ms
           - standard_d2s_v5
           - standard_d4s_v5
           - standard_f4s_v2
@@ -2481,7 +2481,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: standard_d2ls_v6
+          name: standard_b2ms
     <<: *rebalanceparam
     environment:
       - NODE_HOST=$sys.network.node.externalEndpoint
@@ -2538,7 +2538,7 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - standard_d2ls_v6
+          - standard_b2ms
           - standard_d2s_v5
           - standard_d4s_v5
           - standard_f4s_v2
@@ -2832,7 +2832,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: standard_d2ls_v6
+          name: standard_b2ms
     <<: *rebalanceparam
     environment:
       - IS_MULTI_ZONE=1

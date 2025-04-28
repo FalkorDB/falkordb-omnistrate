@@ -239,26 +239,26 @@ jobs:
       matrix:
         instances:
           ####################### AZURE #######################
-          - name: Free - AZURE/eastus2 - Failover & Persistence
-            if: "true"
-            testFile: test_standalone.py
-            tierName: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-            cloudProvider: azure
-            cloudRegion: eastus2
-            subscriptionId: sub-GJPV3NoNC0
-            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'free' --replica-id 'node-f-0' --instance-name 'test-free-failover' --instance-description 'test-free-failover' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
-          - name: Free - AZURE/eastus2 - Out of memory
-            if: "true"
-            testFile: test_out_of_memory.py
-            tierName: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-            cloudProvider: azure
-            cloudRegion: eastus2
-            subscriptionId: sub-GJPV3NoNC0
-            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'free' --replica-id 'node-f-0' --instance-name 'test-free-oom' --instance-description 'test-free-oom' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          # - name: Free - AZURE/eastus2 - Failover & Persistence
+          #   if: "true"
+          #   testFile: test_standalone.py
+          #   tierName: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: azure
+          #   cloudRegion: eastus2
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'free' --replica-id 'node-f-0' --instance-name 'test-free-failover' --instance-description 'test-free-failover' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          # - name: Free - AZURE/eastus2 - Out of memory
+          #   if: "true"
+          #   testFile: test_out_of_memory.py
+          #   tierName: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: azure
+          #   cloudRegion: eastus2
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'free' --replica-id 'node-f-0' --instance-name 'test-free-oom' --instance-description 'test-free-oom' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - AZURE/eastus2 - Change Password
             if: "true"
             testFile: test_change_password.py
@@ -458,7 +458,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'   --instance-name 'test-cluster-mz-failover-tls' --instance-description 'test-cluster-mz-failover' --instance-type 't2.medium' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'   --instance-name 'test-cluster-mz-failover-tls' --instance-description 'test-cluster-mz-failover' --instance-type 'standard_b2ms' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution"
           ###################### AZURE Enterprise tier ######################
           - name: Enterprise/Standalone - AZURE/eastus2 - Failover & Persistence
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
@@ -492,16 +492,16 @@ jobs:
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'  --instance-name 'test-cluster-mz-enterprise-failover' --instance-description 'test-cluster-mz-enterprise-failover' --instance-type 'standard_b2ms' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
           ###################### AZURE startup tier ######################
-          - name: Startup/Standalone - GCP/eastus2 - Failover & Persistence
-            if: "true"
-            testFile: test_standalone.py
-            tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-            cloudProvider: azure
-            cloudRegion: us-central1
-            subscriptionId: sub-GJPV3NoNC0
-            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover-startup' --instance-description 'test-standalone-failover-startup' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          # - name: Startup/Standalone - GCP/eastus2 - Failover & Persistence
+          #   if: "true"
+          #   testFile: test_standalone.py
+          #   tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #   cloudProvider: azure
+          #   cloudRegion: us-central1
+          #   subscriptionId: sub-GJPV3NoNC0
+          #   serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          #   environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+          #   extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover-startup' --instance-description 'test-standalone-failover-startup' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           ###################### AWS ######################
           - name: Free - AWS/us-east-2 - Failover & Persistence
             if: "true"

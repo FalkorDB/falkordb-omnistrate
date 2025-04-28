@@ -177,13 +177,13 @@ x-clusterparam: &clusterparam
         - c6i.2xlarge
         - c6i.4xlarge
         - c6i.8xlarge
-        - B2ls_v2
-        - D2s_v5
-        - D4s_v5
-        - F4s_v2
-        - F8s_v2
-        - F16s_v2
-        - F32s_v2
+        - standard_b2ls_v2
+        - standard_d2s_v5
+        - standard_d4s_v5
+        - standard_f4s_v2
+        - standard_f8s_v2
+        - standard_f16s_v2
+        - standard_F32s_v2
     - key: enableTLS
       description: Whether to enable TLS for the database
       name: Enable TLS
@@ -346,13 +346,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - B2ls_v2
-          - D2s_v5
-          - D4s_v5
-          - F4s_v2
-          - F8s_v2
-          - F16s_v2
-          - F32s_v2
+          - standard_b2ls_v2
+          - standard_d2s_v5
+          - standard_d4s_v5
+          - standard_f4s_v2
+          - standard_f8s_v2
+          - standard_f16s_v2
+          - standard_F32s_v2
         parameterDependencyMap:
           node-s: nodeInstanceType
       - key: enableTLS
@@ -537,13 +537,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - B2ls_v2
-          - D2s_v5
-          - D4s_v5
-          - F4s_v2
-          - F8s_v2
-          - F16s_v2
-          - F32s_v2
+          - standard_b2ls_v2
+          - standard_d2s_v5
+          - standard_d4s_v5
+          - standard_f4s_v2
+          - standard_f8s_v2
+          - standard_f16s_v2
+          - standard_F32s_v2
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -814,13 +814,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - B2ls_v2
-          - D2s_v5
-          - D4s_v5
-          - F4s_v2
-          - F8s_v2
-          - F16s_v2
-          - F32s_v2
+          - standard_b2ls_v2
+          - standard_d2s_v5
+          - standard_d4s_v5
+          - standard_f4s_v2
+          - standard_f8s_v2
+          - standard_f16s_v2
+          - standard_F32s_v2
         parameterDependencyMap:
           node-sz: nodeInstanceType
       - key: numReplicas
@@ -1015,13 +1015,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - B2ls_v2
-          - D2s_v5
-          - D4s_v5
-          - F4s_v2
-          - F8s_v2
-          - F16s_v2
-          - F32s_v2
+          - standard_b2ls_v2
+          - standard_d2s_v5
+          - standard_d4s_v5
+          - standard_f4s_v2
+          - standard_f8s_v2
+          - standard_f16s_v2
+          - standard_F32s_v2
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1341,7 +1341,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: B1ms
+          name: standard_b1ms
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
@@ -1501,13 +1501,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - B2ls_v2
-          - D2s_v5
-          - D4s_v5
-          - F4s_v2
-          - F8s_v2
-          - F16s_v2
-          - F32s_v2
+          - standard_b2ls_v2
+          - standard_d2s_v5
+          - standard_d4s_v5
+          - standard_f4s_v2
+          - standard_f8s_v2
+          - standard_f16s_v2
+          - standard_F32s_v2
         parameterDependencyMap:
           node-mz: nodeInstanceType
       - key: numReplicas
@@ -1702,13 +1702,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - B2ls_v2
-          - D2s_v5
-          - D4s_v5
-          - F4s_v2
-          - F8s_v2
-          - F16s_v2
-          - F32s_v2
+          - standard_b2ls_v2
+          - standard_d2s_v5
+          - standard_d4s_v5
+          - standard_f4s_v2
+          - standard_f8s_v2
+          - standard_f16s_v2
+          - standard_F32s_v2
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -2028,7 +2028,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: B1ms
+          name: standard_b1ms
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
@@ -2187,13 +2187,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - B2ls_v2
-          - D2s_v5
-          - D4s_v5
-          - F4s_v2
-          - F8s_v2
-          - F16s_v2
-          - F32s_v2
+          - standard_b2ls_v2
+          - standard_d2s_v5
+          - standard_d4s_v5
+          - standard_f4s_v2
+          - standard_f8s_v2
+          - standard_f16s_v2
+          - standard_F32s_v2
         parameterDependencyMap:
           cluster-sz: nodeInstanceType
       - key: enableTLS
@@ -2481,7 +2481,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: B1ms
+          name: standard_b1ms
     <<: *rebalanceparam
     environment:
       - NODE_HOST=$sys.network.node.externalEndpoint
@@ -2538,13 +2538,13 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
-          - B2ls_v2
-          - D2s_v5
-          - D4s_v5
-          - F4s_v2
-          - F8s_v2
-          - F16s_v2
-          - F32s_v2
+          - standard_b2ls_v2
+          - standard_d2s_v5
+          - standard_d4s_v5
+          - standard_f4s_v2
+          - standard_f8s_v2
+          - standard_f16s_v2
+          - standard_F32s_v2
         parameterDependencyMap:
           cluster-mz: nodeInstanceType
       - key: enableTLS
@@ -2832,7 +2832,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: B1ms
+          name: standard_b1ms
     <<: *rebalanceparam
     environment:
       - IS_MULTI_ZONE=1

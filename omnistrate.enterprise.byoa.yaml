@@ -10,7 +10,8 @@ x-omnistrate-service-plan:
         GcpServiceAccountEmail: "$GcpServiceAccountEmail"
         AwsAccountId: "$AwsAccountId"
         AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
-
+        AzureSubscriptionId: "$AzureSubscriptionId"
+        AzureTenantId: "$AzureTenantId"
 
 x-omnistrate-load-balancer:
   tcp:
@@ -645,6 +646,9 @@ services:
           aws:
             instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
+          azure:
+            instanceStorageType: AZURE::P15
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -951,6 +955,8 @@ services:
           apiParam: nodeInstanceType
         - cloudProvider: aws
           apiParam: nodeInstanceType
+        - cloudProvider: azure
+          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -1107,6 +1113,9 @@ services:
             instanceStorageSizeGi: 200
           aws:
             instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
+          azure:
+            instanceStorageType: AZURE::P15
             instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
@@ -1283,6 +1292,8 @@ services:
           name: e2-small
         - cloudProvider: aws
           name: t3a.small
+        - cloudProvider: azure
+          name: B1ms
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
@@ -1306,6 +1317,9 @@ services:
             instanceStorageSizeGi: 10
           aws:
             instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 10
+          azure:
+            instanceStorageType: AZURE::P15
             instanceStorageSizeGi: 10
     secrets:
       - source: adminpasspath
@@ -1603,6 +1617,8 @@ services:
           apiParam: nodeInstanceType
         - cloudProvider: aws
           apiParam: nodeInstanceType
+        - cloudProvider: azure
+          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -1758,6 +1774,9 @@ services:
             instanceStorageSizeGi: 200
           aws:
             instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
+          azure:
+            instanceStorageType: AZURE::P15
             instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
@@ -1934,6 +1953,8 @@ services:
           name: e2-small
         - cloudProvider: aws
           name: t3a.small
+        - cloudProvider: azure
+          name: B1ms
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
@@ -1957,6 +1978,9 @@ services:
             instanceStorageSizeGi: 10
           aws:
             instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 10
+          azure:
+            instanceStorageType: AZURE::P15
             instanceStorageSizeGi: 10
     secrets:
       - source: adminpasspath
@@ -2244,6 +2268,8 @@ services:
           apiParam: nodeInstanceType
         - cloudProvider: aws
           apiParam: nodeInstanceType
+        - cloudProvider: azure
+          apiParam: nodeInstanceType
     <<: *clusterparam
     volumes:
       - source: ./data
@@ -2367,6 +2393,8 @@ services:
           name: e2-small
         - cloudProvider: aws
           name: t3a.small
+        - cloudProvider: azure
+          name: B1ms
     <<: *rebalanceparam
     environment:
       - IS_MULTI_ZONE=0
@@ -2578,6 +2606,8 @@ services:
           apiParam: nodeInstanceType
         - cloudProvider: aws
           apiParam: nodeInstanceType
+        - cloudProvider: azure
+          apiParam: nodeInstanceType
     <<: *clusterparam
     volumes:
       - source: ./data
@@ -2698,6 +2728,8 @@ services:
           name: e2-small
         - cloudProvider: aws
           name: t3a.small
+        - cloudProvider: azure
+          name: B1ms
     <<: *rebalanceparam
     environment:
       - IS_MULTI_ZONE=1

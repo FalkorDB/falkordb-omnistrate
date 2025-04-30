@@ -33,11 +33,11 @@ x-omnistrate-load-balancer:
           ingressPort: 26379
           backendPort: 26379
 
-x-internal-integrations:
-  logs:
-    provider: native
-  metrics:
-    #provider: native
+# x-internal-integrations:
+#   logs:
+#     provider: native
+#   metrics:
+#     provider: native
 
 x-falkordbMetrics: &metrics
   prometheusEndpoint: "http://localhost:9121/metrics"

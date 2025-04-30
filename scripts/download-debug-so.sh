@@ -9,7 +9,7 @@
 # Variables
 RELEASE_URL="https://github.com/FalkorDB/falkordb/releases/download"
 LIB_PATH="./falkordb.so"
-DEBUG_LIB_NAME="falkordb.debug-x64.so"
+DEBUG_LIB_NAME="falkordb-debug-x64.so"
 DOWNLOAD_DIR="./data"
 
 VERSION=""

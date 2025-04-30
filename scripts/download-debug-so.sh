@@ -11,13 +11,16 @@ RELEASE_URL="https://github.com/FalkorDB/falkordb/releases/download"
 LIB_PATH="/var/lib/falkordb/bin/falkordb.so"
 DEBUG_LIB_NAME="falkordb-debug-x64.so"
 DOWNLOAD_DIR="/data"
+TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
+AUTH_CONNECTION_STRING="-a $ADMIN_PASSWORD --no-auth-warning"
+
 
 VERSION=""
 # Functions
 get_falkordb_version() {
   echo "Fetching falkordb version..."
   local module_info
-  module_info=$(redis-cli -a $(cat /run/secrets/adminpassword) info modules | grep "module:name=graph")
+  module_info=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info modules | grep "module:name=graph")
   if [ -z "$module_info" ]; then
     echo "Error: Unable to determine falkordb version."
     exit 1

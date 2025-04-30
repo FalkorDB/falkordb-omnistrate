@@ -50,14 +50,24 @@ for instance in (
     time.sleep(5)
     instance_id = instance["consumptionResourceInstanceResult"]["id"]
     print(instance_id)
-    resources_map = instance["consumptionResourceInstanceResult"][
-        "detailedNetworkTopology"
-    ]
-    resource_id = None
-    for key, value in resources_map.items():
-        if value["main"]:
-            resource_id = key
-            break
+    
+    if "detailedNetworkTopology" not in instance["consumptionResourceInstanceResult"]:
+        resources_map = instance["consumptionResourceInstanceResult"]
+        cloud_account_instance = True
+    else:
+        cloud_account_instance = False
+        resources_map = instance["consumptionResourceInstanceResult"][
+            "detailedNetworkTopology"
+        ]
+
+    if not cloud_account_instance:
+        resource_id = None
+        for key, value in resources_map.items():
+            if value["main"]:
+                resource_id = key
+                break
+    else:
+        resource_id= resources_map["resourceID"]
     response = requests.delete(
         f"{delete_instance_url}/{instance_id}",
         headers=headers,

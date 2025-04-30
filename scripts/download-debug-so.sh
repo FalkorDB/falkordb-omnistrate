@@ -8,16 +8,16 @@
 
 # Variables
 RELEASE_URL="https://github.com/FalkorDB/falkordb/releases/download"
-LIB_PATH="./falkordb.so"
+LIB_PATH="/var/lib/falkordb/bin/falkordb.so"
 DEBUG_LIB_NAME="falkordb-debug-x64.so"
-DOWNLOAD_DIR="./data"
+DOWNLOAD_DIR="/data"
 
 VERSION=""
 # Functions
 get_falkordb_version() {
   echo "Fetching falkordb version..."
   local module_info
-  module_info=$(redis-cli info modules | grep "module:name=graph")
+  module_info=$(redis-cli -a $(cat /run/secrets/adminpassword) info modules | grep "module:name=graph")
   if [ -z "$module_info" ]; then
     echo "Error: Unable to determine falkordb version."
     exit 1

@@ -13,10 +13,10 @@ x-omnistrate-service-plan:
       AzureSubscriptionId: "$AzureSubscriptionId"
       AzureTenantId: "$AzureTenantId"
 
-x-internal-integrations:
-  logs:
-    provider: native
-  metrics:
+# x-internal-integrations:
+#   logs:
+#     provider: native
+#   metrics:
 
 services:
   # Free

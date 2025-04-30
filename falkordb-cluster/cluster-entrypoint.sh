@@ -318,7 +318,7 @@ set_memory_limit() {
     ["c6i.2xlarge"]="13GB"
     ["c6i.4xlarge"]="30GB"
     ["c6i.8xlarge"]="62GB"
-    ["standard_bm2s"]="2GB"
+    ["standard_b2ms"]="2GB"
     ["standard_d2s_v5"]="6GB"
     ["standard_d4s_v5"]="14GB"
     ["standard_f4s_v2"]="6GB"
@@ -374,7 +374,6 @@ config_rewrite() {
 create_cluster() {
 
   local urls=""
-
   for host in $(seq 0 5); do
     urls="$urls $(get_host $host):$NODE_PORT"
   done
@@ -464,7 +463,7 @@ set_rdb_persistence_config
 set_aof_persistence_config
 
 config_rewrite
-
+sleep 999999999999999
 if [[ $NODE_INDEX -eq 0 && ! -f "$DATA_DIR/cluster_initialized" ]]; then
   # Create cluster
   echo "Creating cluster"

@@ -463,7 +463,7 @@ set_rdb_persistence_config
 set_aof_persistence_config
 
 config_rewrite
-sleep 999999999999999
+
 if [[ $NODE_INDEX -eq 0 && ! -f "$DATA_DIR/cluster_initialized" ]]; then
   # Create cluster
   echo "Creating cluster"

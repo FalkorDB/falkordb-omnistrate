@@ -82,13 +82,27 @@ fn get_redis_connection_pool(is_sentinel: bool) -> Result<r2d2::Pool<redis::Clie
         err
     })?;
 
-    r2d2::Pool::builder()
-        .max_size(1)
-        .build(client)
-        .map_err(|err| {
-            eprintln!("Failed to create Redis connection pool: {}", err);
-            redis::RedisError::from((redis::ErrorKind::IoError, "Failed to create connection pool"))
-        })
+    let mut retries = 5;
+    let retry_delay = Duration::from_secs(2);
+
+    while retries > 0 {
+        match r2d2::Pool::builder().max_size(1).build(client.clone()) {
+            Ok(pool) => return Ok(pool),
+            Err(err) => {
+                eprintln!(
+                    "Failed to create Redis connection pool: {}. Retries left: {}",
+                    err, retries - 1
+                );
+                retries -= 1;
+                std::thread::sleep(retry_delay);
+            }
+        }
+    }
+
+    Err(redis::RedisError::from((
+        redis::ErrorKind::IoError,
+        "Failed to create connection pool after retries",
+    )))
 }
 
 fn check_node_liveness(db_info: &str, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {

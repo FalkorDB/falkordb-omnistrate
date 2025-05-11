@@ -120,6 +120,7 @@ class OmnistrateFleetInstance:
         """Create an instance with the specified parameters. Optionally wait for the instance to be ready."""
 
         self.falkordb_password = falkordb_password
+        self.falkord_user = falkordb_user
 
         data = {
             "cloud_provider": deployment_cloud_provider,
@@ -477,7 +478,7 @@ class OmnistrateFleetInstance:
         resources = self.get_network_topology()
 
         resources_keys = resources.keys()
-
+            
         endpoints = []
         for key in resources_keys:
             if "nodes" in resources[key] and len(resources[key]["nodes"]) > 0:
@@ -494,7 +495,20 @@ class OmnistrateFleetInstance:
             raise Exception("No endpoints found")
 
         return endpoints
+    
+    def get_operator_endpoint(self):
+        resources = self.get_network_topology()
+        print("resources:",resources)
+        resources_keys = resources.keys()
+        print("resource keys:",resources_keys)
+        endpoints = []
+        for key in resources_keys:
+            endpoints.append({'endpoint': resources[key]['additionalEndpoints']['cluster']['endpoint'], 'ports': resources[key]['additionalEndpoints']['cluster']['openPorts']})
+        if len(endpoints) == 0:
+            raise Exception("No endpoints found")
 
+        return endpoints
+    
     def get_cluster_endpoint(self, network_type="PUBLIC"):
         resources = self.get_network_topology()
 
@@ -514,14 +528,20 @@ class OmnistrateFleetInstance:
                 }
 
     def create_connection(
-        self, ssl: bool = False, force_reconnect: bool = False, retries=5, network_type="PUBLIC"
+        self, ssl: bool = False, force_reconnect: bool = False, retries=5, network_type="PUBLIC", operator=False, username=None, password=None
     ):
 
         if self._connection is not None and not force_reconnect:
             return self._connection
+        if operator:
+            endpoint = self.get_operator_endpoint()[0]
+        else:
+            endpoint = self.get_cluster_endpoint(network_type=network_type)
 
-        endpoint = self.get_cluster_endpoint(network_type=network_type)
-
+        if username is None:
+            username = self.falkord_user
+        if password is None:
+            password = self.falkordb_password
         # Connect to the master node
         while retries > 0:
             try:
@@ -531,8 +551,8 @@ class OmnistrateFleetInstance:
                 self._connection = FalkorDB(
                     host=endpoint["endpoint"],
                     port=endpoint["ports"][0],
-                    username="falkordb",
-                    password=self.falkordb_password,
+                    username=username,
+                    password=password,
                     ssl=ssl,
                     retry_on_error=[
                         ConnectionRefusedError,

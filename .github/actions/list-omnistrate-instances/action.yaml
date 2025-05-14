@@ -27,7 +27,7 @@ runs:
       apk add jq && \
       /usr/local/bin/omnistrate-ctl login --email "${{ inputs.username }}" --password "${{ inputs.password }}" && \
       instances_json=$(/usr/local/bin/omnistrate-ctl instance list -f "${{ inputs.filter }}" -o json) && \
-      echo "Got instances $(echo $instance_json | jq)" && \
+      echo "Got instances $(echo $instances_json | jq)" && \
       echo "$instances_json" | jq -c '.[]' | while read -r instance; do \
         echo "Processing instance"; \
         id=$(echo "$instance" | jq -r '.instance_id'); \

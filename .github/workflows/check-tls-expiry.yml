@@ -33,20 +33,16 @@ jobs:
             instance_id=$(echo "$instance" | jq -r '.instance_id')
             endpoint=$(echo "$instance" | jq -r '.endpoint')
 
-            echo "Checking TLS for $endpoint"
             end_date=$(echo | openssl s_client -servername "$endpoint" -connect "$endpoint" 2>/dev/null \
               | openssl x509 -noout -enddate | cut -d= -f2)
 
             if [ -z "$end_date" ]; then
-              echo "Could not retrieve cert for $endpoint"
               continue
             fi
 
             end_timestamp=$(date -d "$end_date" +%s)
             now=$(date +%s)
             days_left=$(( (end_timestamp - now) / 86400 ))
-
-            echo "$endpoint expires in $days_left days"
 
             if [ "$days_left" -lt 15 ]; then
               curl -X POST 'https://events.pagerduty.com/v2/enqueue' \

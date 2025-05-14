@@ -19,7 +19,7 @@ outputs:
     description: Filtered TLS-enabled instance list (as JSON array)
 runs:
   using: docker
-  image: ghcr.io/omnistrate/ctl:0.9.89
+  image: ghcr.io/omnistrate/ctl:0.11.7
   entrypoint: /bin/sh
   args:
     - -c

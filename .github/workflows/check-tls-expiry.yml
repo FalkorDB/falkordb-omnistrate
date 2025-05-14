@@ -25,20 +25,18 @@ jobs:
       - name: Filter TLS-enabled Instances and Check Expiry
         id: check_tls
         run: |
-          echo "${{ steps.list_instances.outputs.instances }}" | jq -c '.[] | select(.tls == true)' > tls_instances.json
+          echo '${{ steps.list_instances.outputs.instances }}' | jq -c '.[] | select(.tls == true)' > tls_instances.json
 
           alerts=()
 
           while IFS= read -r instance; do
-            id=$(echo "$instance" | jq -r '.instance_id')
-            hostname=$(echo "$instance" | jq -r '.hostname')
+            instance_id=$(echo "$instance" | jq -r '.instance_id')
+            endpoint=$(echo "$instance" | jq -r '.endpoint')
 
-            echo "Checking TLS for $hostname"
-            end_date=$(echo | openssl s_client -servername "$hostname" -connect "$hostname:443" 2>/dev/null \
+            end_date=$(echo | openssl s_client -servername "$endpoint" -connect "$endpoint" 2>/dev/null \
               | openssl x509 -noout -enddate | cut -d= -f2)
 
             if [ -z "$end_date" ]; then
-              echo "Could not retrieve cert for $hostname"
               continue
             fi
 
@@ -46,42 +44,22 @@ jobs:
             now=$(date +%s)
             days_left=$(( (end_timestamp - now) / 86400 ))
 
-            echo "$hostname expires in $days_left days"
-
             if [ "$days_left" -lt 15 ]; then
-              alerts+=("{\"instance_id\":\"$id\",\"hostname\":\"$hostname\",\"expires_in_days\":$days_left}")
+              curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
+                -H 'Content-Type: application/json' \
+                -d "{
+                  \"routing_key\": \"${{ secrets.PAGERDUTY_ROUTING_KEY }}\",
+                  \"event_action\": \"trigger\",
+                  \"payload\": {
+                    \"summary\": \"TLS cert for $instance_id expires in $days_left days\",
+                    \"source\": \"github-actions\",
+                    \"severity\": \"warning\"
+                  },
+                  \"custom_details\": {
+                    \"instance_id\": \"$instance_id\",
+                    \"endpoint\": \"$endpoint\",
+                    \"days_remaining\": \"$days_left\"
+                  }
+                }"
             fi
           done < tls_instances.json
-
-          if [ "${#alerts[@]}" -gt 0 ]; then
-            echo "${alerts[@]}" > expiring_tls.json
-            echo "alert_required=true" >> $GITHUB_ENV
-          else
-            echo "No TLS certs expiring soon"
-          fi
-
-      - name: Trigger PagerDuty Alert
-        if: env.alert_required == 'true'
-        run: |
-          for row in $(cat expiring_tls.json | jq -c '.[]'); do
-            instance_id=$(echo "$row" | jq -r '.instance_id')
-            endpoint=$(echo "$row" | jq -r '.endpoint')
-            days=$(echo "$row" | jq -r '.expires_in_days')
-
-            curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
-              -H 'Content-Type: application/json' \
-              -d "{
-                \"routing_key\": \"${{ secrets.PAGERDUTY_ROUTING_KEY }}\",
-                \"event_action\": \"trigger\",
-                \"payload\": {
-                  \"summary\": \"TLS cert for $instance_id expires in $days days\",
-                  \"source\": \"github-actions\",
-                  \"severity\": \"warning\"
-                },
-                \"custom_details\": {
-                  \"instance_id\": \"$instance_id\",
-                  \"endpoint\": \"$endpoint\",
-                  \"days_remaining\": \"$days\"
-                }
-              }"
-          done

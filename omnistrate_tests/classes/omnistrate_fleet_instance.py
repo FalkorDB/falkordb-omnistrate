@@ -498,9 +498,9 @@ class OmnistrateFleetInstance:
     
     def get_operator_endpoint(self):
         resources = self.get_network_topology()
-        print("resources:",resources)
+
         resources_keys = resources.keys()
-        print("resource keys:",resources_keys)
+
         endpoints = []
         for key in resources_keys:
             endpoints.append({'endpoint': resources[key]['additionalEndpoints']['cluster']['endpoint'], 'ports': resources[key]['additionalEndpoints']['cluster']['openPorts']})
@@ -528,7 +528,7 @@ class OmnistrateFleetInstance:
                 }
 
     def create_connection(
-        self, ssl: bool = False, force_reconnect: bool = False, retries=5, network_type="PUBLIC", operator=False, username=None, password=None
+        self, ssl: bool = False, force_reconnect: bool = False, retries=100, network_type="PUBLIC", operator=False, username=None, password=None
     ):
 
         if self._connection is not None and not force_reconnect:

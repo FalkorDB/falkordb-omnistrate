@@ -235,7 +235,7 @@ services:
           apiVersion: v1
           stringData:
             user.acl: |
-              user {{ $var.falkordbUser }} on >{{ $var.falkordbPassword }} ~* resetchannels -@all +info +client +dbsize +ping +hello +auth +restore +dump +del +exists +unlink +type +flushall +touch +expire +pexpireat +ttl +pttl +expiretime +rename +renamenx +scan +discard +exec +multi +unwatch +watch +echo +slowlog +wait +waitaof +graph.info +graph.list +graph.query +graph.ro_query +graph.explain +graph.profile +graph.delete +graph.constraint +graph.slowlog +graph.bulk +graph.config
+              user {{ $var.falkordbUser }} on >{{ $var.falkordbPassword }} ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +CLUSTER +COMMAND
               user default on >{{ $var.replicationPassword }} allchannels +multi +slaveof +ping +exec +subscribe +config|rewrite +role +publish +info +client|setname +client|kill +script|kill +psync +replconf +ping +cluster +dbsize
               user admin on >{{ $var.adminPassword }} ~* +@all
           kind: Secret
@@ -930,7 +930,7 @@ services:
           apiVersion: v1
           stringData:
             user.acl: |
-              user {{ $var.falkordbUser }} on >{{ $var.falkordbPassword }} ~* resetchannels -@all +info +client +dbsize +ping +hello +auth +restore +dump +del +exists +unlink +type +flushall +touch +expire +pexpireat +ttl +pttl +expiretime +rename +renamenx +scan +discard +exec +multi +unwatch +watch +echo +slowlog +wait +waitaof +graph.info +graph.list +graph.query +graph.ro_query +graph.explain +graph.profile +graph.delete +graph.constraint +graph.slowlog +graph.bulk +graph.config
+              user {{ $var.falkordbUser }} on >{{ $var.falkordbPassword }} ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +CLUSTER +COMMAND
               user default on >{{ $var.replicationPassword }} allchannels +multi +slaveof +ping +exec +subscribe +config|rewrite +role +publish +info +client|setname +client|kill +script|kill +psync +replconf +ping +cluster +dbsize
               user admin on >{{ $var.adminPassword }} ~* +@all
           kind: Secret

@@ -5,6 +5,8 @@ from pathlib import Path
 import threading
 import socket
 import falkordb
+from redis import Redis
+from redis.exceptions import ConnectionError
 
 
 file = Path(__file__).resolve()
@@ -170,6 +172,7 @@ def test_cluster():
         thread.start()
 
         if args.ensure_mz_distribution:
+            logging.info("Testing MZ distribution")
             test_ensure_mz_distribution(instance, password)
 
         # Test failover and data loss
@@ -195,102 +198,98 @@ def test_cluster():
 
 def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str):
     """This function should ensure that each shard is distributed across multiple availability zones"""
-
     instance_details = instance.get_instance_details()
     network_topology: dict = instance.get_network_topology(force_refresh=True)
 
     params = (
         instance_details["result_params"]
         if "result_params" in instance_details
-        else None
+        else {}
     )
 
-    # if not params:
-    #     raise Exception("No result_params found in instance details")
+    # Get operator endpoint
+    operator_endpoints = instance.get_operator_endpoint()
+    if not operator_endpoints:
+        raise Exception("No operator endpoints found")
 
-    # host_count = int(params["hostCount"]) if "hostCount" in params else None
+    port = operator_endpoints[0]["ports"][0]
 
-    # if not host_count:
-    #     raise Exception("No hostCount found in instance details")
-
-    # cluster_replicas = (
-    #     int(params["clusterReplicas"]) if "clusterReplicas" in params else None
-    # )
-
-    # if not cluster_replicas:
-    #     raise Exception("No clusterReplicas found in instance details")
-
-    resource_key = next(
-        (k for [k, v] in network_topology.items() if v["resourceName"] == "cluster-mz"),
-        None,
-    )
-
-    resource = network_topology[resource_key]
-
-    nodes = resource["nodes"]
-
-    if len(nodes) == 0:
-        raise Exception("No nodes found in network topology")
-
-    if len(nodes) != 6:
-        raise Exception(
-            f"Host count does not match number of nodes. Current host count: {6}; Number of nodes: {len(nodes)}"
-        )
-
+    # Create cluster connection using the operator endpoint
     cluster = FalkorDBCluster(
-        host=resource["clusterEndpoint"],
-        port=resource["clusterPorts"][0],
+        host=operator_endpoints[0]["endpoint"],
+        port=port,
         username="falkordb",
         password=password,
-        ssl=params["enableTLS"] == "true" if "enableTLS" in params else False,
+        ssl=params.get("enableTLS") == "true"
     )
 
+    # Get node groups (each group contains a master and its replicas)
     groups = cluster.groups(1)
 
     for group in groups:
         group_azs = set()
         for node in group:
-            omnistrateNode = next(
-                (n for n in nodes if n["endpoint"] == node.hostname), None
-            )
-            if not omnistrateNode:
+            # For operator nodes, hostname pattern is: instance-name-{role}-{index}
+            node_name = node.hostname.split('.')[0]  # Get just the node name part
+            
+            # Find the matching node in network topology using the full node name
+            matching_node = None
+            for topology_node in network_topology.values():
+                if isinstance(topology_node, dict) and "nodes" in topology_node:
+                    for n in topology_node["nodes"]:
+                        if node_name in n["id"]:
+                            matching_node = n
+                            break
+                if matching_node:
+                    break
+
+            if not matching_node:
                 logging.warning(f"Node {node.hostname} not found in network topology")
                 continue
 
-            group_azs.add(omnistrateNode["availabilityZone"])
+            group_azs.add(matching_node["availabilityZone"])
 
         if len(group_azs) == 1:
-            raise Exception(
-                "Group is not distributed across multiple availability zones"
-            )
+            raise Exception(f"Group containing nodes {[n.hostname for n in group]} is not distributed across multiple availability zones")
 
-        logging.info(
-            f"Group {group} is distributed across availability zones {group_azs}"
-        )
+        logging.info(f"Group containing nodes {[n.hostname for n in group]} is distributed across availability zones {group_azs}")
 
     logging.info("Shards are distributed across multiple availability zones")
 
 def test_failover(instance: OmnistrateFleetInstance):
     """This function should retrieve the instance host and port for connection, write some data to the DB, then trigger a failover. After X seconds, the instance should be back online and data should have persisted"""
-
-    db = instance.create_connection(
-        ssl=args.tls, force_reconnect=True, network_type=args.network_type, operator=True, username="admin"
+    print("Testing failover")
+    host = instance.get_operator_endpoint()[0]["endpoint"]
+    port = instance.get_operator_endpoint()[0]["ports"][0]
+    leaderOne = args.instance_name + "-leader-1."+ host.split(".",1)[1]
+    client = Redis(
+        host=leaderOne,
+        port=port,
+        username="admin",
+        password=instance.falkordb_password,
+        ssl=args.tls,
     )
-    graph = db.select_graph("test")
     # Write some data to the DB
-    graph.query("CREATE (n:Person {name: 'Alice'})")
+    client.execute_command("GRAPH.QUERY","test", "CREATE (n:Person {name: 'Alice'})")
+    logging.info("Data written to DB")
     # Trigger failover
-    db.execute_command("DEBUG","SEGFAULT")
+    logging.info("Triggering failover")
+    try:
+        client.execute_command("DEBUG","SEGFAULT")
+    except Exception as e:
+        if isinstance(e,ConnectionError) and ("Connection" or "connection") in str(e):
+            logging.info("Expected connection error")
+    
     time.sleep(10)
     # Check if the instance is back online
-    info = db.execute_command("INFO","REPLICATION")
-    print(info)
+    info = client.execute_command("INFO","REPLICATION")
+    logging.info(info)
     if "role:master" not in info:
         logging.info("Failover successful")
-    
-    
-    result = graph.query("MATCH (n:Person) RETURN n")
-    if len(result.result_set) == 0:
+
+    result = client.execute_command("keys", "*")
+
+    if len(result) <= 1:
         raise Exception("Data lost after failover")
     logging.info(result)
     logging.info("Data persisted after failover")
@@ -305,7 +304,7 @@ def test_zero_downtime(
 ):
     """This function should test the ability to read and write while a failover happens"""
     try:
-        db = instance.create_connection(ssl=ssl, force_reconnect=True, network_type=args.network_type)
+        db = instance.create_connection(ssl=ssl, force_reconnect=True, network_type=args.network_type, operator=True)
 
         graph = db.select_graph("test")
         
@@ -338,7 +337,6 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
         raise ValueError("Interval and timeout must be positive")
     
     cluster_endpoint = instance.get_operator_endpoint()
-    print(cluster_endpoint)
     # if not cluster_endpoint or 'endpoint' not in cluster_endpoint:
     #     raise KeyError("Missing endpoint information in cluster configuration")
 

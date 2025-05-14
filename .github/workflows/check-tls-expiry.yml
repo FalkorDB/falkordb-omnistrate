@@ -30,7 +30,7 @@ jobs:
           alerts=()
 
           while IFS= read -r instance; do
-            id=$(echo "$instance" | jq -r '.instance_id')
+            instance_id=$(echo "$instance" | jq -r '.instance_id')
             endpoint=$(echo "$instance" | jq -r '.endpoint')
 
             echo "Checking TLS for $endpoint"
@@ -49,39 +49,21 @@ jobs:
             echo "$endpoint expires in $days_left days"
 
             if [ "$days_left" -lt 15 ]; then
-              alerts+=("{\"instance_id\":\"$id\",\"endpoint\":\"$endpoint\",\"expires_in_days\":$days_left}")
+              curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
+                -H 'Content-Type: application/json' \
+                -d "{
+                  \"routing_key\": \"${{ secrets.PAGERDUTY_ROUTING_KEY }}\",
+                  \"event_action\": \"trigger\",
+                  \"payload\": {
+                    \"summary\": \"TLS cert for $instance_id expires in $days_left days\",
+                    \"source\": \"github-actions\",
+                    \"severity\": \"warning\"
+                  },
+                  \"custom_details\": {
+                    \"instance_id\": \"$instance_id\",
+                    \"endpoint\": \"$endpoint\",
+                    \"days_remaining\": \"$days_left\"
+                  }
+                }"
             fi
           done < tls_instances.json
-
-          if [ "${#alerts[@]}" -gt 0 ]; then
-            echo "${alerts[@]}" > expiring_tls.json
-            echo "alert_required=true" >> $GITHUB_ENV
-          else
-            echo "No TLS certs expiring soon"
-          fi
-
-      - name: Trigger PagerDuty Alert
-        if: env.alert_required == 'true'
-        run: |
-          for row in $(cat expiring_tls.json | jq -c '.[]'); do
-            instance_id=$(echo "$row" | jq -r '.instance_id')
-            endpoint=$(echo "$row" | jq -r '.endpoint')
-            days=$(echo "$row" | jq -r '.expires_in_days')
-
-            curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
-              -H 'Content-Type: application/json' \
-              -d "{
-                \"routing_key\": \"${{ secrets.PAGERDUTY_ROUTING_KEY }}\",
-                \"event_action\": \"trigger\",
-                \"payload\": {
-                  \"summary\": \"TLS cert for $instance_id expires in $days days\",
-                  \"source\": \"github-actions\",
-                  \"severity\": \"warning\"
-                },
-                \"custom_details\": {
-                  \"instance_id\": \"$instance_id\",
-                  \"endpoint\": \"$endpoint\",
-                  \"days_remaining\": \"$days\"
-                }
-              }"
-          done

@@ -27,10 +27,7 @@ runs:
       apk add jq && \
       /usr/local/bin/omnistrate-ctl login --email "${{ inputs.username }}" --password "${{ inputs.password }}" && \
       instances_json=$(/usr/local/bin/omnistrate-ctl instance list -f "${{ inputs.filter }}" -o json) && \
-      if ! echo "$instances_json" | jq empty; then \
-        echo "Error: Invalid JSON received from omnistrate-ctl instance list" >&2; \
-        exit 1; \
-      fi && \
+      echo "Got instances" && \
       echo "$instances_json" | jq -c '.[]' | while read -r instance; do \
         id=$(echo "$instance" | jq -r '.instance_id'); \
         plan=$(echo "$instance" | jq -r '.plan'); \
@@ -38,6 +35,7 @@ runs:
           continue; \
         fi; \
         desc=$(/usr/local/bin/omnistrate-ctl instance describe "$id"); \
+        echo "Got instance description" && \
         network_type=$(echo "$desc" | jq -r '.consumptionResourceInstanceResult.network_type'); \
         if [ "$network_type" = "INTERNAL" ]; then \
           continue; \
@@ -48,5 +46,6 @@ runs:
         if [ -n "$hostname" ]; then \
           echo "{\"instance_id\": \"$id\", \"hostname\": \"$hostname\", \"tls\": $tls}"; \
         fi; \
+        echo "Processed instance" && \
       done > /github/workspace/filtered_instances.json && \
       echo "instances<<EOF" >> $GITHUB_OUTPUT && cat /github/workspace/filtered_instances.json >> $GITHUB_OUTPUT && echo "EOF" >> $GITHUB_OUTPUT

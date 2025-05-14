@@ -46,6 +46,6 @@ runs:
         if [ -n "$hostname" ]; then \
           echo "{\"instance_id\": \"$id\", \"hostname\": \"$hostname\", \"tls\": $tls}"; \
         fi; \
-        echo "Processed instance" && \
+        echo "Processed instance" \
       done > /github/workspace/filtered_instances.json && \
       echo "instances<<EOF" >> $GITHUB_OUTPUT && cat /github/workspace/filtered_instances.json >> $GITHUB_OUTPUT && echo "EOF" >> $GITHUB_OUTPUT

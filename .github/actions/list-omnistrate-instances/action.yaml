@@ -39,7 +39,7 @@ runs:
         fi
 
         desc=$(/usr/local/bin/omnistrate-ctl instance describe "$id")
-        echo "Got instance description"
+        echo "Got instance description $(echo $desc | jq)"
         
         network_type=$(echo "$desc" | jq -r '.consumptionResourceInstanceResult.network_type')
         echo "Network type: $network_type"

@@ -27,30 +27,36 @@ runs:
       apk add jq && \
       /usr/local/bin/omnistrate-ctl login --email "${{ inputs.username }}" --password "${{ inputs.password }}" && \
       instances_json=$(/usr/local/bin/omnistrate-ctl instance list -f "${{ inputs.filter }}" -o json) && \
-      echo "Got instances $(echo $instances_json | jq)" && \
-      echo "$instances_json" | jq -c '.[]' | while read -r instance; do \
-        echo "Processing instance"; \
-        id=$(echo "$instance" | jq -r '.instance_id'); \
-        echo "Processing instance $id"; \
-        plan=$(echo "$instance" | jq -r '.plan'); \
-        echo "Plan: $plan"; \
-        if [ "${{ inputs.skipFreeTier }}" = "true" ] && echo "$plan" | grep -qi "Free"; then \
-          echo "Skipping Free plan instance"; \
-          continue; \
-        fi; \
-        echo "Plan is not Free"; \
-        desc=$(/usr/local/bin/omnistrate-ctl instance describe "$id"); \
-        echo "Got instance description"; \
-        network_type=$(echo "$desc" | jq -r '.consumptionResourceInstanceResult.network_type'); \
-        if [ "$network_type" = "INTERNAL" ]; then \
-          continue; \
-        fi; \
-        tls=$(echo "$desc" | jq -r '.input_params.enableTLS // false'); \
-        resource=$(echo "$desc" | jq -r '.consumptionResourceInstanceResult.detailedNetworkTopology | to_entries[] | select(.value.publiclyAccessible == true and (.value.clusterEndpoint | length > 0))'); \
-        endpoint=$(echo "$resource" | jq -r '.value.clusterEndpoint' | head -n 1):$(echo "$resource" | jq -r '.value.clusterPorts[0]' | head -n 1); \
-        if [ -n "$hostname" ]; then \
-          echo "{\"instance_id\": \"$id\", \"hostname\": \"$hostname\", \"tls\": $tls}"; \
-        fi; \
-        echo "Processed instance"; \
-      done > /github/workspace/filtered_instances.json && \
+      echo "Got instances:" && echo "$instances_json" | jq '.' && \
+      echo "$instances_json" | jq -c '.[]' | while IFS= read -r instance; do
+        id=$(echo "$instance" | jq -r '.instance_id')
+        plan=$(echo "$instance" | jq -r '.plan')
+        echo "Processing instance $id with plan $plan"
+
+        if [ "${{ inputs.skipFreeTier }}" = "true" ] && echo "$plan" | grep -qi "Free"; then
+          echo "Skipping Free plan instance"
+          continue
+        fi
+
+        desc=$(/usr/local/bin/omnistrate-ctl instance describe "$id")
+        network_type=$(echo "$desc" | jq -r '.consumptionResourceInstanceResult.network_type')
+
+        if [ "$network_type" = "INTERNAL" ]; then
+          echo "Skipping internal instance $id"
+          continue
+        fi
+
+        tls=$(echo "$desc" | jq -r '.input_params.enableTLS // false')
+
+        resource=$(echo "$desc" | jq -r '.consumptionResourceInstanceResult.detailedNetworkTopology | to_entries[] | select(.value.publiclyAccessible == true and (.value.clusterEndpoint | length > 0))')
+        cluster_endpoint=$(echo "$resource" | jq -r '.value.clusterEndpoint' | head -n 1)
+        cluster_port=$(echo "$resource" | jq -r '.value.clusterPorts[0]' | head -n 1)
+        endpoint="$cluster_endpoint:$cluster_port"
+
+        if [ -n "$cluster_endpoint" ]; then
+          echo "{\"instance_id\": \"$id\", \"hostname\": \"$cluster_endpoint\", \"tls\": $tls}" >> /github/workspace/filtered_instances.json
+        fi
+
+        echo "Processed instance $id"
+      done && \
       echo "instances<<EOF" >> $GITHUB_OUTPUT && cat /github/workspace/filtered_instances.json >> $GITHUB_OUTPUT && echo "EOF" >> $GITHUB_OUTPUT

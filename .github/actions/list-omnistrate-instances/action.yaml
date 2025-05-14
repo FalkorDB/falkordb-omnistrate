@@ -27,40 +27,30 @@ runs:
       apk add jq && \
       /usr/local/bin/omnistrate-ctl login --email "${{ inputs.username }}" --password "${{ inputs.password }}" && \
       instances_json=$(/usr/local/bin/omnistrate-ctl instance list -f "${{ inputs.filter }}" -o json) && \
-      echo "Got instances:" && echo "$instances_json" | jq '.' && \
       echo "$instances_json" | jq -c '.[]' | while IFS= read -r instance; do
         id=$(echo "$instance" | jq -r '.instance_id')
         plan=$(echo "$instance" | jq -r '.plan')
-        echo "Processing instance $id with plan $plan"
 
         if [ "${{ inputs.skipFreeTier }}" = "true" ] && echo "$plan" | grep -qi "Free"; then
-          echo "Skipping Free plan instance"
           continue
         fi
 
         desc=$(/usr/local/bin/omnistrate-ctl instance describe "$id")
-        echo "$desc"
-        echo "Got instance description $(echo $desc | jq)"
         
         network_type=$(echo "$desc" | jq -r '.consumptionResourceInstanceResult.network_type')
         echo "Network type: $network_type"
         if [ "$network_type" = "INTERNAL" ]; then
-          echo "Skipping internal instance $id"
           continue
         fi
 
         tls=$(echo "$desc" | jq -r '.input_params.enableTLS // false')
-        echo "TLS enabled: $tls"
 
         resource=$(echo "$desc" | jq -r '.consumptionResourceInstanceResult.detailedNetworkTopology | to_entries[] | select(.value.publiclyAccessible == true and (.value.clusterEndpoint | length > 0))')
         cluster_endpoint=$(echo "$resource" | jq -r '.value.clusterEndpoint' | head -n 1)
         cluster_port=$(echo "$resource" | jq -r '.value.clusterPorts[0]' | head -n 1)
         endpoint="$cluster_endpoint:$cluster_port"
-        echo "Cluster endpoint: $cluster_endpoint"
         if [ -n "$cluster_endpoint" ]; then
-          echo "{\"instance_id\": \"$id\", \"hostname\": \"$cluster_endpoint\", \"tls\": $tls}" >> /github/workspace/filtered_instances.json
+          echo "{\"instance_id\": \"$id\", \"endpoint\": \"$endpoint\", \"tls\": $tls}" >> /github/workspace/filtered_instances.json
         fi
-
-        echo "Processed instance $id"
       done && \
       echo "instances<<EOF" >> $GITHUB_OUTPUT && cat /github/workspace/filtered_instances.json >> $GITHUB_OUTPUT && echo "EOF" >> $GITHUB_OUTPUT

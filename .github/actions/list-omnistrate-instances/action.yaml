@@ -50,13 +50,11 @@ runs:
         cluster_port=$(echo "$resource" | jq -r '.value.clusterPorts[0]' | head -n 1)
         endpoint="$cluster_endpoint:$cluster_port"
         if [ -n "$cluster_endpoint" ]; then
-          echo "{'instance_id': '$id', 'hostname': '$cluster_endpoint', 'tls': $tls}," >> /github/workspace/filtered_instances.json
+          json="{\"instance_id\": \"$id\", \"hostname\": \"$cluster_endpoint\", \"tls\": $tls},"
+          echo $json >> /github/workspace/filtered_instances.json
         fi
       done
-      sed -i '$s#[[:space:]]*,[[:space:]]*$##' /github/workspace/filtered_instances.json
-      echo "replaced commas"
-      sed -i "s#'#\"#g" /github/workspace/filtered_instances.json
-      echo "replaced single quotes"
+      sed -i '$ s/,\n*$//g' /github/workspace/filtered_instances.json
       echo "]" >> /github/workspace/filtered_instances.json
       cat /github/workspace/filtered_instances.json
       echo "instances<<EOF" >> $GITHUB_OUTPUT

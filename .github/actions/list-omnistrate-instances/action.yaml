@@ -30,10 +30,14 @@ runs:
       echo "Got instances" && \
       echo "$instances_json" | jq -c '.[]' | while read -r instance; do \
         id=$(echo "$instance" | jq -r '.instance_id'); \
+        echo "Processing instance $id"; \
         plan=$(echo "$instance" | jq -r '.plan'); \
+        echo "Plan: $plan"; \
         if [ "${{ inputs.skipFreeTier }}" = "true" ] && echo "$plan" | grep -qi "Free"; then \
+          echo "Skipping Free plan instance"; \
           continue; \
         fi; \
+        echo "Plan is not Free"; \
         desc=$(/usr/local/bin/omnistrate-ctl instance describe "$id"); \
         echo "Got instance description"; \
         network_type=$(echo "$desc" | jq -r '.consumptionResourceInstanceResult.network_type'); \

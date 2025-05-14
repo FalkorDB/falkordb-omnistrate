@@ -25,7 +25,7 @@ jobs:
       - name: Filter TLS-enabled Instances and Check Expiry
         id: check_tls
         run: |
-          echo "${{ steps.list_instances.outputs.instances }}" | jq -c '.[] | select(.tls == true)' > tls_instances.json
+          echo '${{ steps.list_instances.outputs.instances }}' | jq -c '.[] | select(.tls == true)' > tls_instances.json
 
           alerts=()
 

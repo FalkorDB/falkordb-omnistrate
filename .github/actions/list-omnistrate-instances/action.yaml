@@ -29,7 +29,7 @@ runs:
       instances_json=$(/usr/local/bin/omnistrate-ctl instance list -f "${{ inputs.filter }}" -o json) && \
       echo "Got instances $(echo $instance_json | jq)" && \
       echo "$instances_json" | jq -c '.[]' | while read -r instance; do \
-        ech o "Processing instance"; \
+        echo "Processing instance"; \
         id=$(echo "$instance" | jq -r '.instance_id'); \
         echo "Processing instance $id"; \
         plan=$(echo "$instance" | jq -r '.plan'); \

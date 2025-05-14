@@ -54,6 +54,7 @@ runs:
         fi
       done
       sed -i '$ s/,\n*$//g' /github/workspace/filtered_instances.json
+      cat /github/workspace/filtered_instances.json
       echo "]" >> /github/workspace/filtered_instances.json
       echo "instances<<EOF" >> $GITHUB_OUTPUT
       cat /github/workspace/filtered_instances.json >> $GITHUB_OUTPUT

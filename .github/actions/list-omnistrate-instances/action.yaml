@@ -27,6 +27,10 @@ runs:
       apk add jq && \
       /usr/local/bin/omnistrate-ctl login --email "${{ inputs.username }}" --password "${{ inputs.password }}" && \
       instances_json=$(/usr/local/bin/omnistrate-ctl instance list -f "${{ inputs.filter }}" -o json) && \
+      if ! echo "$instances_json" | jq empty; then \
+        echo "Error: Invalid JSON received from omnistrate-ctl instance list" >&2; \
+        exit 1; \
+      fi && \
       echo "$instances_json" | jq -c '.[]' | while read -r instance; do \
         id=$(echo "$instance" | jq -r '.instance_id'); \
         plan=$(echo "$instance" | jq -r '.plan'); \

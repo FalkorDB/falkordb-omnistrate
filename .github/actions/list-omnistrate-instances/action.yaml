@@ -39,20 +39,23 @@ runs:
         fi
 
         desc=$(/usr/local/bin/omnistrate-ctl instance describe "$id")
+        echo "Got instance description"
+        
         network_type=$(echo "$desc" | jq -r '.consumptionResourceInstanceResult.network_type')
-
+        echo "Network type: $network_type"
         if [ "$network_type" = "INTERNAL" ]; then
           echo "Skipping internal instance $id"
           continue
         fi
 
         tls=$(echo "$desc" | jq -r '.input_params.enableTLS // false')
+        echo "TLS enabled: $tls"
 
         resource=$(echo "$desc" | jq -r '.consumptionResourceInstanceResult.detailedNetworkTopology | to_entries[] | select(.value.publiclyAccessible == true and (.value.clusterEndpoint | length > 0))')
         cluster_endpoint=$(echo "$resource" | jq -r '.value.clusterEndpoint' | head -n 1)
         cluster_port=$(echo "$resource" | jq -r '.value.clusterPorts[0]' | head -n 1)
         endpoint="$cluster_endpoint:$cluster_port"
-
+        echo "Cluster endpoint: $cluster_endpoint"
         if [ -n "$cluster_endpoint" ]; then
           echo "{\"instance_id\": \"$id\", \"hostname\": \"$cluster_endpoint\", \"tls\": $tls}" >> /github/workspace/filtered_instances.json
         fi

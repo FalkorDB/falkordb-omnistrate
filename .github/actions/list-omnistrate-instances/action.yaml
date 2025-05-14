@@ -24,8 +24,7 @@ runs:
   args:
     - -c
     - |
-      apt-get update && \
-      apt-get install -y jq && \
+      apk add jq && \
       /usr/local/bin/omnistrate-ctl login --email "${{ inputs.username }}" --password "${{ inputs.password }}" && \
       instances_json=$(/usr/local/bin/omnistrate-ctl instance list -f "${{ inputs.filter }}" -o json) && \
       echo "$instances_json" | jq -c '.[]' | while read -r instance; do \

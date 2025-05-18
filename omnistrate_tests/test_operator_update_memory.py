@@ -163,18 +163,29 @@ def test_update_memory():
             logging.error(f"DNS resolution failed: {e}")
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
         
-        thread_signal = threading.Event()
-        error_signal = threading.Event()
-        thread = threading.Thread(
-            target=test_zero_downtime,
-            args=(thread_signal, error_signal, instance, args.tls),
-        )
-        thread.start()
+        add_data(instance)
+
+        thread_signal = None
+        error_signal = None
+        thread = None
+        if "standalone" not in args.instance_name:
+            # Start a new thread and signal for zero_downtime test
+            thread_signal = threading.Event()
+            error_signal = threading.Event()
+            thread = threading.Thread(
+                target=test_zero_downtime,
+                args=(thread_signal, error_signal, instance, args.tls),
+            )
+            thread.start()
 
         instance.update_instance_type(args.new_instance_type, wait_until_ready=True)
         # Wait for the zero_downtime
-        thread_signal.set()
-        thread.join()
+        if "standalone" not in args.instance_name:
+            # Wait for the zero_downtime
+            thread_signal.set()
+            thread.join()
+        
+        query_data(instance)
     except Exception as e:
         logging.exception(e)
         if not args.persist_instance_on_fail:

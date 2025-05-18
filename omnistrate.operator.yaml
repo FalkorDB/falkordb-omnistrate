@@ -12,6 +12,12 @@ services:
   - name: cluster-mz
     capabilities:
       enableMultiZone: true
+    compute:
+      instanceTypes:
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
+        - cloudProvider: gcp
+          apiParam: nodeInstanceType
     network:
       ports:
         - 6379
@@ -86,7 +92,7 @@ services:
                     - key: node.kubernetes.io/instance-type
                       operator: In
                       values:
-                      - {{$var.instanceType}}
+                      - {{$var.nodeInstanceType}}
                     - key: omnistrate.com/resource
                       operator: In
                       values:
@@ -144,7 +150,7 @@ services:
                     - key: node.kubernetes.io/instance-type
                       operator: In
                       values:
-                      - {{$var.instanceType}}
+                      - {{$var.nodeInstanceType}}
                     - key: omnistrate.com/resource
                       operator: In
                       values:
@@ -539,7 +545,7 @@ services:
         required: false
         export: true
         defaultValue: "3"
-      - key: instanceType
+      - key: nodeInstanceType
         description: Instance Type
         name: Instance Type
         type: String
@@ -702,6 +708,12 @@ services:
   - name: cluster-sz
     capabilities:
       enableMultiZone: false
+    compute:
+      instanceTypes:
+        - cloudProvider: aws
+          apiParam: nodeInstanceType
+        - cloudProvider: gcp
+          apiParam: nodeInstanceType
     network:
       ports:
         - 6379
@@ -775,7 +787,7 @@ services:
                     - key: node.kubernetes.io/instance-type
                       operator: In
                       values:
-                      - {{$var.instanceType}}
+                      - {{$var.nodeInstanceType}}
                     - key: omnistrate.com/resource
                       operator: In
                       values:
@@ -832,7 +844,7 @@ services:
                     - key: node.kubernetes.io/instance-type
                       operator: In
                       values:
-                      - {{$var.instanceType}}
+                      - {{$var.nodeInstanceType}}
                     - key: omnistrate.com/resource
                       operator: In
                       values:
@@ -1233,7 +1245,7 @@ services:
         required: false
         export: true
         defaultValue: "3"
-      - key: instanceType
+      - key: nodeInstanceType
         description: Instance Type
         name: Instance Type
         type: String

@@ -143,7 +143,7 @@ fn get_redis_url(password: &str, node_port: &str) -> String {
         let node_port = env::var("RANDOM_NODE_PORT").unwrap_or_else(|_| node_port.to_string());
         format!("rediss://:{}@{}:{}", password, host, node_port)
     } else {
-        format!("redis://:{}@{}:{}", password, host, node_port)
+        format!("redis://:{}@localhost:{}", password, node_port)
     }
 }
 

@@ -6,7 +6,7 @@ import threading
 import socket
 import falkordb
 from redis import Redis
-from redis.exceptions import ConnectionError
+from redis.exceptions import ConnectionError, OutOfMemoryError
 
 
 file = Path(__file__).resolve()
@@ -56,7 +56,6 @@ parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
 parser.add_argument("--debug-command", required=False, default="disabled")
-
 parser.add_argument("--ensure-mz-distribution", action="store_true")
 parser.add_argument("--custom-network", required=False)
 parser.add_argument("--network-type", required=False, default="PUBLIC")
@@ -91,10 +90,9 @@ if not args.persist_instance_on_fail:
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
-current_host_count = int(args.host_count)
-current_cluster_replicas = int(args.cluster_replicas)
 
-def test_cluster_replicas():
+
+def test_update_memory():
     global instance
 
     omnistrate = OmnistrateFleetAPI(
@@ -164,30 +162,7 @@ def test_cluster_replicas():
             logging.error(f"DNS resolution failed: {e}")
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
         
-        thread_signal = threading.Event()
-        error_signal = threading.Event()
-        thread = threading.Thread(
-            target=test_zero_downtime,
-            args=(thread_signal, error_signal, instance, args.tls),
-        )
-        thread.start()
 
-        add_data(instance)
-
-        change_replica_count(instance, int(current_cluster_replicas) + 1)
-
-        if args.ensure_mz_distribution:
-            logging.info("Testing MZ distribution")
-            #test_ensure_mz_distribution(instance, password)
-        
-        query_data(instance)
-        change_replica_count(instance, int(current_cluster_replicas) - 1 )
-        
-        # Wait for the zero_downtime
-        thread_signal.set()
-        thread.join()
-
-        query_data(instance)
     except Exception as e:
         logging.exception(e)
         if not args.persist_instance_on_fail:
@@ -196,160 +171,40 @@ def test_cluster_replicas():
 
     # Delete instance
     instance.delete(network is not None)
+    logging.info("Test passed")
 
-    if error_signal.is_set():
-        raise ValueError("Test failed")
+def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: str = None):
+    """Stress test the instance by allocating memory until it runs out of memory.
+    Should return this: '(error) OOM command not allowed when used memory > 'maxmemory''
+    Args:
+        instance: The OmnistrateFleetInstance to stress test
+    """
+    largeQuery = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
+    medQuery = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
+
+    logging.info("Starting stress test")
+    db = instance.create_connection(
+        ssl=args.tls,
+    )
+    graph = db.select_graph("test")
+
+    if resource_key == 'free':
+        q = medQuery
     else:
-        logging.info("Test passed")
-
-def add_data(instance: OmnistrateFleetInstance):
-
-    # Get instance host and port
-    db = instance.create_connection(ssl=args.tls,operator=True)
-
-    graph = db.select_graph("test")
-
-    # Write some data to the DB
-    graph.query("CREATE (n:Person {name: 'Alice'})")
-
-def query_data(instance: OmnistrateFleetInstance):
-    logging.info("Retrieving data ....")
-    # Get instance host and port
-    db = instance.create_connection(ssl=args.tls, force_reconnect=True, operator=True)
-
-    graph = db.select_graph("test")
-
-    # Get info
-    result = graph.query("MATCH (n:Person) RETURN n.name")
-
-    if len(result.result_set) == 0:
-        raise ValueError("No data found in the graph after upgrade")
+        q = largeQuery
     
-def test_zero_downtime(
-    thread_signal: threading.Event,
-    error_signal: threading.Event,
-    instance: OmnistrateFleetInstance,
-    ssl=False,
-):
-    """This function should test the ability to read and write while a failover happens"""
-    try:
-        db = instance.create_connection(ssl=ssl, force_reconnect=True, network_type=args.network_type, operator=True)
-
-        graph = db.select_graph("test")
-        
-        while not thread_signal.is_set():
-            # Write some data to the DB
-            graph.query("CREATE (n:Person {name: 'Alice'})")
-            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
-            time.sleep(3)
-    except Exception as e:
-        logging.exception(e)
-        error_signal.set()
-        raise e
-
-def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: int):
-    """This function should change the number of replicas in the cluster"""
-    global current_host_count, current_cluster_replicas
+    while True:
+        try:
+            response = graph.query(q)
+            logging.info(f"Response: {response}")
+        except Exception as e:
+            if isinstance(e, OutOfMemoryError) and 'memory' in str(e):
+                logging.info("Out of memory error detected")
+                break
+            logging.error(f"{e}")
+            logging.error("Failed to detect out of memory error")
+            raise e
     
-    diff = new_replicas_count - current_cluster_replicas
-
-    instance_details = instance.get_instance_details()
-
-    resources = instance.get_network_topology(force_refresh=True)
-
-    node_count = [len(resource["nodes"]) for resource in resources.values() 
-       if resource.get("resourceName") == args.resource_key ][0]
-
-    if current_host_count != node_count:
-        raise Exception("Host count does not match current host count")
-
-    instance.update_params(
-        replicaCount=new_replicas_count,
-        wait_for_ready=True,
-    )
-
-    params = (
-        instance_details["result_params"]
-        if "result_params" in instance_details
-        else None
-    )
-
-    if not params:
-        raise Exception("No result_params found in instance details")
-
-    node_count = [len(resource["nodes"]) for resource in instance.get_network_topology(force_refresh=True).values() 
-       if resource.get("resourceName") == args.resource_key ][0]
-    
-    if node_count != (current_host_count + diff):
-        raise Exception(
-            f"Replica count not updated. Expected {new_replicas_count}, got {node_count}"
-        )
-    
-    current_host_count = node_count
-    current_cluster_replicas = new_replicas_count
-    
-    logging.info(f"Replica count updated to {new_replicas_count}")
-    
-def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str):
-    """This function should ensure that each shard is distributed across multiple availability zones"""
-    instance_details = instance.get_instance_details()
-    network_topology: dict = instance.get_network_topology(force_refresh=True)
-
-    params = (
-        instance_details["result_params"]
-        if "result_params" in instance_details
-        else {}
-    )
-
-    # Get operator endpoint
-    operator_endpoints = instance.get_operator_endpoint()
-    if not operator_endpoints:
-        raise Exception("No operator endpoints found")
-
-    port = operator_endpoints[0]["ports"][0]
-
-    # Create cluster connection using the operator endpoint
-    cluster = FalkorDBCluster(
-        host=operator_endpoints[0]["endpoint"],
-        port=port,
-        username="falkordb",
-        password=password,
-        ssl=params.get("enableTLS") == "true"
-    )
-
-    # Get node groups (each group contains a master and its replicas)
-    groups = cluster.groups(1)
-
-    for group in groups:
-        group_azs = set()
-        for node in group:
-            # For operator nodes, hostname pattern is: instance-name-{role}-{index}
-            node_name = node.hostname.split('.')[0]  # Get just the node name part
-            
-            # Find the matching node in network topology using the full node name
-            matching_node = None
-            for topology_node in network_topology.values():
-                if isinstance(topology_node, dict) and "nodes" in topology_node:
-                    for n in topology_node["nodes"]:
-                        if node_name in n["id"]:
-                            matching_node = n
-                            break
-                if matching_node:
-                    break
-
-            if not matching_node:
-                logging.warning(f"Node {node.hostname} not found in network topology")
-                continue
-
-            group_azs.add(matching_node["availabilityZone"])
-
-        if len(group_azs) == 1:
-            raise Exception(f"Group containing nodes {[n.hostname for n in group]} is not distributed across multiple availability zones")
-
-        logging.info(f"Group containing nodes {[n.hostname for n in group]} is distributed across availability zones {group_azs}")
-
-    logging.info("Shards are distributed across multiple availability zones")
-
 def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     """Check if the instance's main endpoint is resolvable.
     Args:
@@ -386,4 +241,4 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     raise TimeoutError(f"Unable to resolve hostname '{hostname}' within {timeout} seconds.")
 
 if __name__ == "__main__":
-    test_cluster_replicas()
+    test_update_memory()

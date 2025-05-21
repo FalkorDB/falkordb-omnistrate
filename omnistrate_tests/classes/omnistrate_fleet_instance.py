@@ -4,8 +4,15 @@ import os
 import logging
 import socket
 import omnistrate_tests.classes.omnistrate_fleet_api
-from redis.exceptions import ReadOnlyError, ResponseError, ClusterError, RedisClusterException, ClusterDownError
+from redis.exceptions import (
+    ReadOnlyError,
+    ResponseError,
+    ClusterError,
+    RedisClusterException,
+    ClusterDownError,
+)
 from redis import retry, backoff, exceptions as redis_exceptions
+
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
@@ -28,6 +35,8 @@ class OmnistrateFleetInstance:
     instance_id: str = None
     _network_topology = None
     _connection: FalkorDB = None
+
+    _network_type: str = "PUBLIC"
 
     falkordb_password: str = None
 
@@ -120,8 +129,8 @@ class OmnistrateFleetInstance:
         """Create an instance with the specified parameters. Optionally wait for the instance to be ready."""
 
         self.falkordb_password = falkordb_password
+        self._network_type = network_type
         self.falkord_user = falkordb_user
-
         data = {
             "cloud_provider": deployment_cloud_provider,
             "region": deployment_region,
@@ -362,7 +371,14 @@ class OmnistrateFleetInstance:
 
         self.wait_for_instance_status(timeout_seconds=1200)
 
-        data = {"requestParams": kwargs}
+        data = {
+            "network_type": (
+                kwargs["network_type"]
+                if "network_type" in kwargs
+                else self._network_type
+            ),
+            "requestParams": kwargs,
+        }
 
         response = self._fleet_api.client().patch(
             f"{self._fleet_api.base_url}/resource-instance/{self.service_provider_id}/{self.service_key}/{self.service_api_version}/{self.service_environment_key}/{self.service_model_key}/{self.product_tier_key}/{self.resource_key}/{self.instance_id}",
@@ -528,7 +544,14 @@ class OmnistrateFleetInstance:
                 }
 
     def create_connection(
-        self, ssl: bool = False, force_reconnect: bool = False, retries=100, network_type="PUBLIC", operator=False, username=None, password=None
+        self,
+        ssl: bool = False,
+        force_reconnect: bool = False,
+        retries=5,
+        network_type="PUBLIC",
+        operator=False,
+        username=None,
+        password=None,
     ):
 
         if self._connection is not None and not force_reconnect:
@@ -560,12 +583,12 @@ class OmnistrateFleetInstance:
                         socket.timeout,
                         redis_exceptions.ConnectionError,
                         ResponseError,
-                        ReadOnlyError
+                        ReadOnlyError,
                     ],
                     cluster_error_retry_attempts=20,
                     retry=retry.Retry(
                         retries=3,
-                        backoff=backoff.ExponentialBackoff(base=1,cap=10),
+                        backoff=backoff.ExponentialBackoff(base=1, cap=10),
                         supported_errors=(
                             ConnectionRefusedError,
                             TimeoutError,
@@ -575,7 +598,7 @@ class OmnistrateFleetInstance:
                             ReadOnlyError,
                             ClusterError,
                             RedisClusterException,
-                            ClusterDownError
+                            ClusterDownError,
                         ),
                     ),
                 )

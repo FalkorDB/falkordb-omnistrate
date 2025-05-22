@@ -10,11 +10,13 @@ x-omnistrate-service-plan:
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
       AwsAccountId: "$AwsAccountId"
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+      AzureSubscriptionId: "$AzureSubscriptionId"
+      AzureTenantId: "$AzureTenantId"
 
-x-internal-integrations:
-  logs:
-    provider: native
-  metrics:
+# x-internal-integrations:
+#   logs:
+#     provider: native
+#   metrics:
 
 services:
   # Free
@@ -125,6 +127,9 @@ services:
             instanceStorageSizeGi: 10
           aws:
             instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 10
+          azure:
+            instanceStorageType: AZURE::PREMIUM_SSD
             instanceStorageSizeGi: 10
     secrets:
       - source: adminpasspath

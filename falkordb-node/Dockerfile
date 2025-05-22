@@ -46,4 +46,4 @@ RUN chown falkordb:falkordb /falkordb/* && \
 
 ENV FALKORDB_HOME=/var/lib/falkordb
 
-CMD [ "node-entrypoint.sh" ]
+ENTRYPOINT [ "node-entrypoint.sh" ]

@@ -154,12 +154,20 @@ def test_failover(instance: OmnistrateFleetInstance):
     """This function should retrieve the instance host and port for connection, write some data to the DB, then trigger a failover. After X seconds, the instance should be back online and data should have persisted"""
 
     # Get instance host and port
-    db = instance.create_connection(
-        ssl=args.tls,
-    )
+    try:
+        db = instance.create_connection(
+            ssl=args.tls,
+        )
 
-    graph = db.select_graph("test")
+        graph = db.select_graph("test")
+    except Exception as e:
+        if isinstance(e, TimeoutError) or isinstance(e, ConnectionRefusedError) or isinstance(e, ConnectionError):
+            logging.error(f"Failed to connect to instance: {e}")
+            logging.error("Persisting instance on fail")
+            args.persist_instance_on_fail = True
+            raise Exception("Instance not ready: Connection refused") from e
 
+    
     # Write some data to the DB
     graph.query("CREATE (n:Person {name: 'Alice'})")
 
@@ -170,7 +178,12 @@ def test_failover(instance: OmnistrateFleetInstance):
     )
 
     # Check if data is still there
-
+    try:
+        ip = resolve_hostname(instance=instance)
+        logging.info(f"Instance endpoint {instance.get_cluster_endpoint()['endpoint']} resolved to {ip}")
+    except TimeoutError as e:
+        logging.error(f"DNS resolution failed: {e}")
+        raise Exception("Instance endpoint not ready: DNS resolution failed") from e
     graph = db.select_graph("test")
 
     result = graph.query("MATCH (n:Person) RETURN n")

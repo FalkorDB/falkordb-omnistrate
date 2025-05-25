@@ -275,25 +275,32 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str
 def test_failover(instance: OmnistrateFleetInstance):
     """This function should retrieve the instance host and port for connection, write some data to the DB, then trigger a failover. After X seconds, the instance should be back online and data should have persisted"""
     # Get instance host and port
-    db = instance.create_connection(
-        ssl=args.tls,
-        network_type=args.network_type,
-    )
+    try:
+        db = instance.create_connection(
+            ssl=args.tls,
+            network_type=args.network_type,
+        )
 
-    graph = db.select_graph("test")
+        graph = db.select_graph("test")
 
-    # Write some data to the DB
-    graph.query("CREATE (n:Person {name: 'Alice'})")
+        # Write some data to the DB
+        graph.query("CREATE (n:Person {name: 'Alice'})")
 
-    # Trigger failover
-    instance.trigger_failover(
-        replica_id=args.replica_id,
-        wait_for_ready=True,
-    )
-    
-    graph = db.select_graph("test")
+        # Trigger failover
+        instance.trigger_failover(
+            replica_id=args.replica_id,
+            wait_for_ready=True,
+        )
+        
+        graph = db.select_graph("test")
 
-    result = graph.query("MATCH (n:Person) RETURN n")
+        result = graph.query("MATCH (n:Person) RETURN n")
+    except Exception as e:
+        if isinstance(e, TimeoutError) or isinstance(e, ConnectionRefusedError) or isinstance(e, ConnectionError):
+            logging.error(f"Failed to connect to instance: {e}")
+            logging.error("Persisting instance on fail")
+            args.persist_instance_on_fail = True
+            raise Exception("Instance not ready: Connection refused") from e
 
     if len(result.result_set) == 0:
         raise Exception("Data lost after failover")
@@ -305,28 +312,35 @@ def test_stop_start(instance: OmnistrateFleetInstance):
     """This function should stop the instance, check that it is stopped, then start it again and check that it is running"""
 
     # Get instance host and port
-    db = instance.create_connection(
-        ssl=args.tls,
-        network_type=args.network_type,
-    )
+    try:
+        db = instance.create_connection(
+            ssl=args.tls,
+            network_type=args.network_type,
+        )
 
-    graph = db.select_graph("test")
+        graph = db.select_graph("test")
 
-    # Write some data to the DB
-    graph.query("CREATE (n:Person {name: 'Alice'})")
+        # Write some data to the DB
+        graph.query("CREATE (n:Person {name: 'Alice'})")
 
-    logging.info("Stopping instance")
+        logging.info("Stopping instance")
 
-    instance.stop(wait_for_ready=True)
+        instance.stop(wait_for_ready=True)
 
-    logging.info("Instance stopped")
+        logging.info("Instance stopped")
 
-    instance.start(wait_for_ready=True)
+        instance.start(wait_for_ready=True)
 
-    graph = db.select_graph("test")
+        graph = db.select_graph("test")
 
-    result = graph.query("MATCH (n:Person) RETURN n")
-
+        result = graph.query("MATCH (n:Person) RETURN n")
+    except Exception as e:
+        if isinstance(e, TimeoutError) or isinstance(e, ConnectionRefusedError) or isinstance(e, ConnectionError):
+            logging.error(f"Failed to connect to instance: {e}")
+            logging.error("Persisting instance on fail")
+            args.persist_instance_on_fail = True
+            raise Exception("Instance not ready: Connection refused") from e
+    
     if len(result.result_set) == 0:
         raise Exception("Data lost after stop/start")
 

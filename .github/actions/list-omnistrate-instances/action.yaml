@@ -1,0 +1,69 @@
+name: List Omnistrate Instances
+description: Login and list Omnistrate instances filtered by criteria, returning TLS-enabled ones
+inputs:
+  username:
+    description: Omnistrate email/username
+    required: true
+  password:
+    description: Omnistrate password
+    required: true
+  filter:
+    description: Filter for instances (e.g. service:FalkorDB,environment:Prod,status:RUNNING)
+    required: true
+  skipFreeTier:
+    description: If true, skip instances with a Free plan
+    required: false
+    default: "false"
+outputs:
+  instances:
+    description: Filtered TLS-enabled instance list (as JSON array)
+runs:
+  using: docker
+  image: ghcr.io/omnistrate/ctl:0.11.7
+  entrypoint: /bin/sh
+  args:
+    - -c
+    - |
+      apk add jq && \
+      /usr/local/bin/omnistrate-ctl login --email "${{ inputs.username }}" --password "${{ inputs.password }}" && \
+      instances_json=$(/usr/local/bin/omnistrate-ctl instance list -f "${{ inputs.filter }}" -o json) && \
+
+      echo "[" > /github/workspace/filtered_instances.json
+
+      echo "$instances_json" | jq -c '.[]' | while IFS= read -r instance; do
+        id=$(echo "$instance" | jq -r '.instance_id')
+        plan=$(echo "$instance" | jq -r '.plan')
+
+        if [ "${{ inputs.skipFreeTier }}" = "true" ] && echo "$plan" | grep -qi "Free"; then
+          continue
+        fi
+
+        desc=$(/usr/local/bin/omnistrate-ctl instance describe "$id")
+        network_type=$(echo "$desc" | jq -r '.consumptionResourceInstanceResult.network_type')
+        if [ "$network_type" = "INTERNAL" ]; then
+          continue
+        fi
+
+        tls=$(echo "$desc" | jq -r '.input_params.enableTLS // false')
+        resource=$(echo "$desc" | jq -r '.consumptionResourceInstanceResult.detailedNetworkTopology | to_entries[] | select(.value.publiclyAccessible == true and (.value.clusterEndpoint | length > 0))')
+        cluster_endpoint=$(echo "$resource" | jq -r '.value.clusterEndpoint' | head -n 1)
+        cluster_port=$(echo "$resource" | jq -r '.value.clusterPorts[0]' | head -n 1)
+        endpoint="$cluster_endpoint:$cluster_port"
+        if [ -n "$cluster_endpoint" ]; then
+          jq -n --arg id "$id" --arg host "$endpoint" --argjson tls "$tls" \
+            '{instance_id: $id, endpoint: $host, tls: $tls}' >> /github/workspace/filtered_instances.json
+          echo "," >> /github/workspace/filtered_instances.json
+        fi
+      done
+
+      # Remove the trailing comma
+      sed -i '$ s/,$//' /github/workspace/filtered_instances.json
+
+      # Close JSON array
+      echo "]" >> /github/workspace/filtered_instances.json
+
+      # Expose to GitHub output
+      echo "instances<<EOF" >> $GITHUB_OUTPUT
+      cat /github/workspace/filtered_instances.json >> $GITHUB_OUTPUT
+      echo "EOF" >> $GITHUB_OUTPUT
+

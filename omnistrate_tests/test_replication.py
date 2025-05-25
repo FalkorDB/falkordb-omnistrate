@@ -70,7 +70,9 @@ parser.set_defaults(tls=False)
 args = parser.parse_args()
 
 instance: OmnistrateFleetInstance = None
-
+db0 = None
+db1 = None
+sentinel = None
 # Intercept exit signals so we can delete the instance before exiting
 def signal_handler(sig, frame):
     if instance:
@@ -195,6 +197,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
     11. Make sure we still have the both writes in the new master and slave
     12. Delete the instance
     """
+    global db0, db1, sentinel
 
     resources = instance.get_connection_endpoints()
     db_resource = list(
@@ -215,7 +218,9 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
         ReadOnlyError
     ))
 
-
+    db0 = db_resource[0]["endpoint"]
+    db1 = db_resource[1]["endpoint"]
+    sentinel = sentinel_resource["endpoint"]
     db_0 = FalkorDB(
         host=db_resource[0]["endpoint"],
         port=db_resource[0]["ports"][0],
@@ -370,6 +375,21 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
             resource_id=instance.get_resource_id(f"node-{id_key}"),
         )
 
+        tout = time.time() + timeout_in_seconds
+        while True:
+            if time.time() > tout:
+                logging.info("Failed to promote instance,timeout exceeded.")
+                raise TimeoutError
+            try:
+                ip = socket.gethostbyname(db0)
+                logging.info(f"Instance endpoint {db0} resolved to {ip}")
+                break
+            except (socket.gaierror, socket.error) as e:
+                logging.info(f"DNS resolution failed: {e}")
+                time.sleep(5)
+                continue
+
+
         promotion_completed = False
         tout = time.time() + timeout_in_seconds
         while not promotion_completed:
@@ -415,6 +435,21 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     6. Make sure we can still connect and read the data
     7. Delete the instance
     """
+
+    global db0, db1, sentinel
+    tout = time.time() + 300
+    while True:
+        if time.time() > tout:
+            logging.info("Failed to promote instance,timeout exceeded.")
+            raise TimeoutError
+        try:
+            ip = socket.gethostbyname(sentinel)
+            logging.info(f"Instance endpoint {sentinel} resolved to {ip}")
+            break
+        except (socket.gaierror, socket.error) as e:
+            logging.info(f"DNS resolution failed: {e}")
+            time.sleep(5)
+            continue
     try:
         resources = instance.get_connection_endpoints()
         sentinel_resource = next(
@@ -441,7 +476,19 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
         logging.info("Instance stopped")
 
         instance.start(wait_for_ready=True)
-
+        tout = time.time() + 300
+        while True:
+            if time.time() > tout:
+                logging.info("Failed to promote instance,timeout exceeded.")
+                raise TimeoutError
+            try:
+                ip = socket.gethostbyname(db0)
+                logging.info(f"Instance endpoint {db0} resolved to {ip}")
+                break
+            except (socket.gaierror, socket.error) as e:
+                logging.info(f"DNS resolution failed: {e}")
+                time.sleep(5)
+                continue
         graph = db.select_graph("test")
         
         result = graph.query("MATCH (n:Person) RETURN n")
@@ -494,6 +541,7 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
         KeyError: If endpoint information is missing
         TimeoutError: If hostname cannot be resolved within timeout
     """
+
     if interval <= 0 or timeout <= 0:
         raise ValueError("Interval and timeout must be positive")
     

@@ -70,9 +70,7 @@ parser.set_defaults(tls=False)
 args = parser.parse_args()
 
 instance: OmnistrateFleetInstance = None
-db0 = None
-db1 = None
-sentinel = None
+
 # Intercept exit signals so we can delete the instance before exiting
 def signal_handler(sig, frame):
     if instance:
@@ -286,137 +284,117 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
         raise Exception(
             f"Sentinel list not correct. Expected 2, got {len(sentinels_list)}"
         )
-    try:
+    
 
-        graph_0 = db_0.select_graph("test")
+    graph_0 = db_0.select_graph("test")
 
-        # Write some data to the DB
-        graph_0.query("CREATE (n:Person {name: 'Alice'})")
+    # Write some data to the DB
+    graph_0.query("CREATE (n:Person {name: 'Alice'})")
 
-        # Check if data was replicated
-        graph_1 = db_1.select_graph("test")
+    # Check if data was replicated
+    graph_1 = db_1.select_graph("test")
 
-        result = graph_1.ro_query("MATCH (n:Person) RETURN n")
+    result = graph_1.ro_query("MATCH (n:Person) RETURN n")
 
-        if len(result.result_set) == 0:
-            raise Exception("Data was not replicated to the slave")
+    if len(result.result_set) == 0:
+        raise Exception("Data was not replicated to the slave")
 
-        id_key = "sz" if args.resource_key == "single-Zone" else "mz"
+    id_key = "sz" if args.resource_key == "single-Zone" else "mz"
 
-        logging.info(f"Triggering failover for node-{id_key}-0")
-        # Trigger failover
-        instance.trigger_failover(
-            replica_id=f"node-{id_key}-0",
-            wait_for_ready=False,
-            resource_id=instance.get_resource_id(f"node-{id_key}"),
-        )
+    logging.info(f"Triggering failover for node-{id_key}-0")
+    # Trigger failover
+    instance.trigger_failover(
+        replica_id=f"node-{id_key}-0",
+        wait_for_ready=False,
+        resource_id=instance.get_resource_id(f"node-{id_key}"),
+    )
 
-        promotion_completed = False
-        tout = time.time() + timeout_in_seconds
-        while not promotion_completed:
-            if time.time() > tout:
-                logging.info("Failed to promote instance,timeout exceeded.")
-                raise TimeoutError
-            try:
-                graph = db_1.execute_command("info replication")
-                if "role:master" in graph:
-                    promotion_completed = True
-                time.sleep(5)
-            except Exception as e:
-                logging.info("Promotion not completed yet")
-                time.sleep(5)
+    promotion_completed = False
+    tout = time.time() + timeout_in_seconds
+    while not promotion_completed:
+        if time.time() > tout:
+            logging.info("Failed to promote instance,timeout exceeded.")
+            raise TimeoutError
+        try:
+            graph = db_1.execute_command("info replication")
+            if "role:master" in graph:
+                promotion_completed = True
+            time.sleep(5)
+        except Exception as e:
+            logging.info("Promotion not completed yet")
+            time.sleep(5)
 
-        logging.info("Promotion completed")
+    logging.info("Promotion completed")
 
-        # Check if data is still there
-        graph_1 = db_1.select_graph("test")
+    # Check if data is still there
+    graph_1 = db_1.select_graph("test")
 
-        result = graph_1.query("MATCH (n:Person) RETURN n")
+    result = graph_1.query("MATCH (n:Person) RETURN n")
 
-        if len(result.result_set) == 0:
-            raise Exception("Data lost after first failover")
+    if len(result.result_set) == 0:
+        raise Exception("Data lost after first failover")
 
-        logging.info("Data persisted after first failover")
+    logging.info("Data persisted after first failover")
 
-        graph_1.query("CREATE (n:Person {name: 'Bob'})")
+    graph_1.query("CREATE (n:Person {name: 'Bob'})")
 
-        result = graph_1.query("MATCH (n:Person) RETURN n")
+    result = graph_1.query("MATCH (n:Person) RETURN n")
 
-        logging.info(f"result after bob: {result.result_set}")
+    logging.info(f"result after bob: {result.result_set}")
 
-        # wait until the node 0 is ready
-        instance.wait_for_instance_status(timeout_seconds=600)
+    # wait until the node 0 is ready
+    instance.wait_for_instance_status(timeout_seconds=600)
 
-        logging.info(f"Triggering failover for sentinel-{id_key}-0")
-        # Trigger sentinel failover
-        instance.trigger_failover(
-            replica_id=f"sentinel-{id_key}-0",
-            wait_for_ready=False,
-            resource_id=instance.get_resource_id(f"sentinel-{id_key}"),
-        )
+    logging.info(f"Triggering failover for sentinel-{id_key}-0")
+    # Trigger sentinel failover
+    instance.trigger_failover(
+        replica_id=f"sentinel-{id_key}-0",
+        wait_for_ready=False,
+        resource_id=instance.get_resource_id(f"sentinel-{id_key}"),
+    )
 
-        graph_1 = db_1.select_graph("test")
+    graph_1 = db_1.select_graph("test")
 
-        result = graph_1.query("MATCH (n:Person) RETURN n")
+    result = graph_1.query("MATCH (n:Person) RETURN n")
 
-        if len(result.result_set) < 2:
-            raise Exception("Data lost after second failover")
+    if len(result.result_set) < 2:
+        raise Exception("Data lost after second failover")
 
-        logging.info("Data persisted after second failover")
+    logging.info("Data persisted after second failover")
 
-        # wait until the node 0 is ready
-        instance.wait_for_instance_status(timeout_seconds=600)
+    # wait until the node 0 is ready
+    instance.wait_for_instance_status(timeout_seconds=600)
 
-        logging.info(f"Triggering failover for node-{id_key}-1")
-        # Trigger failover
-        instance.trigger_failover(
-            replica_id=f"node-{id_key}-1",
-            wait_for_ready=False,
-            resource_id=instance.get_resource_id(f"node-{id_key}"),
-        )
+    logging.info(f"Triggering failover for node-{id_key}-1")
+    # Trigger failover
+    instance.trigger_failover(
+        replica_id=f"node-{id_key}-1",
+        wait_for_ready=False,
+        resource_id=instance.get_resource_id(f"node-{id_key}"),
+    )
 
-        tout = time.time() + timeout_in_seconds
-        while True:
-            if time.time() > tout:
-                logging.info("Failed to promote instance,timeout exceeded.")
-                raise TimeoutError
-            try:
-                ip = socket.gethostbyname(db0)
-                logging.info(f"Instance endpoint {db0} resolved to {ip}")
-                break
-            except (socket.gaierror, socket.error) as e:
-                logging.info(f"DNS resolution failed: {e}")
-                time.sleep(5)
-                continue
+    promotion_completed = False
+    tout = time.time() + timeout_in_seconds
+    while not promotion_completed:
+        if time.time() > tout:
+            logging.info("Failed to promote instance,timeout exceeded.")
+            raise TimeoutError
+        try:
+            graph = db_0.execute_command("info replication")
+            print(graph)
+            if "role:master" in graph:
+                promotion_completed = True
+            time.sleep(5)
+        except Exception as e:
+            logging.info("Promotion not completed yet")
+            time.sleep(5)
 
+    logging.info("Promotion completed")
 
-        promotion_completed = False
-        tout = time.time() + timeout_in_seconds
-        while not promotion_completed:
-            if time.time() > tout:
-                logging.info("Failed to promote instance,timeout exceeded.")
-                raise TimeoutError
-            try:
-                graph = db_0.execute_command("info replication")
-                if "role:master" in graph:
-                    promotion_completed = True
-                time.sleep(5)
-            except Exception as e:
-                logging.info("Promotion not completed yet")
-                time.sleep(5)
+    # Check if data is still there
+    graph_0 = db_0.select_graph("test")
 
-        logging.info("Promotion completed")
-
-        # Check if data is still there
-        graph_0 = db_0.select_graph("test")
-
-        result = graph_0.query("MATCH (n:Person) RETURN n")
-    except Exception as e:
-        if isinstance(e, TimeoutError) or isinstance(e, ConnectionRefusedError) or isinstance(e, ConnectionError):
-            logging.error(f"Failed to connect to instance: {e}")
-            logging.error("Persisting instance on fail")
-            args.persist_instance_on_fail = True
-            raise Exception("Instance not ready: Connection refused") from e
+    result = graph_0.query("MATCH (n:Person) RETURN n")
     
     if len(result.result_set) < 2:
         logging.info(result.result_set)
@@ -435,69 +413,38 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     6. Make sure we can still connect and read the data
     7. Delete the instance
     """
+    time.sleep(15)  # Wait for the instance to be fully ready
 
-    global db0, db1, sentinel
+    resources = instance.get_connection_endpoints()
+    sentinel_resource = next(
+        (resource for resource in resources if resource["id"].startswith("sentinel-")),
+        None,
+    )
+    db = FalkorDB(
+        host=sentinel_resource["endpoint"],
+        port=sentinel_resource["ports"][0],
+        username="falkordb",
+        password=password,
+        ssl=args.tls,
+    )
+
+    graph = db.select_graph("test")
+
+    # Write some data to the DB
+    graph.query("CREATE (n:Person {name: 'Alice'})")
+
+    logging.info("Stopping node")
+
+    instance.stop(wait_for_ready=True)
+
+    logging.info("Instance stopped")
+
+    instance.start(wait_for_ready=True)
     tout = time.time() + 300
-    while True:
-        if time.time() > tout:
-            logging.info("Failed to promote instance,timeout exceeded.")
-            raise TimeoutError
-        try:
-            ip = socket.gethostbyname(sentinel)
-            logging.info(f"Instance endpoint {sentinel} resolved to {ip}")
-            break
-        except (socket.gaierror, socket.error) as e:
-            logging.info(f"DNS resolution failed: {e}")
-            time.sleep(5)
-            continue
-    try:
-        resources = instance.get_connection_endpoints()
-        sentinel_resource = next(
-            (resource for resource in resources if resource["id"].startswith("sentinel-")),
-            None,
-        )
-        db = FalkorDB(
-            host=sentinel_resource["endpoint"],
-            port=sentinel_resource["ports"][0],
-            username="falkordb",
-            password=password,
-            ssl=args.tls,
-        )
-
-        graph = db.select_graph("test")
-
-        # Write some data to the DB
-        graph.query("CREATE (n:Person {name: 'Alice'})")
-
-        logging.info("Stopping node")
-
-        instance.stop(wait_for_ready=True)
-
-        logging.info("Instance stopped")
-
-        instance.start(wait_for_ready=True)
-        tout = time.time() + 300
-        while True:
-            if time.time() > tout:
-                logging.info("Failed to promote instance,timeout exceeded.")
-                raise TimeoutError
-            try:
-                ip = socket.gethostbyname(db0)
-                logging.info(f"Instance endpoint {db0} resolved to {ip}")
-                break
-            except (socket.gaierror, socket.error) as e:
-                logging.info(f"DNS resolution failed: {e}")
-                time.sleep(5)
-                continue
-        graph = db.select_graph("test")
-        
-        result = graph.query("MATCH (n:Person) RETURN n")
-    except Exception as e:
-        if isinstance(e, TimeoutError) or isinstance(e, ConnectionRefusedError) or isinstance(e, ConnectionError):
-            logging.error(f"Failed to connect to instance: {e}")
-            logging.error("Persisting instance on fail")
-            args.persist_instance_on_fail = True
-            raise Exception("Instance not ready: Connection refused") from e
+    graph = db.select_graph("test")
+    
+    time.sleep(15)  # Wait for the instance to be fully ready
+    result = graph.query("MATCH (n:Person) RETURN n")
     if len(result.result_set) == 0:
         raise Exception("Data lost after stop/start")
 

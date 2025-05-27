@@ -255,7 +255,7 @@ get_memory_limit() {
 
   if [[ $MEMORY_LIMIT =~ ^[0-9]+[Gg]$ ]]; then
     echo "Moved $MEMORY_LIMIT to ${MEMORY_LIMIT}B"
-    MEMORY_LIMIT="${MEMORY_LIMIT}B"
+    MEMORY_LIMIT=$(echo "${MEMORY_LIMIT%.*}GB")
   fi
 
   echo "Memory Limit: $MEMORY_LIMIT"

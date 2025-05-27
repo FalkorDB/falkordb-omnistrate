@@ -55,7 +55,7 @@ class OmnistrateFleetAPI:
 
         retries = Retry(
             total=10,
-            backoff_factor=0.1,
+            backoff_factor=0.5,
             status_forcelist=[403, 429, 500, 502, 503, 504],
             allowed_methods=["GET", "POST", "PUT", "DELETE"],
         )

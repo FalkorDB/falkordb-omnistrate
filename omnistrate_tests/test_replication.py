@@ -195,6 +195,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
     11. Make sure we still have the both writes in the new master and slave
     12. Delete the instance
     """
+    global db0, db1, sentinel
 
     resources = instance.get_connection_endpoints()
     db_resource = list(
@@ -215,7 +216,9 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
         ReadOnlyError
     ))
 
-
+    db0 = db_resource[0]["endpoint"]
+    db1 = db_resource[1]["endpoint"]
+    sentinel = sentinel_resource["endpoint"]
     db_0 = FalkorDB(
         host=db_resource[0]["endpoint"],
         port=db_resource[0]["ports"][0],
@@ -281,6 +284,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
         raise Exception(
             f"Sentinel list not correct. Expected 2, got {len(sentinels_list)}"
         )
+    
 
     graph_0 = db_0.select_graph("test")
 
@@ -377,6 +381,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
             raise TimeoutError
         try:
             graph = db_0.execute_command("info replication")
+            print(graph)
             if "role:master" in graph:
                 promotion_completed = True
             time.sleep(5)
@@ -390,7 +395,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
     graph_0 = db_0.select_graph("test")
 
     result = graph_0.query("MATCH (n:Person) RETURN n")
-
+    
     if len(result.result_set) < 2:
         logging.info(result.result_set)
         raise Exception("Data lost after third failover")
@@ -408,6 +413,7 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     6. Make sure we can still connect and read the data
     7. Delete the instance
     """
+    instance.wait_for_instance_status(timeout_seconds=600)
 
     resources = instance.get_connection_endpoints()
     sentinel_resource = next(
@@ -434,11 +440,12 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     logging.info("Instance stopped")
 
     instance.start(wait_for_ready=True)
-
+    tout = time.time() + 300
     graph = db.select_graph("test")
     
-    result = graph.query("MATCH (n:Person) RETURN n")
+    instance.wait_for_instance_status(timeout_seconds=600)
 
+    result = graph.query("MATCH (n:Person) RETURN n")
     if len(result.result_set) == 0:
         raise Exception("Data lost after stop/start")
 
@@ -482,6 +489,7 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
         KeyError: If endpoint information is missing
         TimeoutError: If hostname cannot be resolved within timeout
     """
+
     if interval <= 0 or timeout <= 0:
         raise ValueError("Interval and timeout must be positive")
     

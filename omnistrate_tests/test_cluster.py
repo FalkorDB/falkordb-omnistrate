@@ -275,6 +275,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str
 def test_failover(instance: OmnistrateFleetInstance):
     """This function should retrieve the instance host and port for connection, write some data to the DB, then trigger a failover. After X seconds, the instance should be back online and data should have persisted"""
     # Get instance host and port
+
     db = instance.create_connection(
         ssl=args.tls,
         network_type=args.network_type,

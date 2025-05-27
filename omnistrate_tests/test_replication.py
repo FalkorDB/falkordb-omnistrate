@@ -410,6 +410,8 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     6. Make sure we can still connect and read the data
     7. Delete the instance
     """
+    endpoints = [(endpoint["endpoint"],endpoint["ports"][0]) for endpoint in instance.get_connection_endpoints()]
+
     db = instance.create_connection(
         ssl=args.tls, force_reconnect=True, network_type=args.network_type
     )
@@ -427,10 +429,27 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
 
     instance.start(wait_for_ready=True)
 
+    logging.info("see if endpoints resolve")
+    for endpoint in endpoints:
+        try:
+            ip = socket.gethostbyname(endpoint[0])
+            logging.info(f"Endpoint {endpoint} resolved to {ip}")
+        except socket.gaierror as e:
+            logging.error(f"Failed to resolve endpoint {endpoint[0]}: {e}")
+
     db = instance.create_connection(
         ssl=args.tls, force_reconnect=True, network_type=args.network_type
     )
-    
+
+    logging.info("See if ports are still open")
+    for endpoint in endpoints:
+        try:
+            with socket.create_connection((endpoint[0], endpoint[1]), timeout=5):
+                logging.info(f"Connection to {endpoint[0]} successful")
+        except (socket.timeout, ConnectionRefusedError) as e:
+            logging.error(f"Connection to {endpoint[0]} failed: {e}")
+            raise Exception(f"Failed to connect to {endpoint}") from e
+        
     graph = db.select_graph("test")
     
     result = graph.query("MATCH (n:Person) RETURN n")

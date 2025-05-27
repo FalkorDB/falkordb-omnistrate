@@ -408,7 +408,7 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     6. Make sure we can still connect and read the data
     7. Delete the instance
     """
-
+    time.sleep(15) #Give time for sentine-0 to be ready
     resources = instance.get_connection_endpoints()
     sentinel_resource = next(
         (resource for resource in resources if resource["id"].startswith("sentinel-")),
@@ -435,6 +435,7 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
 
     instance.start(wait_for_ready=True)
 
+    time.sleep(15)  # Give time for the instance to start
     graph = db.select_graph("test")
     
     result = graph.query("MATCH (n:Person) RETURN n")

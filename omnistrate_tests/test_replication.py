@@ -413,7 +413,7 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     6. Make sure we can still connect and read the data
     7. Delete the instance
     """
-    time.sleep(15)  # Wait for the instance to be fully ready
+    instance.wait_for_instance_status(timeout_seconds=600)
 
     resources = instance.get_connection_endpoints()
     sentinel_resource = next(
@@ -443,7 +443,8 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     tout = time.time() + 300
     graph = db.select_graph("test")
     
-    time.sleep(15)  # Wait for the instance to be fully ready
+    instance.wait_for_instance_status(timeout_seconds=600)
+
     result = graph.query("MATCH (n:Person) RETURN n")
     if len(result.result_set) == 0:
         raise Exception("Data lost after stop/start")

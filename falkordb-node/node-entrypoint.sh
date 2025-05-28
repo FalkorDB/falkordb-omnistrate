@@ -253,7 +253,7 @@ get_memory_limit() {
     echo "INSTANCE_TYPE is not set. Setting to default memory limit"
   fi
 
-  if [[ $MEMORY_LIMIT =~ ^[0-9]+[Gg]$ ]]; then
+  if [[ $MEMORY_LIMIT =~ ^[0-9]+.*[Gg]$ ]]; then
     echo "Moved $MEMORY_LIMIT to ${MEMORY_LIMIT}B"
     MEMORY_LIMIT=$(echo "${MEMORY_LIMIT%.*}GB")
   fi

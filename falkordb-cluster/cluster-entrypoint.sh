@@ -301,23 +301,6 @@ get_default_memory_limit() {
   echo "$(awk '/MemTotal/ {printf "%d\n", (($2 / 1024 - 2330) > 100 ? ($2 / 1024 - 2330) : 100)}' /proc/meminfo)MB"
 }
 
-maxmemory_validate_and_convert_to_mb(){
-  local memory_limit=$1
-  if [[ "$memory_limit" =~ ^[0-9]+.*[Gg]$ || "$memory_limit" =~ ^[0-9]+.*[Gg][Bb]$ ]];then
-    #convert GB to MB
-    memory_limit=$(echo "$memory_limit" | grep -oE '^[0-9]+')
-    memory_limit=$(echo "${memory_limit} * 1024" | bc)
-    echo "${memory_limit}MB"
-  elif [[ "$memory_limit" =~ ^[0-9]+.*[Mm]$ || "$memory_limit" =~ ^[0-9]+.*[Mm][Bb]$ ]]; then 
-    # If memory limit is in MB, just return it
-    memory_limit=$(echo "$memory_limit" | grep -oE '^[0-9]+')
-    echo "${memory_limit}MB"
-  else
-    echo "WARNING Invalid memory limit format: $memory_limit"
-    exit 1
-  fi
-}
-
 set_memory_limit() {
   declare -A memory_limit_instance_type_map
   memory_limit_instance_type_map=(
@@ -350,7 +333,6 @@ set_memory_limit() {
     MEMORY_LIMIT=$(get_default_memory_limit)
     echo "INSTANCE_TYPE is not set. Setting to default memory limit"
   fi
-  MEMORY_LIMIT=$(maxmemory_validate_and_convert_to_mb "$MEMORY_LIMIT")
   
   echo "Setting maxmemory to $MEMORY_LIMIT"
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT

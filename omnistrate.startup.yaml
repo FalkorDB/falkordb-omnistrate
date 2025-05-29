@@ -283,8 +283,8 @@ services:
         export: true
         defaultValue: "1GB"
         labeledOptions:
-          1GB: "1.1G"
-          2GB: "2.1G"
+          1GB: "1100M"
+          2GB: "2200M"
         parameterDependencyMap:
           node-s: memoryRequestsAndLimits
     x-omnistrate-capabilities:
@@ -429,8 +429,8 @@ services:
         export: true
         defaultValue: "1GB"
         labeledOptions:
-          1GB: "1.1G"
-          2GB: "2.1G"
+          1GB: "1100M"
+          2GB: "2200M"
       - key: resourceRequestCPU
         name: CPU Request
         description: CPU Request for the Falkordb instance

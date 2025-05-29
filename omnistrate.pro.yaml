@@ -363,7 +363,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: true
+        modifiable: false
         required: true
         export: false
         parameterDependencyMap:
@@ -539,7 +539,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: true
+        modifiable: false
         required: true
         export: false
       - key: RDBPersistenceConfig

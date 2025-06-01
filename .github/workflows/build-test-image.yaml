@@ -161,9 +161,6 @@ jobs:
             mkdir -p secrets || { echo "Failed to create secrets directory"; exit 1; }
             echo '{{ $var.falkordbPassword }}' > ./secrets/falkordbpassword || { echo "Failed to write falkordbpassword"; exit 1; }
             echo '{{ $func.random(string, 16, $sys.deterministicSeedValue) }}' > ./secrets/adminpassword || { echo "Failed to write adminpassword"; exit 1; }
-            echo '{{ $var.adminPassword }}' > ./secrets/grafana_admin_password || { echo "Failed to write grafana_admin_password"; exit 1; }
-            echo '{{ $func.random(string, 16, $sys.deterministicSeedValue)  }}' > ./secrets/grafana_secret_key || { echo "Failed to write grafana_secret_key"; exit 1; }
-            echo '{{ $var.smtpPassword }}' > ./secrets/grafana_smtp_password || { echo "Failed to write grafana_smtp_password"; exit 1; }
           else
             echo "secrets option was not used"
             exit 0
@@ -243,16 +240,6 @@ jobs:
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'free' --replica-id 'node-f-0' --instance-name 'test-free-oom' --instance-description 'test-free-oom' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
-          - name: PRO/Standalone - AWS/us-east-2 - Change Password
-            if: "true"
-            testFile: test_change_password.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            subscriptionId: sub-GJPV3NoNC0
-            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-change-password' --instance-description 'test-standalone-password' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - AWS/us-east-2 - Out of memory
             if: "true"
             testFile: test_out_of_memory.py

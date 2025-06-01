@@ -158,7 +158,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: true
+        modifiable: false
         required: true
         export: false
         parameterDependencyMap:
@@ -283,8 +283,8 @@ services:
         export: true
         defaultValue: "1GB"
         labeledOptions:
-          1GB: "1.1G"
-          2GB: "2.1G"
+          1GB: "1100M"
+          2GB: "2200M"
         parameterDependencyMap:
           node-s: memoryRequestsAndLimits
     x-omnistrate-capabilities:
@@ -324,7 +324,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: true
+        modifiable: false
         required: true
         export: false
       - key: RDBPersistenceConfig
@@ -429,8 +429,8 @@ services:
         export: true
         defaultValue: "1GB"
         labeledOptions:
-          1GB: "1.1G"
-          2GB: "2.1G"
+          1GB: "1100M"
+          2GB: "2200M"
       - key: resourceRequestCPU
         name: CPU Request
         description: CPU Request for the Falkordb instance

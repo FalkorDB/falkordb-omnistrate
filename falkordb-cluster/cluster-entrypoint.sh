@@ -340,7 +340,7 @@ set_memory_limit() {
     MEMORY_LIMIT=$(get_default_memory_limit)
     echo "INSTANCE_TYPE is not set. Setting to default memory limit"
   fi
-
+  
   echo "Setting maxmemory to $MEMORY_LIMIT"
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
 }

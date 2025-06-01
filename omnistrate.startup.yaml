@@ -10,12 +10,14 @@ x-omnistrate-service-plan:
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
       AwsAccountId: "$AwsAccountId"
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+      AzureSubscriptionId: "$AzureSubscriptionId"
+      AzureTenantId: "$AzureTenantId"
 
-x-internal-integrations:
-  logs:
-    provider: native
-  metrics:
-    provider: native
+# x-internal-integrations:
+#   logs:
+#     provider: native
+#   metrics:
+#     provider: native
 
 x-falkordbMetrics: &metrics
   prometheusEndpoint: "http://localhost:9121/metrics"
@@ -457,6 +459,9 @@ services:
             instanceStorageSizeGi: 20
           aws:
             instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 20
+          azure:
+            instanceStorageType: AZURE::PREMIUM_SSD
             instanceStorageSizeGi: 20
     secrets:
       - source: adminpasspath

@@ -2,11 +2,11 @@
 name: operator
 deployment:
   hostedDeployment:
-    GcpProjectId: "app-plane-dev-f7a2434f"
-    GcpProjectNumber: "747498641488"
-    GcpServiceAccountEmail: "omni-btstrp-org-q9h5kjuc0n@app-plane-dev-f7a2434f.iam.gserviceaccount.com"
-    AwsAccountId: "637423310747"
-    AWSBootstrapRoleAccountArn: "arn:aws:iam::637423310747:role/omnistrate-bootstrap-role"
+    GcpProjectId: "$GcpProjectId"
+    GcpProjectNumber: "$GcpProjectNumber"
+    GcpServiceAccountEmail: "$GcpServiceAccountEmail"
+    AwsAccountId: "$AwsAccountId"
+    AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
 
 services:
   - name: cluster-mz
@@ -175,7 +175,7 @@ services:
                 value: "/ca/ca.crt"
             
           kubernetesConfig:
-            image: "muhammadqadora/redis:1.8"
+            image: "falkordb/redis:latest"
             imagePullPolicy: "IfNotPresent"
             redisSecret:
               name: "redis-secret"
@@ -884,7 +884,7 @@ services:
                 value: "/ca/ca.crt"
             
           kubernetesConfig:
-            image: "muhammadqadora/redis:1.8"
+            image: "falkordb/redis:latest"
             imagePullPolicy: "IfNotPresent"
             redisSecret:
               name: "redis-secret"

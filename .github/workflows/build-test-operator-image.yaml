@@ -1,0 +1,296 @@
+name: Build and test image
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: falkordb-node-branch-${{ github.event_name == 'pull_request' && github.ref_name.event.pull_request.head.label || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  OPERATOR_PLAN_NAME: operator-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+  GCP_NETWORK_NAME: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+  AWS_NETWORK_NAME: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+
+jobs:
+  # create-runners:
+  #   strategy:
+  #     matrix:
+  #       machines:
+  #         - name: replication-runner-private-gcp
+  #           machine_type: e2-medium
+  #           runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
+  #           arm: false
+  #           image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
+  #         - name: cluster-runner-private-gcp
+  #           machine_type: e2-medium
+  #           runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
+  #           arm: false
+  #           image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Create runners
+  #       id: create-runner
+  #       uses: FalkorDB/gce-github-runner@install_docker
+  #       with:
+  #         token: ${{ secrets.GH_SA_TOKEN }}
+  #         project_id: ${{ vars.GCP_PROJECT_ID }}
+  #         service_account_key: ${{ secrets.GCP_SA_KEY }}
+  #         machine_zone: ${{ vars.GCP_ZONE }}
+  #         network: n-hcjx5tis6bc
+  #         subnet: s-hcjx5tis6bc-pod
+  #         disk_size: 100
+  #         machine_type: ${{ matrix.machines.machine_type }}
+  #         runner_label: ${{ matrix.machines.runner_label }}
+  #         arm: ${{ matrix.machines.arm }}
+  #         image: ${{ matrix.machines.image }}
+
+  omnistrate-update-plans:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        plans:
+          - service-name: FalkorDB
+            plan-name: FalkorDB Operator
+            file: omnistrate.operator.yaml
+            key: operator
+            tier-name: operator-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Replace Variables
+        run: |
+          sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$AwsAccountId/${{ vars.AWS_ACCOUNT_ID }}/g' ${{ matrix.plans.file }}
+          sed -i 's|$AwsBootstrapRoleAccountArn|${{ vars.AWS_BOOTSTRAP_ROLE_ACCOUNT_ARN }}|g' ${{ matrix.plans.file }}
+          sed -i 's/${{ matrix.plans.plan-name }}/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
+      
+      - name: Upload yaml as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.plans.file }}
+          path: ${{ matrix.plans.file }}
+
+
+      - name: Update Omnistrate plan
+        uses: ./.github/actions/update-omnistrate-plan
+        id: update_omnistrate_plan
+        with:
+          username: ${{ secrets.OMNISTRATE_USERNAME }}
+          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          file: ${{ matrix.plans.file }}
+          service-name: ${{ matrix.plans.service-name }}
+          environment: testing
+          environment-type: qa
+          release-description: dev-${{ github.event.head_commit.id || github.run_id }}
+
+  # create-custom-networks:
+  #   needs: omnistrate-update-plans
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       if: ${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+  #     - name: Create Omnistrate Custom Network - GCP
+  #       if: ${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}
+  #       uses: ./.github/actions/create-omnistrate-custom-network
+  #       id: create_custom_network_gcp
+  #       with:
+  #         username: ${{ secrets.OMNISTRATE_USERNAME }}
+  #         password: ${{ secrets.OMNISTRATE_PASSWORD }}
+  #         cloud_provider: gcp
+  #         region: us-central1
+  #         cidr: "73.0.0.0/16"
+  #         name: ${{ env.GCP_NETWORK_NAME}}
+
+  #     - name: Create Omnistrate Custom Network - AWS
+  #       if: ${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}
+  #       uses: ./.github/actions/create-omnistrate-custom-network
+  #       id: create_custom_network_aws
+  #       with:
+  #         username: ${{ secrets.OMNISTRATE_USERNAME }}
+  #         password: ${{ secrets.OMNISTRATE_PASSWORD }}
+  #         cloud_provider: aws
+  #         region: us-east-2
+  #         cidr: "73.0.0.0/16"
+  #         name: ${{ env.AWS_NETWORK_NAME }}
+
+  test:
+    #needs: [create-custom-networks, create-runners]
+    runs-on: ${{ matrix.instances.runner_label || 'ubuntu-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        instances:
+          ###################### AWS ######################
+          - name: Operator/ClusterSingleZone - AWS/us-east-2 - Update Memory
+            if: "true"
+            testFile: test_operator_update_memory.py
+            tierName: operator-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-sz' --instance-name 'test-cluster-sz-operator-update-memory'  --instance-description 'test-cluster-sz-operator-update-memory' --instance-type 't2.medium' --new-instance-type 'm6i.large' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '3' --host-count '3'"
+          - name: Operator/ClusterMultiZone - AWS/us-east-2 - Update Memory with TLS
+            if: "true"
+            testFile: test_operator_update_memory.py
+            tierName: operator-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-mz' --instance-name 'test-cluster-mz-operator-update-memory'  --instance-description 'test-cluster-mz-operator-update-memory' --tls --instance-type 't2.medium' --new-instance-type 'm6i.large' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '3' --host-count '3'"
+          - name: Operator/ClusterSingleiZone - AWS/us-east-2 - Add replicas
+            if: "true"
+            testFile: test_operator_cluster_replicas.py
+            tierName: operator-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-sz' --instance-name 'test-cluster-sz-operator-cluster-replicas' --instance-description 'test-cluster-sz-operator-cluster-replicas' --instance-type 't2.medium' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '3' --host-count '3'"
+          - name: Operator/ClusterMultiZone - AWS/us-east-2 - Cluster Shards with TLS
+            if: "true"
+            testFile: test_operator_cluster_shards.py
+            tierName: operator-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-mz' --instance-name 'test-cluster-mz-operator-cluster-shards' --instance-description 'test-cluster-mz-operator-cluster-shards' --tls --instance-type 't2.medium' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '3' --host-count '3' --ensure-mz-distribution"
+          - name: Operator/ClusterMultiZone - AWS/us-east-2 - Cluster failover with TLS
+            if: "true"
+            testFile: test_operator_failover_cluster.py
+            tierName: operator-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-mz' --instance-name 'test-cluster-mz-operator-cluster-failover' --instance-description 'test-cluster-mz-operator-cluster-failover' --tls --instance-type 't2.medium' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '3' --host-count '3' --ensure-mz-distribution --debug-command enabled"
+          - name: Operator/ClusterSingleZone - AWS/us-east-2 - Cluster out of memory
+            if: "true"
+            testFile: test_operator_out_of_memory.py
+            tierName: operator-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-sz' --instance-name 'test-cluster-sz-operator-cluster-out-of-memory' --instance-description 'test-cluster-mz-operator-cluster-out-of-memory' --instance-type 't2.medium' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '3' --host-count '3'"
+    steps:
+      - name: Checkout
+        if: matrix.instances.if == 'true' || matrix.instances.if == true
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup python
+        if: ${{ (matrix.instances.if == 'true' || matrix.instances.if == true) && !matrix.instances.runner_label }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Cache Poetry virtualenv
+        if: matrix.instances.if == 'true' || matrix.instances.if == true
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.poetry/virtualenvs
+          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+
+      - name: Install Poetry
+        if: steps.cache.outputs.cache-hit != true && (matrix.instances.if == 'true' || matrix.instances.if == true)
+        env:
+          if: ${{ matrix.instances.if }}
+          if_equal_bool: ${{ matrix.instances.if == true }}
+          if_equal_str: ${{ matrix.instances.if == 'true' }}
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+
+      - name: Install dependencies
+        if: matrix.instances.if == 'true' || matrix.instances.if == true
+        run: |
+          export PATH="~/.local/bin:$PATH"
+          poetry install
+
+      - name: ${{ matrix.instances.name }}
+        if: matrix.instances.if == 'true' || matrix.instances.if == true
+        env:
+          SERVICE_ID: ${{ matrix.instances.serviceId }}
+          ENVIRONMENT_ID: ${{ matrix.instances.environmentId }}
+          CLOUD_PROVIDER: ${{ matrix.instances.cloudProvider }}
+          CLOUD_REGION: ${{ matrix.instances.cloudRegion }}
+          extraParams: ${{ matrix.instances.extraParams }}
+          SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
+          REF_NAME: ${{ matrix.instances.tierName }}
+        run: |
+          export PATH="~/.local/bin:$PATH"
+          poetry run python -u ./omnistrate_tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
+
+  # Runs only if the branch is 'main' or 'v*'
+  # delete-networks:
+  #   runs-on: ubuntu-latest
+  #   needs: test
+  #   if: contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main')
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+  #     - name: Delete Omnistrate Custom Network - GCP
+  #       uses: ./.github/actions/delete-omnistrate-custom-network
+  #       continue-on-error: true
+  #       with:
+  #         username: ${{ secrets.OMNISTRATE_USERNAME }}
+  #         password: ${{ secrets.OMNISTRATE_PASSWORD }}
+  #         custom_network_name: ${{ env.GCP_NETWORK_NAME }}
+
+  #     - name: Delete Omnistrate Custom Network - AWS
+  #       continue-on-error: true
+  #       uses: ./.github/actions/delete-omnistrate-custom-network
+  #       with:
+  #         username: ${{ secrets.OMNISTRATE_USERNAME }}
+  #         password: ${{ secrets.OMNISTRATE_PASSWORD }}
+  #         custom_network_name: ${{ env.AWS_NETWORK_NAME }}
+
+  # cleanup-runner:
+  #   needs: test
+  #   if: ${{ success() || cancelled() || needs.test.result == 'skipped' }}
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       platform:
+  #         - machine_label: cluster-${{ github.run_id }}-${{ github.run_number }}
+  #         - machine_label: replication-${{ github.run_id }}-${{ github.run_number }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/cleanup-runner
+  #       with:
+  #         service_account_key: ${{ secrets.GCP_SA_KEY }}
+  #         project_id: ${{ vars.GCP_PROJECT_ID }}
+  #         zone: ${{ vars.GCP_ZONE }}
+  #         instance_label: ${{ matrix.platform.machine_label }}

@@ -92,7 +92,7 @@ if not args.persist_instance_on_fail:
 
 
 
-def test_update_memory():
+def test_out_of_memory():
     global instance
 
     omnistrate = OmnistrateFleetAPI(
@@ -162,7 +162,8 @@ def test_update_memory():
             logging.error(f"DNS resolution failed: {e}")
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
         
-
+        stress_test_out_of_memory(instance, resource_key=args.resource_key)
+        
     except Exception as e:
         logging.exception(e)
         if not args.persist_instance_on_fail:
@@ -241,4 +242,4 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     raise TimeoutError(f"Unable to resolve hostname '{hostname}' within {timeout} seconds.")
 
 if __name__ == "__main__":
-    test_update_memory()
+    test_out_of_memory()

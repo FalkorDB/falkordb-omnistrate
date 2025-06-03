@@ -1,4 +1,4 @@
-name: Build and test image
+name: Build and test operator image
 
 on:
   pull_request:

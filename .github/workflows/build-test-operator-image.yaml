@@ -134,6 +134,7 @@ jobs:
 
   test:
     #needs: [create-custom-networks, create-runners]
+    needs: omnistrate-update-plans
     runs-on: ${{ matrix.instances.runner_label || 'ubuntu-latest' }}
     strategy:
       fail-fast: false

@@ -381,6 +381,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
                 promotion_completed = True
             time.sleep(5)
         except Exception as e:
+            logging.exception(e)
             logging.info("Promotion not completed yet")
             time.sleep(5)
 
@@ -396,6 +397,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
         raise Exception("Data lost after third failover")
 
     logging.info("Data persisted after third failover")
+    instance.wait_for_instance_status(timeout_seconds=600)
     
 def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     """
@@ -408,18 +410,9 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     6. Make sure we can still connect and read the data
     7. Delete the instance
     """
-
-    resources = instance.get_connection_endpoints()
-    sentinel_resource = next(
-        (resource for resource in resources if resource["id"].startswith("sentinel-")),
-        None,
-    )
-    db = FalkorDB(
-        host=sentinel_resource["endpoint"],
-        port=sentinel_resource["ports"][0],
-        username="falkordb",
-        password=password,
-        ssl=args.tls,
+    
+    db = instance.create_connection(
+        ssl=args.tls, force_reconnect=True, network_type=args.network_type
     )
 
     graph = db.select_graph("test")
@@ -434,6 +427,12 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     logging.info("Instance stopped")
 
     instance.start(wait_for_ready=True)
+
+    logging.info("see if endpoints resolve")
+
+    db = instance.create_connection(
+        ssl=args.tls, force_reconnect=True, network_type=args.network_type
+    )
 
     graph = db.select_graph("test")
     

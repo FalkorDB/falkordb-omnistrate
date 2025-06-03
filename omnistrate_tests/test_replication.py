@@ -427,9 +427,7 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     logging.info("Instance stopped")
 
     instance.start(wait_for_ready=True)
-
-    logging.info("see if endpoints resolve")
-
+    
     db = instance.create_connection(
         ssl=args.tls, force_reconnect=True, network_type=args.network_type
     )

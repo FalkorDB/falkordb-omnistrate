@@ -461,7 +461,7 @@ services:
             instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 20
           azure:
-            instanceStorageType: AZURE::PREMIUM_SSD
+            instanceStorageType: AZURE::STANDARD_SSD
             instanceStorageSizeGi: 20
     secrets:
       - source: adminpasspath

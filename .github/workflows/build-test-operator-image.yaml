@@ -60,6 +60,7 @@ jobs:
           - service-name: FalkorDB
             plan-name: FalkorDB Operator
             file: omnistrate.operator.yaml
+            operator: true
             key: operator
             tier-name: operator-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
     steps:
@@ -94,6 +95,7 @@ jobs:
           service-name: ${{ matrix.plans.service-name }}
           environment: testing
           environment-type: qa
+          spec-type: ${{ matrix.plans.operator == true && '--spec-type ServicePlanSpec' || '' }}
           release-description: dev-${{ github.event.head_commit.id || github.run_id }}
 
   # create-custom-networks:

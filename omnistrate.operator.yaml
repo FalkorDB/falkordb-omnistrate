@@ -560,9 +560,9 @@ services:
         modifiable: true
         required: false
         export: true
-        defaultValue: "t3.medium"
+        defaultValue: "t2.medium"
         options:
-          - t3.medium
+          - t2.medium
           - m6i.large
           - m6i.xlarge
           - c6i.xlarge
@@ -1268,9 +1268,9 @@ services:
         modifiable: true
         required: false
         export: true
-        defaultValue: "t3.medium"
+        defaultValue: "t2.medium"
         options:
-          - t3.medium
+          - t2.medium
           - m6i.large
           - m6i.xlarge
           - c6i.xlarge

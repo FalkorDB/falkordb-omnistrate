@@ -1,8 +1,13 @@
 import sys
 import signal
 from random import randbytes
-from pathlib import Path  # if you haven't already done so
+from pathlib import Path
+import threading
 import socket
+import falkordb
+from redis import Redis
+from redis.exceptions import ConnectionError
+
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -22,8 +27,9 @@ import time
 import os
 from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
 from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
+from omnistrate_tests.classes.falkordb_cluster import FalkorDBCluster
 import argparse
-from redis.exceptions import ResponseError, OutOfMemoryError
+
 parser = argparse.ArgumentParser()
 parser.add_argument("omnistrate_user")
 parser.add_argument("omnistrate_password")
@@ -37,7 +43,7 @@ parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
 parser.add_argument("--resource-key", required=True)
-parser.add_argument("--replica-id", required=True)
+parser.add_argument("--replica-id", required=False, default=None)
 
 
 parser.add_argument("--instance-name", required=True)
@@ -47,11 +53,26 @@ parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
-parser.add_argument("--persist-instance-on-fail",action="store_true")
-parser.add_argument("--custom-network", required=False)
-parser.add_argument("--network-type", required=False, default="PUBLIC")
 parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
+parser.add_argument("--debug-command", required=False, default="disabled")
+parser.add_argument("--new-instance-type", required=True)
+parser.add_argument("--ensure-mz-distribution", action="store_true")
+parser.add_argument("--custom-network", required=False)
+parser.add_argument("--network-type", required=False, default="PUBLIC")
+
+
+parser.add_argument(
+    "--deployment-create-timeout-seconds", required=False, default=2600, type=int
+)
+parser.add_argument(
+    "--deployment-delete-timeout-seconds", required=False, default=2600, type=int
+)
+parser.add_argument(
+    "--deployment-failover-timeout-seconds", required=False, default=2600, type=int
+)
+
+parser.add_argument("--persist-instance-on-fail",action="store_true")
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -71,7 +92,8 @@ if not args.persist_instance_on_fail:
     signal.signal(signal.SIGINT, signal_handler)
 
 
-def test_out_of_memory():
+
+def test_update_memory():
     global instance
 
     omnistrate = OmnistrateFleetAPI(
@@ -97,7 +119,7 @@ def test_out_of_memory():
 
     instance = omnistrate.instance(
         service_id=args.service_id,
-        service_provider_id=service.provider_id,
+        service_provider_id=service.service_provider_id,
         service_key=service.key,
         service_environment_id=args.environment_id,
         service_environment_key=service.get_environment(args.environment_id).key,
@@ -106,12 +128,13 @@ def test_out_of_memory():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
-        deployment_create_timeout_seconds=2400,
-        deployment_delete_timeout_seconds=2400,
-        deployment_failover_timeout_seconds=2400,
+        deployment_create_timeout_seconds=args.deployment_create_timeout_seconds,
+        deployment_delete_timeout_seconds=args.deployment_delete_timeout_seconds,
+        deployment_failover_timeout_seconds=args.deployment_failover_timeout_seconds,
     )
 
     try:
+        password = randbytes(16).hex()
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
@@ -120,24 +143,49 @@ def test_out_of_memory():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password=randbytes(16).hex(),
+            falkordb_password=password,
             nodeInstanceType=args.instance_type,
-            storageSize=args.storage_size,
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            hostCount=args.host_count,
+            clusterReplicas=args.cluster_replicas,
+            enableDebugCommand=args.debug_command,
+            adminPassword=password,
             custom_network_id=network.network_id if network else None,
+
         )
         
         try:
             ip = resolve_hostname(instance=instance)
-            logging.info(f"Instance endpoint {instance.get_cluster_endpoint()['endpoint']} resolved to {ip}")
+            logging.info(f"Instance endpoint {instance.get_operator_endpoint()[0]['endpoint']} resolved to {ip}")
         except TimeoutError as e:
             logging.error(f"DNS resolution failed: {e}")
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
         
-        # Stress test the instance
-        stress_test_out_of_memory(instance,resource_key=args.resource_key)
+        add_data(instance)
+
+        thread_signal = None
+        error_signal = None
+        thread = None
+        if "standalone" not in args.instance_name:
+            # Start a new thread and signal for zero_downtime test
+            thread_signal = threading.Event()
+            error_signal = threading.Event()
+            thread = threading.Thread(
+                target=test_zero_downtime,
+                args=(thread_signal, error_signal, instance, args.tls),
+            )
+            thread.start()
+
+        instance.update_instance_type(args.new_instance_type, wait_until_ready=True)
+        # Wait for the zero_downtime
+        if "standalone" not in args.instance_name:
+            # Wait for the zero_downtime
+            thread_signal.set()
+            thread.join()
+        
+        query_data(instance)
     except Exception as e:
         logging.exception(e)
         if not args.persist_instance_on_fail:
@@ -147,43 +195,56 @@ def test_out_of_memory():
     # Delete instance
     instance.delete(network is not None)
 
-    logging.info("Test passed")
+    if error_signal.is_set():
+        raise ValueError("Test failed")
+    else:
+        logging.info("Test passed")
 
+def add_data(instance: OmnistrateFleetInstance):
 
+    # Get instance host and port
+    db = instance.create_connection(ssl=args.tls,operator=True)
 
-def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: str = None):
-    """Stress test the instance by allocating memory until it runs out of memory.
-    Should return this: '(error) OOM command not allowed when used memory > 'maxmemory''
-    Args:
-        instance: The OmnistrateFleetInstance to stress test
-    """
-    largeQuery = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
-    medQuery = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
-
-    logging.info("Starting stress test")
-    db = instance.create_connection(
-        ssl=args.tls,
-    )
     graph = db.select_graph("test")
 
-    if resource_key == 'free':
-        q = medQuery
-    else:
-        q = largeQuery
-    
-    while True:
-        try:
-            response = graph.query(q)
-            logging.info(f"Response: {response}")
-        except Exception as e:
-            if isinstance(e, OutOfMemoryError) and 'memory' in str(e):
-                logging.info("Out of memory error detected")
-                break
-            logging.error(f"{e}")
-            logging.error("Failed to detect out of memory error")
-            raise e
-        
+    # Write some data to the DB
+    graph.query("CREATE (n:Person {name: 'Alice'})")
 
+def query_data(instance: OmnistrateFleetInstance):
+    logging.info("Retrieving data ....")
+    # Get instance host and port
+    db = instance.create_connection(ssl=args.tls, force_reconnect=True, operator=True)
+
+    graph = db.select_graph("test")
+
+    # Get info
+    result = graph.query("MATCH (n:Person) RETURN n.name")
+
+    if len(result.result_set) == 0:
+        raise ValueError("No data found in the graph after upgrade")
+    
+def test_zero_downtime(
+    thread_signal: threading.Event,
+    error_signal: threading.Event,
+    instance: OmnistrateFleetInstance,
+    ssl=False,
+):
+    """This function should test the ability to read and write while a failover happens"""
+    try:
+        db = instance.create_connection(ssl=ssl, force_reconnect=True, network_type=args.network_type, operator=True)
+
+        graph = db.select_graph("test")
+        
+        while not thread_signal.is_set():
+            # Write some data to the DB
+            graph.query("CREATE (n:Person {name: 'Alice'})")
+            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+            time.sleep(3)
+    except Exception as e:
+        logging.exception(e)
+        error_signal.set()
+        raise e
+    
 def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     """Check if the instance's main endpoint is resolvable.
     Args:
@@ -202,12 +263,11 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     if interval <= 0 or timeout <= 0:
         raise ValueError("Interval and timeout must be positive")
     
-    cluster_endpoint = instance.get_cluster_endpoint()
+    cluster_endpoint = instance.get_operator_endpoint()
+    # if not cluster_endpoint or 'endpoint' not in cluster_endpoint:
+    #     raise KeyError("Missing endpoint information in cluster configuration")
 
-    if not cluster_endpoint or 'endpoint' not in cluster_endpoint:
-        raise KeyError("Missing endpoint information in cluster configuration")
-
-    hostname = cluster_endpoint['endpoint']
+    hostname = cluster_endpoint[0]['endpoint']
     start_time = time.time()
 
     while time.time() - start_time < timeout:
@@ -221,4 +281,4 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     raise TimeoutError(f"Unable to resolve hostname '{hostname}' within {timeout} seconds.")
 
 if __name__ == "__main__":
-    test_out_of_memory()
+    test_update_memory()

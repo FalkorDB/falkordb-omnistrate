@@ -1,8 +1,13 @@
 import sys
 import signal
 from random import randbytes
-from pathlib import Path  # if you haven't already done so
+from pathlib import Path
+import threading
 import socket
+import falkordb
+from redis import Redis
+from redis.exceptions import ConnectionError, OutOfMemoryError
+
 
 file = Path(__file__).resolve()
 parent, root = file.parent, file.parents[1]
@@ -22,8 +27,9 @@ import time
 import os
 from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
 from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
+from omnistrate_tests.classes.falkordb_cluster import FalkorDBCluster
 import argparse
-from redis.exceptions import ResponseError, OutOfMemoryError
+
 parser = argparse.ArgumentParser()
 parser.add_argument("omnistrate_user")
 parser.add_argument("omnistrate_password")
@@ -37,7 +43,7 @@ parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
 parser.add_argument("--resource-key", required=True)
-parser.add_argument("--replica-id", required=True)
+parser.add_argument("--replica-id", required=False, default=None)
 
 
 parser.add_argument("--instance-name", required=True)
@@ -47,11 +53,25 @@ parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
-parser.add_argument("--persist-instance-on-fail",action="store_true")
-parser.add_argument("--custom-network", required=False)
-parser.add_argument("--network-type", required=False, default="PUBLIC")
 parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
+parser.add_argument("--debug-command", required=False, default="disabled")
+parser.add_argument("--ensure-mz-distribution", action="store_true")
+parser.add_argument("--custom-network", required=False)
+parser.add_argument("--network-type", required=False, default="PUBLIC")
+
+
+parser.add_argument(
+    "--deployment-create-timeout-seconds", required=False, default=2600, type=int
+)
+parser.add_argument(
+    "--deployment-delete-timeout-seconds", required=False, default=2600, type=int
+)
+parser.add_argument(
+    "--deployment-failover-timeout-seconds", required=False, default=2600, type=int
+)
+
+parser.add_argument("--persist-instance-on-fail",action="store_true")
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -69,6 +89,7 @@ def signal_handler(sig, frame):
 if not args.persist_instance_on_fail:
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
+
 
 
 def test_out_of_memory():
@@ -97,7 +118,7 @@ def test_out_of_memory():
 
     instance = omnistrate.instance(
         service_id=args.service_id,
-        service_provider_id=service.provider_id,
+        service_provider_id=service.service_provider_id,
         service_key=service.key,
         service_environment_id=args.environment_id,
         service_environment_key=service.get_environment(args.environment_id).key,
@@ -106,12 +127,13 @@ def test_out_of_memory():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
-        deployment_create_timeout_seconds=2400,
-        deployment_delete_timeout_seconds=2400,
-        deployment_failover_timeout_seconds=2400,
+        deployment_create_timeout_seconds=args.deployment_create_timeout_seconds,
+        deployment_delete_timeout_seconds=args.deployment_delete_timeout_seconds,
+        deployment_failover_timeout_seconds=args.deployment_failover_timeout_seconds,
     )
 
     try:
+        password = randbytes(16).hex()
         instance.create(
             wait_for_ready=True,
             deployment_cloud_provider=args.cloud_provider,
@@ -120,24 +142,28 @@ def test_out_of_memory():
             name=args.instance_name,
             description=args.instance_description,
             falkordb_user="falkordb",
-            falkordb_password=randbytes(16).hex(),
+            falkordb_password=password,
             nodeInstanceType=args.instance_type,
-            storageSize=args.storage_size,
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            hostCount=args.host_count,
+            clusterReplicas=args.cluster_replicas,
+            enableDebugCommand=args.debug_command,
+            adminPassword=password,
             custom_network_id=network.network_id if network else None,
+
         )
         
         try:
             ip = resolve_hostname(instance=instance)
-            logging.info(f"Instance endpoint {instance.get_cluster_endpoint()['endpoint']} resolved to {ip}")
+            logging.info(f"Instance endpoint {instance.get_operator_endpoint()[0]['endpoint']} resolved to {ip}")
         except TimeoutError as e:
             logging.error(f"DNS resolution failed: {e}")
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
         
-        # Stress test the instance
-        stress_test_out_of_memory(instance,resource_key=args.resource_key)
+        stress_test_out_of_memory(instance, resource_key=args.resource_key)
+        
     except Exception as e:
         logging.exception(e)
         if not args.persist_instance_on_fail:
@@ -146,10 +172,7 @@ def test_out_of_memory():
 
     # Delete instance
     instance.delete(network is not None)
-
     logging.info("Test passed")
-
-
 
 def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: str = None):
     """Stress test the instance by allocating memory until it runs out of memory.
@@ -182,8 +205,7 @@ def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: st
             logging.error(f"{e}")
             logging.error("Failed to detect out of memory error")
             raise e
-        
-
+    
 def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     """Check if the instance's main endpoint is resolvable.
     Args:
@@ -202,12 +224,11 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     if interval <= 0 or timeout <= 0:
         raise ValueError("Interval and timeout must be positive")
     
-    cluster_endpoint = instance.get_cluster_endpoint()
+    cluster_endpoint = instance.get_operator_endpoint()
+    # if not cluster_endpoint or 'endpoint' not in cluster_endpoint:
+    #     raise KeyError("Missing endpoint information in cluster configuration")
 
-    if not cluster_endpoint or 'endpoint' not in cluster_endpoint:
-        raise KeyError("Missing endpoint information in cluster configuration")
-
-    hostname = cluster_endpoint['endpoint']
+    hostname = cluster_endpoint[0]['endpoint']
     start_time = time.time()
 
     while time.time() - start_time < timeout:

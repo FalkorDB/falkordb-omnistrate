@@ -6,6 +6,11 @@ x-omnistrate-service-plan:
     byoaDeployment:
       AwsAccountId: "$AwsAccountId"
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+  metering:
+    gcsBucketName: $MeteringBucketName
+  validPaymentMethodRequired: false
+  maxNumberOfInstancesAllowed: 10
+  billingProductID: "enterprise_byoa"
 
 x-omnistrate-load-balancer:
   tcp:

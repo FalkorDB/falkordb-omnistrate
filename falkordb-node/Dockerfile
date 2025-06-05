@@ -1,4 +1,4 @@
-ARG FALKORDB_VERSION=v4.8.8
+ARG FALKORDB_VERSION=edge
 
 FROM falkordb/redis_exporter:v1.70.2-alpine as redis_exporter
 
@@ -46,4 +46,4 @@ RUN chown falkordb:falkordb /falkordb/* && \
 
 ENV FALKORDB_HOME=/var/lib/falkordb
 
-CMD [ "node-entrypoint.sh" ]
+ENTRYPOINT [ "node-entrypoint.sh" ]

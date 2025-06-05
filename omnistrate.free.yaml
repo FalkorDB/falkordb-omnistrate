@@ -10,6 +10,9 @@ x-omnistrate-service-plan:
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
       AwsAccountId: "$AwsAccountId"
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+  validPaymentMethodRequired: false
+  maxNumberOfInstancesAllowed: 1
+  billingProductID: "free"
 
 x-internal-integrations:
   logs:

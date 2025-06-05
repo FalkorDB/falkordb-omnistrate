@@ -12,6 +12,11 @@ x-omnistrate-service-plan:
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
   features:
     CUSTOM_NETWORKS:
+  metering:
+    gcsBucketName: $MeteringBucketName
+  validPaymentMethodRequired: false
+  maxNumberOfInstancesAllowed: 10
+  billingProductID: "enterprise"
 
 x-omnistrate-load-balancer:
   tcp:

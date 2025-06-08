@@ -687,6 +687,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
     x-omnistrate-capabilities:
@@ -1164,6 +1165,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1828,6 +1830,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -2325,6 +2328,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
       - CLUSTER_REPLICAS=1
     ports:
       - "6379"
@@ -2661,6 +2665,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
       - CLUSTER_REPLICAS=1
     ports:
       - "6379"

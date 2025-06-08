@@ -1,4 +1,4 @@
-ARG FALKORDB_VERSION=v4.8.8
+ARG FALKORDB_VERSION=filter-path-function
 
 FROM falkordb/redis_exporter:v1.70.2-alpine as redis_exporter
 
@@ -41,4 +41,4 @@ RUN chown falkordb:falkordb /falkordb/* && \
 
 ENV FALKORDB_HOME=/var/lib/falkordb
 
-CMD ["cluster-entrypoint.sh"]
+ENTRYPOINT ["cluster-entrypoint.sh"]

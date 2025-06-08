@@ -10,6 +10,16 @@ x-omnistrate-service-plan:
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
       AwsAccountId: "$AwsAccountId"
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+  metering:
+    gcsBucketName: $MeteringBucketName
+  validPaymentMethodRequired: true
+  maxNumberOfInstancesAllowed: 10
+  billingProductID: "startup"
+  pricing:
+    - dimension: memory
+      unit: GiB
+      timeUnit: hour
+      price: 0.1
 
 x-internal-integrations:
   logs:

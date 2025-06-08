@@ -15,7 +15,7 @@ concurrency:
 env:
   NODE_IMAGE_NAME: falkordb-node
   CLUSTER_IMAGE_NAME: falkordb-cluster
-  FALKORDB_VERSION: edge
+  FALKORDB_VERSION: filter-path-function
   CLUSTER_REBALANCE_IMAGE_NAME: falkordb-cluster-rebalance
 
 jobs:

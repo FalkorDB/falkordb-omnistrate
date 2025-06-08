@@ -1,4 +1,4 @@
-ARG FALKORDB_VERSION=edge
+ARG FALKORDB_VERSION=filter-path-function
 
 FROM falkordb/redis_exporter:v1.70.2-alpine as redis_exporter
 

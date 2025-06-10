@@ -10,6 +10,8 @@ x-omnistrate-service-plan:
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
       AwsAccountId: "$AwsAccountId"
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+      AzureSubscriptionId: "$AzureSubscriptionId"
+      AzureTenantId: "$AzureTenantId"
   metering:
     gcsBucketName: $MeteringBucketName
   validPaymentMethodRequired: true
@@ -467,6 +469,9 @@ services:
             instanceStorageSizeGi: 20
           aws:
             instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 20
+          azure:
+            instanceStorageType: AZURE::STANDARD_SSD
             instanceStorageSizeGi: 20
     secrets:
       - source: adminpasspath

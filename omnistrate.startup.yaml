@@ -12,6 +12,16 @@ x-omnistrate-service-plan:
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
       AzureSubscriptionId: "$AzureSubscriptionId"
       AzureTenantId: "$AzureTenantId"
+  metering:
+    gcsBucketName: $MeteringBucketName
+  validPaymentMethodRequired: true
+  maxNumberOfInstancesAllowed: 10
+  billingProductID: "startup"
+  pricing:
+    - dimension: memory
+      unit: GiB
+      timeUnit: hour
+      price: 0.1
 
 x-internal-integrations:
   logs:
@@ -491,6 +501,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
     x-omnistrate-capabilities:

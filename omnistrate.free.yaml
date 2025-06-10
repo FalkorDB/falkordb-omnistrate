@@ -12,6 +12,9 @@ x-omnistrate-service-plan:
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
       AzureSubscriptionId: "$AzureSubscriptionId"
       AzureTenantId: "$AzureTenantId"
+  validPaymentMethodRequired: false
+  maxNumberOfInstancesAllowed: 1
+  billingProductID: "free"
 
 x-internal-integrations:
   logs:
@@ -160,6 +163,7 @@ services:
       - FALKORDB_RESULT_SET_SIZE=10000
       - FALKORDB_QUERY_MEM_CAPACITY=52428800
       - PERSISTENCE_AOF_CONFIG=no
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
       # - "9121:9121"

@@ -14,6 +14,11 @@ x-omnistrate-service-plan:
       AzureTenantId: "$AzureTenantId"
   features:
     CUSTOM_NETWORKS:
+  metering:
+    gcsBucketName: $MeteringBucketName
+  validPaymentMethodRequired: false
+  maxNumberOfInstancesAllowed: 10
+  billingProductID: "enterprise"
 
 x-omnistrate-load-balancer:
   tcp:
@@ -1153,6 +1158,7 @@ services:
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - MEMORY_LIMIT=$var.maxMemory
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1815,6 +1821,7 @@ services:
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - MEMORY_LIMIT=$var.maxMemory
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -2315,6 +2322,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
       - CLUSTER_REPLICAS=1
       - MEMORY_LIMIT=$var.maxMemory
     ports:
@@ -2656,6 +2664,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
       - CLUSTER_REPLICAS=1
     ports:
       - "6379"

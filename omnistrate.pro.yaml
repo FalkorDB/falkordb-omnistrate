@@ -12,6 +12,20 @@ x-omnistrate-service-plan:
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
       AzureSubscriptionId: "$AzureSubscriptionId"
       AzureTenantId: "$AzureTenantId"
+  metering:
+    gcsBucketName: $MeteringBucketName
+  validPaymentMethodRequired: true
+  maxNumberOfInstancesAllowed: 10
+  billingProductID: "pro"
+  pricing:
+    - dimension: cpu
+      unit: cores
+      timeUnit: hour
+      price: 0.2
+    - dimension: memory
+      unit: GiB
+      timeUnit: hour
+      price: 0.01
 
 x-omnistrate-load-balancer:
   tcp:
@@ -701,6 +715,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
     x-omnistrate-capabilities:
@@ -1197,6 +1212,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1885,6 +1901,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -2399,6 +2416,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
       - CLUSTER_REPLICAS=1
     ports:
       - "6379"
@@ -2749,6 +2767,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
       - CLUSTER_REPLICAS=1
     ports:
       - "6379"

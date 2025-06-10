@@ -31,6 +31,9 @@ fn handle_health_check<F>(is_sentinel: bool, check_fn: F, redis_pool: &r2d2::Poo
 where
     F: Fn(bool,&r2d2::Pool<redis::Client>) -> Result<bool, redis::RedisError>,
 {
+    if env::var("SKIP_HEALTH_CHECK").as_deref() == Ok("true") {
+        return Response::text("OK");
+    }
     match check_fn(is_sentinel,redis_pool) {
         Ok(true) => Response::text("OK"),
         _ => Response::text("Not ready").with_status_code(500),

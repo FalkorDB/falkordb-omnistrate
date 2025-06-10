@@ -6,6 +6,11 @@ x-omnistrate-service-plan:
     byoaDeployment:
       AwsAccountId: "$AwsAccountId"
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+  metering:
+    gcsBucketName: $MeteringBucketName
+  validPaymentMethodRequired: false
+  maxNumberOfInstancesAllowed: 10
+  billingProductID: "enterprise_byoa"
 
 x-omnistrate-load-balancer:
   tcp:
@@ -671,6 +676,7 @@ services:
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - MEMORY_LIMIT=$var.maxMemory
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
     x-omnistrate-capabilities:
@@ -1143,6 +1149,7 @@ services:
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - MEMORY_LIMIT=$var.maxMemory
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1805,6 +1812,7 @@ services:
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - MEMORY_LIMIT=$var.maxMemory
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -2304,6 +2312,7 @@ services:
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - CLUSTER_REPLICAS=1
       - MEMORY_LIMIT=$var.maxMemory
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379"
       - "16379"

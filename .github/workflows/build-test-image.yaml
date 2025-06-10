@@ -144,6 +144,7 @@ jobs:
           sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$MeteringBucketName/${{ secrets.METERING_BUCKET_NAME }}/g' ${{ matrix.plans.file }}
           sed -i 's/${{ matrix.plans.plan-name }}/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
 
       - name: Remove custom metrics for testing

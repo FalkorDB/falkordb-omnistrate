@@ -513,13 +513,6 @@ services:
           chartRepoName: falkordb-helm
           chartRepoURL: "https://falkordb.github.io/helm-charts/"
           chartValues:
-            resources:
-              limits:
-                cpu: 1000m
-                memory: 500Mi
-              requests:
-                cpu: 2000m
-                memory: 2000Mi
             redisOperator:
               webhook: true
             certmanager:
@@ -1231,13 +1224,6 @@ services:
           chartRepoName: falkordb-helm
           chartRepoURL: "https://falkordb.github.io/helm-charts/"
           chartValues:
-            resources:
-              limits:
-                cpu: 1000m
-                memory: 500Mi
-              requests:
-                cpu: 2000m
-                memory: 2000Mi
             redisOperator:
               webhook: true
             certmanager:

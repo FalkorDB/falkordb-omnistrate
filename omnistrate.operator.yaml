@@ -509,7 +509,7 @@ services:
         "Status": "$var._crd.status.state"
       helmChartDependencies:
         - chartName: operator
-          chartVersion: 0.20.1
+          chartVersion: 0.20.2
           chartRepoName: falkordb-helm
           chartRepoURL: "https://falkordb.github.io/helm-charts/"
           chartValues:
@@ -1228,7 +1228,7 @@ services:
         "Status": "$var._crd.status.state"
       helmChartDependencies:
         - chartName: operator
-          chartVersion: 0.20.1
+          chartVersion: 0.20.2
           chartRepoName: falkordb-helm
           chartRepoURL: "https://falkordb.github.io/helm-charts/"
           chartValues:

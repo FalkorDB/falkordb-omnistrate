@@ -505,12 +505,10 @@ services:
                 name: gossip
       readinessConditions:
         "$var._crd.status.state": "Ready"
-        "$var._crd.status.readyFollowerReplicas": "{{ $var.replicaCount }}"
-        "$var._crd.status.readyLeaderReplicas": "{{ $var.masterCount }}"
+        "$var._crd.status.reason": "RedisCluster is ready"
       outputParameters:
         "Status": "$var._crd.status.state"
-        "Leader Replicas": "$var._crd.status.readyLeaderReplicas"
-        "Follower Replicas": "$var._crd.status.readyFollowerReplicas"
+        "Reason": "$var._crd.status.reason"
       helmChartDependencies:
         - chartName: operator
           chartVersion: 0.20.2
@@ -1220,12 +1218,10 @@ services:
                 name: gossip
       readinessConditions:
         "$var._crd.status.state": "Ready"
-        "$var._crd.status.readyFollowerReplicas": "{{ $var.replicaCount }}"
-        "$var._crd.status.readyLeaderReplicas": "{{ $var.masterCount }}"
+        "$var._crd.status.reason": "RedisCluster is ready"
       outputParameters:
         "Status": "$var._crd.status.state"
-        "Leader Replicas": "$var._crd.status.readyLeaderReplicas"
-        "Follower Replicas": "$var._crd.status.readyFollowerReplicas"
+        "Reason": "$var._crd.status.reason"
       helmChartDependencies:
         - chartName: operator
           chartVersion: 0.20.2

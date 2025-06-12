@@ -511,7 +511,7 @@ services:
         "Reason": "$var._crd.status.reason"
       helmChartDependencies:
         - chartName: operator
-          chartVersion: 0.20.3
+          chartVersion: 0.20.4
           chartRepoName: falkordb-helm
           chartRepoURL: "https://falkordb.github.io/helm-charts/"
           chartValues:
@@ -1231,7 +1231,7 @@ services:
         "Reason": "$var._crd.status.reason"
       helmChartDependencies:
         - chartName: operator
-          chartVersion: 0.20.3
+          chartVersion: 0.20.4
           chartRepoName: falkordb-helm
           chartRepoURL: "https://falkordb.github.io/helm-charts/"
           chartValues:

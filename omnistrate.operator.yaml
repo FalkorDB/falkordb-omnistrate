@@ -48,7 +48,7 @@ services:
           
         spec:
           hostPort: 6379
-          clusterSize: {{ $var.clusterSize }}
+          clusterSize: 3
           persistenceEnabled: true
           clusterVersion: v7
           redisLeader:
@@ -505,8 +505,12 @@ services:
                 name: gossip
       readinessConditions:
         "$var._crd.status.state": "Ready"
+        "$var._crd.status.readyFollowerReplicas": "{{ $var.replicaCount }}"
+        "$var._crd.status.readyLeaderReplicas": "{{ $var.masterCount }}"
       outputParameters:
         "Status": "$var._crd.status.state"
+        "Leader Replicas": "$var._crd.status.readyLeaderReplicas"
+        "Follower Replicas": "$var._crd.status.readyFollowerReplicas"
       helmChartDependencies:
         - chartName: operator
           chartVersion: 0.20.2
@@ -539,14 +543,6 @@ services:
         required: false
         export: true
         defaultValue: "FalkorDB Cluster"
-      - key: clusterSize
-        description: Number of nodes in the cluster
-        name: Cluster Size
-        type: Float64
-        modifiable: true
-        required: false
-        export: true
-        defaultValue: "3"
       - key: masterCount
         description: Number of Replicas
         name: Master Count
@@ -609,7 +605,7 @@ services:
         modifiable: false
         required: true
         export: false
-        defaultValue: "{{ $func.random(string,16,10) }}"
+        defaultValue: "{{ $func.random(string,16,$sys.deterministicSeedValue) }}"
       - key: replicationPassword
         description: Replication Password
         name: Replication Password
@@ -617,7 +613,7 @@ services:
         modifiable: false
         required: true
         export: false
-        defaultValue: "{{ $func.random(string,16,$sys.deterministicSeedValue) }}"
+        defaultValue: "{{ $func.random(string,16,10) }}"
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -761,7 +757,7 @@ services:
             redisclusters.redis.redis.opstreelabs.in/role-anti-affinity-topology-key: "kubernetes.io/hostname"
         spec:
           hostPort: 6379
-          clusterSize: {{ $var.clusterSize }}
+          clusterSize: 3
           persistenceEnabled: true
           clusterVersion: v7
           redisLeader:
@@ -1224,8 +1220,12 @@ services:
                 name: gossip
       readinessConditions:
         "$var._crd.status.state": "Ready"
+        "$var._crd.status.readyFollowerReplicas": "{{ $var.replicaCount }}"
+        "$var._crd.status.readyLeaderReplicas": "{{ $var.masterCount }}"
       outputParameters:
         "Status": "$var._crd.status.state"
+        "Leader Replicas": "$var._crd.status.readyLeaderReplicas"
+        "Follower Replicas": "$var._crd.status.readyFollowerReplicas"
       helmChartDependencies:
         - chartName: operator
           chartVersion: 0.20.2
@@ -1258,14 +1258,6 @@ services:
         required: false
         export: true
         defaultValue: "FalkorDB Cluster"
-      - key: clusterSize
-        description: Number of nodes in the cluster
-        name: Cluster Size
-        type: Float64
-        modifiable: true
-        required: false
-        export: true
-        defaultValue: "3"
       - key: masterCount
         description: Number of Replicas
         name: Master Count
@@ -1328,7 +1320,7 @@ services:
         modifiable: false
         required: true
         export: false
-        defaultValue: "{{ $func.random(string,16,10) }}"
+        defaultValue: "{{ $func.random(string,16,$sys.deterministicSeedValue) }}"
       - key: replicationPassword
         description: Replication Password
         name: Replication Password
@@ -1336,7 +1328,7 @@ services:
         modifiable: false
         required: true
         export: false
-        defaultValue: "{{ $func.random(string,16,$sys.deterministicSeedValue) }}"
+        defaultValue: "{{ $func.random(string,16,10) }}"
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config

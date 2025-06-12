@@ -511,7 +511,7 @@ services:
         "Reason": "$var._crd.status.reason"
       helmChartDependencies:
         - chartName: operator
-          chartVersion: 0.20.2
+          chartVersion: 0.20.3
           chartRepoName: falkordb-helm
           chartRepoURL: "https://falkordb.github.io/helm-charts/"
           chartValues:
@@ -522,6 +522,13 @@ services:
             service:
               name: webhook-service
               namespace: default
+            resources:
+              requests:
+                cpu: 1000m
+                memory: 500Mi
+              limits:
+                cpu: 2000m
+                memory: 2000Mi
 
 
     apiParameters:
@@ -1224,7 +1231,7 @@ services:
         "Reason": "$var._crd.status.reason"
       helmChartDependencies:
         - chartName: operator
-          chartVersion: 0.20.2
+          chartVersion: 0.20.3
           chartRepoName: falkordb-helm
           chartRepoURL: "https://falkordb.github.io/helm-charts/"
           chartValues:
@@ -1235,6 +1242,13 @@ services:
             service:
               name: webhook-service
               namespace: default
+            resources:
+              requests:
+                cpu: 1000m
+                memory: 500Mi
+              limits:
+                cpu: 2000m
+                memory: 2000Mi
             
 
     apiParameters:

@@ -510,8 +510,6 @@ services:
           apiParam: nodeInstanceType
         - cloudProvider: aws
           apiParam: nodeInstanceType
-        - cloudProvider: azure
-          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -971,8 +969,6 @@ services:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
         - cloudProvider: aws
-          apiParam: nodeInstanceType
-        - cloudProvider: azure
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
@@ -1638,8 +1634,6 @@ services:
           apiParam: nodeInstanceType
         - cloudProvider: aws
           apiParam: nodeInstanceType
-        - cloudProvider: azure
-          apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
@@ -2296,8 +2290,6 @@ services:
           apiParam: nodeInstanceType
         - cloudProvider: aws
           apiParam: nodeInstanceType
-        - cloudProvider: azure
-          apiParam: nodeInstanceType
     <<: *clusterparam
     volumes:
       - source: ./data
@@ -2634,8 +2626,6 @@ services:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
         - cloudProvider: aws
-          apiParam: nodeInstanceType
-        - cloudProvider: azure
           apiParam: nodeInstanceType
     <<: *clusterparam
     volumes:

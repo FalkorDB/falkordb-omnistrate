@@ -77,11 +77,35 @@ fn get_redis_connection_pool(is_sentinel: bool) -> Result<r2d2::Pool<redis::Clie
     let password = get_redis_password();
     let node_port = get_node_port(is_sentinel);
     let redis_url = get_redis_url(&password, &node_port);
-    let client = redis::Client::open(redis_url)?;
-    if let Ok(pool) = r2d2::Pool::builder().max_size(1).build(client){
-        return Ok(pool);
+
+    println!("Attempting to create Redis connection pool with URL: {}", redis_url);
+
+    let client = redis::Client::open(redis_url).map_err(|err| {
+        eprintln!("Failed to create Redis client: {}", err);
+        err
+    })?;
+
+    let mut retries = 5;
+    let retry_delay = Duration::from_secs(2);
+
+    while retries > 0 {
+        match r2d2::Pool::builder().max_size(1).build(client.clone()) {
+            Ok(pool) => return Ok(pool),
+            Err(err) => {
+                eprintln!(
+                    "Failed to create Redis connection pool: {}. Retries left: {}",
+                    err, retries - 1
+                );
+                retries -= 1;
+                std::thread::sleep(retry_delay);
+            }
+        }
     }
-    Err(redis::RedisError::from((redis::ErrorKind::IoError, "Failed to create connection pool")))
+
+    Err(redis::RedisError::from((
+        redis::ErrorKind::IoError,
+        "Failed to create connection pool after retries",
+    )))
 }
 
 fn check_node_liveness(db_info: &str, con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
@@ -114,6 +138,9 @@ fn get_node_port(is_sentinel: bool) -> String {
 fn get_redis_url(password: &str, node_port: &str) -> String {
     let tls = env::var("TLS").unwrap_or_default();
     let host = env::var("NODE_HOST").unwrap_or_else(|_| "localhost".to_string());
+
+    println!("Constructing Redis URL with host: {}, port: {}, TLS: {}", host, node_port, tls);
+
     if tls == "true" {
         resolve_host(&host);
         let node_port = env::var("RANDOM_NODE_PORT").unwrap_or_else(|_| node_port.to_string());

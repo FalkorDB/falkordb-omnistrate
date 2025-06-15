@@ -10,8 +10,6 @@ x-omnistrate-service-plan:
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
       AwsAccountId: "$AwsAccountId"
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
-      AzureSubscriptionId: "$AzureSubscriptionId"
-      AzureTenantId: "$AzureTenantId"
   metering:
     gcsBucketName: $MeteringBucketName
   validPaymentMethodRequired: true
@@ -685,9 +683,6 @@ services:
           aws:
             instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
-          azure:
-            instanceStorageType: AZURE::STANDARD_SSD
-            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -1176,9 +1171,6 @@ services:
           aws:
             instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
-          azure:
-            instanceStorageType: AZURE::STANDARD_SSD
-            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -1383,9 +1375,6 @@ services:
           aws:
             instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 10
-          azure:
-            instanceStorageType: AZURE::STANDARD_SSD
-            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -1864,9 +1853,6 @@ services:
           aws:
             instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
-          azure:
-            instanceStorageType: AZURE::STANDARD_SSD
-            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -2071,9 +2057,6 @@ services:
           aws:
             instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 10
-          azure:
-            instanceStorageType: AZURE::STANDARD_SSD
-            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -2386,9 +2369,6 @@ services:
             instanceStorageSizeGi: 200
           aws:
             instanceStorageType: AWS::EBS_GP3
-            instanceStorageSizeGi: 200
-          azure:
-            instanceStorageType: AZURE::STANDARD_SSD
             instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
@@ -2737,9 +2717,6 @@ services:
             instanceStorageSizeGi: 200
           aws:
             instanceStorageType: AWS::EBS_GP3
-            instanceStorageSizeGi: 200
-          azure:
-            instanceStorageType: AZURE::STANDARD_SSD
             instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath

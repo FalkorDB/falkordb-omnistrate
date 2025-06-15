@@ -10,8 +10,6 @@ x-omnistrate-service-plan:
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
       AwsAccountId: "$AwsAccountId"
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
-      AzureSubscriptionId: "$AzureSubscriptionId"
-      AzureTenantId: "$AzureTenantId"
   metering:
     gcsBucketName: $MeteringBucketName
   validPaymentMethodRequired: true

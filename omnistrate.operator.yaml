@@ -232,7 +232,7 @@ services:
         - |
           apiVersion: v1
           stringData:
-            password: {{ $var.replicationPassword }}
+            password: {{ $func.random(string,16,$sys.deterministicSeedValue) }}
           kind: Secret
           metadata:
             name: redis-secret
@@ -936,7 +936,7 @@ services:
         - |
           apiVersion: v1
           stringData:
-            password: {{ $var.replicationPassword }}
+            password: {{ $func.random(string,16,$sys.deterministicSeedValue) }}
           kind: Secret
           metadata:
             name: redis-secret

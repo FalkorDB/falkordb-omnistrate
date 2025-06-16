@@ -396,15 +396,15 @@ check_network_type_changes() {
   # Check if network type has changed
   if [[ -f $DATA_DIR/network_type ]]; then
     current_network_type=$(cat "$DATA_DIR/network_type")
-    if [[ "$current_network_type" != "$NETWORK_TYPE" ]]; then
-      echo "Network type has changed from $current_network_type to $NETWORK_TYPE"
-      echo "$NETWORK_TYPE" >"$DATA_DIR/network_type"
+    if [[ "$current_network_type" != "$NETWORKING_TYPE" ]]; then
+      echo "Network type has changed from $current_network_type to $NETWORKING_TYPE"
+      echo "$NETWORKING_TYPE" >"$DATA_DIR/network_type"
       # If network type has changed, rewrite config
       handle_network_type_changed
     fi
   else
     echo "Network type file not found, creating it"
-    echo "$NETWORK_TYPE" >"$DATA_DIR/network_type"
+    echo "$NETWORKING_TYPE" >"$DATA_DIR/network_type"
   fi
 }
 

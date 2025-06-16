@@ -461,6 +461,36 @@ jobs:
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-network-change'  --instance-description 'test-cluster-network-change' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
+          - name: PRO/Standalone - AWS/us-east-2 - Network change with TLS
+            if: "true"
+            testFile: test_network_change.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-network-change' --tls --instance-description 'test-standalone-network-change' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          - name: PRO/SingleZone - AWS/us-east-2 - Network change with TLS
+            if: "true"
+            testFile: test_network_change.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-network-change' --tls --instance-description 'test-replication-network-change' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+          - name: PRO/ClusterSingleZone - AWS/us-east-2 - Network change with TLS
+            if: "true"
+            testFile: test_network_change.py
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-network-change' --tls --instance-description 'test-cluster-network-change' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
     
         #   ############## AWS Enterprise tier ##############
         #   - name: Enterprise/Standalone - AWS/us-east-2 - Failover & Persistence

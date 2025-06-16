@@ -151,7 +151,6 @@ def test_update_memory():
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
             enableDebugCommand=args.debug_command,
-            adminPassword=password,
             custom_network_id=network.network_id if network else None,
 
         )

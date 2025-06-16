@@ -151,7 +151,6 @@ def test_cluster():
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
             enableDebugCommand=args.debug_command,
-            adminPassword=password,
             custom_network_id=network.network_id if network else None,
 
         )
@@ -265,7 +264,7 @@ def test_failover(instance: OmnistrateFleetInstance):
     client = Redis(
         host=leaderOne,
         port=port,
-        username="admin",
+        username="falkordb",
         password=instance.falkordb_password,
         ssl=args.tls,
     )

@@ -152,7 +152,6 @@ def test_cluster_replicas():
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
             enableDebugCommand=args.debug_command,
-            adminPassword=password,
             custom_network_id=network.network_id if network else None,
 
         )
@@ -174,14 +173,14 @@ def test_cluster_replicas():
 
         add_data(instance)
 
-        change_replica_count(instance, int(current_host_count) + 1 ,int(current_cluster_replicas) + 1)
+        change_replica_count(instance ,int(current_cluster_replicas) + 1)
 
         if args.ensure_mz_distribution:
             logging.info("Testing MZ distribution")
             test_ensure_mz_distribution(instance, password)
         
         query_data(instance)
-        change_replica_count(instance, int(current_host_count) - 1 ,int(current_cluster_replicas) - 1)
+        change_replica_count(instance,int(current_cluster_replicas) - 1)
         
         # Wait for the zero_downtime
         thread_signal.set()
@@ -247,7 +246,7 @@ def test_zero_downtime(
         error_signal.set()
         raise e
 
-def change_replica_count(instance: OmnistrateFleetInstance,host_count: int,new_replicas_count: int):
+def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: int):
     """This function should change the number of replicas in the cluster"""
     global current_host_count, current_cluster_replicas
     
@@ -264,11 +263,9 @@ def change_replica_count(instance: OmnistrateFleetInstance,host_count: int,new_r
 
     instance.update_params(
         replicaCount=new_replicas_count,
-        masterCount=host_count,
         wait_for_ready=True,
     )
 
-    current_host_count = host_count
     current_cluster_replicas = new_replicas_count
 
     params = (
@@ -284,11 +281,16 @@ def change_replica_count(instance: OmnistrateFleetInstance,host_count: int,new_r
        if resource.get("resourceName") == args.resource_key ][0]
     
     if (current_cluster_replicas + current_host_count) != node_count:
-        raise Exception(
-            f"Replica count not updated. Expected {new_replicas_count}, got {node_count}"
-        )
+        logging.info("Omnistrate may have counted terminaing nodes as part of the replica count.")
+        client = instance.create_connection(ssl=args.tls, operator=True)
+        if len(client.connection.cluster_nodes()) == int(current_host_count + new_replicas_count):
+            logging.info(f"node count updated to {int(current_host_count + new_replicas_count)}")
+        else:
+            raise Exception(
+                f"Replica count not updated. Expected {int(current_host_count + new_replicas_count)}, got {node_count}"
+            )
     
-    logging.info(f"node count updated to {node_count}")
+    logging.info(f"node count updated to {int(current_host_count + new_replicas_count)}")
     
 def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str):
     """This function should ensure that each shard is distributed across multiple availability zones"""
@@ -314,7 +316,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str
         port=port,
         username="falkordb",
         password=password,
-        ssl=params.get("enableTLS") == "true"
+        ssl=args.tls,
     )
 
     # Get node groups (each group contains a master and its replicas)

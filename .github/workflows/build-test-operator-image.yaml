@@ -200,7 +200,7 @@ jobs:
             subscriptionId: sub-GJPV3NoNC0
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-sz' --instance-name 'test-cluster-sz-operator-cluster-out-of-memory' --instance-description 'test-cluster-mz-operator-cluster-out-of-memory' --instance-type 't2.medium' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '3' --host-count '3'"
+            extraParams: "--resource-key 'cluster-sz' --instance-name 'test-cluster-sz-operator-cluster-oom' --instance-description 'test-cluster-mz-operator-cluster-out-of-memory' --instance-type 't2.medium' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '3' --host-count '3'"
     steps:
       - name: Checkout
         if: matrix.instances.if == 'true' || matrix.instances.if == true

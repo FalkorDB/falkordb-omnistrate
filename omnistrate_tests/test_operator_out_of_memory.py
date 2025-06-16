@@ -150,7 +150,6 @@ def test_out_of_memory():
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
             enableDebugCommand=args.debug_command,
-            adminPassword=password,
             custom_network_id=network.network_id if network else None,
 
         )
@@ -186,6 +185,7 @@ def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: st
     logging.info("Starting stress test")
     db = instance.create_connection(
         ssl=args.tls,
+        operator=True
     )
     graph = db.select_graph("test")
 

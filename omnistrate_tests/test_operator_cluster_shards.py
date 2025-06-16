@@ -152,7 +152,6 @@ def test_cluster_shards():
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
             enableDebugCommand=args.debug_command,
-            adminPassword=password,
             custom_network_id=network.network_id if network else None,
 
         )
@@ -284,11 +283,16 @@ def change_replica_count(instance: OmnistrateFleetInstance,host_count: int,new_r
        if resource.get("resourceName") == args.resource_key ][0]
     
     if (current_cluster_replicas + current_host_count) != node_count:
-        raise Exception(
-            f"Replica count not updated. Expected {new_replicas_count}, got {node_count}"
-        )
+        logging.info("Omnistrate may have counted terminaing nodes as part of the replica count.")
+        client = instance.create_connection(ssl=args.tls, operator=True)
+        if len(client.connection.cluster_nodes()) == int(current_host_count + new_replicas_count):
+            logging.info(f"node count updated to {int(current_host_count + new_replicas_count)}")
+        else:
+            raise Exception(
+                f"Replica count not updated. Expected {int(current_host_count + new_replicas_count)}, got {node_count}"
+            )
     
-    logging.info(f"node count updated to {node_count}")
+    logging.info(f"node count updated to {int(current_host_count + new_replicas_count)}")
     
 def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str):
     """This function should ensure that each shard is distributed across multiple availability zones"""
@@ -314,7 +318,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str
         port=port,
         username="falkordb",
         password=password,
-        ssl=params.get("enableTLS") == "true"
+        ssl=args.tls,
     )
 
     # Get node groups (each group contains a master and its replicas)

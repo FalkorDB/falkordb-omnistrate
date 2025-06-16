@@ -169,8 +169,9 @@ def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: st
     Args:
         instance: The OmnistrateFleetInstance to stress test
     """
-    largeQuery = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
-    medQuery = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
+    largeQuery = "UNWIND RANGE(1, 1000000) AS id CREATE (n:Person {name: 'Alice'})"
+    mediumQuery = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
+    smallQuery = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
 
     logging.info("Starting stress test")
     db = instance.create_connection(
@@ -179,9 +180,11 @@ def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: st
     graph = db.select_graph("test")
 
     if resource_key == 'free':
-        q = medQuery
-    else:
+        q = smallQuery
+    elif args.cloud_provider == 'azure':
         q = largeQuery
+    else:
+        q = mediumQuery
     
     while True:
         try:

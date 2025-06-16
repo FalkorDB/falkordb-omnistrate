@@ -56,6 +56,7 @@ parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
 parser.add_argument("--persist-instance-on-fail", action="store_true")
 parser.add_argument("--network-type", required=False, default="PUBLIC")
+parser.add_argument("--custom-network", required=False)
 
 parser.add_argument(
     "--deployment-create-timeout-seconds", required=False, default=2600, type=int
@@ -135,6 +136,9 @@ def test_upgrade_version():
     logging.info(f"Last tier: {last_tier.version}")
 
     # 2. Create omnistrate instance with previous version
+    network = None
+    if args.custom_network:
+        network = omnistrate.network(args.custom_network)
     instance = omnistrate.instance(
         service_id=args.service_id,
         service_provider_id=service.service_provider_id,
@@ -168,6 +172,7 @@ def test_upgrade_version():
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
             product_tier_version=last_tier.version,
+            custom_network_id=network.network_id if network else None
 
         )
 

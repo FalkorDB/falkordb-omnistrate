@@ -48,7 +48,7 @@ parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
-
+parser.add_argument("--custom-network", required=False)
 parser.add_argument("--ensure-mz-distribution", action="store_true")
 parser.add_argument("--persist-instance-on-fail",action="store_true")
 parser.add_argument("--network-type", required=False, default="PUBLIC")
@@ -101,6 +101,9 @@ def test_cluster_shards():
     )
 
     logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
+    network = None
+    if args.custom_network:
+        network = omnistrate.network(args.custom_network)
 
     instance = omnistrate.instance(
         service_id=args.service_id,
@@ -136,6 +139,7 @@ def test_cluster_shards():
             AOFPersistenceConfig=args.aof_config,
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
+            custom_network_id=network.network_id if network else None,
         )
 
         try:

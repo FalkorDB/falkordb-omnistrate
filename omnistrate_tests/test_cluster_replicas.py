@@ -55,6 +55,7 @@ parser.add_argument("--shards", required=False, default="3")
 parser.add_argument("--persist-instance-on-fail",action="store_true")
 parser.add_argument("--ensure-mz-distribution", action="store_true")
 parser.add_argument("--network-type", required=False, default="PUBLIC")
+parser.add_argument("--custom-network", required=False)
 
 parser.add_argument(
     "--deployment-create-timeout-seconds", required=False, default=2600, type=int
@@ -107,6 +108,10 @@ def test_cluster_replicas():
 
     logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
+    network = None
+    if args.custom_network:
+        network = omnistrate.network(args.custom_network)
+        
     instance = omnistrate.instance(
         service_id=args.service_id,
         service_provider_id=service.service_provider_id,
@@ -142,6 +147,8 @@ def test_cluster_replicas():
             AOFPersistenceConfig=args.aof_config,
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
+            custom_network_id=network.network_id if network else None,
+            
         )
 
         try:

@@ -181,10 +181,13 @@ def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: st
 
     if resource_key == 'free':
         q = smallQuery
-    elif args.cloud_provider == 'azure':
-        q = largeQuery
     else:
         q = mediumQuery
+
+    if args.cloud_provider == "azure":
+        for i in range(60):
+            response =graph.query(largeQuery)
+            logging.info(f"Response: {response}")
     
     while True:
         try:

@@ -52,6 +52,7 @@ parser.add_argument("--custom-network", required=False)
 parser.add_argument("--network-type", required=False, default="PUBLIC")
 parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
+parser.add_argument("--maxmemory", required=False, default="")
 
 parser.add_argument(
     "--deployment-create-timeout-seconds", required=False, default=2600, type=int
@@ -136,6 +137,7 @@ def test_out_of_memory():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            maxMemory=args.maxmemory,
             custom_network_id=network.network_id if network else None,
         )
         

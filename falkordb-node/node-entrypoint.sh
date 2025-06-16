@@ -379,6 +379,35 @@ config_rewrite() {
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG REWRITE
 }
 
+handle_network_type_changed() {
+  # the node itself should have it's replica-announce-ip parameter set to the new $NODE_HOST value
+  # if sentinel is running, set the sentinel announce-ip parameter to the new $NODE_HOST value
+  if [[ $RUN_NODE -eq 1 ]]; then
+    echo "Setting replica-announce-ip to $NODE_HOST"
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET replica-announce-ip $NODE_HOST
+  fi
+  if [[ $RUN_SENTINEL -eq 1 ]]; then
+    echo "Setting sentinel announce-ip to $NODE_HOST"
+    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL SET $MASTER_NAME announce-ip $NODE_HOST
+  fi
+}
+
+check_network_type_changes() {
+  # Check if network type has changed
+  if [[ -f $DATA_DIR/network_type ]]; then
+    current_network_type=$(cat "$DATA_DIR/network_type")
+    if [[ "$current_network_type" != "$NETWORKING_TYPE" ]]; then
+      echo "Network type has changed from $current_network_type to $NETWORKING_TYPE"
+      echo "$NETWORKING_TYPE" >"$DATA_DIR/network_type"
+      # If network type has changed, rewrite config
+      handle_network_type_changed
+    fi
+  else
+    echo "Network type file not found, creating it"
+    echo "$NETWORKING_TYPE" >"$DATA_DIR/network_type"
+  fi
+}
+
 if [ -f $NODE_CONF_FILE ]; then
   # Get current admin password
   CURRENT_ADMIN_PASSWORD=$(cat $NODE_CONF_FILE | grep -oP '(?<=requirepass ).*' | sed 's/\"//g')
@@ -412,6 +441,7 @@ fi
 
 set_persistence_config
 get_self_host_ip
+check_network_type_changes
 
 if [ "$RUN_NODE" -eq "1" ]; then
 
@@ -572,6 +602,8 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
     redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
   fi
 fi
+
+check_network_type_changes
 
 if [ -f /usr/local/bin/healthcheck ]; then
   if [[ $RUN_NODE -eq 1 ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]]; then

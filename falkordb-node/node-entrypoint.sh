@@ -603,6 +603,8 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   fi
 fi
 
+check_network_type_changes
+
 if [ -f /usr/local/bin/healthcheck ]; then
   if [[ $RUN_NODE -eq 1 ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
     echo "Starting Healthcheck"

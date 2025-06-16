@@ -292,7 +292,7 @@ services:
               app.kubernetes.io/component: middleware
           data:
             redis-additional.conf: |
-              loadmodule /FalkorDB/bin/src/falkordb.so CACHE_SIZE {{ $var.falkorDBCacheSize }} NODE_CREATION_BUFFER {{$var.falkorDBNodeCreationBuffer }} MAX_QUEUED_QUERIES {{$var.falkorDBMaxQueuedQueries}} TIMEOUT_MAX {{ $var.falkorDBTimeoutMax }} TIMEOUT_DEFAULT {{$var.falkorDBTimeoutDefault }} RESULTSET_SIZE {{$var.falkorDBResultSetSize }} QUERY_MEM_CAPACITY {{$var.falkorDBQueryMemCapacity }} VKEY_MAX_ENTITY_COUNT	4611686000000000000
+              loadmodule /FalkorDB/bin/src/bin/falkordb.so CACHE_SIZE {{ $var.falkorDBCacheSize }} NODE_CREATION_BUFFER {{$var.falkorDBNodeCreationBuffer }} MAX_QUEUED_QUERIES {{$var.falkorDBMaxQueuedQueries}} TIMEOUT_MAX {{ $var.falkorDBTimeoutMax }} TIMEOUT_DEFAULT {{$var.falkorDBTimeoutDefault }} RESULTSET_SIZE {{$var.falkorDBResultSetSize }} QUERY_MEM_CAPACITY {{$var.falkorDBQueryMemCapacity }} VKEY_MAX_ENTITY_COUNT	4611686000000000000
               tls-auth-clients no
               tls-ca-cert-file /ca/ca.crt
               masterauth {{ $func.random(string,16,$sys.deterministicSeedValue) }}
@@ -996,7 +996,7 @@ services:
               app.kubernetes.io/component: middleware
           data:
             redis-additional.conf: |
-              loadmodule /FalkorDB/bin/src/falkordb.so CACHE_SIZE {{ $var.falkorDBCacheSize }} NODE_CREATION_BUFFER {{$var.falkorDBNodeCreationBuffer }} MAX_QUEUED_QUERIES {{$var.falkorDBMaxQueuedQueries}} TIMEOUT_MAX {{ $var.falkorDBTimeoutMax }} TIMEOUT_DEFAULT {{$var.falkorDBTimeoutDefault }} RESULTSET_SIZE {{$var.falkorDBResultSetSize }} QUERY_MEM_CAPACITY {{$var.falkorDBQueryMemCapacity }} VKEY_MAX_ENTITY_COUNT	4611686000000000000
+              loadmodule /FalkorDB/bin/src/bin/falkordb.so CACHE_SIZE {{ $var.falkorDBCacheSize }} NODE_CREATION_BUFFER {{$var.falkorDBNodeCreationBuffer }} MAX_QUEUED_QUERIES {{$var.falkorDBMaxQueuedQueries}} TIMEOUT_MAX {{ $var.falkorDBTimeoutMax }} TIMEOUT_DEFAULT {{$var.falkorDBTimeoutDefault }} RESULTSET_SIZE {{$var.falkorDBResultSetSize }} QUERY_MEM_CAPACITY {{$var.falkorDBQueryMemCapacity }} VKEY_MAX_ENTITY_COUNT	4611686000000000000
               tls-auth-clients no
               tls-ca-cert-file /ca/ca.crt
               masterauth {{ $func.random(string,16,$sys.deterministicSeedValue) }}

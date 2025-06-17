@@ -119,7 +119,7 @@ def test_cluster():
 
     instance = omnistrate.instance(
         service_id=args.service_id,
-        service_provider_id=service.service_provider_id,
+        service_provider_id=service.service_provider_id,  # Update this to the correct service provider ID
         service_key=service.key,
         service_environment_id=args.environment_id,
         service_environment_key=service.get_environment(args.environment_id).key,
@@ -219,7 +219,7 @@ def test_ensure_mz_distribution(instance: OmnistrateFleetInstance, password: str
         port=port,
         username="falkordb",
         password=password,
-        ssl=params.get("enableTLS") == "true"
+        ssl=args.tls,
     )
 
     # Get node groups (each group contains a master and its replicas)
@@ -278,6 +278,9 @@ def test_failover(instance: OmnistrateFleetInstance):
     except Exception as e:
         if isinstance(e,ConnectionError) and ("Connection" or "connection") in str(e):
             logging.info("Expected connection error")
+        else:
+            logging.exception("Unexpected error during failover trigger")
+            raise e
     
     time.sleep(10)
     # Check if the instance is back online
@@ -286,9 +289,9 @@ def test_failover(instance: OmnistrateFleetInstance):
     if "role:master" not in info:
         logging.info("Failover successful")
 
-    result = client.execute_command("keys", "*")
+    result = client.execute_command("GRAPH.LIST")
 
-    if len(result) <= 1:
+    if len(result) != 1:
         raise Exception("Data lost after failover")
     logging.info(result)
     logging.info("Data persisted after failover")

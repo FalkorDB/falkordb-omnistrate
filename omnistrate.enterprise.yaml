@@ -1303,7 +1303,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: standard_b2ms
+          name: standard_b2ls_v2
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
@@ -1965,7 +1965,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: standard_b2ms
+          name: standard_b2ls_v2
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
@@ -2409,7 +2409,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: standard_b2ms
+          name: standard_b2ls_v2
     <<: *rebalanceparam
     environment:
       - IS_MULTI_ZONE=0
@@ -2748,7 +2748,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: standard_b2ms
+          name: standard_b2ls_v2
     <<: *rebalanceparam
     environment:
       - IS_MULTI_ZONE=1

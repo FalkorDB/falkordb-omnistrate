@@ -227,6 +227,8 @@ services:
               value: "5"
             - name: REDIS_TLS_CA_KEY
               value: "/ca/ca.crt"
+            - name: INSTANCE_TYPE
+              value: "{{ $var.nodeInstanceType }}"
 
       supplementalFiles:
         - |
@@ -931,6 +933,8 @@ services:
               value: "5"
             - name: REDIS_TLS_CA_KEY
               value: "/ca/ca.crt"
+            - name: INSTANCE_TYPE
+              value: "{{ $var.nodeInstanceType }}"
 
       supplementalFiles:
         - |

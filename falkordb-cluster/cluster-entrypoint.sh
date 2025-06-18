@@ -368,7 +368,6 @@ config_rewrite() {
 create_cluster() {
 
   local urls=""
-
   for host in $(seq 0 5); do
     urls="$urls $(get_host $host):$NODE_PORT"
   done

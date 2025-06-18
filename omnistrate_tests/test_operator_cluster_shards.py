@@ -287,11 +287,27 @@ def change_replica_count(instance: OmnistrateFleetInstance,host_count: int,new_r
     if (current_cluster_replicas + current_host_count) != node_count:
         logging.info("Omnistrate may have counted terminaing nodes as part of the replica count.")
         client = instance.create_connection(ssl=args.tls, operator=True)
-        if len(client.connection.cluster_nodes()) == int(current_host_count + new_replicas_count):
-            logging.info(f"node count updated to {int(current_host_count + new_replicas_count)}")
+        
+        # Retry cluster_nodes() check with timeout
+        max_retries = 3
+        retry_interval = 5
+        expected_node_count = int(current_host_count + new_replicas_count)
+        
+        for attempt in range(max_retries):
+            cluster_nodes = client.connection.cluster_nodes()
+            actual_node_count = len(cluster_nodes)
+            
+            if actual_node_count == expected_node_count:
+                logging.info(f"node count updated to {expected_node_count}")
+                break
+            
+            logging.info(f"Attempt {attempt + 1}/{max_retries}: Expected {expected_node_count} nodes, got {actual_node_count}. Retrying in {retry_interval} seconds...")
+            
+            if attempt < max_retries - 1:  # Don't sleep on the last attempt
+                time.sleep(retry_interval)
         else:
             raise Exception(
-                f"Replica count not updated. Expected {int(current_host_count + new_replicas_count)}, got {node_count}"
+                f"Replica count not updated after {max_retries} attempts. Expected {expected_node_count}, got {actual_node_count}"
             )
     
     logging.info(f"node count updated to {int(current_host_count + new_replicas_count)}")

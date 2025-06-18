@@ -524,7 +524,6 @@ services:
             service:
               name: webhook-service
               namespace: default
-            replicas: 2
             resources:
               requests:
                 cpu: 1000m
@@ -1231,7 +1230,6 @@ services:
             service:
               name: webhook-service
               namespace: default
-            replicas: 2
             resources:
               requests:
                 cpu: 1000m

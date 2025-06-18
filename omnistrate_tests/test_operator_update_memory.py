@@ -156,8 +156,10 @@ def test_update_memory():
         )
         
         try:
-            ip = resolve_hostname(instance=instance)
-            logging.info(f"Instance endpoint {instance.get_operator_endpoint()[0]['endpoint']} resolved to {ip}")
+            resolved = resolve_hostname(instance=instance)
+            logging.info(f"Instance endpoint {resolved['main_endpoint']['hostname']} resolved to {resolved['main_endpoint']['ip']}")
+            for node in resolved['nodes']:
+                logging.info(f"Node {node['hostname']} ({node['role']}-{node['index']}) resolved to {node['ip']}")
         except TimeoutError as e:
             logging.error(f"DNS resolution failed: {e}")
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
@@ -243,16 +245,20 @@ def test_zero_downtime(
         logging.exception(e)
         error_signal.set()
         raise e
-    
-def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
-    """Check if the instance's main endpoint is resolvable.
+
+def resolve_hostname(instance: OmnistrateFleetInstance, timeout=300, interval=1):
+    """Check if the instance's main endpoint and all individual nodes are resolvable.
     Args:
         instance: The OmnistrateFleetInstance to check
-        timeout: Maximum time in seconds to wait for resolution (default: 30)
+        timeout: Maximum time in seconds to wait for resolution (default: 300)
         interval: Time in seconds between retry attempts (default: 1)
     
     Returns:
-        str: The resolved IP address
+        dict: Dictionary containing resolved information:
+            {
+                'main_endpoint': {'hostname': str, 'ip': str},
+                'nodes': [{'hostname': str, 'ip': str, 'role': str, 'index': int}, ...]
+            }
 
     Raises:
         ValueError: If interval or timeout are invalid
@@ -263,21 +269,59 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
         raise ValueError("Interval and timeout must be positive")
     
     cluster_endpoint = instance.get_operator_endpoint()
-    # if not cluster_endpoint or 'endpoint' not in cluster_endpoint:
-    #     raise KeyError("Missing endpoint information in cluster configuration")
-
+    if not cluster_endpoint or not cluster_endpoint[0].get('endpoint'):
+        raise KeyError("Missing endpoint information in cluster configuration")
+    
     hostname = cluster_endpoint[0]['endpoint']
+    domain_suffix = hostname.split('.', 1)[1]
+    
+    # Correct node count: 3 leaders + 3 followers = 6 total nodes
+    leader_nodes = [
+        f"{args.instance_name}-leader-{i}.{domain_suffix}"
+        for i in range(0, 3)
+    ]
+    follower_nodes = [
+        f"{args.instance_name}-follower-{i}.{domain_suffix}"
+        for i in range(0, 3)
+    ]
+    
+    all_nodes = leader_nodes + follower_nodes
     start_time = time.time()
+
+    if not hostname or not all_nodes:
+        raise ValueError("Hostname or nodes list is invalid or empty")
 
     while time.time() - start_time < timeout:
         try:
-            ip = socket.gethostbyname(hostname)
-            return ip
+            # Try to resolve main endpoint
+            main_ip = socket.gethostbyname(hostname)
+            
+            # Try to resolve all individual nodes
+            resolved_nodes = []
+            for i, node_hostname in enumerate(all_nodes):
+                node_ip = socket.gethostbyname(node_hostname)
+                role = "leader" if i < 3 else "follower"
+                index = i if i < 3 else i - 3
+                resolved_nodes.append({
+                    'hostname': node_hostname,
+                    'ip': node_ip,
+                    'role': role,
+                    'index': index
+                })
+            
+            return {
+                'main_endpoint': {
+                    'hostname': hostname,
+                    'ip': main_ip
+                },
+                'nodes': resolved_nodes
+            }
+            
         except (socket.gaierror, socket.error) as e:
             logging.debug(f"DNS resolution attempt failed: {e}")
             time.sleep(interval)
      
-    raise TimeoutError(f"Unable to resolve hostname '{hostname}' within {timeout} seconds.")
+    raise TimeoutError(f"Unable to resolve hostname '{hostname}' and all nodes within {timeout} seconds.")
 
 if __name__ == "__main__":
     test_update_memory()

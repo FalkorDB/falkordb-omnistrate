@@ -441,7 +441,6 @@ fi
 
 set_persistence_config
 get_self_host_ip
-check_network_type_changes
 
 if [ "$RUN_NODE" -eq "1" ]; then
 

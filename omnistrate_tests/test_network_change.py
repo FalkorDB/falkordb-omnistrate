@@ -80,7 +80,7 @@ if not args.persist_instance_on_fail:
     signal.signal(signal.SIGINT, signal_handler)
 
 
-def test_update_memory():
+def test_network_change():
     global instance
 
     omnistrate = OmnistrateFleetAPI(
@@ -278,4 +278,4 @@ def resolve_hostname(instance: OmnistrateFleetInstance, timeout=300, interval=1)
 
 
 if __name__ == "__main__":
-    test_update_memory()
+    test_network_change()

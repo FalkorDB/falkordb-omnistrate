@@ -29,7 +29,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("omnistrate_user")
 parser.add_argument("omnistrate_password")
-parser.add_argument("cloud_provider", choices=["aws", "gcp"])
+parser.add_argument("cloud_provider", choices=["aws", "gcp", "azure"])
 parser.add_argument("region")
 
 parser.add_argument(
@@ -52,6 +52,18 @@ parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--replica-count", required=False, default="2")
 parser.add_argument("--persist-instance-on-fail", action="store_true")
 parser.add_argument("--network-type", required=False, default="PUBLIC")
+parser.add_argument("--custom-network", required=False)
+
+parser.add_argument(
+    "--deployment-create-timeout-seconds", required=False, default=2600, type=int
+)
+parser.add_argument(
+    "--deployment-delete-timeout-seconds", required=False, default=2600, type=int
+)
+parser.add_argument(
+    "--deployment-failover-timeout-seconds", required=False, default=2600, type=int
+)
+
 parser.set_defaults(tls=False)
 args = parser.parse_args()
 
@@ -89,7 +101,9 @@ def test_add_remove_replica():
     )
 
     logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
-
+    network = None
+    if args.custom_network:
+        network = omnistrate.network(args.custom_network)
     instance = omnistrate.instance(
         service_id=args.service_id,
         service_provider_id=service.service_provider_id,
@@ -101,9 +115,9 @@ def test_add_remove_replica():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
-        deployment_create_timeout_seconds=2400,
-        deployment_delete_timeout_seconds=2400,
-        deployment_failover_timeout_seconds=2400,
+        deployment_create_timeout_seconds=args.deployment_create_timeout_seconds,
+        deployment_delete_timeout_seconds=args.deployment_delete_timeout_seconds,
+        deployment_failover_timeout_seconds=args.deployment_failover_timeout_seconds,
     )
 
     try:
@@ -122,6 +136,7 @@ def test_add_remove_replica():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            custom_network_id=network.network_id if network else None
         )
 
         try:

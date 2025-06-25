@@ -1177,8 +1177,16 @@ services:
         type: POST_UPGRADE
         commandTemplate: |
           #!/bin/bash
-          sleep 99999999
-          exit 0
+          ssl=$(if [[ "$TLS" == "true" ]]; then echo "--tls"; else echo ""; fi)
+          resource_key=$(if [[ $RESOURCE_ALIAS =~ .*mz.* ]];then echo mz ;else echo sz;fi)
+          sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
+          for i in {0..1};do
+            node=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
+            if [[ "$node" != "$sentinel_0" ]]; then
+              echo "A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"
+              exit 1
+            fi
+          done
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -1369,8 +1377,16 @@ services:
         type: POST_UPGRADE
         commandTemplate: |
           #!/bin/bash
-          sleep 99999999
-          exit 0
+          ssl=$(if [[ "$TLS" == "true" ]]; then echo "--tls"; else echo ""; fi)
+          resource_key=$(if [[ $RESOURCE_ALIAS =~ .*mz.* ]];then echo mz ;else echo sz;fi)
+          sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
+          for i in {0..1};do
+            node=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
+            if [[ "$node" != "$sentinel_0" ]]; then
+              echo "A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"
+              exit 1
+            fi
+          done
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -1854,8 +1870,16 @@ services:
         type: POST_UPGRADE
         commandTemplate: |
           #!/bin/bash
-          sleep 99999999
-          exit 0
+          ssl=$(if [[ "$TLS" == "true" ]]; then echo "--tls"; else echo ""; fi)
+          resource_key=$(if [[ $RESOURCE_ALIAS =~ .*mz.* ]];then echo mz ;else echo sz;fi)
+          sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
+          for i in {0..1};do
+            node=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
+            if [[ "$node" != "$sentinel_0" ]]; then
+              echo "A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"
+              exit 1
+            fi
+          done
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -2045,8 +2069,16 @@ services:
         type: POST_UPGRADE
         commandTemplate: |
           #!/bin/bash
-          sleep 99999999
-          exit 0
+          ssl=$(if [[ "$TLS" == "true" ]]; then echo "--tls"; else echo ""; fi)
+          resource_key=$(if [[ $RESOURCE_ALIAS =~ .*mz.* ]];then echo mz ;else echo sz;fi)
+          sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
+          for i in {0..1};do
+            node=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
+            if [[ "$node" != "$sentinel_0" ]]; then
+              echo "A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"
+              exit 1
+            fi
+          done
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |

@@ -1177,7 +1177,7 @@ services:
         type: POST_UPGRADE
         commandTemplate: |
           #!/bin/bash
-          echo "THIS MEANS THAT THE CLUSTER HAS BEEN UPGRADED" > /data/upgrade.txt
+          sleep 99999999
           exit 0
       - scope: NODE
         type: STARTUP_CHECK
@@ -1369,7 +1369,7 @@ services:
         type: POST_UPGRADE
         commandTemplate: |
           #!/bin/bash
-          echo "THIS MEANS THAT THE CLUSTER HAS BEEN UPGRADED" > /data/upgrade.txt
+          sleep 99999999
           exit 0
       - scope: NODE
         type: STARTUP_CHECK
@@ -1854,7 +1854,7 @@ services:
         type: POST_UPGRADE
         commandTemplate: |
           #!/bin/bash
-          echo "THIS MEANS THAT THE CLUSTER HAS BEEN UPGRADED" > /data/upgrade.txt
+          sleep 99999999
           exit 0
       - scope: NODE
         type: STARTUP_CHECK
@@ -2045,7 +2045,7 @@ services:
         type: POST_UPGRADE
         commandTemplate: |
           #!/bin/bash
-          echo "THIS MEANS THAT THE CLUSTER HAS BEEN UPGRADED" > /data/upgrade.txt
+          sleep 99999999
           exit 0
       - scope: NODE
         type: STARTUP_CHECK
@@ -2304,7 +2304,7 @@ services:
       - cluster-sz-rebalance
   
 
-  
+
   cluster-sz:
     x-omnistrate-mode-internal: true
     image: $FalkorDBClusterImage

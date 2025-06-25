@@ -1173,6 +1173,12 @@ services:
       enableMultiZone: false
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
+      - scope: CLUSTER
+        type: POST_UPGRADE
+        commandTemplate: |
+          #!/bin/bash
+          echo "THIS MEANS THAT THE CLUSTER HAS BEEN UPGRADED" > /data/upgrade.txt
+          exit 0
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -1359,6 +1365,12 @@ services:
         required: true
         export: false
     x-omnistrate-actionhooks:
+      - scope: CLUSTER
+        type: POST_UPGRADE
+        commandTemplate: |
+          #!/bin/bash
+          echo "THIS MEANS THAT THE CLUSTER HAS BEEN UPGRADED" > /data/upgrade.txt
+          exit 0
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -1838,6 +1850,12 @@ services:
       enableMultiZone: true
       enableEndpointPerReplica: true
     x-omnistrate-actionhooks:
+      - scope: CLUSTER
+        type: POST_UPGRADE
+        commandTemplate: |
+          #!/bin/bash
+          echo "THIS MEANS THAT THE CLUSTER HAS BEEN UPGRADED" > /data/upgrade.txt
+          exit 0
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -2023,6 +2041,12 @@ services:
         required: true
         export: false
     x-omnistrate-actionhooks:
+      - scope: CLUSTER
+        type: POST_UPGRADE
+        commandTemplate: |
+          #!/bin/bash
+          echo "THIS MEANS THAT THE CLUSTER HAS BEEN UPGRADED" > /data/upgrade.txt
+          exit 0
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |

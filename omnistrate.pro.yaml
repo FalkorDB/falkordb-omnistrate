@@ -2302,8 +2302,9 @@ services:
     depends_on:
       - cluster-sz
       - cluster-sz-rebalance
-    
+  
 
+  
   cluster-sz:
     x-omnistrate-mode-internal: true
     image: $FalkorDBClusterImage

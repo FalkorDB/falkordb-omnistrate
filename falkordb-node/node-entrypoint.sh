@@ -185,6 +185,10 @@ handle_sigterm() {
   if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
     kill -TERM $redis_exporter_pid
   fi
+  
+  if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_sentinel_pid ]]; then
+    kill -TERM $redis_exporter_sentinel_pid
+  fi
 
   if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $healthcheck_pid ]]; then
     kill -TERM $healthcheck_pid
@@ -590,12 +594,20 @@ else
 fi
 
 if [[ $RUN_METRICS -eq 1 ]]; then
-  echo "Starting Metrics"
+  echo "Starting Metrics for Redis"
   aof_metric_export=$(if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then echo "-include-aof-file-size"; else echo ""; fi)
   # When TLS is enabled, use RANDOM_NODE_PORT to get the external port if defined (multi tenancy tiers)
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://localhost:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -tls-server-min-version TLS1.3 -include-system-metrics -is-falkordb -slowlog-history-enabled $aof_metric_export &
   redis_exporter_pid=$!
+fi
+
+if [[ $RUN_METRICS -eq 1 && $RUN_SENTINEL -eq 1 ]]; then
+  echo "Starting Metrics for Sentinel"
+  # When TLS is enabled, use RANDOM_NODE_PORT to get the external port if defined (multi tenancy tiers)
+  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://localhost:$SENTINEL_PORT"; else echo "redis://localhost:$SENTINEL_PORT"; fi)
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -tls-server-min-version TLS1.3 &
+  redis_exporter_sentinel_pid=$!
 fi
 
 #Start cron

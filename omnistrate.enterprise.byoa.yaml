@@ -974,6 +974,8 @@ services:
         required: false
         export: true
         defaultValue: "2"
+        parameterDependencyMap:
+          sentinel-sz: numReplicas
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -1150,6 +1152,7 @@ services:
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - MEMORY_LIMIT=$var.maxMemory
       - SKIP_HEALTH_CHECK=false
+      - NUM_REPLICAS=$var.numReplicas
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1161,10 +1164,11 @@ services:
         type: POST_UPGRADE
         commandTemplate: |
           #!/bin/bash
+          set -euo pipefail
           ssl=$(if [[ "$TLS" == "true" ]]; then echo "--tls"; else echo ""; fi)
           resource_key=$(if [[ $RESOURCE_ALIAS =~ .*mz.* ]];then echo mz ;else echo sz;fi)
           sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
-          for i in {0..1};do
+          for i in $(seq 0 $((NUM_REPLICAS-1))); do
             node=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
             if [[ "$node" != "$sentinel_0" ]]; then
               echo "A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"
@@ -1320,6 +1324,7 @@ services:
       - DATA_DIR=/var/lib/falkordb
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - NODE_HOST=$sys.network.node.externalEndpoint
+      - NUM_REPLICAS=$var.numReplicas
     ports:
       - "26379:26379"
     volumes:
@@ -1360,15 +1365,24 @@ services:
         modifiable: false
         required: true
         export: false
+      - key: numReplicas
+        description: Number of Replicas
+        name: Number of Replicas
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "2"
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: POST_UPGRADE
         commandTemplate: |
           #!/bin/bash
+          set -euo pipefail
           ssl=$(if [[ "$TLS" == "true" ]]; then echo "--tls"; else echo ""; fi)
           resource_key=$(if [[ $RESOURCE_ALIAS =~ .*mz.* ]];then echo mz ;else echo sz;fi)
           sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
-          for i in {0..1};do
+          for i in $(seq 0 $((NUM_REPLICAS-1))); do
             node=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
             if [[ "$node" != "$sentinel_0" ]]; then
               echo "A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"
@@ -1665,6 +1679,8 @@ services:
         required: false
         export: true
         defaultValue: "2"
+        parameterDependencyMap:
+          sentinel-mz: numReplicas
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -1841,6 +1857,7 @@ services:
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - MEMORY_LIMIT=$var.maxMemory
       - SKIP_HEALTH_CHECK=false
+      - NUM_REPLICAS=$var.numReplicas
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1852,10 +1869,11 @@ services:
         type: POST_UPGRADE
         commandTemplate: |
           #!/bin/bash
+          set -euo pipefail
           ssl=$(if [[ "$TLS" == "true" ]]; then echo "--tls"; else echo ""; fi)
           resource_key=$(if [[ $RESOURCE_ALIAS =~ .*mz.* ]];then echo mz ;else echo sz;fi)
           sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
-          for i in {0..1};do
+          for i in $(seq 0 $((NUM_REPLICAS-1))); do
             node=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
             if [[ "$node" != "$sentinel_0" ]]; then
               echo "A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"
@@ -2010,6 +2028,7 @@ services:
       - DATA_DIR=/var/lib/falkordb
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - NODE_HOST=$sys.network.node.externalEndpoint
+      - NUM_REPLICAS=$var.numReplicas
     ports:
       - "26379:26379"
     volumes:
@@ -2050,15 +2069,24 @@ services:
         modifiable: false
         required: true
         export: false
+      - key: numReplicas
+        description: Number of Replicas
+        name: Number of Replicas
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "2"
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: POST_UPGRADE
         commandTemplate: |
           #!/bin/bash
+          set -euo pipefail
           ssl=$(if [[ "$TLS" == "true" ]]; then echo "--tls"; else echo ""; fi)
           resource_key=$(if [[ $RESOURCE_ALIAS =~ .*mz.* ]];then echo mz ;else echo sz;fi)
           sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
-          for i in {0..1};do
+          for i in $(seq 0 $((NUM_REPLICAS-1))); do
             node=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
             if [[ "$node" != "$sentinel_0" ]]; then
               echo "A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"

@@ -1312,7 +1312,7 @@ services:
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
-      - RUN_METRICS=0
+      - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
       - DEBUG=0
       - REDIS_EXPORTER_DEBUG=false
@@ -1976,7 +1976,7 @@ services:
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
-      - RUN_METRICS=0
+      - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
       - DEBUG=0
       - REDIS_EXPORTER_DEBUG=false

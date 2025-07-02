@@ -296,7 +296,7 @@ x-clusterparam: &clusterparam
       description: Choose the maxmemory for your database (do not exceed InstanceType memory)
       name: FalkorDB Maxmemory
       type: String
-      modifiable: false
+      modifiable: true
       required: false
       export: true
       defaultValue: "6GB"
@@ -478,7 +478,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -630,7 +630,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -931,7 +931,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -1098,7 +1098,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -1595,7 +1595,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -1761,7 +1761,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -2246,7 +2246,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -2585,7 +2585,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"

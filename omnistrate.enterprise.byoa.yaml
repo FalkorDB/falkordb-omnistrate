@@ -106,6 +106,14 @@ x-clusterparam: &clusterparam
       options:
         - "everysec"
         - "always"
+    - key: aofCronExpression
+      description: Cron expression for AOF persistence. Check the documentation for more information.
+      name: AOF Cron Expression
+      type: String
+      modifiable: true
+      required: false
+      export: true
+      defaultValue: "*/30 * * * *"
     - key: falkorDBCacheSize
       description: Choose the cache size for your database
       name: FalkorDB Cache Size
@@ -274,6 +282,16 @@ services:
           - "always"
         parameterDependencyMap:
           node-s: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          node-s: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -440,6 +458,14 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -552,6 +578,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
@@ -727,6 +754,16 @@ services:
           - "always"
         parameterDependencyMap:
           node-sz: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          node-sz: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -908,6 +945,14 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -1025,6 +1070,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
@@ -1391,6 +1437,16 @@ services:
           - "always"
         parameterDependencyMap:
           node-mz: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          node-mz: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -1571,6 +1627,14 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -1688,6 +1752,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
@@ -2054,6 +2119,16 @@ services:
         max: 256
         parameterDependencyMap:
           cluster-sz: falkorDBCacheSize
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          cluster-sz: aofCronExpression
       - key: falkorDBNodeCreationBuffer
         description: Choose the buffer size for your database
         name: FalkorDB Node Creation Buffer
@@ -2187,6 +2262,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
@@ -2381,6 +2457,16 @@ services:
           - "always"
         parameterDependencyMap:
           cluster-mz: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          cluster-sz: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -2526,6 +2612,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries

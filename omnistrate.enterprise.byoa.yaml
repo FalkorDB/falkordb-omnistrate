@@ -2107,6 +2107,16 @@ services:
           - "always"
         parameterDependencyMap:
           cluster-sz: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          cluster-sz: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -2119,16 +2129,6 @@ services:
         max: 256
         parameterDependencyMap:
           cluster-sz: falkorDBCacheSize
-      - key: aofCronExpression
-        description: Cron expression for AOF persistence. Check the documentation for more information.
-        name: AOF Cron Expression
-        type: String
-        modifiable: true
-        required: false
-        export: true
-        defaultValue: "*/30 * * * *"
-        parameterDependencyMap:
-          cluster-sz: aofCronExpression
       - key: falkorDBNodeCreationBuffer
         description: Choose the buffer size for your database
         name: FalkorDB Node Creation Buffer
@@ -2466,7 +2466,7 @@ services:
         export: true
         defaultValue: "*/30 * * * *"
         parameterDependencyMap:
-          cluster-sz: aofCronExpression
+          cluster-mz: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size

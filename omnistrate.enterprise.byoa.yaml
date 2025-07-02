@@ -35,8 +35,6 @@ x-omnistrate-load-balancer:
 x-internal-integrations:
   logs:
     provider: native
-  metrics:
-    provider: native
 
 x-falkordbMetrics: &metrics
   prometheusEndpoint: "http://localhost:9121/metrics"

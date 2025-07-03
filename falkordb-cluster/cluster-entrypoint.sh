@@ -95,10 +95,10 @@ if [[ ! -s "$FALKORDB_HOME/rewriteAof" && ! -f "$FALKORDB_HOME/rewriteAof" ]]; t
       set -e
       size=\$(stat -c%s $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof)
       if (( size > 5*1024*1024 ));then
-        echo "File larger than 5MB, running BGREWRITEAOF"
+        echo "File larger than 5MB, running BGREWRITEAOF" >>$FALKORDB_LOG_FILE_PATH
         $(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF
       else
-        echo "File smaller than 5MB, not running BGREWRITEAOF"
+        echo "File smaller than 5MB, not running BGREWRITEAOF" >>$FALKORDB_LOG_FILE_PATH
       fi
       """ > "$FALKORDB_HOME/rewriteAof"
   chmod +x "$FALKORDB_HOME/rewriteAof"
@@ -111,7 +111,7 @@ fi
 rewrite_aof_cronjob() {
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
   # The command is run every 12 hours to prevent the AOF file from growing too large.
-  (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION $FALKORDB_HOME/rewriteAof") | crontab -
+  (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION /bin/bash $FALKORDB_HOME/rewriteAof") | crontab -
 }
 
 meet_unknown_nodes() {

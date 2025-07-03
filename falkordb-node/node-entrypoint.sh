@@ -102,10 +102,31 @@ if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
   DEBUG=1
 fi
 
+
+if [[ ! -s "$FALKORDB_HOME/rewriteAof" && ! -f "$FALKORDB_HOME/rewriteAof" ]]; then
+  echo "Creating rewriteAof script"
+  echo """
+      #!/bin/bash
+      set -e
+      size=$(stat -c%s $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof)
+      if (( size > 5*1024*1024 ));then
+        echo "File larger than 5MB, running BGREWRITEAOF"
+        "$(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF"
+      else
+        echo "File smaller than 5MB, not running BGREWRITEAOF"
+      fi
+      """ > "$FALKORDB_HOME/rewriteAof"
+  chmod +x "$FALKORDB_HOME/rewriteAof"
+  echo "rewriteAof script created"
+else
+  echo "rewriteAof script already exists"
+fi
+
+
 rewrite_aof_cronjob() {
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
   # The command is run every 12 hours to prevent the AOF file from growing too large.
-  (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION $(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF") | crontab -
+  (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION $FALKORDB_HOME/rewriteAof") | crontab -
 }
 
 dump_conf_files() {

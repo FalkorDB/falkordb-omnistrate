@@ -91,7 +91,7 @@ fi
 
 if [[ ! -s "$FALKORDB_HOME/rewriteAof" && ! -f "$FALKORDB_HOME/rewriteAof" ]]; then
   echo "Creating rewriteAof script"
-  echo """
+  echo """#!/bin/bash
       set -e
       size=\$(stat -c%s $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof)
       if (( size > 5*1024*1024 ));then

@@ -97,7 +97,7 @@ if [[ ! -s "$FALKORDB_HOME/rewriteAof" && ! -f "$FALKORDB_HOME/rewriteAof" ]]; t
       size=$(stat -c%s $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof)
       if (( size > 5*1024*1024 ));then
         echo "File larger than 5MB, running BGREWRITEAOF"
-        "$(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF"
+        $(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF
       else
         echo "File smaller than 5MB, not running BGREWRITEAOF"
       fi

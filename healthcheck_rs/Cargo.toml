@@ -12,6 +12,7 @@ rouille = "3.6.2"
 openssl-sys = "0.9.98"
 dns-lookup = "2.0.4"
 r2d2 = "0.8.10"
+sysinfo = "0.35.2"
 
 [dependencies.openssl]
 version = "0.10.29"

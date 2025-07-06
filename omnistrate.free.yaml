@@ -134,6 +134,9 @@ services:
         target: /run/secrets/adminpassword
       - source: falkordbpasspath
         target: /run/secrets/falkordbpassword
+    configs:
+      - source: health_check
+        target: /run/configs/healthcheck
 
     environment:
       - RUN_NODE=1
@@ -159,6 +162,7 @@ services:
       - FALKORDB_QUERY_MEM_CAPACITY=52428800
       - PERSISTENCE_AOF_CONFIG=no
       - SKIP_HEALTH_CHECK=false
+      - HEALTH_CHECK_CONFIG_PATH=/run/configs/healthcheck
     ports:
       - "6379:6379"
       # - "9121:9121"
@@ -241,3 +245,6 @@ secrets:
     file: ./secrets/adminpassword
   falkordbpasspath:
     file: ./secrets/falkordbpassword
+configs:
+  health_check:
+    file: ./configs/healthcheck

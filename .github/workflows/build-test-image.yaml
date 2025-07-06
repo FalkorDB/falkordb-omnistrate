@@ -164,6 +164,21 @@ jobs:
             echo "secrets option was not used"
             exit 0
           fi
+      - name: Create Config files
+        run: |
+          export conf=$(grep '^configs' omnistrate.free.yaml)
+          if [[ -n "$conf" ]];then
+            mkdir -p configs || { echo "Failed to create configs directory"; exit 1; }
+            echo """
+              skip_all=false
+              skip_liveness=false
+              skip_readiness=false
+              skip_startup=false
+            """ > ./configs/healthcheck || { echo "Failed to write healthcheck config"; exit 1; }
+          else
+            echo "configs option was not used"
+            exit 0
+          fi
 
       - name: Update Omnistrate plan
         uses: ./.github/actions/update-omnistrate-plan

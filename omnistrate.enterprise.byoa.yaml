@@ -35,125 +35,9 @@ x-omnistrate-load-balancer:
 x-internal-integrations:
   logs:
     provider: native
-  metrics:
-    provider: native
-
-x-falkordbMetrics: &metrics
-  prometheusEndpoint: "http://localhost:9121/metrics"
-  metrics:
-    redis_aof_file_size_bytes:
-      "AOF File Size (Bytes)":
-        aggregationFunction: sum
-    redis_commands_latencies_usec_bucket:
-      "Command Latency (μs) Bucket":
-        aggregationFunction: sum
-    redis_commands_latencies_usec_sum:
-      "Total Command Latency (μs)":
-        aggregationFunction: sum
-    redis_commands_latencies_usec_count:
-      "Command Latency Count (μs)":
-        aggregationFunction: sum
-    redis_commands_processed_total:
-      "Total Processed Commands":
-        aggregationFunction: sum
-    redis_commands_rejected_calls_total:
-      "Rejected Command Calls":
-        aggregationFunction: sum
-    redis_commands_total:
-      "Total Commands":
-        aggregationFunction: sum
-    redis_connected_clients:
-      "Connected Clients":
-        aggregationFunction: sum
-    redis_connections_received_total:
-      "Total Connections Received":
-        aggregationFunction: sum
-    redis_db_keys:
-      "Database Keys":
-        aggregationFunction: sum
-    redis_errors_total:
-      "Total Errors":
-        aggregationFunction: sum
-    redis_last_slow_execution_duration_seconds:
-      "Last Slow Execution Duration (Seconds)":
-        aggregationFunction: sum
-    redis_loading_dump_file:
-      "Loading Dump File":
-        aggregationFunction: sum
-    redis_mem_clients_normal:
-      "Memory Used By Normal Clients":
-        aggregationFunction: sum
-      "Memory Used (Bytes)":
-        aggregationFunction: sum
-    redis_memory_used_dataset_bytes:
-      "Memory Used By Dataset (Bytes)":
-        aggregationFunction: sum
-    redis_rdb_bgsave_in_progress:
-      "RDB BGSAVE In Progress":
-        aggregationFunction: sum
-    redis_rdb_changes_since_last_save:
-      "Changes Since Last RDB Save":
-        aggregationFunction: sum
-    redis_rdb_current_bgsave_duration_sec:
-      "Current RDB BGSAVE Duration (Seconds)":
-        aggregationFunction: sum
-    redis_rdb_last_bgsave_duration_sec:
-      "Last RDB BGSAVE Duration (Seconds)":
-        aggregationFunction: sum
-    redis_memory_used_bytes:
-      "Memory Used (Bytes)":
-        aggregationFunction: sum
-    redis_memory_max_bytes:
-      "Memory Max (Bytes)":
-        aggregationFunction: sum
-    redis_rdb_last_cow_size_bytes:
-      "Last RDB Copy-On-Write Size (Bytes)":
-        aggregationFunction: sum
-    redis_rdb_last_load_loaded_keys:
-      "Last RDB Load: Loaded Keys":
-        aggregationFunction: sum
-    redis_rdb_last_save_timestamp_seconds:
-      "Last RDB Save Timestamp (Seconds)":
-        aggregationFunction: sum
-    redis_rdb_saves_total:
-      "Total RDB Saves":
-        aggregationFunction: sum
-    redis_rejected_connections_total:
-      "Total Rejected Connections":
-        aggregationFunction: sum
-    redis_slowlog_last_id:
-      "Slow Log Last ID":
-        aggregationFunction: sum
-    redis_unexpected_error_replies:
-      "Unexpected Error Replies":
-        aggregationFunction: sum
-    redis_uptime_in_seconds:
-      "Uptime (Seconds)":
-        aggregationFunction: sum
-    redis_net_input_bytes_total:
-      "Total Network Input Bytes":
-        aggregationFunction: sum
-    redis_net_output_bytes_total:
-      "Total Network Output Bytes":
-        aggregationFunction: sum
-    redis_commands_duration_seconds_total:
-      "Total Command Duration (Seconds)":
-        aggregationFunction: sum
 
 x-omnistrate-integrations:
   - omnistrateLogging:
-  - omnistrateMetrics:
-      additionalMetrics:
-        node-s:
-          <<: *metrics
-        node-sz:
-          <<: *metrics
-        node-mz:
-          <<: *metrics
-        cluster-sz:
-          <<: *metrics
-        cluster-mz:
-          <<: *metrics
 
 x-rebalanceparam: &rebalanceparam
   x-omnistrate-api-params:
@@ -222,6 +106,14 @@ x-clusterparam: &clusterparam
       options:
         - "everysec"
         - "always"
+    - key: aofCronExpression
+      description: Cron expression for AOF persistence. Check the documentation for more information.
+      name: AOF Cron Expression
+      type: String
+      modifiable: true
+      required: false
+      export: true
+      defaultValue: "*/30 * * * *"
     - key: falkorDBCacheSize
       description: Choose the cache size for your database
       name: FalkorDB Cache Size
@@ -296,7 +188,7 @@ x-clusterparam: &clusterparam
       description: Choose the maxmemory for your database (do not exceed InstanceType memory)
       name: FalkorDB Maxmemory
       type: String
-      modifiable: false
+      modifiable: true
       required: false
       export: true
       defaultValue: "6GB"
@@ -390,6 +282,16 @@ services:
           - "always"
         parameterDependencyMap:
           node-s: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          node-s: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -478,7 +380,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -556,6 +458,14 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -630,7 +540,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -668,6 +578,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
@@ -843,6 +754,16 @@ services:
           - "always"
         parameterDependencyMap:
           node-sz: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          node-sz: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -931,7 +852,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -1026,6 +947,14 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -1100,7 +1029,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -1143,6 +1072,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
@@ -1317,7 +1247,7 @@ services:
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
-      - RUN_METRICS=0
+      - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
       - DEBUG=0
       - SENTINEL_PORT=26379
@@ -1550,6 +1480,16 @@ services:
           - "always"
         parameterDependencyMap:
           node-mz: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          node-mz: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -1638,7 +1578,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -1732,6 +1672,14 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -1806,7 +1754,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -1849,6 +1797,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
@@ -2021,7 +1970,7 @@ services:
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
-      - RUN_METRICS=0
+      - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
       - DEBUG=0
       - SENTINEL_PORT=26379
@@ -2243,6 +2192,16 @@ services:
           - "always"
         parameterDependencyMap:
           cluster-sz: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          cluster-sz: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -2331,7 +2290,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -2388,6 +2347,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
@@ -2582,6 +2542,16 @@ services:
           - "always"
         parameterDependencyMap:
           cluster-mz: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          cluster-mz: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -2670,7 +2640,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -2727,6 +2697,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries

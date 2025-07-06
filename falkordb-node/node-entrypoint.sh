@@ -593,7 +593,7 @@ else
   echo "Healthcheck binary not found"
 fi
 
-if [[ $RUN_METRICS -eq 1 ]]; then
+if [[ $RUN_METRICS -eq 1 && $RUN_NODE -eq 1 ]]; then
   echo "Starting Metrics for Redis"
   aof_metric_export=$(if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then echo "-include-aof-file-size"; else echo ""; fi)
   # When TLS is enabled, use RANDOM_NODE_PORT to get the external port if defined (multi tenancy tiers)

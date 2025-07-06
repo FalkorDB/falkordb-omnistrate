@@ -1103,7 +1103,8 @@ services:
             node=$(echo $(redis-cli --no-auth-warning --user falkordbupgradeuser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
             if [[ "$node" != "$sentinel_0" ]]; then
               echo "WARNING SPLIT BRAIN DETECTED!,A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"
-              sed -i "s/sentinel monitor.*/sentinel monitor $MASTER_NAME $sentinel_0 6379 2/" $DATA_DIR/data/sentinel.conf
+              echo "Please refer to the documentation for instructions on how to resolve this issue."
+              echo "link: https://github.com/FalkorDB/runbooks/blob/main/Sentinel%20split%20brain%20after%20upgrade.md"
               exit 1
             fi
           done
@@ -1250,6 +1251,7 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
+      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, $sys.deterministicSeedValue)
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
@@ -1313,11 +1315,13 @@ services:
           set -euo pipefail
           ssl=$(if [[ "$TLS" == "true" ]]; then echo "--tls"; else echo ""; fi)
           resource_key=$(if [[ $RESOURCE_ALIAS =~ .*mz.* ]];then echo mz ;else echo sz;fi)
-          sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
+          sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordbupgradeuser -a $FALKORDB_POST_UPGRADE_PASSWORD -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name $MASTER_NAME) | awk '{print $1}')
           for i in $(seq 0 $((NUM_REPLICAS-1))); do
-            node=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
+            node=$(echo $(redis-cli --no-auth-warning --user falkordbupgradeuser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
             if [[ "$node" != "$sentinel_0" ]]; then
-              echo "A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"
+              echo "WARNING SPLIT BRAIN DETECTED!,A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"
+              echo "Please refer to the documentation for instructions on how to resolve this issue."
+              echo "link: https://github.com/FalkorDB/runbooks/blob/main/Sentinel%20split%20brain%20after%20upgrade.md"
               exit 1
             fi
           done
@@ -1793,6 +1797,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
+      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, $sys.deterministicSeedValue)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1823,11 +1828,13 @@ services:
           set -euo pipefail
           ssl=$(if [[ "$TLS" == "true" ]]; then echo "--tls"; else echo ""; fi)
           resource_key=$(if [[ $RESOURCE_ALIAS =~ .*mz.* ]];then echo mz ;else echo sz;fi)
-          sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
+          sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordbupgradeuser -a $FALKORDB_POST_UPGRADE_PASSWORD -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name $MASTER_NAME) | awk '{print $1}')
           for i in $(seq 0 $((NUM_REPLICAS-1))); do
-            node=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
+            node=$(echo $(redis-cli --no-auth-warning --user falkordbupgradeuser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
             if [[ "$node" != "$sentinel_0" ]]; then
-              echo "A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"
+              echo "WARNING SPLIT BRAIN DETECTED!,A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"
+              echo "Please refer to the documentation for instructions on how to resolve this issue."
+              echo "link: https://github.com/FalkorDB/runbooks/blob/main/Sentinel%20split%20brain%20after%20upgrade.md"
               exit 1
             fi
           done
@@ -1973,6 +1980,7 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
+      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, $sys.deterministicSeedValue)
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
@@ -2036,11 +2044,13 @@ services:
           set -euo pipefail
           ssl=$(if [[ "$TLS" == "true" ]]; then echo "--tls"; else echo ""; fi)
           resource_key=$(if [[ $RESOURCE_ALIAS =~ .*mz.* ]];then echo mz ;else echo sz;fi)
-          sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
+          sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordbupgradeuser -a $FALKORDB_POST_UPGRADE_PASSWORD -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name $MASTER_NAME) | awk '{print $1}')
           for i in $(seq 0 $((NUM_REPLICAS-1))); do
-            node=$(echo $(redis-cli --no-auth-warning --user falkordb -a $(cat /run/secrets/falkordbpassword) -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
+            node=$(echo $(redis-cli --no-auth-warning --user falkordbupgradeuser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name master) | awk '{print $1}')
             if [[ "$node" != "$sentinel_0" ]]; then
-              echo "A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"
+              echo "WARNING SPLIT BRAIN DETECTED!,A master discrepancy was found between sentinel-${resource_key}-0 and node-${resource_key}-$i"
+              echo "Please refer to the documentation for instructions on how to resolve this issue."
+              echo "link: https://github.com/FalkorDB/runbooks/blob/main/Sentinel%20split%20brain%20after%20upgrade.md"
               exit 1
             fi
           done

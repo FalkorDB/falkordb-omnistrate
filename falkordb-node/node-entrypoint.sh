@@ -97,35 +97,36 @@ SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/
 NODE_CONF_FILE=$DATA_DIR/node.conf
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'*/30 * * * *'}
+AOF_FILE_SIZE_TO_MONITOR=${AOF_FILE_SIZE_TO_MONITOR:-5} # 5MB
 
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
   DEBUG=1
 fi
 
 
-if [[ ! -s "$FALKORDB_HOME/rewriteAof" && ! -f "$FALKORDB_HOME/rewriteAof" ]]; then
-  echo "Creating rewriteAof script"
+if [[ ! -s "$FALKORDB_HOME/run_bgrewriteaof" && ! -f "$FALKORDB_HOME/run_bgrewriteaof" ]]; then
+  echo "Creating run_bgrewriteaof script"
   echo """#!/bin/bash
       set -e
       size=\$(stat -c%s $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof)
-      if (( size > 5*1024*1024 ));then
+      if (( size > $AOF_FILE_SIZE_TO_MONITOR*1024*1024 ));then
         echo "File larger than 5MB, running BGREWRITEAOF" >>$FALKORDB_LOG_FILE_PATH
         $(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF
       else
         echo "File smaller than 5MB, not running BGREWRITEAOF" >>$FALKORDB_LOG_FILE_PATH
       fi
-      """ > "$FALKORDB_HOME/rewriteAof"
-  chmod +x "$FALKORDB_HOME/rewriteAof"
-  echo "rewriteAof script created"
+      """ > "$FALKORDB_HOME/run_bgrewriteaof"
+  chmod +x "$FALKORDB_HOME/run_bgrewriteaof"
+  echo "run_bgrewriteaof script created"
 else
-  echo "rewriteAof script already exists"
+  echo "run_bgrewriteaof script already exists"
 fi
 
 
 rewrite_aof_cronjob() {
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
   # The command is run every 12 hours to prevent the AOF file from growing too large.
-  (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION /bin/bash $FALKORDB_HOME/rewriteAof") | crontab -
+  (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION /bin/bash $FALKORDB_HOME/run_bgrewriteaof") | crontab -
 }
 
 dump_conf_files() {

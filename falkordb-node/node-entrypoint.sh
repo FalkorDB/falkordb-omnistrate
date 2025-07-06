@@ -96,16 +96,37 @@ FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/
 SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
-AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'0 */12 * * *'}
+AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'*/30 * * * *'}
+AOF_FILE_SIZE_TO_MONITOR=${AOF_FILE_SIZE_TO_MONITOR:-5} # 5MB
 
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
   DEBUG=1
 fi
 
+
+if [[ ! -s "$FALKORDB_HOME/run_bgrewriteaof" && ! -f "$FALKORDB_HOME/run_bgrewriteaof" ]]; then
+  echo "Creating run_bgrewriteaof script"
+  echo """#!/bin/bash
+      set -e
+      size=\$(stat -c%s $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof)
+      if (( size > $AOF_FILE_SIZE_TO_MONITOR*1024*1024 ));then
+        echo "File larger than 5MB, running BGREWRITEAOF" >>$FALKORDB_LOG_FILE_PATH
+        $(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF
+      else
+        echo "File smaller than 5MB, not running BGREWRITEAOF" >>$FALKORDB_LOG_FILE_PATH
+      fi
+      """ > "$FALKORDB_HOME/run_bgrewriteaof"
+  chmod +x "$FALKORDB_HOME/run_bgrewriteaof"
+  echo "run_bgrewriteaof script created"
+else
+  echo "run_bgrewriteaof script already exists"
+fi
+
+
 rewrite_aof_cronjob() {
   # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
   # The command is run every 12 hours to prevent the AOF file from growing too large.
-  (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION $(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF") | crontab -
+  (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION /bin/bash $FALKORDB_HOME/run_bgrewriteaof") | crontab -
 }
 
 dump_conf_files() {
@@ -184,6 +205,10 @@ handle_sigterm() {
 
   if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
     kill -TERM $redis_exporter_pid
+  fi
+  
+  if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_sentinel_pid ]]; then
+    kill -TERM $redis_exporter_sentinel_pid
   fi
 
   if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $healthcheck_pid ]]; then
@@ -589,13 +614,21 @@ else
   echo "Healthcheck binary not found"
 fi
 
-if [[ $RUN_METRICS -eq 1 ]]; then
-  echo "Starting Metrics"
+if [[ $RUN_METRICS -eq 1 && $RUN_NODE -eq 1 ]]; then
+  echo "Starting Metrics for Redis"
   aof_metric_export=$(if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then echo "-include-aof-file-size"; else echo ""; fi)
   # When TLS is enabled, use RANDOM_NODE_PORT to get the external port if defined (multi tenancy tiers)
   exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://localhost:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -tls-server-min-version TLS1.3 -include-system-metrics -is-falkordb -slowlog-history-enabled $aof_metric_export &
   redis_exporter_pid=$!
+fi
+
+if [[ $RUN_METRICS -eq 1 && $RUN_SENTINEL -eq 1 ]]; then
+  echo "Starting Metrics for Sentinel"
+  # When TLS is enabled, use RANDOM_NODE_PORT to get the external port if defined (multi tenancy tiers)
+  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://localhost:$SENTINEL_PORT"; else echo "redis://localhost:$SENTINEL_PORT"; fi)
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -web.listen-address '0.0.0.0:9122'  -log-format json -tls-server-min-version TLS1.3 &
+  redis_exporter_sentinel_pid=$!
 fi
 
 #Start cron

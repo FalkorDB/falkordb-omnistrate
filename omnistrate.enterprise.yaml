@@ -573,6 +573,9 @@ services:
         target: /run/secrets/adminpassword
       - source: falkordbpasspath
         target: /run/secrets/falkordbpassword
+    configs:
+      - source: health_check
+        target: /run/configs/healthcheck
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=0
@@ -597,6 +600,7 @@ services:
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - MEMORY_LIMIT=$var.maxMemory
+      - HEALTH_CHECK_CONFIG_PATH=/run/configs/healthcheck
     ports:
       - "6379:6379"
     x-omnistrate-capabilities:
@@ -1060,6 +1064,9 @@ services:
         target: /run/secrets/adminpassword
       - source: falkordbpasspath
         target: /run/secrets/falkordbpassword
+    configs:
+      - source: health_check
+        target: /run/configs/healthcheck
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -1089,6 +1096,7 @@ services:
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - MEMORY_LIMIT=$var.maxMemory
       - SKIP_HEALTH_CHECK=false
+      - HEALTH_CHECK_CONFIG_PATH=/run/configs/healthcheck
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1741,6 +1749,9 @@ services:
         target: /run/secrets/adminpassword
       - source: falkordbpasspath
         target: /run/secrets/falkordbpassword
+    configs:
+      - source: health_check
+        target: /run/configs/healthcheck
     environment:
       - RUN_NODE=1
       - RUN_SENTINEL=1
@@ -1771,6 +1782,7 @@ services:
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - MEMORY_LIMIT=$var.maxMemory
       - SKIP_HEALTH_CHECK=false
+      - HEALTH_CHECK_CONFIG_PATH=/run/configs/healthcheck
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -2260,6 +2272,9 @@ services:
         target: /run/secrets/adminpassword
       - source: falkordbpasspath
         target: /run/secrets/falkordbpassword
+    configs:
+      - source: health_check
+        target: /run/configs/healthcheck
     environment:
       - RUN_NODE=1
       - RUN_METRICS=1
@@ -2285,6 +2300,7 @@ services:
       - SKIP_HEALTH_CHECK=false
       - CLUSTER_REPLICAS=1
       - MEMORY_LIMIT=$var.maxMemory
+      - HEALTH_CHECK_CONFIG_PATH=/run/configs/healthcheck
     ports:
       - "6379"
       - "16379"
@@ -2613,6 +2629,9 @@ services:
         target: /run/secrets/adminpassword
       - source: falkordbpasspath
         target: /run/secrets/falkordbpassword
+    configs:
+      - source: health_check
+        target: /run/configs/healthcheck
     environment:
       - RUN_NODE=1
       - RUN_METRICS=1
@@ -2637,6 +2656,7 @@ services:
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - SKIP_HEALTH_CHECK=false
       - CLUSTER_REPLICAS=1
+      - HEALTH_CHECK_CONFIG_PATH=/run/configs/healthcheck
     ports:
       - "6379"
       - "16379"
@@ -2737,3 +2757,6 @@ secrets:
     file: ./secrets/adminpassword
   falkordbpasspath:
     file: ./secrets/falkordbpassword
+configs:
+  health_check:
+    file: ./configs/healthcheck

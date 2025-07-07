@@ -2,6 +2,81 @@ use rouille::{router, Response, Server};
 use std::env;
 use std::time::{Duration, Instant};
 
+#[derive(Debug, Clone)]
+struct HealthCheckConfig {
+    skip_all: bool,
+    skip_liveness: bool,
+    skip_readiness: bool,
+    skip_startup: bool,
+}
+
+impl HealthCheckConfig {
+    fn load_from_configmap() -> Self {
+        let config_path = env::var("HEALTH_CHECK_CONFIG_PATH")
+            .unwrap_or_else(|_| "/run/configs/healthcheck".to_string());
+        
+        let mut config = HealthCheckConfig {
+            skip_all: false,
+            skip_liveness: false,
+            skip_readiness: false,
+            skip_startup: false,
+        };
+
+        // Try to read from ConfigMap file, fall back to environment variables
+        if let Ok(config_content) = std::fs::read_to_string(&config_path) {
+            config.parse_from_string(&config_content);
+        } else {
+            config.load_from_env();
+        }
+
+        config
+    }
+
+    fn parse_from_string(&mut self, content: &str) {
+        for line in content.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            
+            if let Some((key, value)) = line.split_once('=') {
+                let key = key.trim();
+                let value = value.trim().to_lowercase();
+                let is_true = value == "true" || value == "1" || value == "yes";
+                
+                match key {
+                    "skip_all" => self.skip_all = is_true,
+                    "skip_liveness" => self.skip_liveness = is_true,
+                    "skip_readiness" => self.skip_readiness = is_true,
+                    "skip_startup" => self.skip_startup = is_true,
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    fn load_from_env(&mut self) {
+        // Fallback to environment variables for backward compatibility
+        self.skip_all = env::var("SKIP_HEALTH_CHECK").as_deref() == Ok("true") ||
+                       env::var("SKIP_ALL").as_deref() == Ok("true");
+        self.skip_liveness = env::var("SKIP_LIVENESS").as_deref() == Ok("true");
+        self.skip_readiness = env::var("SKIP_READINESS").as_deref() == Ok("true");
+        self.skip_startup = env::var("SKIP_STARTUP").as_deref() == Ok("true");
+    }
+
+    fn should_skip_liveness(&self) -> bool {
+        self.skip_all || self.skip_liveness
+    }
+
+    fn should_skip_readiness(&self) -> bool {
+        self.skip_all || self.skip_readiness
+    }
+
+    fn should_skip_startup(&self) -> bool {
+        self.skip_all || self.skip_startup
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let is_sentinel = args.get(1).map_or(false, |arg| arg == "sentinel");
@@ -16,9 +91,22 @@ fn start_health_check_server(is_sentinel: bool) {
     let addr = format!("localhost:{}", port);
     let server = Server::new(addr, move |request| {
         router!(request,
-            (GET) (/liveness) => { handle_health_check(is_sentinel, check_handler_liveness, &redis_pool) },
-            (GET) (/readiness) => { handle_health_check(is_sentinel, check_handler_readiness, &redis_pool) },
-            (GET) (/startup) => { Response::text("OK") },
+            (GET) (/liveness) => { 
+                let config = HealthCheckConfig::load_from_configmap();
+                handle_health_check(is_sentinel, check_handler_liveness, &redis_pool, config.should_skip_liveness()) 
+            },
+            (GET) (/readiness) => { 
+                let config = HealthCheckConfig::load_from_configmap();
+                handle_health_check(is_sentinel, check_handler_readiness, &redis_pool, config.should_skip_readiness()) 
+            },
+            (GET) (/startup) => { 
+                let config = HealthCheckConfig::load_from_configmap();
+                if config.should_skip_startup() {
+                    Response::text("OK")
+                } else {
+                    Response::text("OK")
+                }
+            },
             _ => Response::empty_404()
         )
     }).unwrap();
@@ -27,14 +115,15 @@ fn start_health_check_server(is_sentinel: bool) {
     server.run();
 }
 
-fn handle_health_check<F>(is_sentinel: bool, check_fn: F, redis_pool: &r2d2::Pool<redis::Client>) -> Response
+fn handle_health_check<F>(is_sentinel: bool, check_fn: F, redis_pool: &r2d2::Pool<redis::Client>, should_skip: bool) -> Response
 where
     F: Fn(bool,&r2d2::Pool<redis::Client>) -> Result<bool, redis::RedisError>,
 {
-    if env::var("SKIP_HEALTH_CHECK").as_deref() == Ok("true") {
+    if should_skip {
         return Response::text("OK");
     }
-    match check_fn(is_sentinel,redis_pool) {
+    
+    match check_fn(is_sentinel, redis_pool) {
         Ok(true) => Response::text("OK"),
         _ => Response::text("Not ready").with_status_code(500),
     }

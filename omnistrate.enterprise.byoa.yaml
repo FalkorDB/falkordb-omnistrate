@@ -1067,7 +1067,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 15, $sys.deterministicSeedValue)
+      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1251,7 +1251,7 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 15, $sys.deterministicSeedValue)
+      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
@@ -1798,7 +1798,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 15, $sys.deterministicSeedValue)
+      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1981,7 +1981,7 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 15, $sys.deterministicSeedValue)
+      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS

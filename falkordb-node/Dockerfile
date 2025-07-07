@@ -1,4 +1,4 @@
-ARG FALKORDB_VERSION=allow-clients-ping-while-aof-alpine
+ARG FALKORDB_VERSION=v4.8.8
 
 FROM falkordb/redis_exporter:v1.70.2-alpine as redis_exporter
 

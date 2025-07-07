@@ -1096,7 +1096,7 @@ services:
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - MEMORY_LIMIT=$var.maxMemory
       - SKIP_HEALTH_CHECK=false
-      - HEALTH_CHECK_CONFIG_PATH=/run/configs/health_check
+      - HEALTH_CHECK_CONFIG_PATH=/run/configs/healthcheck
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1782,7 +1782,7 @@ services:
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - MEMORY_LIMIT=$var.maxMemory
       - SKIP_HEALTH_CHECK=false
-      - HEALTH_CHECK_CONFIG_PATH=/run/configs/health_check
+      - HEALTH_CHECK_CONFIG_PATH=/run/configs/healthcheck
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -2300,7 +2300,7 @@ services:
       - SKIP_HEALTH_CHECK=false
       - CLUSTER_REPLICAS=1
       - MEMORY_LIMIT=$var.maxMemory
-      - HEALTH_CHECK_CONFIG_PATH=/run/configs/health_check
+      - HEALTH_CHECK_CONFIG_PATH=/run/configs/healthcheck
     ports:
       - "6379"
       - "16379"

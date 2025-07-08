@@ -60,7 +60,7 @@ fn check_handler_liveness(
 ) -> Result<bool, redis::RedisError> {
     if let Ok(mut con) = redis_pool.get() {
         let response: String = redis::cmd("PING").query(&mut con)?;
-        if response.contains("PONG") || response.contains("BUSY") {
+        if response.contains("PONG") || response.contains("BUSY") || response.contains("LOADING") {
             Ok(true)
         } else {
             Err(redis::RedisError::from((

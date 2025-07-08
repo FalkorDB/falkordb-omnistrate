@@ -9,7 +9,7 @@ fn main() {
 }
 
 fn start_health_check_server(is_sentinel: bool) {
-    let redis_pool = get_redis_connection_pool(is_sentinel).unwrap();
+    let redis_pool = get_redis_client(is_sentinel).unwrap();
     let port = env::var(if is_sentinel {
         "HEALTH_CHECK_PORT_SENTINEL"
     } else {
@@ -37,51 +37,72 @@ fn start_health_check_server(is_sentinel: bool) {
     server.run();
 }
 
-fn handle_health_check<F>(
-    is_sentinel: bool,
-    check_fn: F,
-    redis_pool: &r2d2::Pool<redis::Client>,
-) -> Response
+fn handle_health_check<F>(is_sentinel: bool, check_fn: F, redis_pool: &redis::Client) -> Response
 where
-    F: Fn(bool, &r2d2::Pool<redis::Client>) -> Result<bool, redis::RedisError>,
+    F: Fn(bool, &redis::Client) -> Result<bool, redis::RedisError>,
 {
     if env::var("SKIP_HEALTH_CHECK").as_deref() == Ok("true") {
         return Response::text("OK");
     }
-    match check_fn(is_sentinel, redis_pool) {
-        Ok(true) => Response::text("OK"),
-        _ => Response::text("Not ready").with_status_code(500),
+    let res = check_fn(is_sentinel, redis_pool);
+
+    if res.is_ok() {
+        Response::text("OK")
+    } else {
+        eprintln!("Health check failed: {}", res.err().unwrap());
+        Response::text("Not ready").with_status_code(500)
     }
 }
 
-fn check_handler_liveness(
-    _: bool,
-    redis_pool: &r2d2::Pool<redis::Client>,
-) -> Result<bool, redis::RedisError> {
-    if let Ok(mut con) = redis_pool.get() {
-        let response: String = redis::cmd("PING").query(&mut con)?;
-        if response.contains("PONG") || response.contains("BUSY") || response.contains("LOADING") {
-            Ok(true)
-        } else {
+fn check_handler_liveness(_: bool, redis_pool: &redis::Client) -> Result<bool, redis::RedisError> {
+    let connection = redis_pool.get_connection();
+
+    match connection {
+        Ok(mut conn) => {
+            let response: redis::RedisResult<String> = redis::cmd("PING").query(&mut conn);
+
+            if response.is_err() {
+                let error = response.err().unwrap();
+
+                if error.kind() == redis::ErrorKind::BusyLoadingError {
+                    eprintln!("Redis is busy loading data, returning true for liveness check.");
+                    return Ok(true);
+                }
+
+                eprintln!("Failed to send PING command: {:?}", error);
+                return Err(redis::RedisError::from((
+                    redis::ErrorKind::IoError,
+                    "Failed to send PING command",
+                )));
+            }
+
+            let value = response.as_ref().unwrap();
+
+            if value.contains("PONG") || value.contains("BUSY") || value.contains("LOADING") {
+                Ok(true)
+            } else {
+                eprintln!("Unexpected PING response: {}", value);
+                Err(redis::RedisError::from((
+                    redis::ErrorKind::ResponseError,
+                    "Unexpected PING response",
+                )))
+            }
+        }
+        Err(err) => {
+            eprintln!("Failed to get connection: {:?}", err);
             Err(redis::RedisError::from((
-                redis::ErrorKind::ResponseError,
-                "Unexpected PING response: {}",
-                response,
+                redis::ErrorKind::IoError,
+                "Failed to get connection",
             )))
         }
-    } else {
-        Err(redis::RedisError::from((
-            redis::ErrorKind::IoError,
-            "Failed to get connection from pool",
-        )))
     }
 }
 
 fn check_handler_readiness(
     is_sentinel: bool,
-    redis_pool: &r2d2::Pool<redis::Client>,
+    redis_pool: &redis::Client,
 ) -> Result<bool, redis::RedisError> {
-    if let Ok(mut con) = redis_pool.get() {
+    if let Ok(mut con) = redis_pool.get_connection() {
         if is_sentinel {
             return check_sentinel(&mut con);
         }
@@ -94,14 +115,12 @@ fn check_handler_readiness(
     } else {
         Err(redis::RedisError::from((
             redis::ErrorKind::IoError,
-            "Failed to get connection from pool",
+            "Failed to get connection",
         )))
     }
 }
 
-fn get_redis_connection_pool(
-    is_sentinel: bool,
-) -> Result<r2d2::Pool<redis::Client>, redis::RedisError> {
+fn get_redis_client(is_sentinel: bool) -> Result<redis::Client, redis::RedisError> {
     let password = get_redis_password();
     let node_port = get_node_port(is_sentinel);
     let redis_url = get_redis_url(&password, &node_port);
@@ -111,38 +130,7 @@ fn get_redis_connection_pool(
         err
     })?;
 
-    let mut retries = 5;
-    let retry_delay = Duration::from_secs(2);
-
-    while retries > 0 {
-        match r2d2::Pool::builder().max_size(1).build(client.clone()) {
-            Ok(pool) => return Ok(pool),
-            Err(err) => {
-                eprintln!(
-                    "Failed to create Redis connection pool: {}. Retries left: {}",
-                    err,
-                    retries - 1
-                );
-                retries -= 1;
-                std::thread::sleep(retry_delay);
-            }
-        }
-    }
-
-    Err(redis::RedisError::from((
-        redis::ErrorKind::IoError,
-        "Failed to create connection pool after retries",
-    )))
-}
-
-fn check_node_liveness(
-    db_info: &str,
-    con: &mut redis::Connection,
-) -> Result<bool, redis::RedisError> {
-    match get_redis_role(db_info)? {
-        "master" => get_status_from_master_liveness(con),
-        _ => get_status_from_slave_liveness(con),
-    }
+    return Ok(client);
 }
 
 fn check_node_readiness(
@@ -203,16 +191,6 @@ fn get_redis_role(db_info: &str) -> Result<&str, redis::RedisError> {
         .ok_or_else(|| redis::RedisError::from((redis::ErrorKind::ResponseError, "Role not found")))
 }
 
-fn get_status_from_cluster_node_liveness(
-    con: &mut redis::Connection,
-) -> Result<bool, redis::RedisError> {
-    match redis::cmd("CLUSTER").arg("INFO").query::<String>(con) {
-        Ok(result) if result.contains("cluster_state:ok") => Ok(true),
-        Err(err) if err.kind() == redis::ErrorKind::BusyLoadingError => Ok(true),
-        _ => Ok(false),
-    }
-}
-
 fn get_status_from_cluster_node_readiness(
     con: &mut redis::Connection,
 ) -> Result<bool, redis::RedisError> {
@@ -222,32 +200,11 @@ fn get_status_from_cluster_node_readiness(
         .contains("cluster_state:ok"))
 }
 
-fn get_status_from_master_liveness(con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
-    match redis::cmd("PING").query::<String>(con) {
-        Ok(result) if result.contains("PONG") => Ok(true),
-        Err(err) if err.kind() == redis::ErrorKind::BusyLoadingError => Ok(true),
-        _ => Ok(false),
-    }
-}
-
 fn get_status_from_master_readiness(
     db_info: &str,
     con: &mut redis::Connection,
 ) -> Result<bool, redis::RedisError> {
     Ok(redis::cmd("PING").query::<String>(con)?.contains("PONG") && db_info.contains("loading:0"))
-}
-
-fn get_status_from_slave_liveness(con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
-    match redis::cmd("PING").query::<String>(con) {
-        Ok(result) if result.contains("PONG") => Ok(true),
-        Err(err)
-            if err.kind() == redis::ErrorKind::BusyLoadingError
-                || err.kind() == redis::ErrorKind::MasterDown =>
-        {
-            Ok(true)
-        }
-        _ => Ok(false),
-    }
 }
 
 fn get_status_from_slave_readiness(

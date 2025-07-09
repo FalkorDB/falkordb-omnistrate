@@ -9,7 +9,7 @@ fn main() {
 }
 
 fn start_health_check_server(is_sentinel: bool) {
-    let redis_pool = get_redis_client(is_sentinel).unwrap();
+    let redis_client = get_redis_client(is_sentinel).unwrap();
     let port = env::var(if is_sentinel {
         "HEALTH_CHECK_PORT_SENTINEL"
     } else {
@@ -26,8 +26,8 @@ fn start_health_check_server(is_sentinel: bool) {
     let addr = format!("localhost:{}", port);
     let server = Server::new(addr, move |request| {
         router!(request,
-            (GET) (/liveness) => { handle_health_check(is_sentinel, check_handler_liveness, &redis_pool) },
-            (GET) (/readiness) => { handle_health_check(is_sentinel, check_handler_readiness, &redis_pool) },
+            (GET) (/liveness) => { handle_health_check(is_sentinel, check_handler_liveness, &redis_client) },
+            (GET) (/readiness) => { handle_health_check(is_sentinel, check_handler_readiness, &redis_client) },
             (GET) (/startup) => { Response::text("OK") },
             _ => Response::empty_404()
         )

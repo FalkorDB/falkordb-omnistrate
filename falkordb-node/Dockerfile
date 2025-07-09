@@ -1,9 +1,9 @@
 ARG FALKORDB_VERSION=v4.8.8
 
-FROM falkordb/redis_exporter:v1.70.2-alpine as redis_exporter
+FROM falkordb/redis_exporter:v1.70.2-alpine AS redis_exporter
 
 
-FROM rust:1.82-slim as healthcheck_builder
+FROM rust:1.82-slim AS healthcheck_builder
 
 RUN apt-get update -y && apt-get install -y pkg-config build-essential cmake libtool openssl libssl-dev
 
@@ -47,5 +47,3 @@ RUN chown falkordb:falkordb /falkordb/* && \
 ENV FALKORDB_HOME=/var/lib/falkordb
 
 ENTRYPOINT [ "node-entrypoint.sh" ]
-
-CMD [ "node-entrypoint.sh" ]

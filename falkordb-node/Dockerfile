@@ -1,4 +1,4 @@
-ARG FALKORDB_VERSION=v4.8.8
+ARG FALKORDB_VERSION=v4.10.1
 
 FROM falkordb/redis_exporter:v1.70.2-alpine AS redis_exporter
 

@@ -23,8 +23,7 @@ RUN chown falkordb:falkordb /falkordb/* && \
   chmod +x /usr/local/bin/sentinel-entrypoint.sh && \
   mkdir -p /var/lib/falkordb && \
   chown falkordb:falkordb /var/lib/falkordb && \
-  chmod 700 /var/lib/falkordb && \
-  chmod +x ./download-debug-so.sh
+  chmod 700 /var/lib/falkordb
 
 ENV FALKORDB_HOME=/var/lib/falkordb
 

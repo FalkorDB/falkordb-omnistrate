@@ -48,7 +48,7 @@ x-omnistrate-load-balancer:
 x-internal-integrations:
   logs:
     provider: native
-    
+
 x-omnistrate-integrations:
   - omnistrateLogging
 
@@ -619,6 +619,17 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 30Mi
+        exporter:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 50Mi
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK
@@ -681,7 +692,6 @@ services:
           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
           call_liveness_check
           fi
-
 
   # Single Zone
 
@@ -1117,6 +1127,31 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 30Mi
+        exporter:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 50Mi
+        healthcheck-sentinel:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 30Mi
+          args:
+            - sentinel
+        exporter-sentinel:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 50Mi
+          args:
+            - -is-sentinel
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK
@@ -1176,7 +1211,7 @@ services:
           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
             call_readiness_check
           fi
-          
+
           sentinel_call_readiness_check() {
 
             echo "Health check URL: $SENTINEL_READINESS_CHECK_URL"
@@ -1194,40 +1229,40 @@ services:
       - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: |
-           #!/bin/bash
+          #!/bin/bash
 
-            LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
-            SENTINEL_LIVENESS_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/liveness"
-            call_liveness_check() {
+           LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+           SENTINEL_LIVENESS_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/liveness"
+           call_liveness_check() {
 
-              echo "Health check URL: $LIVENESS_CHECK_URL"
-              curl -sf $LIVENESS_CHECK_URL
-              
-              if [ $? -ne 0 ]; then
-                echo "Health check failed"
-                exit 1
-              fi
-            }
+             echo "Health check URL: $LIVENESS_CHECK_URL"
+             curl -sf $LIVENESS_CHECK_URL
+             
+             if [ $? -ne 0 ]; then
+               echo "Health check failed"
+               exit 1
+             fi
+           }
 
-            sentinel_call_liveness_check() {
+           sentinel_call_liveness_check() {
 
-              echo "Health check URL: $SENTINEL_LIVENESS_CHECK_URL"
-              curl -sf $SENTINEL_LIVENESS_CHECK_URL
-              
-              if [ $? -ne 0 ]; then
-                echo "Health check failed"
-                exit 1
-              fi
-            }
+             echo "Health check URL: $SENTINEL_LIVENESS_CHECK_URL"
+             curl -sf $SENTINEL_LIVENESS_CHECK_URL
+             
+             if [ $? -ne 0 ]; then
+               echo "Health check failed"
+               exit 1
+             fi
+           }
 
-            if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-            call_liveness_check
-            fi
+           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+           call_liveness_check
+           fi
 
-            if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
-              sentinel_call_liveness_check
-            fi
-          
+           if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
+             sentinel_call_liveness_check
+           fi
+
       - scope: NODE
         type: REMOVE
         commandTemplate: |
@@ -1287,6 +1322,21 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck-sentinel:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 30Mi
+          args:
+            - sentinel
+        exporter-sentinel:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 50Mi
+          args:
+            - -is-sentinel
     x-omnistrate-api-params:
       - key: enableTLS
         description: Whether to enable TLS for the database
@@ -1801,6 +1851,31 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: true
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 30Mi
+        exporter:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 50Mi
+        healthcheck-sentinel:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 30Mi
+          args:
+            - sentinel
+        exporter-sentinel:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 50Mi
+          args: 
+            - -is-sentinel
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK
@@ -1860,7 +1935,7 @@ services:
           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
             call_readiness_check
           fi
-          
+
           sentinel_call_readiness_check() {
 
             echo "Health check URL: $SENTINEL_READINESS_CHECK_URL"
@@ -1878,40 +1953,40 @@ services:
       - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: |
-           #!/bin/bash
+          #!/bin/bash
 
-            LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
-            SENTINEL_LIVENESS_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/liveness"
-            call_liveness_check() {
+           LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+           SENTINEL_LIVENESS_CHECK_URL="${SENTINEL_HEALTH_CHECK_HOST:-localhost}:${SENTINEL_HEALTH_CHECK_PORT:-8082}/liveness"
+           call_liveness_check() {
 
-              echo "Health check URL: $LIVENESS_CHECK_URL"
-              curl -sf $LIVENESS_CHECK_URL
-              
-              if [ $? -ne 0 ]; then
-                echo "Health check failed"
-                exit 1
-              fi
-            }
+             echo "Health check URL: $LIVENESS_CHECK_URL"
+             curl -sf $LIVENESS_CHECK_URL
+             
+             if [ $? -ne 0 ]; then
+               echo "Health check failed"
+               exit 1
+             fi
+           }
 
-            sentinel_call_liveness_check() {
+           sentinel_call_liveness_check() {
 
-              echo "Health check URL: $SENTINEL_LIVENESS_CHECK_URL"
-              curl -sf $SENTINEL_LIVENESS_CHECK_URL
-              
-              if [ $? -ne 0 ]; then
-                echo "Health check failed"
-                exit 1
-              fi
-            }
+             echo "Health check URL: $SENTINEL_LIVENESS_CHECK_URL"
+             curl -sf $SENTINEL_LIVENESS_CHECK_URL
+             
+             if [ $? -ne 0 ]; then
+               echo "Health check failed"
+               exit 1
+             fi
+           }
 
-            if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
-            call_liveness_check
-            fi
+           if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+           call_liveness_check
+           fi
 
-            if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
-              sentinel_call_liveness_check
-            fi
-          
+           if [[ ! -z $RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]] && [[ $NODE_INDEX -le 1 ]];then
+             sentinel_call_liveness_check
+           fi
+
       - scope: NODE
         type: REMOVE
         commandTemplate: |
@@ -1970,6 +2045,21 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck-sentinel:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 30Mi
+          args:
+            - sentinel
+        exporter-sentinel:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 50Mi
+          args:
+           - -is-sentinel
     x-omnistrate-api-params:
       - key: enableTLS
         description: Whether to enable TLS for the database
@@ -2027,7 +2117,7 @@ services:
           if [[ ! -z RUN_HEALTH_CHECK_SENTINEL ]] && [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 ]];then
             sentinel_call_readiness_check
           fi
-          
+
       - scope: NODE
         type: HEALTH_CHECK
         commandTemplate: |
@@ -2252,7 +2342,6 @@ services:
     depends_on:
       - cluster-sz
       - cluster-sz-rebalance
-    
 
   cluster-sz:
     x-omnistrate-mode-internal: true
@@ -2311,6 +2400,19 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 30Mi
+        exporter:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 50Mi
+          args:
+            - -is-cluster
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK
@@ -2659,6 +2761,19 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: true
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 30Mi
+        exporter:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 50Mi
+          args:
+            - -is-cluster
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK

@@ -440,7 +440,7 @@ services:
             cpu: "200m"
             memory: 50Mi
           command:
-            - "redis_exporter"
+            - "/redis_exporter"
           args:
             - "-skip-tls-verification"
             - "-redis.password"

@@ -438,7 +438,7 @@ services:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
             cpu: "200m"
-            memory:
+            memory: 50Mi
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK

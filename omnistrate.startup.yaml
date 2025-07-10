@@ -428,6 +428,31 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpus: "0.2"
+            memory: 30M
+        exporter:
+          imageNameWithTag: falkordb/redis_exporter:v1.70.2-alpine
+          resourceLimits:
+            cpus: "0.2"
+            memory: 50M
+          command:
+            - "redis_exporter"
+          args:
+            - "-skip-tls-verification"
+            - "-redis.password"
+            - "$(cat /run/secrets/adminpassword)"
+            - "-redis.addr"
+            - '$(if [[ $TLS == "true" ]]; then echo "rediss://$NODE_HOST:$NODE_PORT"; else echo "redis://$NODE_HOST:$NODE_PORT"; fi)'
+            - "-web.listen-address"
+            - "0.0.0.0:9122"
+            - "-log-format"
+            - "json"
+            - "-tls-server-min-version"
+            - "TLS1.3"
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK

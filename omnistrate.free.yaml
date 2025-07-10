@@ -165,6 +165,12 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpus: "0.2"
+            memory: 30M
     deploy:
       resources:
         limits:

@@ -439,8 +439,6 @@ services:
           resourceLimits:
             cpu: "200m"
             memory: 50Mi
-          command:
-            - "/redis_exporter"
           args:
             - "-skip-tls-verification"
             - "-redis.password"

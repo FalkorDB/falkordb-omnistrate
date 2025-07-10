@@ -432,12 +432,12 @@ services:
         healthcheck:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
-            cpus: "0.2"
+            cpu: "200m"
             memory: 30M
         exporter:
           imageNameWithTag: falkordb/redis_exporter:v1.70.2-alpine
           resourceLimits:
-            cpu: "0.2"
+            cpu: "200m"
             memory: 50M
           command:
             - "redis_exporter"

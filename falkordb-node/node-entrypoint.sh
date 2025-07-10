@@ -84,7 +84,6 @@ if [[ $(basename "$DATA_DIR") != 'data' ]];then DATA_DIR=$DATA_DIR/data;fi
 
 DEBUG=${DEBUG:-0}
 REPLACE_NODE_CONF=${REPLACE_NODE_CONF:-0}
-REPLACE_SENTINEL_CONF=${REPLACE_SENTINEL_CONF:-0}
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
 AUTH_CONNECTION_STRING="-a $ADMIN_PASSWORD --no-auth-warning"
 SAVE_LOGS_TO_FILE=${SAVE_LOGS_TO_FILE:-1}
@@ -93,9 +92,7 @@ LOG_LEVEL=${LOG_LEVEL:-notice}
 DATE_NOW=$(date +"%Y%m%d%H%M%S")
 
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo ""; fi)
-SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
-SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'*/30 * * * *'}
 AOF_FILE_SIZE_TO_MONITOR=${AOF_FILE_SIZE_TO_MONITOR:-5} # 5MB
 
@@ -419,19 +416,10 @@ if [ ! -f $NODE_CONF_FILE ] || [ "$REPLACE_NODE_CONF" -eq "1" ]; then
   cp /falkordb/node.conf $NODE_CONF_FILE
 fi
 
-# If sentinel.conf doesn't exist or $REPLACE_SENTINEL_CONF=1, copy it from /falkordb
-if [ ! -f $SENTINEL_CONF_FILE ] || [ "$REPLACE_SENTINEL_CONF" -eq "1" ]; then
-  echo "Copying sentinel.conf from /falkordb"
-  cp /falkordb/sentinel.conf $SENTINEL_CONF_FILE
-fi
-
 # Create log files if they don't exist
 if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
   if [ "$RUN_NODE" -eq "1" ]; then
     touch $FALKORDB_LOG_FILE_PATH
-  fi
-  if [ "$RUN_SENTINEL" -eq "1" ]; then
-    touch $SENTINEL_LOG_FILE_PATH
   fi
 fi
 
@@ -522,82 +510,6 @@ if [ "$RUN_NODE" -eq "1" ]; then
   config_rewrite
 fi
 
-if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" == "1" ]]); then
-  sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
-  sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
-  sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
-  sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $SENTINEL_CONF_FILE
-
-  sed -i "s/\$SENTINEL_HOST/$NODE_HOST/g" $SENTINEL_CONF_FILE
-
-  echo "Starting Sentinel"
-
-  if [[ $TLS == "true" ]]; then
-    echo "port 0" >>$SENTINEL_CONF_FILE
-    echo "tls-port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
-    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$SENTINEL_CONF_FILE
-    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$SENTINEL_CONF_FILE
-    echo "tls-ca-cert-file $ROOT_CA_PATH" >>$SENTINEL_CONF_FILE
-    echo "tls-replication yes" >>$SENTINEL_CONF_FILE
-    echo "tls-auth-clients no" >>$SENTINEL_CONF_FILE
-  else
-    echo "port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
-  fi
-
-  # Start Sentinel supervisord service
-  echo "
-  [inet_http_server]
-  port = 127.0.0.1:9001
-
-  [supervisord]
-  nodaemon=true
-  logfile=/dev/null
-  stdout_logfile=/dev/stdout
-  stdout_logfile_maxbytes=0
-  stderr_logfile=/dev/stderr
-  stderr_logfile_maxbytes=0
-  pidfile=/var/run/supervisord.pid
-
-  [supervisorctl]
-  serverurl=http://127.0.0.1:9001
-
-  [rpcinterface:supervisor]
-  supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
-
-  [program:redis-sentinel]
-  command=redis-server $SENTINEL_CONF_FILE --sentinel
-  autorestart=true
-  stdout_logfile=$SENTINEL_LOG_FILE_PATH
-  stderr_logfile=$SENTINEL_LOG_FILE_PATH
-  " > $DATA_DIR/supervisord.conf
-
-  tail -F $SENTINEL_LOG_FILE_PATH &
-  
-  supervisord -c $DATA_DIR/supervisord.conf &
-
-  sleep 10
-
-  # If FALKORDB_MASTER_HOST is not empty, add monitor to sentinel
-  if [[ ! -z $FALKORDB_MASTER_HOST ]]; then
-    log "Master Name: $MASTER_NAME\Master Host: $FALKORDB_MASTER_HOST\Master Port: $FALKORDB_MASTER_PORT_NUMBER\nSentinel Quorum: $SENTINEL_QUORUM"
-    wait_until_node_host_resolves $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER
-    response=$(redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER $SENTINEL_QUORUM)
-
-    if [[ "$response" == "ERR Invalid IP address or hostname specified" ]]; then
-      echo """
-        The hostname $NODE_HOST for the node $HOSTNAME was resolved successfully the first time but failed to do so a second time,
-        this  caused the SENTINEL MONITOR command failed.
-      """
-      exit 1
-    fi
-
-    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
-    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
-    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
-    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
-  fi
-fi
-
 #Start cron
 cron
 
@@ -607,20 +519,6 @@ fi
 
 # If TLS=true, create a job to rotate the certificate
 if [[ "$TLS" == "true" ]]; then
-  if [[ $RUN_SENTINEL -eq 1 ]]; then
-    backoff=$(shuf -i 1-59 -n 1)
-    cron="$backoff 0 * * *"
-    echo "Creating sentinel certificate rotation job. Cron: $cron"
-    echo "
-    #!/bin/bash
-    set -e
-    echo 'Restarting sentinel'
-    supervisorctl -c $DATA_DIR/supervisord.conf restart redis-sentinel
-    " >$DATA_DIR/cert_rotate_sentinel.sh
-    chmod +x $DATA_DIR/cert_rotate_sentinel.sh
-    (crontab -l 2>/dev/null; echo "$cron $DATA_DIR/cert_rotate_sentinel.sh") | crontab -
-  fi
-
   if [[ $RUN_NODE -eq 1 ]]; then
     echo "Creating node certificate rotation job"
     echo "

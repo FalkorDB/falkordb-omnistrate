@@ -1152,6 +1152,11 @@ services:
             memory: 50Mi
           args:
             - -is-sentinel
+        sentinel:
+          imageNameWithTag: $FalkorDBSentinelImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 50Mi
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK
@@ -1281,7 +1286,7 @@ services:
 
   sentinel-sz:
     x-omnistrate-mode-internal: true
-    image: $FalkorDBNodeImage
+    image: $FalkorDBSentinelImage
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:
@@ -1876,6 +1881,11 @@ services:
             memory: 50Mi
           args: 
             - -is-sentinel
+        sentinel:
+          imageNameWithTag: $FalkorDBSentinelImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 50Mi
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK
@@ -2004,7 +2014,7 @@ services:
 
   sentinel-mz:
     x-omnistrate-mode-internal: true
-    image: $FalkorDBNodeImage
+    image: $FalkorDBSentinelImage
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:

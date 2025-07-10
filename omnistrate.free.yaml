@@ -169,7 +169,7 @@ services:
         healthcheck:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
-            cpus: "0.2"
+            cpu: "0.2"
             memory: 30M
     deploy:
       resources:

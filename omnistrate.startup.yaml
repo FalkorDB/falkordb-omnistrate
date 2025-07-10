@@ -437,7 +437,7 @@ services:
         exporter:
           imageNameWithTag: falkordb/redis_exporter:v1.70.2-alpine
           resourceLimits:
-            cpus: "0.2"
+            cpu: "0.2"
             memory: 50M
           command:
             - "redis_exporter"

@@ -218,6 +218,8 @@ x-post-upgrade-hook: &postupgradehook
   commandTemplate: |
     #!/bin/bash
     set -euo pipefail
+    #!/bin/bash
+    set -euo pipefail
     link="Please refer to the documentation for instructions on how to resolve this issue: https://github.com/FalkorDB/runbooks/blob/main/alerts/SentinelSplitBrainAlertsRunbook.md"
     ssl=$(if [[ "$TLS" == "true" ]]; then echo "--tls"; else echo ""; fi)
     resource_key=$(if [[ $RESOURCE_ALIAS =~ .*mz.* ]];then echo mz ;else echo sz;fi)
@@ -226,9 +228,9 @@ x-post-upgrade-hook: &postupgradehook
     hosts=($sentinel_0)
     for i in $(seq 0 $((NUM_REPLICAS-1)));do
       hosts[$i+1]=$(echo $(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name $MASTER_NAME) | awk '{print $1}')
-      master=$(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p NODE_PORT info | grep "role:master")
+      master=$(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p $NODE_PORT info | grep "role:master")
       if [[ -n $master ]]; then
-        true_master=$(node-${resource_key}-$i${internal}.${EXTERNAL_DNS_SUFFIX})
+        true_master=$(echo node-${resource_key}-$i${internal}.${EXTERNAL_DNS_SUFFIX})
       fi
     done
     unique_list=($(printf "%s\n" "${hosts[@]}" | sort | uniq))

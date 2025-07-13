@@ -11,7 +11,31 @@ SAVE_LOGS_TO_FILE=${SAVE_LOGS_TO_FILE:-1}
 SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 REPLACE_SENTINEL_CONF=${REPLACE_SENTINEL_CONF:-0}
+
+FALKORDB_USER=${FALKORDB_USER:-falkordb}
+#FALKORDB_PASSWORD=${FALKORDB_PASSWORD:-''}
+if [[ -f "/run/secrets/falkordbpassword" ]] && [[ -s "/run/secrets/falkordbpassword" ]]; then
+  FALKORDB_PASSWORD=$(cat "/run/secrets/falkordbpassword")
+elif [[ -n "$FALKORDB_PASSWORD" ]]; then
+  FALKORDB_PASSWORD=$FALKORDB_PASSWORD
+else
+  FALKORDB_PASSWORD=''
+fi
+#ADMIN_PASSWORD=${ADMIN_PASSWORD:-''}
+if [[ -f "/run/secrets/adminpassword" ]] && [[ -s "/run/secrets/adminpassword" ]]; then
+  ADMIN_PASSWORD=$(cat "/run/secrets/adminpassword")
+  export ADMIN_PASSWORD
+elif [[ -n "$ADMIN_PASSWORD" ]]; then
+  export ADMIN_PASSWORD=$ADMIN_PASSWORD
+else
+  export ADMIN_PASSWORD=''
+fi
 LOG_LEVEL=${LOG_LEVEL:-notice}
+
+NODE_HOST=${NODE_HOST:-localhost}
+SENTINEL_PORT=${SENTINEL_PORT:-26379}
+ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
+TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
 
 # Add backward compatibility for /data folder
 if [[ "$DATA_DIR" != '/data' ]]; then
@@ -22,7 +46,7 @@ if [[ "$DATA_DIR" != '/data' ]]; then
   fi
 fi
 
-if [[ $(basename "$DATA_DIR") != 'data' ]];then DATA_DIR=$DATA_DIR/data;fi
+if [[ $(basename "$DATA_DIR") != 'data' ]]; then DATA_DIR=$DATA_DIR/data; fi
 
 # If sentinel.conf doesn't exist or $REPLACE_SENTINEL_CONF=1, copy it from /falkordb
 if [ ! -f $SENTINEL_CONF_FILE ] || [ "$REPLACE_SENTINEL_CONF" -eq "1" ]; then
@@ -84,10 +108,10 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   autorestart=true
   stdout_logfile=$SENTINEL_LOG_FILE_PATH
   stderr_logfile=$SENTINEL_LOG_FILE_PATH
-  " > $DATA_DIR/supervisord.conf
+  " >$DATA_DIR/supervisord.conf
 
   tail -F $SENTINEL_LOG_FILE_PATH &
-  
+
   supervisord -c $DATA_DIR/supervisord.conf &
 
   sleep 10
@@ -129,7 +153,10 @@ if [[ "$TLS" == "true" ]]; then
     supervisorctl -c $DATA_DIR/supervisord.conf restart redis-sentinel
     " >$DATA_DIR/cert_rotate_sentinel.sh
     chmod +x $DATA_DIR/cert_rotate_sentinel.sh
-    (crontab -l 2>/dev/null; echo "$cron $DATA_DIR/cert_rotate_sentinel.sh") | crontab -
+    (
+      crontab -l 2>/dev/null
+      echo "$cron $DATA_DIR/cert_rotate_sentinel.sh"
+    ) | crontab -
   fi
 fi
 

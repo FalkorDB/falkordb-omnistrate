@@ -203,7 +203,7 @@ x-clusterparam: &clusterparam
 x-post-upgrade-hook: &postupgradehook
   commandTemplate: |
     #!/bin/bash
-    set -euo pipefail
+    set -eo pipefail
     link="Please refer to the documentation for instructions on how to resolve this issue: https://github.com/FalkorDB/runbooks/blob/main/alerts/SentinelSplitBrainAlertsRunbook.md"
     ssl=$(if [[ "$TLS" == "true" ]]; then echo "--tls"; else echo ""; fi)
     resource_key=$(if [[ $RESOURCE_ALIAS =~ .*mz.* ]];then echo mz ;else echo sz;fi)

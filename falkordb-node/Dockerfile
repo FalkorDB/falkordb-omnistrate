@@ -18,6 +18,7 @@ WORKDIR /falkordb
 
 COPY falkordb-node/node.conf .
 COPY falkordb-node/node-entrypoint.sh /usr/local/bin/
+COPY scripts/download-debug-so.sh .
 
 RUN chown falkordb:falkordb /falkordb/* && \
   chmod +x /usr/local/bin/node-entrypoint.sh && \

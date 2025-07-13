@@ -232,7 +232,7 @@ x-post-upgrade-hook: &postupgradehook
       fi
     done
     unique_list=($(printf "%s\n" "${hosts[@]}" | sort | uniq))
-    func resolve_split_brain(){
+    resolve_split_brain(){
       local host=$1
       echo "host: $host"
       redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL remove $MASTER_NAME || echo $link;exit 1

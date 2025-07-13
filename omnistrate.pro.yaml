@@ -1150,8 +1150,6 @@ services:
           resourceLimits:
             cpu: "200m"
             memory: 50Mi
-          args:
-            - -is-sentinel
         sentinel:
           imageNameWithTag: $FalkorDBSentinelImage
           resourceLimits:
@@ -1340,8 +1338,6 @@ services:
           resourceLimits:
             cpu: "200m"
             memory: 50Mi
-          args:
-            - -is-sentinel
     x-omnistrate-api-params:
       - key: enableTLS
         description: Whether to enable TLS for the database

@@ -212,20 +212,24 @@ x-post-upgrade-hook: &postupgradehook
     hosts=($sentinel_0)
     for i in $(seq 0 $((NUM_REPLICAS-1)));do
       hosts[$i+1]=$(echo $(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name $MASTER_NAME) | awk '{print $1}')
-      master=$(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p $NODE_PORT info | grep "role:master")
+      master=$(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p 6379 info | grep "role:master")
       if [[ -n $master ]]; then
         true_master=$(echo node-${resource_key}-$i${internal}.${EXTERNAL_DNS_SUFFIX})
       fi
     done
     unique_list=($(printf "%s\n" "${hosts[@]}" | sort | uniq))
+    func resolve_split_brain(){
+      local host=$1
+      echo "host: $host"
+      redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL remove $MASTER_NAME || echo $link;exit 1
+      redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL MONITOR $MASTER_NAME $true_master 6379 2 || echo $link;exit 1
+      redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL FLUSHCONFIG || echo $link;exit 1
+    }
     if [[ ${#unique_list[@]} -ne 1 ]]; then
       echo "Split brain detected"
-      for host in sentinel-${resource_key}-0 $(seq 0 $((NUM_REPLICAS-1))); do
-        echo "Host: $host"
-        redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL remove $MASTER_NAME || echo $link;exit 1
-        redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL FLUSHCONFIG || echo $link;exit 1
-        redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL MONITOR $MASTER_NAME $true_master 6379 2 || echo $link;exit 1
-        redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL FLUSHCONFIG || echo $link;exit 1
+      resolve_split_brain "sentinel-${resource_key}-0"
+      for i in $(seq 0 $((NUM_REPLICAS-1))); do
+        resolve_split_brain "node-${resource_key}-$i"
       done
     fi
     exit 0

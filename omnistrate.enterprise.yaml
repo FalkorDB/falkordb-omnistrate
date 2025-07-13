@@ -220,9 +220,9 @@ x-post-upgrade-hook: &postupgradehook
     resolve_split_brain(){
       local host=$1
       echo "host: $host"
-      redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL remove $MASTER_NAME || echo $link;exit 1
-      redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL MONITOR $MASTER_NAME $true_master 6379 2 || echo $link;exit 1
-      redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL FLUSHCONFIG || echo $link;exit 1
+      redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL remove $MASTER_NAME || { echo "$link"; exit 1; }
+      redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL MONITOR $MASTER_NAME $true_master 6379 2 || { echo "$link"; exit 1; }
+      redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL FLUSHCONFIG || { echo "$link"; exit 1; }
       }
     if [[ ${#unique_list[@]} -ne 1 ]]; then
       echo "Split brain detected"

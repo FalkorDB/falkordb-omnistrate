@@ -1,5 +1,7 @@
 #!/bin/bash
 
+DATE_NOW=$(date +"%Y%m%d%H%M%S")
+
 RUN_SENTINEL=${RUN_SENTINEL:-0}
 TLS=${TLS:-false}
 NODE_INDEX=${NODE_INDEX:-0}
@@ -9,6 +11,7 @@ SAVE_LOGS_TO_FILE=${SAVE_LOGS_TO_FILE:-1}
 SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 REPLACE_SENTINEL_CONF=${REPLACE_SENTINEL_CONF:-0}
+LOG_LEVEL=${LOG_LEVEL:-notice}
 
 # Add backward compatibility for /data folder
 if [[ "$DATA_DIR" != '/data' ]]; then

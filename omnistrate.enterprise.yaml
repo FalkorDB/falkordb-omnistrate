@@ -212,9 +212,9 @@ x-post-upgrade-hook: &postupgradehook
     hosts=($sentinel_0)
     for i in $(seq 0 $((NUM_REPLICAS-1)));do
       hosts[$i+1]=$(echo $(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name $MASTER_NAME) | awk '{print $1}')
-      master=$(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p NODE_PORT info | grep "role:master")
+      master=$(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p $NODE_PORT info | grep "role:master")
       if [[ -n $master ]]; then
-        true_master=$(node-${resource_key}-$i${internal}.${EXTERNAL_DNS_SUFFIX})
+        true_master=$(echo node-${resource_key}-$i${internal}.${EXTERNAL_DNS_SUFFIX})
       fi
     done
     unique_list=($(printf "%s\n" "${hosts[@]}" | sort | uniq))

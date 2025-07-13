@@ -1,19 +1,5 @@
 ARG FALKORDB_VERSION=v4.8.8
 
-FROM falkordb/redis_exporter:v1.70.2-alpine as redis_exporter
-
-
-FROM rust:1-slim-buster as healthcheck_builder
-
-RUN apt-get update -y && apt-get install -y pkg-config build-essential cmake libtool openssl libssl-dev
-
-WORKDIR /healthcheck
-
-COPY ../healthcheck_rs/ /healthcheck
-
-RUN cargo build --release
-
-
 FROM falkordb/falkordb:$FALKORDB_VERSION
 
 RUN apt-get update && apt-get install -y curl jq openssl cron gdb

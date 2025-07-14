@@ -225,7 +225,14 @@ x-post-upgrade-hook: &postupgradehook
     # Function to get master address from sentinel
     get_master_addr() {
         local host=$1
-        redis_exec "$host" "$SENTINEL_PORT" SENTINEL get-master-addr-by-name "$MASTER_NAME" | awk '{print $1}'
+        local result
+        # Redis SENTINEL returns hostname and port on separate lines
+        result=$(redis_exec "$host" "$SENTINEL_PORT" SENTINEL get-master-addr-by-name "$MASTER_NAME" 2>/dev/null | {
+            read -r hostname
+            read -r port
+            echo "$hostname"
+        }) || return 1
+        [[ -n "$result" && "$result" != "null" ]] && echo "$result" || return 1
     }
 
     # Function to check if node is master
@@ -265,12 +272,20 @@ x-post-upgrade-hook: &postupgradehook
             fi
         done
         
+        # Filter out empty/invalid responses
+        local -a valid_hosts=()
+        for host in "${hosts[@]}"; do
+            if [[ -n "$host" && "$host" != "null" ]]; then
+                valid_hosts+=("$host")
+            fi
+        done
+        
         # Get unique hosts (split brain detection)
         local -a unique_hosts
-        readarray -t unique_hosts < <(printf "%s\n" "${hosts[@]}" | sort -u)
+        readarray -t unique_hosts < <(printf "%s\n" "${valid_hosts[@]}" | sort -u)
         
         # Check for split brain condition
-        if [[ ${#unique_hosts[@]} -ne 1 ]]; then
+        if [[ ${#unique_hosts[@]} -gt 1 ]]; then
             echo "Split brain detected - ${#unique_hosts[@]} different masters reported"
             echo "True master: $true_master"
             

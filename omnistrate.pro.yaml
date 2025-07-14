@@ -217,41 +217,119 @@ x-clusterparam: &clusterparam
 x-post-upgrade-hook: &postupgradehook
   commandTemplate: |
     #!/bin/bash
-    link="Please refer to the documentation for instructions on how to resolve this issue: https://github.com/FalkorDB/runbooks/blob/main/alerts/SentinelSplitBrainAlertsRunbook.md"
-    ssl=$(if [[ "$TLS" == "true" ]]; then echo "--tls"; else echo ""; fi)
-    resource_key=$(if [[ $RESOURCE_ALIAS =~ .*mz.* ]];then echo mz ;else echo sz;fi)
-    internal=$(if [[ "$NETWORKING_TYPE" == "INTERNAL" ]];then echo '-internal';else echo '';fi)
-    sentinel_0=$(echo $(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h sentinel-${resource_key}-0 $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name $MASTER_NAME) | awk '{print $1}')
-    hosts=($sentinel_0)
-    for i in $(seq 0 $((NUM_REPLICAS-1)));do
-      hosts[$i+1]=$(echo $(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name $MASTER_NAME) | awk '{print $1}')
-      master=$(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p $NODE_PORT info | grep "role:master")
-      if [[ -n $master ]]; then
-        true_master=$(echo node-${resource_key}-$i${internal}.${EXTERNAL_DNS_SUFFIX})
-      fi
-    done
-    unique_list=($(printf "%s\n" "${hosts[@]}" | sort | uniq))
-    resolve_split_brain(){
-      local host=$1
-      echo "host: $host"
-      redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL remove $MASTER_NAME || { echo "$link"; exit 1; }
-      redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL MONITOR $MASTER_NAME $true_master $NODE_PORT $SENTINEL_QUORUM || { echo "$link"; exit 1; }
-      redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL FLUSHCONFIG || { echo "$link"; exit 1; }
-      }
-    if [[ ${#unique_list[@]} -ne 1 ]]; then
-      echo "Split brain detected"
-      # Only fix the wrong sentinels by comparing against the correct master
-      correct_master=$true_master
-      if [[ "$sentinel_0" != "$correct_master" ]]; then
-        resolve_split_brain "sentinel-${resource_key}-0"
-      fi
-      for i in $(seq 0 $((NUM_REPLICAS-1))); do
-        if [[ "${hosts[$i+1]}" != "$correct_master" ]]; then
-          resolve_split_brain "node-${resource_key}-$i"
+
+    # Exit on any error, undefined variables, and pipe failures
+    set -euo pipefail
+
+    # Constants
+    readonly LINK="Please refer to the documentation for instructions on how to resolve this issue: https://github.com/FalkorDB/runbooks/blob/main/alerts/SentinelSplitBrainAlertsRunbook.md"
+    readonly REDIS_USER="falkordbUpgradeUser"
+
+    # Derived configuration
+    readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
+    readonly RESOURCE_KEY=$([[ "$RESOURCE_ALIAS" =~ .*mz.* ]] && echo "mz" || echo "sz")
+    readonly INTERNAL_SUFFIX=$([[ "${NETWORKING_TYPE:-}" == "INTERNAL" ]] && echo "-internal" || echo "")
+
+    # Common Redis CLI options
+    readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+
+    # Function to execute Redis CLI commands with error handling
+    redis_exec() {
+        local host=$1 port=$2
+        shift 2
+        redis-cli $REDIS_OPTS -h "$host" -p "$port" "$@" || {
+            echo "$LINK" >&2
+            exit 1
+        }
+    }
+
+    # Function to get master address from sentinel
+    get_master_addr() {
+        local host=$1
+        local result
+        # Redis SENTINEL returns hostname and port on separate lines
+        result=$(redis_exec "$host" "$SENTINEL_PORT" SENTINEL get-master-addr-by-name "$MASTER_NAME" 2>/dev/null | {
+            read -r hostname
+            read -r port
+            echo "$hostname"
+        }) || return 1
+        [[ -n "$result" && "$result" != "null" ]] && echo "$result" || return 1
+    }
+
+    # Function to check if node is master
+    is_master() {
+        local host=$1
+        redis_exec "$host" "$NODE_PORT" info | grep -q "role:master"
+    }
+
+    # Function to resolve split brain for a specific sentinel
+    resolve_split_brain() {
+        local host=$1
+        echo "Resolving split brain for host: $host"
+        
+        redis_exec "$host" "$SENTINEL_PORT" SENTINEL remove "$MASTER_NAME"
+        redis_exec "$host" "$SENTINEL_PORT" SENTINEL MONITOR "$MASTER_NAME" "$true_master" "$NODE_PORT" "$SENTINEL_QUORUM"
+        redis_exec "$host" "$SENTINEL_PORT" SENTINEL FLUSHCONFIG
+    }
+
+    # Main execution
+    main() {
+        local -a hosts=()
+        local true_master=""
+        
+        # Get sentinel-0 master address
+        hosts[0]=$(get_master_addr "sentinel-${RESOURCE_KEY}-0")
+        
+        # Process replicas
+        for ((i = 0; i < NUM_REPLICAS; i++)); do
+            local node_host="node-${RESOURCE_KEY}-$i"
+            
+            # Get master address from this sentinel
+            hosts[$((i + 1))]=$(get_master_addr "$node_host")
+            
+            # Check if this node is the actual master
+            if is_master "$node_host"; then
+                true_master="${node_host}${INTERNAL_SUFFIX}.${EXTERNAL_DNS_SUFFIX}"
+            fi
+        done
+        
+        # Filter out empty/invalid responses
+        local -a valid_hosts=()
+        for host in "${hosts[@]}"; do
+            if [[ -n "$host" && "$host" != "null" ]]; then
+                valid_hosts+=("$host")
+            fi
+        done
+        
+        # Get unique hosts (split brain detection)
+        local -a unique_hosts
+        readarray -t unique_hosts < <(printf "%s\n" "${valid_hosts[@]}" | sort -u)
+        
+        # Check for split brain condition
+        if [[ ${#unique_hosts[@]} -gt 1 ]]; then
+            echo "Split brain detected - ${#unique_hosts[@]} different masters reported"
+            echo "True master: $true_master"
+            
+            # Fix sentinel-0 if needed
+            if [[ "${hosts[0]}" != "$true_master" ]]; then
+                resolve_split_brain "sentinel-${RESOURCE_KEY}-0"
+            fi
+            
+            # Fix replica sentinels if needed
+            for ((i = 0; i < NUM_REPLICAS; i++)); do
+                if [[ "${hosts[$((i + 1))]}" != "$true_master" ]]; then
+                    resolve_split_brain "node-${RESOURCE_KEY}-$i"
+                fi
+            done
+            
+            echo "Split brain resolution completed"
+        else
+            echo "No split brain detected - all sentinels report same master: ${unique_hosts[0]}"
         fi
-      done
-    fi
-    exit 0
+    }
+
+    # Run main function
+    main
 services:
   # Standalone
 

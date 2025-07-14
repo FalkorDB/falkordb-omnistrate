@@ -1,6 +1,18 @@
+use k8s_openapi::api::core::v1::ConfigMap;
+use kube::{Api, Client}; // Removed unused Config import
 use rouille::{router, Response, Server};
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::env;
 use std::time::{Duration, Instant};
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+struct HealthConfig {
+    skip_all: Option<bool>,
+    skip_liveness: Option<bool>,
+    skip_readiness: Option<bool>,
+    skip_startup: Option<bool>,
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -26,9 +38,9 @@ fn start_health_check_server(is_sentinel: bool) {
     let addr = format!("localhost:{}", port);
     let server = Server::new(addr, move |request| {
         router!(request,
-            (GET) (/liveness) => { handle_health_check(is_sentinel, check_handler_liveness, &redis_client) },
-            (GET) (/readiness) => { handle_health_check(is_sentinel, check_handler_readiness, &redis_client) },
-            (GET) (/startup) => { Response::text("OK") },
+            (GET) (/liveness) => { handle_health_check_with_config(is_sentinel, check_handler_liveness, &redis_client, "liveness") },
+            (GET) (/readiness) => { handle_health_check_with_config(is_sentinel, check_handler_readiness, &redis_client, "readiness") },
+            (GET) (/startup) => { handle_health_check_with_config(is_sentinel, |_, _| Ok(true), &redis_client, "startup") },
             _ => Response::empty_404()
         )
     }).unwrap();
@@ -37,21 +49,100 @@ fn start_health_check_server(is_sentinel: bool) {
     server.run();
 }
 
-fn handle_health_check<F>(is_sentinel: bool, check_fn: F, redis_pool: &redis::Client) -> Response
+fn handle_health_check_with_config<F>(
+    is_sentinel: bool,
+    check_fn: F,
+    redis_pool: &redis::Client,
+    check_type: &str,
+) -> Response
 where
     F: Fn(bool, &redis::Client) -> Result<bool, redis::RedisError>,
 {
+    // Check legacy environment variable first
     if env::var("SKIP_HEALTH_CHECK").as_deref() == Ok("true") {
         return Response::text("OK");
     }
-    let res = check_fn(is_sentinel, redis_pool);
 
-    if res.is_ok() {
-        Response::text("OK")
-    } else {
-        eprintln!("Health check failed: {}", res.err().unwrap());
-        Response::text("Not ready").with_status_code(500)
+    // Check configmap overrides
+    if let Ok(config) = get_health_config_from_configmap() {
+        if config.skip_all.unwrap_or(false) {
+            return Response::text("OK");
+        }
+
+        match check_type {
+            "liveness" if config.skip_liveness.unwrap_or(false) => return Response::text("OK"),
+            "readiness" if config.skip_readiness.unwrap_or(false) => return Response::text("OK"),
+            "startup" if config.skip_startup.unwrap_or(false) => return Response::text("OK"),
+            _ => {}
+        }
     }
+
+    match check_fn(is_sentinel, redis_pool) {
+        Ok(true) => Response::text("OK"),
+        _ => Response::text("Not ready").with_status_code(500),
+    }
+}
+
+fn get_health_config_from_configmap() -> Result<HealthConfig, Box<dyn std::error::Error>> {
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let config_name =
+            env::var("HEALTH_CONFIG_NAME").unwrap_or_else(|_| "health-config".to_string());
+        let namespace = env::var("NAMESPACE").unwrap_or_else(|_| "default".to_string());
+
+        let client = match Client::try_default().await {
+            Ok(client) => client,
+            Err(_) => return Err("Failed to create Kubernetes client".into()),
+        };
+
+        let configmaps: Api<ConfigMap> = Api::namespaced(client, &namespace);
+
+        match configmaps.get(&config_name).await {
+            Ok(configmap) => {
+                if let Some(data) = configmap.data {
+                    parse_health_config_from_data(data)
+                } else {
+                    Ok(HealthConfig::default())
+                }
+            }
+            Err(_) => {
+                // ConfigMap doesn't exist, return default config
+                Ok(HealthConfig::default())
+            }
+        }
+    })
+}
+
+fn parse_health_config_from_data(
+    data: BTreeMap<String, String>,
+) -> Result<HealthConfig, Box<dyn std::error::Error>> {
+    let mut config = HealthConfig::default();
+
+    // Parse boolean values from configmap data
+    if let Some(skip_all_str) = data.get("skip_all") {
+        config.skip_all = Some(skip_all_str.trim().to_lowercase() == "true");
+    }
+
+    if let Some(skip_liveness_str) = data.get("skip_liveness") {
+        config.skip_liveness = Some(skip_liveness_str.trim().to_lowercase() == "true");
+    }
+
+    if let Some(skip_readiness_str) = data.get("skip_readiness") {
+        config.skip_readiness = Some(skip_readiness_str.trim().to_lowercase() == "true");
+    }
+
+    if let Some(skip_startup_str) = data.get("skip_startup") {
+        config.skip_startup = Some(skip_startup_str.trim().to_lowercase() == "true");
+    }
+
+    // Alternatively, if you want to support JSON format in the configmap:
+    if let Some(json_config) = data.get("config.json") {
+        if let Ok(parsed_config) = serde_json::from_str::<HealthConfig>(json_config) {
+            return Ok(parsed_config);
+        }
+    }
+
+    Ok(config)
 }
 
 fn check_handler_liveness(_: bool, redis_pool: &redis::Client) -> Result<bool, redis::RedisError> {

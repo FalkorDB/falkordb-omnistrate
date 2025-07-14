@@ -1,4 +1,4 @@
-ARG FALKORDB_VERSION=v4.8.8
+ARG FALKORDB_VERSION=v4.10.2
 
 FROM falkordb/falkordb:$FALKORDB_VERSION
 
@@ -29,4 +29,4 @@ RUN chown falkordb:falkordb /falkordb/* && \
 
 ENV FALKORDB_HOME=/var/lib/falkordb
 
-CMD [ "node-entrypoint.sh" ]
+ENTRYPOINT [ "node-entrypoint.sh" ]

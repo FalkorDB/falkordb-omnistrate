@@ -27,4 +27,4 @@ RUN chown falkordb:falkordb /falkordb/* && \
 
 ENV FALKORDB_HOME=/var/lib/falkordb
 
-CMD [ "sentinel-entrypoint.sh" ]
+ENTRYPOINT [ "sentinel-entrypoint.sh" ]

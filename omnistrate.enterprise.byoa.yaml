@@ -258,7 +258,6 @@ x-post-upgrade-hook: &postupgradehook
         
         # Get sentinel-0 master address
         hosts[0]=$(get_master_addr "sentinel-${RESOURCE_KEY}-0")
-        
         # Process replicas
         for ((i = 0; i < NUM_REPLICAS; i++)); do
             local node_host="node-${RESOURCE_KEY}-$i"
@@ -283,7 +282,12 @@ x-post-upgrade-hook: &postupgradehook
         # Get unique hosts (split brain detection)
         local -a unique_hosts
         readarray -t unique_hosts < <(printf "%s\n" "${valid_hosts[@]}" | sort -u)
-        
+
+        [[ -z "$true_master" ]] && {
+            echo "Unable to determine the real master, aborting split-brain fix" >&2
+            exit 1
+          }
+
         # Check for split brain condition
         if [[ ${#unique_hosts[@]} -gt 1 ]]; then
             echo "Split brain detected - ${#unique_hosts[@]} different masters reported"

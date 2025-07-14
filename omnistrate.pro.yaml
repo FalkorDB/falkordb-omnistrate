@@ -305,6 +305,11 @@ x-post-upgrade-hook: &postupgradehook
         local -a unique_hosts
         readarray -t unique_hosts < <(printf "%s\n" "${valid_hosts[@]}" | sort -u)
         
+        [[ -z "$true_master" ]] && {
+            echo "Unable to determine the real master, aborting split-brain fix" >&2
+            exit 1
+          }
+
         # Check for split brain condition
         if [[ ${#unique_hosts[@]} -gt 1 ]]; then
             echo "Split brain detected - ${#unique_hosts[@]} different masters reported"

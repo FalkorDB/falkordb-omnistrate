@@ -88,7 +88,7 @@ fn get_health_config_from_configmap() -> Result<HealthConfig, Box<dyn std::error
     rt.block_on(async {
         let config_name =
             env::var("HEALTH_CONFIG_NAME").unwrap_or_else(|_| "health-config".to_string());
-        let namespace = env::var("NAMESPACE").unwrap_or_else(|_| "default".to_string());
+        let namespace = get_namespace()?;
 
         let client = match Client::try_default().await {
             Ok(client) => client,
@@ -111,6 +111,17 @@ fn get_health_config_from_configmap() -> Result<HealthConfig, Box<dyn std::error
             }
         }
     })
+}
+
+fn get_namespace() -> Result<String, Box<dyn std::error::Error>> {
+    // First try to read from the service account token
+    match std::fs::read_to_string("/var/run/secrets/kubernetes.io/serviceaccount/namespace") {
+        Ok(namespace) => Ok(namespace.trim().to_string()),
+        Err(_) => {
+            // Fallback to environment variable if file doesn't exist (e.g., running outside k8s)
+            env::var("NAMESPACE").or_else(|_| Ok("default".to_string()))
+        }
+    }
 }
 
 fn parse_health_config_from_data(

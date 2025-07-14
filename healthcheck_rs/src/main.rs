@@ -6,6 +6,30 @@ use std::collections::BTreeMap;
 use std::env;
 use std::time::{Duration, Instant};
 
+// Example ConfigMap structure for health checks
+/* 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: health-config
+  namespace: default
+data:
+  # Individual health check skip flags
+  skip_all: "false"
+  skip_liveness: "false"
+  skip_readiness: "false"
+  skip_startup: "true"
+  
+  # Alternative: JSON format (if you prefer structured config)
+  config.json: |
+    {
+      "skip_all": false,
+      "skip_liveness": false,
+      "skip_readiness": false,
+      "skip_startup": true
+    }
+*/
+
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 struct HealthConfig {
     skip_all: Option<bool>,

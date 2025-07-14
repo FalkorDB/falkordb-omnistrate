@@ -204,7 +204,7 @@ x-post-upgrade-hook: &postupgradehook
     hosts=($sentinel_0)
     for i in $(seq 0 $((NUM_REPLICAS-1)));do
       hosts[$i+1]=$(echo $(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p $SENTINEL_PORT SENTINEL get-master-addr-by-name $MASTER_NAME) | awk '{print $1}')
-      master=$(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p 6379 info | grep "role:master")
+      master=$(redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h node-${resource_key}-$i $ssl -p $NODE_PORT info | grep "role:master")
       if [[ -n $master ]]; then
         true_master=$(echo node-${resource_key}-$i${internal}.${EXTERNAL_DNS_SUFFIX})
       fi
@@ -214,18 +214,23 @@ x-post-upgrade-hook: &postupgradehook
       local host=$1
       echo "host: $host"
       redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL remove $MASTER_NAME || { echo "$link"; exit 1; }
-      redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL MONITOR $MASTER_NAME $true_master 6379 2 || { echo "$link"; exit 1; }
+      redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL MONITOR $MASTER_NAME $true_master $NODE_PORT $SENTINEL_QUORUM || { echo "$link"; exit 1; }
       redis-cli --no-auth-warning --user falkordbUpgradeUser -a $FALKORDB_POST_UPGRADE_PASSWORD -h $host $ssl -p $SENTINEL_PORT SENTINEL FLUSHCONFIG || { echo "$link"; exit 1; }
       }
     if [[ ${#unique_list[@]} -ne 1 ]]; then
       echo "Split brain detected"
-      resolve_split_brain "sentinel-${resource_key}-0"
+      # Only fix the wrong sentinels by comparing against the correct master
+      correct_master=$true_master
+      if [[ "$sentinel_0" != "$correct_master" ]]; then
+        resolve_split_brain "sentinel-${resource_key}-0"
+      fi
       for i in $(seq 0 $((NUM_REPLICAS-1))); do
-        resolve_split_brain "node-${resource_key}-$i"
+        if [[ "${hosts[$i+1]}" != "$correct_master" ]]; then
+          resolve_split_brain "node-${resource_key}-$i"
+        fi
       done
     fi
     exit 0
-
 services:
   # Standalone
 
@@ -1094,6 +1099,7 @@ services:
       - BROWSER=0
       - DEBUG=0
       - SENTINEL_HOST=$sentinel-sz.sys.network.externalClusterEndpoint
+      - SENTINEL_QUORUM=2
       - SENTINEL_PORT=26379
       - MASTER_NAME=master
       - NODE_HOST=$sys.network.node.externalEndpoint
@@ -1271,6 +1277,8 @@ services:
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
       - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - SENTINEL_QUORUM=2
+      - NODE_PORT=6379
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
@@ -1797,6 +1805,7 @@ services:
       - DEBUG=0
       - IS_MULTI_ZONE=1
       - SENTINEL_HOST=$sentinel-mz.sys.network.externalClusterEndpoint
+      - SENTINEL_QUORUM=2
       - SENTINEL_PORT=26379
       - MASTER_NAME=master
       - NODE_HOST=$sys.network.node.externalEndpoint
@@ -1973,6 +1982,8 @@ services:
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
       - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - SENTINEL_QUORUM=2
+      - NODE_PORT=6379
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS

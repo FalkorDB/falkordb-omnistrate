@@ -1151,8 +1151,8 @@ services:
             cpu: "200m"
             memory: 50Mi
           args:
-            - $SENTINEL_PORT
-            - 9122
+            - "$SENTINEL_PORT"
+            - "9122"
         sentinel:
           imageNameWithTag: $FalkorDBSentinelImage
           resourceLimits:
@@ -1342,8 +1342,8 @@ services:
             cpu: "200m"
             memory: 50Mi
           args:
-            - $SENTINEL_PORT
-            - 9122
+            - "$SENTINEL_PORT"
+            - "9122"
     x-omnistrate-api-params:
       - key: enableTLS
         description: Whether to enable TLS for the database
@@ -1882,8 +1882,8 @@ services:
             cpu: "200m"
             memory: 50Mi
           args:
-            - $SENTINEL_PORT
-            - 9122
+            - "$SENTINEL_PORT"
+            - "9122"
         sentinel:
           imageNameWithTag: $FalkorDBSentinelImage
           resourceLimits:
@@ -2072,8 +2072,8 @@ services:
             cpu: "200m"
             memory: 50Mi
           args:
-            - $SENTINEL_PORT
-            - 9122
+            - "$SENTINEL_PORT"
+            - "9122"
     x-omnistrate-api-params:
       - key: enableTLS
         description: Whether to enable TLS for the database

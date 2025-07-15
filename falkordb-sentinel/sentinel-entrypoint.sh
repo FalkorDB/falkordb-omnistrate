@@ -57,7 +57,7 @@ wait_until_node_host_resolves() {
   fi
 
   while true; do
-    log "Checking if node host resolves $1"
+    log "Checking if node host resolves $1:$2"
     if [[ $(getent hosts $1) ]]; then
       host_response=$(redis-cli -h $1 -p $2 $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
 
@@ -71,6 +71,12 @@ wait_until_node_host_resolves() {
     echo "Waiting for node host to resolve"
     sleep 5
   done
+}
+
+log() {
+  if [[ $DEBUG -eq 1 ]]; then
+    echo $1
+  fi
 }
 
 # If sentinel.conf doesn't exist or $REPLACE_SENTINEL_CONF=1, copy it from /falkordb

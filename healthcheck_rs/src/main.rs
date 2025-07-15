@@ -180,7 +180,20 @@ fn get_redis_url(password: &str, node_port: &str) -> String {
 }
 
 fn check_sentinel(con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
-    Ok(redis::cmd("PING").query::<String>(con)? == "PONG")
+    // check that it has a master
+    let master_info: String = redis::cmd("SENTINEL")
+        .arg("masters")
+        .query(con)
+        .map_err(|err| {
+            eprintln!("Failed to get sentinel masters: {}", err);
+            err
+        })?;
+    if master_info.is_empty() || master_info.contains("(empty array)") {
+        eprintln!("No master found in sentinel");
+        return Ok(false);
+    }
+
+    return Ok(true);
 }
 
 fn get_redis_role(db_info: &str) -> Result<&str, redis::RedisError> {

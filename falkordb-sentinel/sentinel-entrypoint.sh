@@ -50,6 +50,29 @@ if [[ $(basename "$DATA_DIR") != 'data' ]]; then DATA_DIR=$DATA_DIR/data; fi
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 
+wait_until_node_host_resolves() {
+  # If $1 is an IP address, return
+  if [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return
+  fi
+
+  while true; do
+    log "Checking if node host resolves $1"
+    if [[ $(getent hosts $1) ]]; then
+      host_response=$(redis-cli -h $1 -p $2 $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING PING)
+
+      log "Host Response: $host_response"
+      if [[ $host_response == "PONG" ]]; then
+        echo "Node host resolved"
+        sleep 10
+        break
+      fi
+    fi
+    echo "Waiting for node host to resolve"
+    sleep 5
+  done
+}
+
 # If sentinel.conf doesn't exist or $REPLACE_SENTINEL_CONF=1, copy it from /falkordb
 if [ ! -f $SENTINEL_CONF_FILE ] || [ "$REPLACE_SENTINEL_CONF" -eq "1" ]; then
   echo "Copying sentinel.conf from /falkordb"
@@ -118,7 +141,6 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
 
   sleep 10
 
-  # If FALKORDB_MASTER_HOST is not empty, add monitor to sentinel
   if [[ "$RUN_NODE" -eq "1" ]]; then
     log "Master Name: $MASTER_NAME\Master Host: $NODE_HOST\Master Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
     wait_until_node_host_resolves $NODE_HOST $NODE_PORT

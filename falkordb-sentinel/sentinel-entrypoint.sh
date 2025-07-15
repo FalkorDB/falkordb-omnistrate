@@ -31,6 +31,7 @@ fi
 LOG_LEVEL=${LOG_LEVEL:-notice}
 
 NODE_HOST=${NODE_HOST:-localhost}
+NODE_PORT=${NODE_PORT:-6379}
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
@@ -118,10 +119,10 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   sleep 10
 
   # If FALKORDB_MASTER_HOST is not empty, add monitor to sentinel
-  if [[ ! -z $FALKORDB_MASTER_HOST ]]; then
-    log "Master Name: $MASTER_NAME\Master Host: $FALKORDB_MASTER_HOST\Master Port: $FALKORDB_MASTER_PORT_NUMBER\nSentinel Quorum: $SENTINEL_QUORUM"
-    wait_until_node_host_resolves $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER
-    response=$(redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER $SENTINEL_QUORUM)
+  if [[ "$RUN_NODE" -eq "1" ]]; then
+    log "Master Name: $MASTER_NAME\Master Host: $NODE_HOST\Master Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
+    wait_until_node_host_resolves $NODE_HOST $NODE_PORT
+    response=$(redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
 
     if [[ "$response" == "ERR Invalid IP address or hostname specified" ]]; then
       echo """

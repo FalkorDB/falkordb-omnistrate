@@ -8,8 +8,6 @@ NODE_INDEX=${NODE_INDEX:-0}
 DATA_DIR=${DATA_DIR:-"${FALKORDB_HOME}/data"}
 
 SAVE_LOGS_TO_FILE=${SAVE_LOGS_TO_FILE:-1}
-SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
-SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 REPLACE_SENTINEL_CONF=${REPLACE_SENTINEL_CONF:-0}
 
 FALKORDB_USER=${FALKORDB_USER:-falkordb}
@@ -47,6 +45,9 @@ if [[ "$DATA_DIR" != '/data' ]]; then
 fi
 
 if [[ $(basename "$DATA_DIR") != 'data' ]]; then DATA_DIR=$DATA_DIR/data; fi
+
+SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
+SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 
 # If sentinel.conf doesn't exist or $REPLACE_SENTINEL_CONF=1, copy it from /falkordb
 if [ ! -f $SENTINEL_CONF_FILE ] || [ "$REPLACE_SENTINEL_CONF" -eq "1" ]; then

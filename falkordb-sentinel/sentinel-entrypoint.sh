@@ -38,6 +38,12 @@ TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
 AUTH_CONNECTION_STRING="-a $ADMIN_PASSWORD --no-auth-warning"
 
+MASTER_NAME=${MASTER_NAME:-master}
+SENTINEL_QUORUM=${SENTINEL_QUORUM:-2}
+SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
+SENTINEL_FAILOVER=${SENTINEL_FAILOVER:-1000}
+
+
 # Add backward compatibility for /data folder
 if [[ "$DATA_DIR" != '/data' ]]; then
   mkdir -p $DATA_DIR
@@ -153,7 +159,7 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
     log "Master Name: $MASTER_NAME\Master Host: $NODE_HOST\Master Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
     wait_until_node_host_resolves $NODE_HOST $NODE_PORT
     response=$(redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
-
+    log "Response from SENTINEL MONITOR command: $response"
     if [[ "$response" == "ERR Invalid IP address or hostname specified" ]]; then
       echo """
         The hostname $NODE_HOST for the node $HOSTNAME was resolved successfully the first time but failed to do so a second time,

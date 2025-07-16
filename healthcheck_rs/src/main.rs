@@ -189,6 +189,7 @@ fn check_sentinel(con: &mut redis::Connection) -> Result<bool, redis::RedisError
     // check that it has a master
     let master_info: String = redis::cmd("SENTINEL")
         .arg("masters")
+        .arg(env::var("MASTER_NAME").unwrap_or_else(|_| "master".to_string()))
         .query(con)
         .map_err(|err| {
             eprintln!("Failed to get sentinel masters: {}", err);

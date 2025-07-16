@@ -187,17 +187,19 @@ fn check_sentinel(con: &mut redis::Connection) -> Result<bool, redis::RedisError
     }
 
     // check that it has a master
-    let master_info: String = redis::cmd("SENTINEL")
+    let master_info: Vec<String> = redis::cmd("SENTINEL")
         .arg("masters")
-        .arg(env::var("MASTER_NAME").unwrap_or_else(|_| "master".to_string()))
         .query(con)
         .map_err(|err| {
             eprintln!("Failed to get sentinel masters: {}", err);
             err
         })?;
-    if master_info.is_empty() || master_info.contains("(empty array)") {
+    if master_info.is_empty() {
         eprintln!("No master found in sentinel");
-        return Ok(false);
+        return Err(redis::RedisError::from((
+            redis::ErrorKind::ResponseError,
+            "No master found in sentinel",
+        )));
     }
 
     return Ok(true);

@@ -11,7 +11,6 @@ RUN useradd -u 1000 -m falkordb && usermod -aG crontab falkordb && \
   chmod 660 /var/run/supervisord.pid && \
   chmod u+s /usr/sbin/cron
 
-
 RUN mkdir -p /falkordb
 
 WORKDIR /falkordb

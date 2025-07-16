@@ -35,6 +35,8 @@ NODE_PORT=${NODE_PORT:-6379}
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
+TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
+AUTH_CONNECTION_STRING="-a $ADMIN_PASSWORD --no-auth-warning"
 
 # Add backward compatibility for /data folder
 if [[ "$DATA_DIR" != '/data' ]]; then

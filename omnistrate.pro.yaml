@@ -1153,6 +1153,7 @@ services:
           args:
             - "26379"
             - "9122"
+            - "0"
         sentinel:
           imageNameWithTag: $FalkorDBSentinelImage
           resourceLimits:
@@ -1345,6 +1346,7 @@ services:
           args:
             - "26379"
             - "9122"
+            - "0"
     x-omnistrate-api-params:
       - key: enableTLS
         description: Whether to enable TLS for the database
@@ -1885,6 +1887,7 @@ services:
           args:
             - "26379"
             - "9122"
+            - "0"
         sentinel:
           imageNameWithTag: $FalkorDBSentinelImage
           resourceLimits:
@@ -2076,6 +2079,7 @@ services:
           args:
             - "26379"
             - "9122"
+            - "0"
     x-omnistrate-api-params:
       - key: enableTLS
         description: Whether to enable TLS for the database

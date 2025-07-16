@@ -30,11 +30,18 @@ else
   exporter_port=${exporter_port:-9121}
 fi
 
+if [ -n "$3" ]; then
+  is_node=$3
+else
+  is_node=${is_node:-"1"}
+fi
+
 if [ -n "$RUN_METRICS" ] && [ "$RUN_METRICS" -eq "$RUN_METRICS" ] 2>/dev/null && [ "$RUN_METRICS" -eq 1 ]; then
   aof_metric_export=$(if [ "$PERSISTENCE_AOF_CONFIG" != "no" ]; then echo "-include-aof-file-size"; else echo ""; fi)
+  extra_args=$(if [ "$is_node" -eq "1" ]; then echo "--is-falkordb -slowlog-history-enabled $aof_metric_export"; else echo ""; fi)
   redis_url=$(if [ "$TLS" = "true" ]; then echo "rediss://localhost:$redis_port"; else echo "redis://localhost:$redis_port"; fi)
   exporter_address="0.0.0.0:$exporter_port"
   echo "Starting Metrics Exporter on $exporter_address for Redis at $redis_url"
   # shellcheck disable=SC2068
-  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $redis_url -web.listen-address $exporter_address -log-format json -tls-server-min-version TLS1.3 -include-system-metrics -is-falkordb -slowlog-history-enabled $aof_metric_export $@
+  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $redis_url -web.listen-address $exporter_address -log-format json -tls-server-min-version TLS1.3 -include-system-metrics $extra_args
 fi

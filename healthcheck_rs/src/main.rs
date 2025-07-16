@@ -180,6 +180,12 @@ fn get_redis_url(password: &str, node_port: &str) -> String {
 }
 
 fn check_sentinel(con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
+
+    // required for the sentinel only pod to allow the other pods to be scheduled
+    if env::var("SENTINEL_IGNORE_MASTER_CHECK").as_deref() == Ok("true") {
+        return Ok(true);
+    }
+
     // check that it has a master
     let master_info: String = redis::cmd("SENTINEL")
         .arg("masters")

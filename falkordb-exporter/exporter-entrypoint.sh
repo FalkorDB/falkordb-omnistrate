@@ -31,10 +31,10 @@ else
 fi
 
 if [ -n "$RUN_METRICS" ] && [ "$RUN_METRICS" -eq "$RUN_METRICS" ] 2>/dev/null && [ "$RUN_METRICS" -eq 1 ]; then
-  echo "Starting Metrics"
   aof_metric_export=$(if [ "$PERSISTENCE_AOF_CONFIG" != "no" ]; then echo "-include-aof-file-size"; else echo ""; fi)
   redis_url=$(if [ "$TLS" = "true" ]; then echo "rediss://localhost:$redis_port"; else echo "redis://localhost:$redis_port"; fi)
   exporter_address="0.0.0.0:$exporter_port"
+  echo "Starting Metrics Exporter on $exporter_address for Redis at $redis_url"
   # shellcheck disable=SC2068
   redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $redis_url -web.listen-address $exporter_address -log-format json -tls-server-min-version TLS1.3 -include-system-metrics -is-falkordb -slowlog-history-enabled $aof_metric_export $@
 fi

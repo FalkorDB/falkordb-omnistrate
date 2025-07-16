@@ -1,4 +1,11 @@
 #!/bin/sh
+if [[ "$DATA_DIR" != '/data' ]]; then
+  mkdir -p $DATA_DIR
+  if [[ -d '/data' ]]; then
+    # create simlink
+    ln -s /data $DATA_DIR
+  fi
+fi
 
 if [ -f "/run/secrets/adminpassword" ] && [ -s "/run/secrets/adminpassword" ]; then
   ADMIN_PASSWORD=$(cat "/run/secrets/adminpassword")

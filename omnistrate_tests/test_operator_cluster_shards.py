@@ -288,10 +288,7 @@ def change_replica_count(instance: OmnistrateFleetInstance,host_count: int,new_r
     while True:
         if time.time() > tout:
             raise Exception("Timeout while waiting for replica count to update,failed to update replica count")
-        if (current_cluster_replicas + current_host_count) != node_count:
-            logging.info("Omnistrate may have counted terminaing nodes as part of the replica count.")
-        else:
-            logging.info(f"Replica count updated to {current_cluster_replicas}")
+        if (current_cluster_replicas + current_host_count) == node_count:
             break
     # if (current_cluster_replicas + current_host_count) != node_count:
     #     logging.info("Omnistrate may have counted terminaing nodes as part of the replica count.")

@@ -290,7 +290,7 @@ def change_replica_count(instance: OmnistrateFleetInstance,host_count: int,new_r
         
         # Retry cluster_nodes() check with timeout
         max_retries = 3
-        retry_interval = 5
+        retry_interval = 10
         expected_node_count = int(current_host_count + new_replicas_count)
         
         for attempt in range(max_retries):

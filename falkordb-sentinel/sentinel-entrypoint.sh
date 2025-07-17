@@ -28,10 +28,12 @@ elif [[ -n "$ADMIN_PASSWORD" ]]; then
 else
   export ADMIN_PASSWORD=''
 fi
+
 LOG_LEVEL=${LOG_LEVEL:-notice}
 
 NODE_HOST=${NODE_HOST:-localhost}
 NODE_PORT=${NODE_PORT:-6379}
+SENTINEL_HOST=sentinel-$(echo $RESOURCE_ALIAS | cut -d "-" -f 2)-0.$LOCAL_DNS_SUFFIX
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
@@ -42,7 +44,6 @@ MASTER_NAME=${MASTER_NAME:-master}
 SENTINEL_QUORUM=${SENTINEL_QUORUM:-2}
 SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
 SENTINEL_FAILOVER=${SENTINEL_FAILOVER:-1000}
-
 
 # Add backward compatibility for /data folder
 if [[ "$DATA_DIR" != '/data' ]]; then
@@ -79,6 +80,23 @@ wait_until_node_host_resolves() {
     echo "Waiting for node host to resolve"
     sleep 5
   done
+}
+
+get_master() {
+  master_info=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT -a $ADMIN_PASSWORD $TLS_CONNECTION_STRING --no-auth-warning SENTINEL get-master-addr-by-name $MASTER_NAME)
+
+  echo "Master Info: $master_info"
+
+  # If RUN_SENTINEL is 1 and could not connect to sentinel, wait and try again
+  if [[ $RUN_SENTINEL -eq 1 && -z $master_info && ! $HOSTNAME =~ ^node.*0 ]]; then
+    echo "Could not connect to sentinel, waiting 5 seconds and trying again"
+    sleep 5
+    get_master
+    return
+  fi
+
+  FALKORDB_MASTER_HOST=$(echo $master_info | awk '{print $1}')
+  FALKORDB_MASTER_PORT_NUMBER=$(echo $master_info | awk '{print $2}')
 }
 
 log() {
@@ -157,8 +175,10 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
 
   if [[ "$RUN_NODE" -eq "1" ]]; then
     log "Master Name: $MASTER_NAME\Master Host: $NODE_HOST\Master Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
-    wait_until_node_host_resolves $NODE_HOST $NODE_PORT
-    response=$(redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
+    wait_until_node_host_resolves $SENTINEL_HOST $SENTINEL_PORT
+    get_master
+    wait_until_node_host_resolves $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER
+    response=$(redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER $SENTINEL_QUORUM)
     log "Response from SENTINEL MONITOR command: $response"
     if [[ "$response" == "ERR Invalid IP address or hostname specified" ]]; then
       echo """

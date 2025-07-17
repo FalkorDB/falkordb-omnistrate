@@ -282,31 +282,39 @@ def change_replica_count(instance: OmnistrateFleetInstance, new_replicas_count: 
     node_count = [len(resource["nodes"]) for resource in instance.get_network_topology(force_refresh=True).values() 
        if resource.get("resourceName") == args.resource_key ][0]
     
-    if (current_cluster_replicas + current_host_count) != node_count:
-        logging.info("Omnistrate may have counted terminaing nodes as part of the replica count.")
-        client = instance.create_connection(ssl=args.tls, operator=True)
-        
-        # Retry cluster_nodes() check with timeout
-        max_retries = 3
-        retry_interval = 5
-        expected_node_count = int(current_host_count + new_replicas_count)
-        
-        for attempt in range(max_retries):
-            cluster_nodes = client.connection.cluster_nodes()
-            actual_node_count = len(cluster_nodes)
-            
-            if actual_node_count == expected_node_count:
-                logging.info(f"node count updated to {expected_node_count}")
-                break
-            
-            logging.info(f"Attempt {attempt + 1}/{max_retries}: Expected {expected_node_count} nodes, got {actual_node_count}. Retrying in {retry_interval} seconds...")
-            
-            if attempt < max_retries - 1:  # Don't sleep on the last attempt
-                time.sleep(retry_interval)
+
+    tout = time.time() + 120
+    while True:
+        if time.time() > tout:
+            raise Exception("Timeout while waiting for replica count to update")
+        if (current_cluster_replicas + current_host_count) != node_count:
+            logging.info("Omnistrate may have counted terminaing nodes as part of the replica count.")
         else:
-            raise Exception(
-                f"Replica count not updated after {max_retries} attempts. Expected {expected_node_count}, got {actual_node_count}"
-            )
+            logging.info(f"Replica count updated to {current_cluster_replicas}")
+            break
+        # client = instance.create_connection(ssl=args.tls, operator=True)
+        
+        # # Retry cluster_nodes() check with timeout
+        # max_retries = 3
+        # retry_interval = 5
+        # expected_node_count = int(current_host_count + new_replicas_count)
+        
+        # for attempt in range(max_retries):
+        #     cluster_nodes = client.connection.cluster_nodes()
+        #     actual_node_count = len(cluster_nodes)
+            
+        #     if actual_node_count == expected_node_count:
+        #         logging.info(f"node count updated to {expected_node_count}")
+        #         break
+            
+        #     logging.info(f"Attempt {attempt + 1}/{max_retries}: Expected {expected_node_count} nodes, got {actual_node_count}. Retrying in {retry_interval} seconds...")
+            
+        #     if attempt < max_retries - 1:  # Don't sleep on the last attempt
+        #         time.sleep(retry_interval)
+        # else:
+        #     raise Exception(
+        #         f"Replica count not updated after {max_retries} attempts. Expected {expected_node_count}, got {actual_node_count}"
+        #     )
     
     logging.info(f"node count updated to {int(current_host_count + new_replicas_count)}")
     

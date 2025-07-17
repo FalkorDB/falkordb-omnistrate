@@ -232,7 +232,7 @@ def test_zero_downtime(
 ):
     """This function should test the ability to read and write while a failover happens"""
     try:
-        db = instance.create_connection(ssl=ssl, network_type=args.network_type, operator=True)
+        db = instance.create_connection(ssl=ssl, force_reconnect=True ,network_type=args.network_type, operator=True)
 
         graph = db.select_graph("test")
         

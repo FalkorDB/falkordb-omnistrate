@@ -234,7 +234,7 @@ services:
         - |
           apiVersion: v1
           stringData:
-            password: {{ $func.random(string,16,$sys.deterministicSeedValue) }}
+            password: {{ $func.random(string,16,10) }}
           kind: Secret
           metadata:
             name: redis-secret
@@ -246,7 +246,7 @@ services:
           stringData:
             user.acl: |
               user {{ $var.falkordbUser }} on >{{ $var.falkordbPassword }} ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +CLUSTER +COMMAND +DEBUG
-              user default on >{{ $func.random(string,16,$sys.deterministicSeedValue) }} allchannels +multi +slaveof +ping +exec +subscribe +config|rewrite +role +publish +info +client|setname +client|kill +script|kill +psync +replconf +ping +cluster +dbsize
+              user default on >{{ $func.random(string,16,10) }} allchannels +multi +slaveof +ping +exec +subscribe +config|rewrite +role +publish +info +client|setname +client|kill +script|kill +psync +replconf +ping +cluster +dbsize
               user admin on >{{ $func.random(string,16,$sys.deterministicSeedValue) }} ~* +@all
           kind: Secret
           metadata:
@@ -318,7 +318,7 @@ services:
               loadmodule /FalkorDB/bin/src/bin/falkordb.so CACHE_SIZE {{ $var.falkorDBCacheSize }} NODE_CREATION_BUFFER {{$var.falkorDBNodeCreationBuffer }} MAX_QUEUED_QUERIES {{$var.falkorDBMaxQueuedQueries}} TIMEOUT_MAX {{ $var.falkorDBTimeoutMax }} TIMEOUT_DEFAULT {{$var.falkorDBTimeoutDefault }} RESULTSET_SIZE {{$var.falkorDBResultSetSize }} QUERY_MEM_CAPACITY {{$var.falkorDBQueryMemCapacity }} VKEY_MAX_ENTITY_COUNT	4611686000000000000
               tls-auth-clients no
               tls-ca-cert-file /ca/ca.crt
-              masterauth {{ $func.random(string,16,$sys.deterministicSeedValue) }}
+              masterauth {{ $func.random(string,16,10) }}
               masteruser "default"
               cluster-preferred-endpoint-type hostname
               enable-debug-command {{ $var.enableDebugCommand }}
@@ -961,7 +961,7 @@ services:
         - |
           apiVersion: v1
           stringData:
-            password: {{ $func.random(string,16,$sys.deterministicSeedValue) }}
+            password: {{ $func.random(string,16,10) }}
           kind: Secret
           metadata:
             name: redis-secret
@@ -973,7 +973,7 @@ services:
           stringData:
             user.acl: |
               user {{ $var.falkordbUser }} on >{{ $var.falkordbPassword }} ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +CLUSTER +COMMAND +DEBUG
-              user default on >{{ $func.random(string,16,$sys.deterministicSeedValue) }} allchannels +multi +slaveof +ping +exec +subscribe +config|rewrite +role +publish +info +client|setname +client|kill +script|kill +psync +replconf +ping +cluster +dbsize
+              user default on >{{ $func.random(string,16,10) }} allchannels +multi +slaveof +ping +exec +subscribe +config|rewrite +role +publish +info +client|setname +client|kill +script|kill +psync +replconf +ping +cluster +dbsize
               user admin on >{{ $func.random(string,16,$sys.deterministicSeedValue) }} ~* +@all
           kind: Secret
           metadata:
@@ -1045,7 +1045,7 @@ services:
               loadmodule /FalkorDB/bin/src/bin/falkordb.so CACHE_SIZE {{ $var.falkorDBCacheSize }} NODE_CREATION_BUFFER {{$var.falkorDBNodeCreationBuffer }} MAX_QUEUED_QUERIES {{$var.falkorDBMaxQueuedQueries}} TIMEOUT_MAX {{ $var.falkorDBTimeoutMax }} TIMEOUT_DEFAULT {{$var.falkorDBTimeoutDefault }} RESULTSET_SIZE {{$var.falkorDBResultSetSize }} QUERY_MEM_CAPACITY {{$var.falkorDBQueryMemCapacity }} VKEY_MAX_ENTITY_COUNT	4611686000000000000
               tls-auth-clients no
               tls-ca-cert-file /ca/ca.crt
-              masterauth {{ $func.random(string,16,$sys.deterministicSeedValue) }}
+              masterauth {{ $func.random(string,16,10) }}
               masteruser "default"
               cluster-preferred-endpoint-type hostname
               enable-debug-command {{ $var.enableDebugCommand }}

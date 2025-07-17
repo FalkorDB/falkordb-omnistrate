@@ -30,6 +30,16 @@ data:
     }
 */
 
+// Example command to create a ConfigMap in Kubernetes
+/*
+kubectl create configmap health-config \
+  --from-literal=skip_all="false" \
+  --from-literal=skip_liveness="false" \
+  --from-literal=skip_readiness="false" \
+  --from-literal=skip_startup="true" \
+  --namespace=default
+ */
+
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 struct HealthConfig {
     skip_all: Option<bool>,

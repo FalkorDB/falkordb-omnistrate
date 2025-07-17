@@ -587,7 +587,7 @@ class OmnistrateFleetInstance:
                     ],
                     cluster_error_retry_attempts=20,
                     retry=retry.Retry(
-                        retries=3,
+                        retries=6,
                         backoff=backoff.ExponentialBackoff(base=1, cap=10),
                         supported_errors=(
                             ConnectionRefusedError,

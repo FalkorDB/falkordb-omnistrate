@@ -12,8 +12,8 @@ rouille = "3.6.2"
 openssl-sys = "0.9.109"
 dns-lookup = "2.0.4"
 r2d2 = "0.8.10"
-k8s-openapi = { version = "0.20", features = ["v1_28"] }
-kube = { version = "0.87", features = ["client", "derive"] }
+k8s-openapi = { version = "0.23.0", features = ["v1_28"] }
+kube = { version = "0.95.0", features = ["client", "rustls-tls"] }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

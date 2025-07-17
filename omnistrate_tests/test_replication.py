@@ -164,7 +164,7 @@ def test_replication():
             target=test_zero_downtime, args=(thread_signal, error_signal, instance, args.tls)
         )
         thread.start()
-
+        time.sleep(5)  # Give the thread some time to start
         # Test failover and data loss
         test_failover(instance, password)
 

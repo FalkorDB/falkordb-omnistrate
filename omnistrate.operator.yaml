@@ -190,7 +190,7 @@ services:
                 - mountPath: "/ca"
                   name: "ca-certificate"
                   readOnly: true
-            nodeConfVolume: true
+            nodeConfVolume: false
             nodeConfVolumeClaimTemplate:
               spec:
                 accessModes:
@@ -918,7 +918,7 @@ services:
                 - mountPath: "/ca"
                   name: "ca-certificate"
                   readOnly: true
-            nodeConfVolume: true
+            nodeConfVolume: false
             nodeConfVolumeClaimTemplate:
               spec:
                 accessModes:

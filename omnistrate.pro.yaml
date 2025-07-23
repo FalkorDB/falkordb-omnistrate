@@ -625,7 +625,7 @@ services:
           securityContext:
             runAsGroup: 0
             runAsNonRoot: true
-            runAsUser: 10001
+            runAsUser: 0
             capabilities:
               add:
                 - SYS_RESOURCE

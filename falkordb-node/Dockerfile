@@ -41,6 +41,7 @@ COPY scripts/oom-score-fix.sh .
 RUN chown falkordb:falkordb /var/lib/falkordb/* && \
   chmod +x /usr/local/bin/node-entrypoint.sh && \
   mkdir -p /var/lib/falkordb && \
+  mkdir -p /var/lib/falkordb/scripts && \
   chown falkordb:falkordb /var/lib/falkordb && \
   chmod 700 /var/lib/falkordb && \
   chmod +x /var/lib/falkordb/scripts/download-debug-so.sh && \

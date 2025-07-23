@@ -43,8 +43,8 @@ RUN chown falkordb:falkordb /var/lib/falkordb/* && \
   mkdir -p /var/lib/falkordb && \
   chown falkordb:falkordb /var/lib/falkordb && \
   chmod 700 /var/lib/falkordb && \
-  chmod +x ./download-debug-so.sh && \
-  chmod +x ./oom-score-fix.sh
+  chmod +x /var/lib/falkordb/scripts/download-debug-so.sh && \
+  chmod +x /var/lib/falkordb/scripts/oom-score-fix.sh
 
 ENV FALKORDB_HOME=/var/lib/falkordb
 

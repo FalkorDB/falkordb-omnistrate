@@ -38,7 +38,7 @@ COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/loc
 COPY scripts/download-debug-so.sh .
 COPY scripts/oom-score-fix.sh .
 
-RUN chown falkordb:falkordb /falkordb/* && \
+RUN chown falkordb:falkordb /var/lib/falkordb/* && \
   chmod +x /usr/local/bin/node-entrypoint.sh && \
   mkdir -p /var/lib/falkordb && \
   chown falkordb:falkordb /var/lib/falkordb && \

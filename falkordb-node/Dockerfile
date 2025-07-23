@@ -35,8 +35,8 @@ COPY falkordb-node/node.conf .
 COPY falkordb-node/node-entrypoint.sh /usr/local/bin/
 COPY --from=redis_exporter /redis_exporter /usr/local/bin/
 COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/local/bin/healthcheck
-COPY scripts/download-debug-so.sh .
-COPY scripts/oom-score-fix.sh .
+COPY scripts/download-debug-so.sh /var/lib/falkordb/scripts/download-debug-so.sh
+COPY scripts/oom-score-fix.sh /var/lib/falkordb/scripts/oom-score-fix.sh
 
 RUN chown falkordb:falkordb /var/lib/falkordb/* && \
   chmod +x /usr/local/bin/node-entrypoint.sh && \

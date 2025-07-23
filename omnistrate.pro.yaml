@@ -619,6 +619,17 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+      sidecars:
+        oom_fix:
+          imageNameWithTag: busybox:latest
+          securityContext:
+            runAsGroup: 0
+            runAsNonRoot: true
+            runAsUser: 10001
+            capabilities:
+              add:
+                - SYS_RESOURCE
+          command: ["sh", "-c", "echo -1000 > /proc/self/oom_score_adj"]
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK

@@ -629,7 +629,7 @@ services:
             capabilities:
               add:
                 - SYS_RESOURCE
-          command: ["sh", "-c", "echo -1000 > /proc/self/oom_score_adj"]
+          command: ["/var/lib/falkordb/oom-score-fix.sh"]
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK

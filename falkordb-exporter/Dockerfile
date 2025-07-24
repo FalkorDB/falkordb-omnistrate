@@ -6,9 +6,17 @@ COPY --from=redis_exporter /redis_exporter /usr/local/bin/redis_exporter
 
 COPY falkordb-exporter/exporter-entrypoint.sh /usr/local/bin/exporter-entrypoint.sh
 
+RUN mkdir -p /falkordb
+
+WORKDIR /falkordb
+
 RUN mkdir -p /var/lib/falkordb && \
   chmod 700 /var/lib/falkordb && \
-  chmod +x /usr/local/bin/exporter-entrypoint.sh
+  chmod +x /usr/local/bin/exporter-entrypoint.sh && \
+  useradd -u 1000 -m falkordb && \
+  chown falkordb:falkordb /var/lib/falkordb && \
+  chown falkordb:falkordb /falkordb/*
+
 
 ENV FALKORDB_HOME=/var/lib/falkordb
 

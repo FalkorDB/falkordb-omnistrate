@@ -45,6 +45,11 @@ jobs:
             days_left=$(( (end_timestamp - now) / 86400 ))
 
             if [ "$days_left" -lt 15 ]; then
+              if [ "$days_left" -lt 10 ]; then
+                severity="critical"
+              else
+                severity="warning"
+              fi
               curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
                 -H 'Content-Type: application/json' \
                 -d "{
@@ -53,7 +58,7 @@ jobs:
                   \"payload\": {
                     \"summary\": \"TLS cert for $instance_id expires in $days_left days\",
                     \"source\": \"github-actions\",
-                    \"severity\": \"warning\"
+                    \"severity\": \"$severity\"
                   },
                   \"custom_details\": {
                     \"instance_id\": \"$instance_id\",

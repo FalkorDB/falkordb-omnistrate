@@ -19,7 +19,7 @@ ENV FALKORDB_HOME=/var/lib/falkordb
 
 RUN mkdir -p /var/lib/falkordb && \
     chmod 700 /var/lib/falkordb && \
-    chmod +x /usr/local/bin/exporter-entrypoint.sh && \
+    #chmod +x /usr/local/bin/exporter-entrypoint.sh && \
     addgroup \
     --gid "$GID" \
     "$GROUPNAME" \
@@ -29,6 +29,9 @@ RUN mkdir -p /var/lib/falkordb && \
     --ingroup "$GROUPNAME" \
     --no-create-home \
     --uid "$UID" \
-    $USER
+    $USER && \
+    chown -R "$USER":"$GROUPNAME" "${FALKORDB_HOME}" && \
+    chmod 700 "${FALKORDB_HOME}" && \
+    chown -R "$USER":"$GROUPNAME" /falkordb
 
 ENTRYPOINT [ "/usr/local/bin/exporter-entrypoint.sh" ]

@@ -28,15 +28,15 @@ RUN useradd -u 1000 -m falkordb && usermod -aG crontab falkordb && \
 
 RUN mkdir -p /var/lib/falkordb
 
-WORKDIR /var/lib/falkordb
+WORKDIR /falkordb
 
 COPY falkordb-node/sentinel.conf .
 COPY falkordb-node/node.conf .
 COPY falkordb-node/node-entrypoint.sh /usr/local/bin/
 COPY --from=redis_exporter /redis_exporter /usr/local/bin/
 COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/local/bin/healthcheck
-COPY scripts/download-debug-so.sh /var/lib/falkordb/scripts/download-debug-so.sh
-COPY scripts/oom-score-fix.sh /var/lib/falkordb/scripts/oom-score-fix.sh
+COPY scripts/download-debug-so.sh /falkordb/download-debug-so.sh
+COPY scripts/oom-score-fix.sh /falkordb/oom-score-fix.sh
 
 RUN chown falkordb:falkordb /var/lib/falkordb/* && \
   chmod +x /usr/local/bin/node-entrypoint.sh && \
@@ -44,8 +44,8 @@ RUN chown falkordb:falkordb /var/lib/falkordb/* && \
   mkdir -p /var/lib/falkordb/scripts && \
   chown falkordb:falkordb /var/lib/falkordb && \
   chmod 700 /var/lib/falkordb && \
-  chmod +x /var/lib/falkordb/scripts/download-debug-so.sh && \
-  chmod +x /var/lib/falkordb/scripts/oom-score-fix.sh
+  chmod +x /falkordb/download-debug-so.sh && \
+  chmod +x /falkordb/oom-score-fix.sh
 
 ENV FALKORDB_HOME=/var/lib/falkordb
 

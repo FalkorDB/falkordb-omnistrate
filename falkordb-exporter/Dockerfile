@@ -10,14 +10,25 @@ RUN mkdir -p /falkordb
 
 WORKDIR /falkordb
 
-RUN mkdir -p /var/lib/falkordb && \
-  chmod 700 /var/lib/falkordb && \
-  chmod +x /usr/local/bin/exporter-entrypoint.sh && \
-  useradd -u 1000 -m falkordb && \
-  chown falkordb:falkordb /var/lib/falkordb && \
-  chown falkordb:falkordb /falkordb/*
-
+ENV USER=falkordb
+ENV GROUPNAME=$USER
+ENV UID=1000
+ENV GID=1000
 
 ENV FALKORDB_HOME=/var/lib/falkordb
+
+RUN mkdir -p /var/lib/falkordb && \
+    chmod 700 /var/lib/falkordb && \
+    chmod +x /usr/local/bin/exporter-entrypoint.sh && \
+    addgroup \
+    --gid "$GID" \
+    "$GROUPNAME" \
+    && adduser \
+    --disabled-password \
+    --home "${FALKORDB_HOME}" \
+    --ingroup "$GROUPNAME" \
+    --no-create-home \
+    --uid "$UID" \
+    $USER
 
 ENTRYPOINT [ "/usr/local/bin/exporter-entrypoint.sh" ]

@@ -88,7 +88,7 @@ get_master() {
   echo "Master Info: $master_info"
 
   # If RUN_SENTINEL is 1 and could not connect to sentinel, wait and try again
-  if [[ $RUN_SENTINEL -eq 1 && -z $master_info && ! $HOSTNAME =~ ^node.*0 ]]; then
+  if [[ $RUN_SENTINEL -eq 1 && -z $master_info]]; then
     echo "Could not connect to sentinel, waiting 5 seconds and trying again"
     sleep 5
     get_master

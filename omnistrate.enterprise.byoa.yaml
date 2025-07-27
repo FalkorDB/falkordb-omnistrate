@@ -1258,7 +1258,7 @@ services:
 
   sentinel-sz:
     x-omnistrate-mode-internal: true
-    image: $FalkorDBNodeImage
+    image: $FalkorDBSentinelImage
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:
@@ -1989,7 +1989,7 @@ services:
 
   sentinel-mz:
     x-omnistrate-mode-internal: true
-    image: $FalkorDBNodeImage
+    image: $FalkorDBSentinelImage
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:

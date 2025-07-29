@@ -1,15 +1,5 @@
 #!/usr/bin/env python3
 """
-TLS Certificate Expiration Monitor for Omni                    tls_instances = []
-
-            for instance in raw_instances:
-                instance_id = instance.get('consumptionResourceInstanceResult', {}).get('id')
-                if not instance_id:
-                    continue          # Get all instances using the filter
-            raw_instances = self.omnistrate_api.list_instances(self.instance_filter)
-
-            tls_instances = []e Instances
-
 This script checks TLS certificate expiration dates for all TLS-enabled instances
 and sends PagerDuty alerts if any certificates expire within 15 days.
 """

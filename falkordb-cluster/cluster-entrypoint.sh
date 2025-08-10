@@ -90,7 +90,7 @@ if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
   DEBUG=1
 fi
 
-if [[ ! -s "$DATA_DIR/run_bgrewriteaof" && ! -f "$DATA_DIR/run_bgrewriteaof" ]]; then
+if [[ ! -s "$FALKORDB_HOME/run_bgrewriteaof" && ! -f "$FALKORDB_HOME/run_bgrewriteaof" ]]; then
   echo "Creating run_bgrewriteaof script"
   echo "
       #!/bin/bash

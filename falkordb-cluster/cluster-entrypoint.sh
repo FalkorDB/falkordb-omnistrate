@@ -92,28 +92,26 @@ fi
 
 if [[ ! -s "$FALKORDB_HOME/run_bgrewriteaof" && ! -f "$FALKORDB_HOME/run_bgrewriteaof" ]]; then
   echo "Creating run_bgrewriteaof script"
-  echo """#!/bin/bash
+  echo "
+      #!/bin/bash
       set -e
+      AOF_FILE_SIZE_TO_MONITOR=\${AOF_FILE_SIZE_TO_MONITOR:-5}
+      ROOT_CA_PATH=\${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
+      TLS_CONNECTION_STRING=$(if [[ \$TLS == "true" ]]; then echo "--tls --cacert \$ROOT_CA_PATH"; else echo ""; fi)
       size=\$(stat -c%s $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof)
-      if (( size > $AOF_FILE_SIZE_TO_MONITOR*1024*1024 ));then
-        echo "File larger than 5MB, running BGREWRITEAOF" >>$FALKORDB_LOG_FILE_PATH
+      if [ \$size -gt \$((AOF_FILE_SIZE_TO_MONITOR * 1024 * 1024)) ]; then
+        echo \"File larger than \$AOF_FILE_SIZE_TO_MONITOR MB, running BGREWRITEAOF\"
         $(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF
       else
-        echo "File smaller than 5MB, not running BGREWRITEAOF" >>$FALKORDB_LOG_FILE_PATH
+        echo \"File smaller than \$AOF_FILE_SIZE_TO_MONITOR MB, not running BGREWRITEAOF\"
       fi
-      """ > "$FALKORDB_HOME/run_bgrewriteaof"
-  chmod +x "$FALKORDB_HOME/run_bgrewriteaof"
+      " > "$DATA_DIR/run_bgrewriteaof"
+  chmod +x "$DATA_DIR/run_bgrewriteaof"
+  ln -s "$DATA_DIR/run_bgrewriteaof" $FALKORDB_HOME/run_bgrewriteaof
   echo "run_bgrewriteaof script created"
 else
   echo "run_bgrewriteaof script already exists"
 fi
-
-
-rewrite_aof_cronjob() {
-  # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
-  # The command is run every 12 hours to prevent the AOF file from growing too large.
-  (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION /bin/bash $FALKORDB_HOME/run_bgrewriteaof") | crontab -
-}
 
 meet_unknown_nodes() {
   # Had to add sleep until things are stable (nodes that can communicate should be given time to do so)
@@ -513,15 +511,10 @@ if [[ $RUN_METRICS -eq 1 ]]; then
   redis_exporter_pid=$!
 fi
 
-#Start cron
-cron
-
-rewrite_aof_cronjob
-
-# If TLS=true, create a job to rotate the certificate
+# If TLS=true, create a script to rotate the certificate
 if [[ "$TLS" == "true" ]]; then
   if [[ $RUN_NODE -eq 1 ]]; then
-    echo "Creating node certificate rotation job"
+    echo "Creating node certificate rotation job script"
     echo "
     #!/bin/bash
     set -e
@@ -529,7 +522,6 @@ if [[ "$TLS" == "true" ]]; then
     redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-cert-file $TLS_MOUNT_PATH/tls.crt
     " >$DATA_DIR/cert_rotate_node.sh
     chmod +x $DATA_DIR/cert_rotate_node.sh
-    (crontab -l 2>/dev/null; echo "0 0 * * * $DATA_DIR/cert_rotate_node.sh") | crontab -
   fi
 fi
 

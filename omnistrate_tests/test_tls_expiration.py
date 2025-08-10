@@ -80,15 +80,28 @@ class TLSCertificateMonitor:
             tls_instances = []
 
             filtered_instances = [
-                instance for instance in raw_instances
-                if instance.get("consumptionResourceInstanceResult", {}).get("status") == "RUNNING"
-                and self.skip_free_tier and "free" not in instance.get("productTierName", "").lower()
-                and instance.get("input_params", {}).get("enableTLS", "false").lower() in ["true", "1", "yes"]
-                and instance.get("consumptionResourceInstanceResult", {}).get("network_type") != "INTERNAL"
+                instance
+                for instance in raw_instances
+                if instance.get("consumptionResourceInstanceResult", {}).get("status")
+                == "RUNNING"
+                and (
+                    not self.skip_free_tier
+                    or "free" not in instance.get("productTierName", "").lower()
+                )
+                and str(
+                    instance.get("input_params", {}).get("enableTLS", "false")
+                ).lower()
+                in ("true", "1", "yes")
+                and instance.get("consumptionResourceInstanceResult", {}).get(
+                    "network_type"
+                )
+                != "INTERNAL"
             ]
 
             for instance in filtered_instances:
-                instance_id = instance.get("consumptionResourceInstanceResult", {}).get("id")
+                instance_id = instance.get("consumptionResourceInstanceResult", {}).get(
+                    "id"
+                )
                 if not instance_id:
                     continue
 
@@ -287,13 +300,16 @@ class TLSCertificateMonitor:
         details = []
         for cert in sorted(expiring_certs, key=lambda x: x["days_until_expiry"]):
             details.append(
-                f"• {cert['hostname']}:{cert['port']} ({cert['service_type']}) "
+                f"• {cert['hostname']}:{cert['port']}"
                 f"expires in {cert['days_until_expiry']} days "
                 f"({cert['expiry_date'].strftime('%Y-%m-%d %H:%M:%S')})"
             )
 
         description = f"{summary}\\n\\nCertificate Details:\\n" + "\\n".join(details)
-
+        serializable_certs = [
+            {**c, "expiry_date": c["expiry_date"].strftime("%Y-%m-%d %H:%M:%S")}
+            for c in expiring_certs
+        ]
         # Prepare PagerDuty payload
         payload = {
             "routing_key": self.pagerduty_routing_key,
@@ -312,7 +328,7 @@ class TLSCertificateMonitor:
                     "service_name": service_name,
                     "environment_name": environment,
                     "product_tier_name": tier,
-                    "expiring_certificates": expiring_certs,
+                    "expiring_certificates": serializable_certs,
                     "total_expiring": total_expiring,
                     "critical_count": critical_count,
                     "warning_count": warning_count,

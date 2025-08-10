@@ -90,19 +90,24 @@ if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
   DEBUG=1
 fi
 
-if [[ ! -s "$FALKORDB_HOME/run_bgrewriteaof" && ! -f "$FALKORDB_HOME/run_bgrewriteaof" ]]; then
+if [[ ! -s "$DATA_DIR/run_bgrewriteaof" && ! -f "$DATA_DIR/run_bgrewriteaof" ]]; then
   echo "Creating run_bgrewriteaof script"
-  echo """#!/bin/bash
+  echo "
+      #!/bin/bash
       set -e
+      AOF_FILE_SIZE_TO_MONITOR=\${AOF_FILE_SIZE_TO_MONITOR:-5}
+      ROOT_CA_PATH=\${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
+      TLS_CONNECTION_STRING=$(if [[ \$TLS == "true" ]]; then echo "--tls --cacert \$ROOT_CA_PATH"; else echo ""; fi)
       size=\$(stat -c%s $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof)
-      if (( size > $AOF_FILE_SIZE_TO_MONITOR*1024*1024 ));then
-        echo "File larger than 5MB, running BGREWRITEAOF" >>$FALKORDB_LOG_FILE_PATH
+      if [ \$size -gt \$((AOF_FILE_SIZE_TO_MONITOR * 1024 * 1024)) ]; then
+        echo \"File larger than \$AOF_FILE_SIZE_TO_MONITOR MB, running BGREWRITEAOF\"
         $(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF
       else
-        echo "File smaller than 5MB, not running BGREWRITEAOF" >>$FALKORDB_LOG_FILE_PATH
+        echo \"File smaller than \$AOF_FILE_SIZE_TO_MONITOR MB, not running BGREWRITEAOF\"
       fi
-      """ > "$FALKORDB_HOME/run_bgrewriteaof"
-  chmod +x "$FALKORDB_HOME/run_bgrewriteaof"
+      " > "$DATA_DIR/run_bgrewriteaof"
+  chmod +x "$DATA_DIR/run_bgrewriteaof"
+  ln -s "$DATA_DIR/run_bgrewriteaof" $FALKORDB_HOME/run_bgrewriteaof
   echo "run_bgrewriteaof script created"
 else
   echo "run_bgrewriteaof script already exists"

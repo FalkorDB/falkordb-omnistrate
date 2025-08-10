@@ -104,7 +104,7 @@ if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
 fi
 
 
-if [[ ! -s "$FALKORDB_HOME/run_bgrewriteaof" && ! -f "$FALKORDB_HOME/run_bgrewriteaof" ]]; then
+if [[ ! -s "$DATA_DIR/run_bgrewriteaof" && ! -f "$DATA_DIR/run_bgrewriteaof" ]]; then
   echo "Creating run_bgrewriteaof script"
   echo "
       #!/bin/bash
@@ -119,8 +119,9 @@ if [[ ! -s "$FALKORDB_HOME/run_bgrewriteaof" && ! -f "$FALKORDB_HOME/run_bgrewri
       else
         echo \"File smaller than \$AOF_FILE_SIZE_TO_MONITOR MB, not running BGREWRITEAOF\"
       fi
-      " > "$FALKORDB_HOME/run_bgrewriteaof"
-  chmod +x "$FALKORDB_HOME/run_bgrewriteaof"
+      " > "$DATA_DIR/run_bgrewriteaof"
+  chmod +x "$DATA_DIR/run_bgrewriteaof"
+  ln -s "$DATA_DIR/run_bgrewriteaof" $FALKORDB_HOME/run_bgrewriteaof
   echo "run_bgrewriteaof script created"
 else
   echo "run_bgrewriteaof script already exists"

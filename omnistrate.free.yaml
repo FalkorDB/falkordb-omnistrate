@@ -10,11 +10,9 @@ x-omnistrate-service-plan:
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
       AwsAccountId: "$AwsAccountId"
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
-
-x-internal-integrations:
-  logs:
-    provider: native
-  metrics:
+  validPaymentMethodRequired: false
+  maxNumberOfInstancesAllowed: 1
+  billingProductID: "free"
 
 services:
   # Free
@@ -62,7 +60,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: true
+        modifiable: false
         required: true
         export: false
         parameterDependencyMap:
@@ -104,7 +102,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: true
+        modifiable: false
         required: true
         export: false
       # - key: enableTLS
@@ -155,6 +153,7 @@ services:
       - FALKORDB_RESULT_SET_SIZE=10000
       - FALKORDB_QUERY_MEM_CAPACITY=52428800
       - PERSISTENCE_AOF_CONFIG=no
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
       # - "9121:9121"

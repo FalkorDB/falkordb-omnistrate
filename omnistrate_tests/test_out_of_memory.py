@@ -27,7 +27,7 @@ from redis.exceptions import ResponseError, OutOfMemoryError
 parser = argparse.ArgumentParser()
 parser.add_argument("omnistrate_user")
 parser.add_argument("omnistrate_password")
-parser.add_argument("cloud_provider", choices=["aws", "gcp"])
+parser.add_argument("cloud_provider", choices=["aws", "gcp", "azure"])
 parser.add_argument("region")
 
 parser.add_argument(
@@ -52,6 +52,17 @@ parser.add_argument("--custom-network", required=False)
 parser.add_argument("--network-type", required=False, default="PUBLIC")
 parser.add_argument("--host-count", required=False, default="6")
 parser.add_argument("--cluster-replicas", required=False, default="1")
+parser.add_argument("--maxmemory", required=False, default="")
+
+parser.add_argument(
+    "--deployment-create-timeout-seconds", required=False, default=2600, type=int
+)
+parser.add_argument(
+    "--deployment-delete-timeout-seconds", required=False, default=2600, type=int
+)
+parser.add_argument(
+    "--deployment-failover-timeout-seconds", required=False, default=2600, type=int
+)
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -97,7 +108,7 @@ def test_out_of_memory():
 
     instance = omnistrate.instance(
         service_id=args.service_id,
-        service_provider_id='sp-JvkxkPhinN',
+        service_provider_id=service.service_provider_id,
         service_key=service.key,
         service_environment_id=args.environment_id,
         service_environment_key=service.get_environment(args.environment_id).key,
@@ -106,9 +117,9 @@ def test_out_of_memory():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
-        deployment_create_timeout_seconds=2400,
-        deployment_delete_timeout_seconds=2400,
-        deployment_failover_timeout_seconds=2400,
+        deployment_create_timeout_seconds=args.deployment_create_timeout_seconds,
+        deployment_delete_timeout_seconds=args.deployment_delete_timeout_seconds,
+        deployment_failover_timeout_seconds=args.deployment_failover_timeout_seconds,
     )
 
     try:
@@ -126,6 +137,7 @@ def test_out_of_memory():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            maxMemory=args.maxmemory,
             custom_network_id=network.network_id if network else None,
         )
         
@@ -157,8 +169,8 @@ def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: st
     Args:
         instance: The OmnistrateFleetInstance to stress test
     """
-    largeQuery = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
-    medQuery = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
+    mediumQuery = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
+    smallQuery = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
 
     logging.info("Starting stress test")
     db = instance.create_connection(
@@ -167,10 +179,10 @@ def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: st
     graph = db.select_graph("test")
 
     if resource_key == 'free':
-        q = medQuery
+        q = smallQuery
     else:
-        q = largeQuery
-    
+        q = mediumQuery
+
     while True:
         try:
             response = graph.query(q)

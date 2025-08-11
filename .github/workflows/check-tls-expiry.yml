@@ -13,75 +13,24 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: List Omnistrate Instances
-        id: list_instances
-        uses: ./.github/actions/list-omnistrate-instances
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
-          filter: service:FalkorDB,environment:Prod,status:RUNNING
-          skipFreeTier: true
+          python-version: '3.11'
 
-      - name: Filter TLS-enabled Instances and Check Expiry
-        id: check_tls
+      - name: Install dependencies
         run: |
-          echo "${{ steps.list_instances.outputs.instances }}" | jq -c '.[] | select(.tls == true)' > tls_instances.json
+          pip install poetry
+          poetry install
 
-          alerts=()
-
-          while IFS= read -r instance; do
-            id=$(echo "$instance" | jq -r '.instance_id')
-            hostname=$(echo "$instance" | jq -r '.hostname')
-
-            echo "Checking TLS for $hostname"
-            end_date=$(echo | openssl s_client -servername "$hostname" -connect "$hostname:443" 2>/dev/null \
-              | openssl x509 -noout -enddate | cut -d= -f2)
-
-            if [ -z "$end_date" ]; then
-              echo "Could not retrieve cert for $hostname"
-              continue
-            fi
-
-            end_timestamp=$(date -d "$end_date" +%s)
-            now=$(date +%s)
-            days_left=$(( (end_timestamp - now) / 86400 ))
-
-            echo "$hostname expires in $days_left days"
-
-            if [ "$days_left" -lt 15 ]; then
-              alerts+=("{\"instance_id\":\"$id\",\"hostname\":\"$hostname\",\"expires_in_days\":$days_left}")
-            fi
-          done < tls_instances.json
-
-          if [ "${#alerts[@]}" -gt 0 ]; then
-            echo "${alerts[@]}" > expiring_tls.json
-            echo "alert_required=true" >> $GITHUB_ENV
-          else
-            echo "No TLS certs expiring soon"
-          fi
-
-      - name: Trigger PagerDuty Alert
-        if: env.alert_required == 'true'
+      - name: Run TLS Certificate Expiration Check
         run: |
-          for row in $(cat expiring_tls.json | jq -c '.[]'); do
-            instance_id=$(echo "$row" | jq -r '.instance_id')
-            endpoint=$(echo "$row" | jq -r '.endpoint')
-            days=$(echo "$row" | jq -r '.expires_in_days')
-
-            curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
-              -H 'Content-Type: application/json' \
-              -d "{
-                \"routing_key\": \"${{ secrets.PAGERDUTY_ROUTING_KEY }}\",
-                \"event_action\": \"trigger\",
-                \"payload\": {
-                  \"summary\": \"TLS cert for $instance_id expires in $days days\",
-                  \"source\": \"github-actions\",
-                  \"severity\": \"warning\"
-                },
-                \"custom_details\": {
-                  \"instance_id\": \"$instance_id\",
-                  \"endpoint\": \"$endpoint\",
-                  \"days_remaining\": \"$days\"
-                }
-              }"
-          done
+          poetry run python omnistrate_tests/test_tls_expiration.py \
+            "${{ secrets.OMNISTRATE_USERNAME }}" \
+            "${{ secrets.OMNISTRATE_PASSWORD }}" \
+            "${{ secrets.PAGERDUTY_ROUTING_KEY }}" \
+            "${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}" \
+            "${{ vars.OMNISTRATE_INTERNAL_PROD_ENVIRONMENT }}" \
+            --verbose
+        env:
+          PYTHONPATH: ${{ github.workspace }}

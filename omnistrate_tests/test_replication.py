@@ -39,7 +39,7 @@ import random
 parser = argparse.ArgumentParser()
 parser.add_argument("omnistrate_user")
 parser.add_argument("omnistrate_password")
-parser.add_argument("cloud_provider", choices=["aws", "gcp"])
+parser.add_argument("cloud_provider", choices=["aws", "gcp", "azure"])
 parser.add_argument("region")
 
 parser.add_argument(
@@ -65,6 +65,16 @@ parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--persist-instance-on-fail",action="store_true")
 parser.add_argument("--custom-network", required=False)
 parser.add_argument("--network-type", required=False, default="PUBLIC")
+
+parser.add_argument(
+    "--deployment-create-timeout-seconds", required=False, default=2600, type=int
+)
+parser.add_argument(
+    "--deployment-delete-timeout-seconds", required=False, default=2600, type=int
+)
+parser.add_argument(
+    "--deployment-failover-timeout-seconds", required=False, default=2600, type=int
+)
 
 parser.set_defaults(tls=False)
 args = parser.parse_args()
@@ -117,9 +127,9 @@ def test_replication():
         product_tier_key=product_tier.product_tier_key,
         resource_key=args.resource_key,
         subscription_id=args.subscription_id,
-        deployment_create_timeout_seconds=2400,
-        deployment_delete_timeout_seconds=2400,
-        deployment_failover_timeout_seconds=2400
+        deployment_create_timeout_seconds=args.deployment_create_timeout_seconds,
+        deployment_delete_timeout_seconds=args.deployment_delete_timeout_seconds,
+        deployment_failover_timeout_seconds=args.deployment_failover_timeout_seconds,
     )
 
     try:
@@ -381,6 +391,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
                 promotion_completed = True
             time.sleep(5)
         except Exception as e:
+            logging.exception(e)
             logging.info("Promotion not completed yet")
             time.sleep(5)
 
@@ -396,6 +407,7 @@ def test_failover(instance: OmnistrateFleetInstance, password: str,timeout_in_se
         raise Exception("Data lost after third failover")
 
     logging.info("Data persisted after third failover")
+    instance.wait_for_instance_status(timeout_seconds=600)
     
 def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     """
@@ -408,18 +420,9 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     6. Make sure we can still connect and read the data
     7. Delete the instance
     """
-
-    resources = instance.get_connection_endpoints()
-    sentinel_resource = next(
-        (resource for resource in resources if resource["id"].startswith("sentinel-")),
-        None,
-    )
-    db = FalkorDB(
-        host=sentinel_resource["endpoint"],
-        port=sentinel_resource["ports"][0],
-        username="falkordb",
-        password=password,
-        ssl=args.tls,
+    
+    db = instance.create_connection(
+        ssl=args.tls, force_reconnect=True, network_type=args.network_type
     )
 
     graph = db.select_graph("test")
@@ -434,6 +437,10 @@ def test_stop_start(instance: OmnistrateFleetInstance, password: str):
     logging.info("Instance stopped")
 
     instance.start(wait_for_ready=True)
+    
+    db = instance.create_connection(
+        ssl=args.tls, force_reconnect=True, network_type=args.network_type
+    )
 
     graph = db.select_graph("test")
     

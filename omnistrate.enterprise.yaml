@@ -10,8 +10,15 @@ x-omnistrate-service-plan:
       GcpServiceAccountEmail: "$GcpServiceAccountEmail"
       AwsAccountId: "$AwsAccountId"
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+      AzureSubscriptionId: "$AzureSubscriptionId"
+      AzureTenantId: "$AzureTenantId"
   features:
     CUSTOM_NETWORKS:
+  metering:
+    gcsBucketName: $MeteringBucketName
+  validPaymentMethodRequired: false
+  maxNumberOfInstancesAllowed: 10
+  billingProductID: "enterprise"
 
 x-omnistrate-load-balancer:
   tcp:
@@ -32,129 +39,6 @@ x-omnistrate-load-balancer:
             - sentinel-mz
           ingressPort: 26379
           backendPort: 26379
-
-x-internal-integrations:
-  logs:
-    provider: native
-  metrics:
-    provider: native
-
-x-falkordbMetrics: &metrics
-  prometheusEndpoint: "http://localhost:9121/metrics"
-  metrics:
-    redis_aof_file_size_bytes:
-      "AOF File Size (Bytes)":
-        aggregationFunction: sum
-    redis_commands_latencies_usec_bucket:
-      "Command Latency (μs) Bucket":
-        aggregationFunction: sum
-    redis_commands_latencies_usec_sum:
-      "Total Command Latency (μs)":
-        aggregationFunction: sum
-    redis_commands_latencies_usec_count:
-      "Command Latency Count (μs)":
-        aggregationFunction: sum
-    redis_commands_processed_total:
-      "Total Processed Commands":
-        aggregationFunction: sum
-    redis_commands_rejected_calls_total:
-      "Rejected Command Calls":
-        aggregationFunction: sum
-    redis_commands_total:
-      "Total Commands":
-        aggregationFunction: sum
-    redis_connected_clients:
-      "Connected Clients":
-        aggregationFunction: sum
-    redis_connections_received_total:
-      "Total Connections Received":
-        aggregationFunction: sum
-    redis_db_keys:
-      "Database Keys":
-        aggregationFunction: sum
-    redis_errors_total:
-      "Total Errors":
-        aggregationFunction: sum
-    redis_last_slow_execution_duration_seconds:
-      "Last Slow Execution Duration (Seconds)":
-        aggregationFunction: sum
-    redis_loading_dump_file:
-      "Loading Dump File":
-        aggregationFunction: sum
-    redis_mem_clients_normal:
-      "Memory Used By Normal Clients":
-        aggregationFunction: sum
-      "Memory Used (Bytes)":
-        aggregationFunction: sum
-    redis_memory_used_dataset_bytes:
-      "Memory Used By Dataset (Bytes)":
-        aggregationFunction: sum
-    redis_rdb_bgsave_in_progress:
-      "RDB BGSAVE In Progress":
-        aggregationFunction: sum
-    redis_rdb_changes_since_last_save:
-      "Changes Since Last RDB Save":
-        aggregationFunction: sum
-    redis_rdb_current_bgsave_duration_sec:
-      "Current RDB BGSAVE Duration (Seconds)":
-        aggregationFunction: sum
-    redis_rdb_last_bgsave_duration_sec:
-      "Last RDB BGSAVE Duration (Seconds)":
-        aggregationFunction: sum
-    redis_memory_used_bytes:
-      "Memory Used (Bytes)":
-        aggregationFunction: sum
-    redis_memory_max_bytes:
-      "Memory Max (Bytes)":
-        aggregationFunction: sum
-    redis_rdb_last_cow_size_bytes:
-      "Last RDB Copy-On-Write Size (Bytes)":
-        aggregationFunction: sum
-    redis_rdb_last_load_loaded_keys:
-      "Last RDB Load: Loaded Keys":
-        aggregationFunction: sum
-    redis_rdb_last_save_timestamp_seconds:
-      "Last RDB Save Timestamp (Seconds)":
-        aggregationFunction: sum
-    redis_rdb_saves_total:
-      "Total RDB Saves":
-        aggregationFunction: sum
-    redis_rejected_connections_total:
-      "Total Rejected Connections":
-        aggregationFunction: sum
-    redis_slowlog_last_id:
-      "Slow Log Last ID":
-        aggregationFunction: sum
-    redis_unexpected_error_replies:
-      "Unexpected Error Replies":
-        aggregationFunction: sum
-    redis_uptime_in_seconds:
-      "Uptime (Seconds)":
-        aggregationFunction: sum
-    redis_net_input_bytes_total:
-      "Total Network Input Bytes":
-        aggregationFunction: sum
-    redis_net_output_bytes_total:
-      "Total Network Output Bytes":
-        aggregationFunction: sum
-    redis_commands_duration_seconds_total:
-      "Total Command Duration (Seconds)":
-        aggregationFunction: sum
-
-x-omnistrate-integrations:
-  - omnistrateLogging:
-  - omnistrateMetrics:
-      additionalMetrics:
-        node-s:
-          <<: *metrics
-        node-sz:
-          <<: *metrics
-        node-mz:
-          <<: *metrics
-        cluster-sz:
-          <<: *metrics
-        cluster-mz:
-          <<: *metrics
 
 x-rebalanceparam: &rebalanceparam
   x-omnistrate-api-params:
@@ -223,6 +107,14 @@ x-clusterparam: &clusterparam
       options:
         - "everysec"
         - "always"
+    - key: aofCronExpression
+      description: Cron expression for AOF persistence. Check the documentation for more information.
+      name: AOF Cron Expression
+      type: String
+      modifiable: true
+      required: false
+      export: true
+      defaultValue: "*/30 * * * *"
     - key: falkorDBCacheSize
       description: Choose the cache size for your database
       name: FalkorDB Cache Size
@@ -297,7 +189,7 @@ x-clusterparam: &clusterparam
       description: Choose the maxmemory for your database (do not exceed InstanceType memory)
       name: FalkorDB Maxmemory
       type: String
-      modifiable: false
+      modifiable: true
       required: false
       export: true
       defaultValue: "6GB"
@@ -359,7 +251,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: true
+        modifiable: false
         required: true
         export: false
         parameterDependencyMap:
@@ -391,6 +283,16 @@ services:
           - "always"
         parameterDependencyMap:
           node-s: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          node-s: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -479,7 +381,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -501,6 +403,8 @@ services:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
         - cloudProvider: aws
+          apiParam: nodeInstanceType
+        - cloudProvider: azure
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
@@ -531,7 +435,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: true
+        modifiable: false
         required: true
         export: false
       - key: RDBPersistenceConfig
@@ -557,6 +461,14 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -631,7 +543,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -645,6 +557,9 @@ services:
             instanceStorageSizeGi: 200
           aws:
             instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
+          azure:
+            instanceStorageType: AZURE::STANDARD_SSD
             instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
@@ -666,6 +581,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
@@ -840,6 +756,16 @@ services:
           - "always"
         parameterDependencyMap:
           node-sz: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          node-sz: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -928,7 +854,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -951,6 +877,8 @@ services:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
         - cloudProvider: aws
+          apiParam: nodeInstanceType
+        - cloudProvider: azure
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
@@ -1019,6 +947,14 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -1093,7 +1029,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -1108,6 +1044,9 @@ services:
             instanceStorageSizeGi: 200
           aws:
             instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
+          azure:
+            instanceStorageType: AZURE::STANDARD_SSD
             instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
@@ -1133,6 +1072,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
@@ -1141,6 +1081,7 @@ services:
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - MEMORY_LIMIT=$var.maxMemory
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1284,10 +1225,12 @@ services:
           name: e2-small
         - cloudProvider: aws
           name: t3a.small
+        - cloudProvider: azure
+          name: standard_b2ls_v2
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
-      - RUN_METRICS=0
+      - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
       - DEBUG=0
       - SENTINEL_PORT=26379
@@ -1308,6 +1251,9 @@ services:
           aws:
             instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 10
+          azure:
+            instanceStorageType: AZURE::STANDARD_SSD
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -1493,6 +1439,16 @@ services:
           - "always"
         parameterDependencyMap:
           node-mz: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          node-mz: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -1581,7 +1537,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -1603,6 +1559,8 @@ services:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
         - cloudProvider: aws
+          apiParam: nodeInstanceType
+        - cloudProvider: azure
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
@@ -1671,6 +1629,14 @@ services:
         options:
           - "everysec"
           - "always"
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -1745,7 +1711,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -1759,6 +1725,9 @@ services:
             instanceStorageSizeGi: 200
           aws:
             instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
+          azure:
+            instanceStorageType: AZURE::STANDARD_SSD
             instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
@@ -1785,6 +1754,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
@@ -1793,6 +1763,7 @@ services:
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - MEMORY_LIMIT=$var.maxMemory
+      - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1935,10 +1906,12 @@ services:
           name: e2-small
         - cloudProvider: aws
           name: t3a.small
+        - cloudProvider: azure
+          name: standard_b2ls_v2
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
-      - RUN_METRICS=0
+      - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
       - DEBUG=0
       - SENTINEL_PORT=26379
@@ -1959,6 +1932,9 @@ services:
           aws:
             instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 10
+          azure:
+            instanceStorageType: AZURE::STANDARD_SSD
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -2133,6 +2109,16 @@ services:
           - "always"
         parameterDependencyMap:
           cluster-sz: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          cluster-sz: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -2221,7 +2207,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -2245,6 +2231,8 @@ services:
           apiParam: nodeInstanceType
         - cloudProvider: aws
           apiParam: nodeInstanceType
+        - cloudProvider: azure
+          apiParam: nodeInstanceType
     <<: *clusterparam
     volumes:
       - source: ./data
@@ -2256,6 +2244,9 @@ services:
             instanceStorageSizeGi: 200
           aws:
             instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
+          azure:
+            instanceStorageType: AZURE::STANDARD_SSD
             instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
@@ -2276,6 +2267,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
@@ -2283,6 +2275,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
       - CLUSTER_REPLICAS=1
       - MEMORY_LIMIT=$var.maxMemory
     ports:
@@ -2368,6 +2361,8 @@ services:
           name: e2-small
         - cloudProvider: aws
           name: t3a.small
+        - cloudProvider: azure
+          name: standard_b2ls_v2
     <<: *rebalanceparam
     environment:
       - IS_MULTI_ZONE=0
@@ -2467,6 +2462,16 @@ services:
           - "always"
         parameterDependencyMap:
           cluster-mz: AOFPersistenceConfig
+      - key: aofCronExpression
+        description: Cron expression for AOF persistence. Check the documentation for more information.
+        name: AOF Cron Expression
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "*/30 * * * *"
+        parameterDependencyMap:
+          cluster-mz: aofCronExpression
       - key: falkorDBCacheSize
         description: Choose the cache size for your database
         name: FalkorDB Cache Size
@@ -2555,7 +2560,7 @@ services:
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
         name: FalkorDB Maxmemory
         type: String
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "6GB"
@@ -2579,6 +2584,8 @@ services:
           apiParam: nodeInstanceType
         - cloudProvider: aws
           apiParam: nodeInstanceType
+        - cloudProvider: azure
+          apiParam: nodeInstanceType
     <<: *clusterparam
     volumes:
       - source: ./data
@@ -2590,6 +2597,9 @@ services:
             instanceStorageSizeGi: 200
           aws:
             instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 200
+          azure:
+            instanceStorageType: AZURE::STANDARD_SSD
             instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
@@ -2610,6 +2620,7 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
+      - AOF_CRON_EXPRESSION=$var.aofCronExpression
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
       - FALKORDB_NODE_CREATION_BUFFER=$var.falkorDBNodeCreationBuffer
       - FALKORDB_MAX_QUEUED_QUERIES=$var.falkorDBMaxQueuedQueries
@@ -2617,6 +2628,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
       - CLUSTER_REPLICAS=1
     ports:
       - "6379"
@@ -2699,6 +2711,8 @@ services:
           name: e2-small
         - cloudProvider: aws
           name: t3a.small
+        - cloudProvider: azure
+          name: standard_b2ls_v2
     <<: *rebalanceparam
     environment:
       - IS_MULTI_ZONE=1
@@ -2711,153 +2725,8 @@ services:
       - source: adminpasspath
         target: /run/secrets/adminpassword
 
-  Grafana:
-    x-omnistrate-mode-internal: false
-    image: grafana/grafana:latest
-    x-omnistrate-compute:
-      replicaCount: 1
-      instanceTypes:
-        - cloudProvider: gcp
-          apiParam: nodeInstanceType
-        - cloudProvider: aws
-          apiParam: nodeInstanceType
-    x-omnistrate-api-params:
-      - key: nodeInstanceType
-        description: The instance type.
-        name: Node Instance Type
-        type: String
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: e2-medium
-      - key: adminUser
-        description: The admin user for Grafana
-        name: Admin User
-        type: String
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: admin
-      - key: adminPassword
-        description: The admin password for Grafana
-        name: Admin Password
-        type: Password
-        modifiable: true
-        required: true
-        export: false
-      - key: adminEmail
-        description: The admin email for Grafana
-        name: Admin Email
-        type: String
-        modifiable: true
-        required: true
-        export: true
-        defaultValue:
-      - key: rootUrl
-        description: The root URL for Grafana
-        name: Root URL
-        type: String
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: http://localhost:3000
-      - key: smtpEnabled
-        description: Whether to enable SMTP for Grafana
-        name: SMTP Enabled
-        type: Boolean
-        modifiable: true
-        required: true
-        export: true
-        defaultValue: "false"
-      - key: smtpHost
-        description: The SMTP host for Grafana
-        name: SMTP Host
-        type: String
-        modifiable: true
-        required: false
-        export: true
-        defaultValue: localhost
-      - key: smtpUser
-        description: The SMTP user for Grafana
-        name: SMTP User
-        type: String
-        modifiable: true
-        required: false
-        export: true
-        defaultValue: admin
-      - key: smtpPassword
-        description: The SMTP password for Grafana
-        name: SMTP Password
-        type: Password
-        modifiable: true
-        required: false
-        export: false
-        defaultValue: admin
-      - key: smtpFromAddress
-        description: The SMTP from address for Grafana
-        name: SMTP From Address
-        type: String
-        modifiable: true
-        required: false
-        export: true
-        defaultValue: mail@example.com
-      - key: smtpFromName
-        description: The SMTP from name for Grafana
-        name: SMTP From Name
-        type: String
-        modifiable: true
-        required: false
-        export: true
-        defaultValue: Grafana
-    environment:
-      - SECURITY_CONTEXT_FS_GROUP=472
-      - GF_SECURITY_ADMIN_USER=$var.adminUser
-      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
-      - GF_SECURITY_ADMIN_EMAIL=$var.adminEmail
-      - GF_SECURITY_SECRET_KEY__FILE=/run/secrets/grafana_secret_key
-      - GF_SERVER_ROOT_URL=$var.rootUrl
-      - GF_SMTP_ENABLED=$var.smtpEnabled
-      - GF_SMTP_HOST=$var.smtpHost
-      - GF_SMTP_USER=$var.smtpUser
-      - GF_SMTP_PASSWORD__FILE=/run/secrets/grafana_smtp_password
-      - GF_SMTP_FROM_ADDRESS=$var.smtpFromAddress
-      - GF_SMTP_FROM_NAME=$var.smtpFromName
-    ports:
-      - "3000:3000"
-    volumes:
-      - source: ./grafana
-        target: /var/lib/grafana
-        type: bind
-        x-omnistrate-storage:
-          gcp:
-            instanceStorageType: GCP::PD_BALANCED
-            instanceStorageSizeGi: 200
-          aws:
-            instanceStorageType: AWS::EBS_GP3
-            instanceStorageSizeGi: 200
-    configs:
-      - source: grafana
-        target: /usr/local/etc/grafana/grafana.ini
-    secrets:
-      - source: grafana_admin_password
-        target: /run/secrets/grafana_admin_password
-      - source: grafana_secret_key
-        target: /run/secrets/grafana_secret_key
-      - source: grafana_smtp_password
-        target: /run/secrets/grafana_smtp_password
-
-configs:
-  grafana:
-    file: ./configs/grafana.ini
-
 secrets:
   adminpasspath:
     file: ./secrets/adminpassword
   falkordbpasspath:
     file: ./secrets/falkordbpassword
-  grafana_admin_password:
-    file: ./secrets/grafana_admin_password
-  grafana_secret_key:
-    file: ./secrets/grafana_secret_key
-  grafana_smtp_password:
-    file: ./secrets/grafana_smtp_password

@@ -16,12 +16,13 @@ env:
   NODE_IMAGE_NAME: falkordb-node
   CLUSTER_IMAGE_NAME: falkordb-cluster
   CLUSTER_REBALANCE_IMAGE_NAME: falkordb-cluster-rebalance
-  FALKORDB_VERSION: v4.8.6
+  FALKORDB_VERSION: v4.12.1
   FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
   PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
   ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
   GCP_NETWORK_NAME: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
   AWS_NETWORK_NAME: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+  AZURE_NETWORK_NAME: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
 jobs:
   create-runners:
@@ -138,15 +139,13 @@ jobs:
           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
           sed -i 's/$AwsAccountId/${{ vars.AWS_ACCOUNT_ID }}/g' ${{ matrix.plans.file }}
           sed -i 's|$AwsBootstrapRoleAccountArn|${{ vars.AWS_BOOTSTRAP_ROLE_ACCOUNT_ARN }}|g' ${{ matrix.plans.file }}
+          sed -i 's/$AzureSubscriptionId/${{ vars.AZURE_SUBSCRIPTION_ID }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$AzureTenantId/${{ vars.AZURE_TENANT_ID }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$MeteringBucketName/${{ secrets.METERING_BUCKET_NAME }}/g' ${{ matrix.plans.file }}
           sed -i 's/${{ matrix.plans.plan-name }}/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
-
-      - name: Remove custom metrics for testing
-        run: |
-          yq eval 'del(.x-omnistrate-integrations[1].omnistrateMetrics) | .x-omnistrate-integrations |= map(select(type != "!!map" or length > 0))' ${{ matrix.plans.file }} > ${{ matrix.plans.file }}.tmp
-          mv ${{ matrix.plans.file }}.tmp ${{ matrix.plans.file }}
 
       - name: Upload yaml as artifact
         uses: actions/upload-artifact@v4
@@ -161,9 +160,6 @@ jobs:
             mkdir -p secrets || { echo "Failed to create secrets directory"; exit 1; }
             echo '{{ $var.falkordbPassword }}' > ./secrets/falkordbpassword || { echo "Failed to write falkordbpassword"; exit 1; }
             echo '{{ $func.random(string, 16, $sys.deterministicSeedValue) }}' > ./secrets/adminpassword || { echo "Failed to write adminpassword"; exit 1; }
-            echo '{{ $var.adminPassword }}' > ./secrets/grafana_admin_password || { echo "Failed to write grafana_admin_password"; exit 1; }
-            echo '{{ $func.random(string, 16, $sys.deterministicSeedValue)  }}' > ./secrets/grafana_secret_key || { echo "Failed to write grafana_secret_key"; exit 1; }
-            echo '{{ $var.smtpPassword }}' > ./secrets/grafana_smtp_password || { echo "Failed to write grafana_smtp_password"; exit 1; }
           else
             echo "secrets option was not used"
             exit 0
@@ -215,6 +211,19 @@ jobs:
           cidr: "73.0.0.0/16"
           name: ${{ env.AWS_NETWORK_NAME }}
 
+      - name: Create Omnistrate Custom Network - AZURE
+        if: ${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}
+        uses: ./.github/actions/create-omnistrate-custom-network
+        id: create_custom_network_azure
+        with:
+          username: ${{ secrets.OMNISTRATE_USERNAME }}
+          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          cloud_provider: azure
+          region: eastus2
+          cidr: "73.0.0.0/16"
+          name: ${{ env.AZURE_NETWORK_NAME }}
+  
+
   test:
     needs: [create-custom-networks, create-runners]
     runs-on: ${{ matrix.instances.runner_label || 'ubuntu-latest' }}
@@ -222,6 +231,178 @@ jobs:
       fail-fast: false
       matrix:
         instances:
+          ####################### AZURE #######################
+          - name: enterprise/Standalone - AZURE/eastus2 - Out of memory
+            if: "true"
+            testFile: test_out_of_memory.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-oom' --instance-description 'test-standalone-oom' --instance-type 'standard_b2ls_v2' --maxmemory '2GB' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: enterprise/Standalone - AZURE/eastus2 - Failover & Persistence
+            if: "true"
+            testFile: test_standalone.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover' --instance-description 'test-standalone-failover' --instance-type 'standard_b2ms' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: enterprise/SingleZone - AZURE/eastus2 - Failover & Persistence
+            if: "true"
+            testFile: test_replication.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover'  --instance-description 'test-sz-failover' --instance-type 'standard_b2ms' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: enterprise/MultiZone - AZURE/eastus2 - Failover & Persistence
+            if: "true"
+            testFile: test_replication.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover' --instance-description 'test-mz-failover' --instance-type 'standard_b2ms' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: enterprise/MultiZone - AZURE/eastus2 - Out of memory
+            if: "true"
+            testFile: test_out_of_memory.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'multi-Zone' --replica-id 'node-mz-0' --instance-name 'test-mz-oom' --instance-description 'test-mz-oom' --instance-type 'standard_b2ls_v2' --maxmemory '2GB' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"  
+          - name: enterprise/Standalone - AZURE/eastus2 - Failover & Persistence With TLS
+            if: "true"
+            testFile: test_standalone.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-failover-tls' --instance-description 'test-standalone-failover-tls' --instance-type 'standard_b2ms' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: enterprise/SingleZone - AZURE/eastus2 - Failover & Persistence With TLS
+            if: "true"
+            testFile: test_replication.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-sz-failover-tls'  --instance-description 'test-sz-failover-tls' --instance-type 'standard_b2ms' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: enterprise/MultiZone - AZURE/eastus2  - Failover & Persistence With TLS
+            if: "true"
+            testFile: test_replication.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'multi-Zone' --instance-name 'test-mz-failover-tls' --instance-description 'test-mz-failover-tls' --instance-type 'standard_b2ms' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: enterprise/Standalone - AZURE/eastus2  - Update Memory
+            if: "true"
+            testFile: test_update_memory.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-update-memory'  --instance-description 'test-standalone-update-memory' --instance-type 'standard_b2ms' --new-instance-type 'standard_d2s_v5' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: enterprise/SingleZone - AZURE/eastus2 - Update Memory
+            if: "true"
+            testFile: test_update_memory.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-update-memory'  --instance-description 'test-replication-update-memory' --instance-type 'standard_b2ms' --new-instance-type 'standard_d2s_v5' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: enterprise/ClusterSingleZone - AZURE/eastus2 - Update Memory
+            if: "true"
+            testFile: test_update_memory.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-update-memory'  --instance-description 'test-cluster-update-memory' --instance-type 'standard_b2ms' --new-instance-type 'standard_d2s_v5' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+
+          - name: enterprise/SingleZone - AZURE/eastus2 - Upgrade Version
+            if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
+            testFile: test_upgrade_version.py
+            tierName: enterprise-main
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-upgrade' --instance-description 'test-replication-upgrade' --instance-type 'standard_b2ms' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: enterprise/ClusterSingleZone - AZURE/eastus2 - Failover & Persistence
+            if: "true"
+            testFile: test_cluster.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1'  --instance-name 'test-cluster-sz-failover' --instance-description 'test-cluster-sz-failover' --instance-type 'standard_b2ms' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: enterprise/ClusterMultiZone - AZURE/eastus2 - Failover & Persistence
+            if: "true"
+            testFile: test_cluster.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'   --instance-name 'test-cluster-mz-failover' --instance-description 'test-cluster-mz-failover' --instance-type 'standard_b2ms' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: enterprise/ClusterMultiZone - AZURE/eastus2 - Out of memory
+            if: "true"
+            testFile: test_out_of_memory.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'   --instance-name 'test-cluster-mz-oom' --instance-description 'test-cluster-mz-oom' --instance-type 'standard_b2ls_v2' --maxmemory '2GB' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: enterprise/ClusterSingleZone - AZURE/eastus2 - Failover & Persistence With TLS
+            if: "true"
+            testFile: test_cluster.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Single-Zone' --replica-id 'cluster-sz-1'   --instance-name 'test-cluster-sz-failover-tls' --instance-description 'test-cluster-sz-failover' --instance-type 'standard_b2ms' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
+          - name: enterprise/ClusterMultiZone - AZURE/eastus2 - Failover & Persistence With TLS
+            if: "true"
+            testFile: test_cluster.py
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+            cloudProvider: azure
+            cloudRegion: eastus2
+            subscriptionId: sub-GJPV3NoNC0
+            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+            extraParams: "--resource-key 'cluster-Multi-Zone' --replica-id 'cluster-mz-4'   --instance-name 'test-cluster-mz-failover-tls' --instance-description 'test-cluster-mz-failover' --instance-type 'standard_b2ms' --storage-size '30' --tls --rdb-config 'medium' --aof-config 'always' --host-count '6' --cluster-replicas '1' --ensure-mz-distribution --custom-network=azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }} --deployment-create-timeout-seconds 4800"
           ###################### AWS ######################
           - name: Free - AWS/us-east-2 - Failover & Persistence
             if: "true"
@@ -243,16 +424,6 @@ jobs:
             serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
             environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
             extraParams: "--resource-key 'free' --replica-id 'node-f-0' --instance-name 'test-free-oom' --instance-description 'test-free-oom' --instance-type 'none' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
-          - name: PRO/Standalone - AWS/us-east-2 - Change Password
-            if: "true"
-            testFile: test_change_password.py
-            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            subscriptionId: sub-GJPV3NoNC0
-            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'standalone' --replica-id 'node-s-0' --instance-name 'test-standalone-change-password' --instance-description 'test-standalone-password' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
           - name: PRO/Standalone - AWS/us-east-2 - Out of memory
             if: "true"
             testFile: test_out_of_memory.py

@@ -1,13 +1,15 @@
 use k8s_openapi::api::core::v1::ConfigMap;
 use kube::{Api, Client}; // Removed unused Config import
+use once_cell::sync::Lazy;
 use rouille::{router, Response, Server};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::env;
+use std::sync::RwLock;
 use std::time::{Duration, Instant};
 
 // Example ConfigMap structure for health checks
-/* 
+/*
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -19,7 +21,7 @@ data:
   skip_liveness: "false"
   skip_readiness: "false"
   skip_startup: "true"
-  
+
   # Alternative: JSON format (if you prefer structured config)
   config.json: |
     {
@@ -47,6 +49,18 @@ struct HealthConfig {
     skip_readiness: Option<bool>,
     skip_startup: Option<bool>,
 }
+static TOKIO_RT: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("failed to build tokio runtime")
+});
+
+static K8S_CLIENT: Lazy<RwLock<Option<kube::Client>>> = Lazy::new(|| RwLock::new(None));
+static HEALTH_CONFIG_CACHE: Lazy<RwLock<Option<(Instant, HealthConfig)>>> =
+    Lazy::new(|| RwLock::new(None));
+
+const HEALTH_CONFIG_TTL: Duration = Duration::from_secs(5);
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -118,33 +132,58 @@ where
 }
 
 fn get_health_config_from_configmap() -> Result<HealthConfig, Box<dyn std::error::Error>> {
-    let rt = tokio::runtime::Runtime::new()?;
-    rt.block_on(async {
-        let config_name =
-            env::var("HEALTH_CONFIG_NAME").unwrap_or_else(|_| "health-config".to_string());
-        let namespace = get_namespace()?;
+    // Serve from cache if fresh
+    if let Some((ts, cfg)) = HEALTH_CONFIG_CACHE.read().unwrap().as_ref() {
+        if ts.elapsed() < HEALTH_CONFIG_TTL {
+            return Ok(cfg.clone());
+        }
+    }
 
-        let client = match Client::try_default().await {
-            Ok(client) => client,
-            Err(_) => return Err("Failed to create Kubernetes client".into()),
-        };
+    let cfg = TOKIO_RT.block_on(async {
+        let name = env::var("HEALTH_CONFIG_NAME").unwrap_or_else(|_| "health-config".into());
+        let ns = get_namespace()?;
 
-        let configmaps: Api<ConfigMap> = Api::namespaced(client, &namespace);
+        // Bootstrap client once
+        {
+            let mut guard = K8S_CLIENT.write().unwrap();
+            if guard.is_none() {
+                if let Ok(c) = Client::try_default().await {
+                    *guard = Some(c);
+                } else {
+                    eprintln!("healthcheck: Failed to create Kubernetes client; using defaults.");
+                    return Ok::<_, Box<dyn std::error::Error>>(HealthConfig::default());
+                }
+            }
+        }
 
-        match configmaps.get(&config_name).await {
-            Ok(configmap) => {
-                if let Some(data) = configmap.data {
+        let client = K8S_CLIENT.read().unwrap().as_ref().unwrap().clone();
+        let api: Api<ConfigMap> = Api::namespaced(client, &ns);
+
+        // Time-bound the GET to avoid hanging probes
+        match tokio::time::timeout(Duration::from_secs(1), api.get(&name)).await {
+            Ok(Ok(cm)) => {
+                if let Some(data) = cm.data {
                     parse_health_config_from_data(data)
                 } else {
                     Ok(HealthConfig::default())
                 }
             }
+            Ok(Err(err)) => {
+                eprintln!(
+                    "healthcheck: Failed to get ConfigMap {} in {}: {}",
+                    name, ns, err
+                );
+                Ok(HealthConfig::default())
+            }
             Err(_) => {
-                // ConfigMap doesn't exist, return default config
+                eprintln!("healthcheck: ConfigMap fetch timed out; using defaults.");
                 Ok(HealthConfig::default())
             }
         }
-    })
+    })?;
+
+    *HEALTH_CONFIG_CACHE.write().unwrap() = Some((Instant::now(), cfg.clone()));
+    Ok(cfg)
 }
 
 fn get_namespace() -> Result<String, Box<dyn std::error::Error>> {

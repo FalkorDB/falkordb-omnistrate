@@ -1,4 +1,4 @@
-ARG FALKORDB_VERSION=v4.10.2
+ARG FALKORDB_VERSION=v4.12.1
 
 FROM falkordb/redis_exporter:v1.70.2-alpine AS redis_exporter
 
@@ -26,7 +26,7 @@ RUN useradd -u 1000 -m falkordb && usermod -aG crontab falkordb && \
   chmod u+s /usr/sbin/cron
 
 
-RUN mkdir -p /falkordb
+RUN mkdir -p /var/lib/falkordb
 
 WORKDIR /falkordb
 
@@ -35,14 +35,15 @@ COPY falkordb-node/node.conf .
 COPY falkordb-node/node-entrypoint.sh /usr/local/bin/
 COPY --from=redis_exporter /redis_exporter /usr/local/bin/
 COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/local/bin/healthcheck
-COPY scripts/download-debug-so.sh .
+COPY scripts/download-debug-so.sh /falkordb/download-debug-so.sh
 
-RUN chown falkordb:falkordb /falkordb/* && \
+RUN chown falkordb:falkordb /var/lib/falkordb/* && \
   chmod +x /usr/local/bin/node-entrypoint.sh && \
   mkdir -p /var/lib/falkordb && \
+  mkdir -p /var/lib/falkordb/scripts && \
   chown falkordb:falkordb /var/lib/falkordb && \
   chmod 700 /var/lib/falkordb && \
-  chmod +x ./download-debug-so.sh
+  chmod +x /falkordb/download-debug-so.sh
 
 ENV FALKORDB_HOME=/var/lib/falkordb
 

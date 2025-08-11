@@ -45,13 +45,6 @@ x-omnistrate-load-balancer:
           ingressPort: 26379
           backendPort: 26379
 
-x-internal-integrations:
-  logs:
-    provider: native
-    
-x-omnistrate-integrations:
-  - omnistrateLogging
-
 x-rebalanceparam: &rebalanceparam
   x-omnistrate-api-params:
     - key: enableTLS

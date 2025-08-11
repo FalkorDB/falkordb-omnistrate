@@ -28,8 +28,8 @@ class OmnistrateFleetAPI:
 
     def handle_response(self, response, message):
         if response.status_code >= 300 or response.status_code < 200:
-            logging.error(f"{message}: {response.text}")
-            raise Exception(f"{message}")
+            logging.error("%s: %s", message, response.text)
+            raise requests.RequestException(message)
 
     def get_token(self):
 
@@ -178,3 +178,20 @@ class OmnistrateFleetAPI:
         network_name: str,
     ):
         return omnistrate_tests.OmnistrateFleetNetwork(self, network_name)
+
+    def list_instances(self, service_id: str, env_id: str) -> list:
+        """
+        List all instances, optionally filtered by parameters.
+        
+        Args:
+            filter_params: Filter string like "service:FalkorDB,environment:Prod,status:RUNNING"
+            
+        Returns:
+            List of instance dictionaries
+        """
+        url = f"{self.base_url}/fleet/service/{service_id}/environment/{env_id}/instances"
+      
+        response = self.client().get(url, timeout=60)
+        self.handle_response(response, "Failed to list instances")
+        
+        return response.json().get("resourceInstances", [])

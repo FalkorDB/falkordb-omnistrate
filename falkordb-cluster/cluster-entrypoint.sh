@@ -464,7 +464,11 @@ if [ ! -f $NODE_CONF_FILE ] || [ "$REPLACE_NODE_CONF" -eq "1" ]; then
 fi
 
 # Create log file
-touch $FALKORDB_LOG_FILE_PATH
+if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
+  if [[ ! -f $FALKORDB_LOG_FILE_PATH ]]; then
+    touch $FALKORDB_LOG_FILE_PATH
+  fi
+fi
 
 run_node
 

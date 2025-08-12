@@ -9,7 +9,7 @@ import time
 import random
 import string
 from requests import exceptions
-import omnistrate_tests.classes.omnistrate_fleet_api
+import tests.classes.omnistrate_fleet_api
 
 
 class OmnistrateFleetNetwork:
@@ -18,7 +18,7 @@ class OmnistrateFleetNetwork:
 
     def __init__(
         self,
-        fleet_api: omnistrate_tests.classes.omnistrate_fleet_api.OmnistrateFleetAPI,
+        fleet_api: tests.classes.omnistrate_fleet_api.OmnistrateFleetAPI,
         network_name: str,
     ):
         self._fleet_api = fleet_api

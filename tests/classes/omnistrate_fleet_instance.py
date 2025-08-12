@@ -3,7 +3,7 @@ import json
 import os
 import logging
 import socket
-import omnistrate_tests.classes.omnistrate_fleet_api
+import tests.classes.omnistrate_fleet_api
 from redis.exceptions import (
     ReadOnlyError,
     ResponseError,
@@ -42,7 +42,7 @@ class OmnistrateFleetInstance:
 
     def __init__(
         self,
-        fleet_api: omnistrate_tests.classes.omnistrate_fleet_api.OmnistrateFleetAPI,
+        fleet_api: tests.classes.omnistrate_fleet_api.OmnistrateFleetAPI,
         deployment_create_timeout_seconds: int | None,
         deployment_delete_timeout_seconds: int | None,
         deployment_failover_timeout_seconds: int | None,

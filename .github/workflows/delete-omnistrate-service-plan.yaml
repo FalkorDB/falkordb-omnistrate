@@ -47,6 +47,7 @@ jobs:
           - tier-name: free-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
           - tier-name: pro-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
           - tier-name: enterprise-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - tier-name: enterprise-byoa-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
           - tier-name: startup-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
     steps:
       - name: Checkout

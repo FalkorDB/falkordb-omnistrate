@@ -24,7 +24,7 @@ from contextlib import suppress
 with suppress(ValueError):
     sys.path.remove(str(parent))
 
-from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
+from tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
 
 # Configure logging
 logging.basicConfig(

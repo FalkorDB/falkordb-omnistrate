@@ -1,6 +1,6 @@
 import requests
 from requests.adapters import HTTPAdapter, Retry
-import omnistrate_tests.classes
+import tests.classes
 from .omnistrate_types import (
     ProductTier,
     Service,
@@ -155,7 +155,7 @@ class OmnistrateFleetAPI:
         deployment_failover_timeout_seconds: int = None,
         deployment_update_timeout_seconds: int = None,
     ):
-        return omnistrate_tests.OmnistrateFleetInstance(
+        return tests.OmnistrateFleetInstance(
             self,
             deployment_create_timeout_seconds,
             deployment_delete_timeout_seconds,
@@ -177,7 +177,7 @@ class OmnistrateFleetAPI:
         self,
         network_name: str,
     ):
-        return omnistrate_tests.OmnistrateFleetNetwork(self, network_name)
+        return tests.OmnistrateFleetNetwork(self, network_name)
 
     def list_instances(self, service_id: str, env_id: str) -> list:
         """

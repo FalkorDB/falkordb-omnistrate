@@ -96,7 +96,7 @@ def cfg(pytestconfig):
         "orig_instance_type": opt("--instance-type"),
 
         # Auth (env)
-        "omnistrate_user": os.getenv("OMNISTRATE_USER"),
+        "omnistrate_user": os.getenv("OMNISTRATE_USERNAME"),
         "omnistrate_password": os.getenv("OMNISTRATE_PASSWORD"),
     }
 
@@ -104,7 +104,7 @@ def cfg(pytestconfig):
 @pytest.fixture(scope="session")
 def omnistrate(cfg):
     if not cfg["omnistrate_user"] or not cfg["omnistrate_password"]:
-        raise RuntimeError("Missing OMNISTRATE_USER / OMNISTRATE_PASSWORD in environment.")
+        raise RuntimeError("Missing OMNISTRATE_USERNAME / OMNISTRATE_PASSWORD in environment.")
     return OmnistrateFleetAPI(email=cfg["omnistrate_user"], password=cfg["omnistrate_password"])
 
 

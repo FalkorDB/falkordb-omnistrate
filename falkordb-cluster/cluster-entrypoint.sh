@@ -83,7 +83,7 @@ LOG_LEVEL=${LOG_LEVEL:-notice}
 RESOURCE_ALIAS=${RESOURCE_ALIAS:-""}
 
 DATE_NOW=$(date +"%Y%m%d%H%M%S")
-FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo ""; fi)
+FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo "/dev/null"; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
@@ -464,7 +464,11 @@ if [ ! -f $NODE_CONF_FILE ] || [ "$REPLACE_NODE_CONF" -eq "1" ]; then
 fi
 
 # Create log file
-touch $FALKORDB_LOG_FILE_PATH
+if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
+  if [[ ! -f $FALKORDB_LOG_FILE_PATH ]]; then
+    touch $FALKORDB_LOG_FILE_PATH
+  fi
+fi
 
 run_node
 

@@ -622,7 +622,7 @@ jobs:
             EXTRA_ARGS+=(--custom-network "${{ matrix.instances.customNetwork }}")
 
           poetry run pytest -q "${{ matrix.instances.testFile }}" \
-            --tests "${{ matrix.instances.tests }}" \
+            --e2e-steps "${{ matrix.instances.tests }}" \
             --tier-name "${{ matrix.instances.tierName }}" \
             --cloud-provider "${{ matrix.instances.cloudProvider }}" \
             --region "${{ matrix.instances.cloudRegion }}" \

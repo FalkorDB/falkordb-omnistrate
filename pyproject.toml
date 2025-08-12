@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "omnistrate_tests"
+name = "tests"
 version = "0.1.0"
 description = "tests for omnistrate"
 authors = ["FalkorDB <info@falkordb.com>"]

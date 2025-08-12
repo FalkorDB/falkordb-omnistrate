@@ -2,9 +2,6 @@ import sys
 import signal
 from random import randbytes
 from pathlib import Path  # if you haven't already done so
-import threading
-# pylint: disable=no-name-in-module
-from utils import get_last_gh_tag
 import socket
 
 file = Path(__file__).resolve()
@@ -23,9 +20,8 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
 import os
-from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
-from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
-from omnistrate_tests.classes.omnistrate_types import TierVersionStatus
+from tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
+from tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -41,22 +37,19 @@ parser.add_argument("--ref-name", required=False, default=os.getenv("REF_NAME"))
 parser.add_argument("--service-id", required=True)
 parser.add_argument("--environment-id", required=True)
 parser.add_argument("--resource-key", required=True)
+parser.add_argument("--replica-id", required=True)
 
 
 parser.add_argument("--instance-name", required=True)
-parser.add_argument(
-    "--instance-description", required=False, default="test-upgrade-version"
-)
+parser.add_argument("--instance-description", required=False, default="test-standalone")
 parser.add_argument("--instance-type", required=True)
 parser.add_argument("--storage-size", required=False, default="30")
 parser.add_argument("--tls", action="store_true")
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
-parser.add_argument("--host-count", required=False, default="6")
-parser.add_argument("--cluster-replicas", required=False, default="1")
-parser.add_argument("--persist-instance-on-fail", action="store_true")
-parser.add_argument("--network-type", required=False, default="PUBLIC")
+parser.add_argument("--persist-instance-on-fail",action="store_true")
 parser.add_argument("--custom-network", required=False)
+parser.add_argument("--network-type", required=False, default="PUBLIC")
 
 parser.add_argument(
     "--deployment-create-timeout-seconds", required=False, default=2600, type=int
@@ -86,7 +79,7 @@ if not args.persist_instance_on_fail:
     signal.signal(signal.SIGINT, signal_handler)
 
 
-def test_upgrade_version():
+def test_standalone():
     global instance
 
     omnistrate = OmnistrateFleetAPI(
@@ -106,39 +99,10 @@ def test_upgrade_version():
 
     logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
-    # 1. List product tier versions
-    tiers = omnistrate.list_tier_versions(
-        service_id=args.service_id, tier_id=product_tier.product_tier_id
-    )
-
-    preferred_tier_tag = get_last_gh_tag()
-
-    preferred_tier = next(
-        (tier for tier in tiers if tier.description == preferred_tier_tag), None
-    )
-
-    if preferred_tier is None:
-        preferred_tier = next(
-            (tier for tier in tiers if tier.status == TierVersionStatus.PREFERRED), None
-        )
-
-    if preferred_tier is None:
-        raise ValueError("No preferred tier found")
-
-    last_tier = next(
-        (tier for tier in tiers if tier.status == TierVersionStatus.ACTIVE), None
-    )
-
-    if last_tier is None:
-        raise ValueError("No last tier found")
-
-    logging.info(f"Preferred tier: {preferred_tier.version}")
-    logging.info(f"Last tier: {last_tier.version}")
-
-    # 2. Create omnistrate instance with previous version
     network = None
     if args.custom_network:
         network = omnistrate.network(args.custom_network)
+
     instance = omnistrate.instance(
         service_id=args.service_id,
         service_provider_id=service.service_provider_id,
@@ -154,6 +118,7 @@ def test_upgrade_version():
         deployment_delete_timeout_seconds=args.deployment_delete_timeout_seconds,
         deployment_failover_timeout_seconds=args.deployment_failover_timeout_seconds,
     )
+
     try:
         instance.create(
             wait_for_ready=True,
@@ -169,114 +134,95 @@ def test_upgrade_version():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
-            hostCount=args.host_count,
-            clusterReplicas=args.cluster_replicas,
-            product_tier_version=last_tier.version,
-            custom_network_id=network.network_id if network else None
-
+            custom_network_id=network.network_id if network else None,
         )
-
+        
         try:
             ip = resolve_hostname(instance=instance)
             logging.info(f"Instance endpoint {instance.get_cluster_endpoint()['endpoint']} resolved to {ip}")
         except TimeoutError as e:
             logging.error(f"DNS resolution failed: {e}")
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
-        
-        # 3. Add data to the instance
-        add_data(instance)
+        # Test failover and data loss
+        test_failover(instance)
 
-        thread_signal = None
-        error_signal = None
-        thread = None
-        if "standalone" not in args.instance_name:
-            thread_signal = threading.Event()
-            error_signal = threading.Event()
-            thread = threading.Thread(
-                target=test_zero_downtime,
-                args=(thread_signal, error_signal, instance, args.tls),
-            )
-            thread.start()
-
-        # 4. Upgrade version for the omnistrate instance
-        upgrade_timer = time.time()
-        instance.upgrade(
-            service_id=args.service_id,
-            product_tier_id=product_tier.product_tier_id,
-            source_version=last_tier.version,
-            target_version=preferred_tier.version,
-            wait_until_ready=True,
-        )
-
-        if "standalone" not in args.instance_name:
-            thread_signal.set()
-            thread.join()
-
-        logging.info(f"Upgrade time: {(time.time() - upgrade_timer):.2f}s")
-
-        # 6. Verify the upgrade was successful
-        query_data(instance)
+        # Test stop and start instance
+        test_stop_start(instance)
     except Exception as e:
         logging.exception(e)
         if not args.persist_instance_on_fail:
-            instance.delete(False)
+            instance.delete(network is not None)
         raise e
 
-    # 7. Delete the instance
-    instance.delete(False)
+    # Delete instance
+    instance.delete(network is not None)
 
-    if "standalone" not in args.instance_name and error_signal.is_set():
-        raise ValueError("Test failed")
-    else:
-        logging.info("Test passed")
+    logging.info("Test passed")
 
 
-def add_data(instance: OmnistrateFleetInstance):
+def test_failover(instance: OmnistrateFleetInstance):
+    """This function should retrieve the instance host and port for connection, write some data to the DB, then trigger a failover. After X seconds, the instance should be back online and data should have persisted"""
 
     # Get instance host and port
-    db = instance.create_connection(ssl=args.tls)
+    db = instance.create_connection(
+        ssl=args.tls,
+    )
 
     graph = db.select_graph("test")
 
     # Write some data to the DB
     graph.query("CREATE (n:Person {name: 'Alice'})")
 
+    # Trigger failover
+    instance.trigger_failover(
+        replica_id=args.replica_id,
+        wait_for_ready=True,
+    )
 
-def query_data(instance: OmnistrateFleetInstance):
-
-    # Get instance host and port
-    db = instance.create_connection(ssl=args.tls)
+    # Check if data is still there
 
     graph = db.select_graph("test")
 
-    # Get info
-    result = graph.query("MATCH (n:Person) RETURN n.name")
+    result = graph.query("MATCH (n:Person) RETURN n")
 
     if len(result.result_set) == 0:
-        raise ValueError("No data found in the graph after upgrade")
+        raise Exception("Data lost after failover")
+
+    logging.info("Data persisted after failover")
+
+    graph.delete()
 
 
-def test_zero_downtime(
-    thread_signal: threading.Event,
-    error_signal: threading.Event,
-    instance: OmnistrateFleetInstance,
-    ssl=False,
-):
-    """This function should test the ability to read and write while an upgrade version happens"""
-    try:
-        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+def test_stop_start(instance: OmnistrateFleetInstance):
+    """This function should stop the instance, check that it is stopped, then start it again and check that it is running"""
 
-        graph = db.select_graph("test")
+    # Get instance host and port
+    db = instance.create_connection(
+        ssl=args.tls,
+    )
 
-        while not thread_signal.is_set():
-            # Write some data to the DB
-            graph.query("CREATE (n:Person {name: 'Alice'})")
-            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
-            time.sleep(3)
-    except Exception as e:
-        logging.exception(e)
-        error_signal.set()
-        raise e
+    graph = db.select_graph("test")
+
+    # Write some data to the DB
+    graph.query("CREATE (n:Person {name: 'Alice'})")
+
+    logging.info("Stopping instance")
+
+    instance.stop(wait_for_ready=True)
+
+    logging.info("Instance stopped")
+
+    instance.start(wait_for_ready=True)
+
+    graph = db.select_graph("test")
+
+    result = graph.query("MATCH (n:Person) RETURN n")
+
+    if len(result.result_set) == 0:
+        raise Exception("Data lost after stop/start")
+
+    logging.info("Instance started")
+
 
 def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     """Check if the instance's main endpoint is resolvable.
@@ -315,4 +261,4 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     raise TimeoutError(f"Unable to resolve hostname '{hostname}' within {timeout} seconds.")
 
 if __name__ == "__main__":
-    test_upgrade_version()
+    test_standalone()

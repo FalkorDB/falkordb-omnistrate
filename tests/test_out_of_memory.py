@@ -20,10 +20,10 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
 import os
-from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
-from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
+from tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
+from tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
 import argparse
-
+from redis.exceptions import ResponseError, OutOfMemoryError
 parser = argparse.ArgumentParser()
 parser.add_argument("omnistrate_user")
 parser.add_argument("omnistrate_password")
@@ -50,6 +50,9 @@ parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--persist-instance-on-fail",action="store_true")
 parser.add_argument("--custom-network", required=False)
 parser.add_argument("--network-type", required=False, default="PUBLIC")
+parser.add_argument("--host-count", required=False, default="6")
+parser.add_argument("--cluster-replicas", required=False, default="1")
+parser.add_argument("--maxmemory", required=False, default="")
 
 parser.add_argument(
     "--deployment-create-timeout-seconds", required=False, default=2600, type=int
@@ -79,7 +82,7 @@ if not args.persist_instance_on_fail:
     signal.signal(signal.SIGINT, signal_handler)
 
 
-def test_standalone():
+def test_out_of_memory():
     global instance
 
     omnistrate = OmnistrateFleetAPI(
@@ -134,6 +137,7 @@ def test_standalone():
             enableTLS=args.tls,
             RDBPersistenceConfig=args.rdb_config,
             AOFPersistenceConfig=args.aof_config,
+            maxMemory=args.maxmemory,
             custom_network_id=network.network_id if network else None,
         )
         
@@ -143,11 +147,9 @@ def test_standalone():
         except TimeoutError as e:
             logging.error(f"DNS resolution failed: {e}")
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
-        # Test failover and data loss
-        test_failover(instance)
-
-        # Test stop and start instance
-        test_stop_start(instance)
+        
+        # Stress test the instance
+        stress_test_out_of_memory(instance,resource_key=args.resource_key)
     except Exception as e:
         logging.exception(e)
         if not args.persist_instance_on_fail:
@@ -160,69 +162,39 @@ def test_standalone():
     logging.info("Test passed")
 
 
-def test_failover(instance: OmnistrateFleetInstance):
-    """This function should retrieve the instance host and port for connection, write some data to the DB, then trigger a failover. After X seconds, the instance should be back online and data should have persisted"""
 
-    # Get instance host and port
+def stress_test_out_of_memory(instance: OmnistrateFleetInstance,resource_key: str = None):
+    """Stress test the instance by allocating memory until it runs out of memory.
+    Should return this: '(error) OOM command not allowed when used memory > 'maxmemory''
+    Args:
+        instance: The OmnistrateFleetInstance to stress test
+    """
+    mediumQuery = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
+    smallQuery = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
+
+    logging.info("Starting stress test")
     db = instance.create_connection(
         ssl=args.tls,
     )
-
     graph = db.select_graph("test")
 
-    # Write some data to the DB
-    graph.query("CREATE (n:Person {name: 'Alice'})")
+    if resource_key == 'free':
+        q = smallQuery
+    else:
+        q = mediumQuery
 
-    # Trigger failover
-    instance.trigger_failover(
-        replica_id=args.replica_id,
-        wait_for_ready=True,
-    )
-
-    # Check if data is still there
-
-    graph = db.select_graph("test")
-
-    result = graph.query("MATCH (n:Person) RETURN n")
-
-    if len(result.result_set) == 0:
-        raise Exception("Data lost after failover")
-
-    logging.info("Data persisted after failover")
-
-    graph.delete()
-
-
-def test_stop_start(instance: OmnistrateFleetInstance):
-    """This function should stop the instance, check that it is stopped, then start it again and check that it is running"""
-
-    # Get instance host and port
-    db = instance.create_connection(
-        ssl=args.tls,
-    )
-
-    graph = db.select_graph("test")
-
-    # Write some data to the DB
-    graph.query("CREATE (n:Person {name: 'Alice'})")
-
-    logging.info("Stopping instance")
-
-    instance.stop(wait_for_ready=True)
-
-    logging.info("Instance stopped")
-
-    instance.start(wait_for_ready=True)
-
-    graph = db.select_graph("test")
-
-    result = graph.query("MATCH (n:Person) RETURN n")
-
-    if len(result.result_set) == 0:
-        raise Exception("Data lost after stop/start")
-
-    logging.info("Instance started")
-
+    while True:
+        try:
+            response = graph.query(q)
+            logging.info(f"Response: {response}")
+        except Exception as e:
+            if isinstance(e, OutOfMemoryError) and 'memory' in str(e):
+                logging.info("Out of memory error detected")
+                break
+            logging.error(f"{e}")
+            logging.error("Failed to detect out of memory error")
+            raise e
+        
 
 def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     """Check if the instance's main endpoint is resolvable.
@@ -261,4 +233,4 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     raise TimeoutError(f"Unable to resolve hostname '{hostname}' within {timeout} seconds.")
 
 if __name__ == "__main__":
-    test_standalone()
+    test_out_of_memory()

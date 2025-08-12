@@ -133,6 +133,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Replace Variables
+        working-directory: compose
         run: |
           sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
@@ -151,9 +152,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.plans.file }}
-          path: ${{ matrix.plans.file }}
+          path: compose/${{ matrix.plans.file }}
 
       - name: Create FALKORDB_PASSWORD/ADMIN_PASSWORD files
+        working-directory: compose
         run: |
           export sec=$(grep '^secrets' omnistrate.free.yaml)
           if [[ -n "$sec" ]];then
@@ -171,7 +173,7 @@ jobs:
         with:
           username: ${{ secrets.OMNISTRATE_USERNAME }}
           password: ${{ secrets.OMNISTRATE_PASSWORD }}
-          file: ${{ matrix.plans.file }}
+          file: compose/${{ matrix.plans.file }}
           service-name: ${{ matrix.plans.service-name }}
           environment: testing
           environment-type: qa
@@ -894,7 +896,7 @@ jobs:
           REF_NAME: ${{ matrix.instances.tierName }}
         run: |
           export PATH="~/.local/bin:$PATH"
-          poetry run python -u ./omnistrate_tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
+          poetry run python -u ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
 
   # Runs only if the branch is 'main' or 'v*'
   delete-networks:

@@ -28,8 +28,8 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 import time
 import os
-from omnistrate_tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
-from omnistrate_tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
+from tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
+from tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
 import argparse
 from falkordb import FalkorDB
 from redis import Sentinel

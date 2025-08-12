@@ -63,11 +63,11 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - dockerfile: ./falkordb-node/Dockerfile
+          - dockerfile: ./src/falkordb-node/Dockerfile
             image-name: falkordb-node
-          - dockerfile: ./falkordb-cluster/Dockerfile
+          - dockerfile: ./src/falkordb-cluster/Dockerfile
             image-name: falkordb-cluster
-          - dockerfile: ./falkordb-cluster-rebalance/Dockerfile
+          - dockerfile: ./src/falkordb-cluster-rebalance/Dockerfile
             image-name: falkordb-cluster-rebalance
     steps:
       - name: Checkout

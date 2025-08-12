@@ -4,7 +4,7 @@ RUN mkdir -p /rebalance
 
 WORKDIR /rebalance
 
-COPY falkordb-cluster-rebalance/ /rebalance/
+COPY src/falkordb-cluster-rebalance/ /rebalance/
 
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \

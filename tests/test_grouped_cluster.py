@@ -1,5 +1,5 @@
 import pytest
-from suite_utils import (
+from .suite_utils import (
     add_data,
     assert_data,
     change_then_revert,

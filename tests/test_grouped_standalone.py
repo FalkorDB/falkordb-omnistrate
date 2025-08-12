@@ -1,5 +1,5 @@
 import pytest
-from suite_utils import add_data, assert_data, stress_oom
+from .suite_utils import add_data, assert_data, stress_oom
 
 def _run_step(cfg, name):
     steps = cfg["e2e_steps"]

@@ -1,7 +1,7 @@
 import os
 import time
 import pytest
-from suite_utils import (
+from .suite_utils import (
     add_data,
     assert_data,
     change_then_revert,
@@ -143,7 +143,7 @@ def test_replication_pack(instance):
             instance.update_params(numReplicas=orig_replicas, wait_for_ready=True)
 
         # change under traffic, then revert under traffic
-        from suite_utils import (
+        from .suite_utils import (
             change_then_revert,
         )  # local import to avoid unused if step not selected
 

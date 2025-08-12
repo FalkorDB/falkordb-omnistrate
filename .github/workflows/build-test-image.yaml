@@ -245,7 +245,7 @@ jobs:
           #################### ENTERPRISE • AZURE (non-TLS) ####################
           - name: "[01] enterprise/Standalone - AZURE/eastus2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_standalone.py
+            testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: azure
@@ -257,7 +257,7 @@ jobs:
 
           - name: "[02] enterprise/SingleZone - AZURE/eastus2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_replication.py
+            testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: azure
@@ -269,7 +269,7 @@ jobs:
 
           - name: "[03] enterprise/MultiZone - AZURE/eastus2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_replication.py
+            testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: azure
@@ -281,7 +281,7 @@ jobs:
 
           - name: "[04] enterprise/ClusterSingleZone - AZURE/eastus2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_cluster.py
+            testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: azure
@@ -295,7 +295,7 @@ jobs:
 
           - name: "[05] enterprise/ClusterMultiZone - AZURE/eastus2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_cluster.py
+            testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: azure
@@ -310,7 +310,7 @@ jobs:
           ###################### ENTERPRISE • AWS (non-TLS) #####################
           - name: "[06] enterprise/Standalone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_standalone.py
+            testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,update_memory,oom"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: aws
@@ -323,7 +323,7 @@ jobs:
 
           - name: "[07] enterprise/SingleZone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_replication.py
+            testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,update_memory,oom"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: aws
@@ -336,7 +336,7 @@ jobs:
 
           - name: "[08] enterprise/MultiZone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_replication.py
+            testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,update_memory,oom"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: aws
@@ -349,7 +349,7 @@ jobs:
 
           - name: "[09] enterprise/ClusterSingleZone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_cluster.py
+            testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,update_memory,oom"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: aws
@@ -364,7 +364,7 @@ jobs:
 
           - name: "[10] enterprise/ClusterMultiZone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_cluster.py
+            testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,update_memory,oom"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: aws
@@ -380,7 +380,7 @@ jobs:
           ###################### ENTERPRISE • GCP (non-TLS) #####################
           - name: "[11] enterprise/Standalone - GCP/us-central1 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_standalone.py
+            testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: gcp
@@ -392,7 +392,7 @@ jobs:
 
           - name: "[12] enterprise/SingleZone - GCP/us-central1 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_replication.py
+            testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: gcp
@@ -404,7 +404,7 @@ jobs:
 
           - name: "[13] enterprise/MultiZone - GCP/us-central1 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_replication.py
+            testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: gcp
@@ -416,7 +416,7 @@ jobs:
 
           - name: "[14] enterprise/ClusterSingleZone - GCP/us-central1 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_cluster.py
+            testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: gcp
@@ -430,7 +430,7 @@ jobs:
 
           - name: "[15] enterprise/ClusterMultiZone - GCP/us-central1 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-            testFile: tests/grouped/test_grouped_cluster.py
+            testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ github.ref_name }}"
             cloudProvider: gcp
@@ -445,7 +445,7 @@ jobs:
           ######################## NON-ENTERPRISE • AWS ONLY #####################
           - name: "[16] free/Standalone - AWS/us-east-2 - Grouped"
             if: "true"
-            testFile: tests/grouped/test_grouped_standalone.py
+            testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,oom"
             tierName: "free-${{ github.ref_name }}"
             cloudProvider: aws
@@ -455,7 +455,7 @@ jobs:
 
           - name: "[17] startup/Standalone - AWS/us-east-2 - Grouped"
             if: "true"
-            testFile: tests/grouped/test_grouped_standalone.py
+            testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,oom"
             tierName: "startup-${{ github.ref_name }}"
             cloudProvider: aws
@@ -465,7 +465,7 @@ jobs:
 
           - name: "[18] pro/Standalone - AWS/us-east-2 - Grouped"
             if: "true"
-            testFile: tests/grouped/test_grouped_standalone.py
+            testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,update_memory,oom"
             tierName: "pro-${{ github.ref_name }}"
             cloudProvider: aws
@@ -477,7 +477,7 @@ jobs:
 
           - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
             if: "true"
-            testFile: tests/grouped/test_grouped_replication.py
+            testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,update_memory,oom"
             tierName: "pro-${{ github.ref_name }}"
             cloudProvider: aws
@@ -489,7 +489,7 @@ jobs:
 
           - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
             if: "true"
-            testFile: tests/grouped/test_grouped_replication.py
+            testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,update_memory,oom"
             tierName: "pro-${{ github.ref_name }}"
             cloudProvider: aws
@@ -501,7 +501,7 @@ jobs:
 
           - name: "[21] pro/ClusterSingleZone - AWS/us-east-2 - Grouped"
             if: "true"
-            testFile: tests/grouped/test_grouped_cluster.py
+            testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,update_memory,oom"
             tierName: "pro-${{ github.ref_name }}"
             cloudProvider: aws
@@ -515,7 +515,7 @@ jobs:
 
           - name: "[22] pro/ClusterMultiZone - AWS/us-east-2 - Grouped"
             if: "true"
-            testFile: tests/grouped/test_grouped_cluster.py
+            testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,update_memory,oom"
             tierName: "pro-${{ github.ref_name }}"
             cloudProvider: aws
@@ -530,7 +530,7 @@ jobs:
           - name: "[23] pro/MultiZone - PRIVATE/GCP/us-central1 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
-            testFile: tests/grouped/test_grouped_replication.py
+            testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart"
             tierName: "pro-${{ github.ref_name }}"
             cloudProvider: gcp
@@ -543,7 +543,7 @@ jobs:
           - name: "[24] pro/ClusterMultiZone - PRIVATE/GCP/us-central1 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
-            testFile: tests/grouped/test_grouped_cluster.py
+            testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart"
             tierName: "pro-${{ github.ref_name }}"
             cloudProvider: gcp

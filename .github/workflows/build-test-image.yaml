@@ -633,6 +633,7 @@ jobs:
             "${EXTRA_ARGS[@]}"
 
   test-upgrade-version:
+    needs: [omnistrate-update-plans]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

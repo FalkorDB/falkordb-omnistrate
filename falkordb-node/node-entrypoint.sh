@@ -412,7 +412,7 @@ handle_network_type_changed() {
   fi
   if [[ $RUN_SENTINEL -eq 1 ]]; then
     echo "Setting sentinel announce-ip to $NODE_HOST"
-    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL SET $MASTER_NAME announce-ip $NODE_HOST
+    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET announce-ip $NODE_HOST
   fi
 }
 

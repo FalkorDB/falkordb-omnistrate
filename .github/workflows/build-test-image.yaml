@@ -166,7 +166,6 @@ jobs:
           path: compose/${{ matrix.plans.file }}
 
       - name: Create FALKORDB_PASSWORD/ADMIN_PASSWORD files
-        working-directory: compose
         run: |
           export sec=$(grep '^secrets' omnistrate.free.yaml)
           if [[ -n "$sec" ]];then

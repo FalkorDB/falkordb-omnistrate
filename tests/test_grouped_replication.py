@@ -1,10 +1,9 @@
-import os
 import time
 import pytest
+import logging
 from .suite_utils import (
     add_data,
     assert_data,
-    change_then_revert,
     stress_oom,
     assert_multi_zone,
 )
@@ -12,6 +11,9 @@ from redis import Sentinel
 from redis.retry import Retry
 from redis.backoff import ExponentialBackoff
 from redis.exceptions import TimeoutError, ConnectionError, ReadOnlyError, ResponseError
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 def _run_step(cfg, name):
@@ -61,6 +63,7 @@ def test_replication_pack(instance):
     Replication pack (single-Zone / multi-Zone).
     Steps: failover, stopstart, sentinel-failover, second-failover, scale-replicas, resize, oom, upgrade
     """
+    logging.info("Starting test_replication_pack")
     ssl = instance._cfg["tls"]
     cfg = instance._cfg
     rk = cfg["resource_key"]
@@ -75,20 +78,23 @@ def test_replication_pack(instance):
         "upgrade",
     }
     if cfg["e2e_steps"] != {"all"} and not (cfg["e2e_steps"] & valid):
+        logging.warning("No selected steps for replication pack. Skipping test.")
         pytest.skip("No selected steps for replication pack")
 
     id_key = "sz" if rk == "single-Zone" else "mz"
 
     # 0) Ensure MZ distribution
     if "multi-zone" in cfg["resource_key"].lower():
+        logging.info("Ensuring multi-zone distribution")
         assert_multi_zone(instance, host_count=cfg["orig_cluster_replicas"])
 
     # Seed data if any step runs
-    if True:
-        add_data(instance, ssl)
+    logging.debug("Adding initial data to the instance")
+    add_data(instance, ssl)
 
     # 1) Failover & persistence
     if _run_step(cfg, "failover"):
+        logging.info("Triggering failover")
         instance.trigger_failover(
             replica_id=f"node-{id_key}-0",
             wait_for_ready=False,
@@ -103,61 +109,73 @@ def test_replication_pack(instance):
                 if "role:master" in info:
                     break
             except Exception:
+                logging.debug("Retrying connection during failover")
                 time.sleep(5)
+        logging.debug("Validating data after failover")
         assert_data(instance, ssl, msg="Data lost after first failover")
 
     # 2) Stop/Start immediately after failover
     if _run_step(cfg, "stopstart"):
+        logging.info("Stopping and starting the instance")
         instance.stop(wait_for_ready=True)
         instance.start(wait_for_ready=True)
+        logging.debug("Validating data after stop/start")
         assert_data(instance, ssl, msg="Data missing after stop/start")
 
     # 3) Sentinel failover
     if _run_step(cfg, "sentinel-failover"):
+        logging.info("Triggering sentinel failover")
         instance.wait_for_instance_status(timeout_seconds=600)
         instance.trigger_failover(
             replica_id=f"sentinel-{id_key}-0",
             wait_for_ready=False,
             resource_id=instance.get_resource_id(f"sentinel-{id_key}"),
         )
+        logging.debug("Validating data after sentinel failover")
         assert_data(instance, ssl, msg="Data lost after sentinel failover")
 
     # 4) Second master failover
     if _run_step(cfg, "second-failover"):
+        logging.info("Triggering second master failover")
         instance.wait_for_instance_status(timeout_seconds=600)
         instance.trigger_failover(
             replica_id=f"node-{id_key}-1",
             wait_for_ready=False,
             resource_id=instance.get_resource_id(f"node-{id_key}"),
         )
+        logging.debug("Validating data after second failover")
         assert_data(instance, ssl, msg="Data lost after second failover")
 
     # 5) Add/remove replica — MUST revert
     if _run_step(cfg, "scale-replicas"):
+        logging.info("Scaling replicas")
         orig_replicas = int(cfg["orig_cluster_replicas"] or "1")
 
         def do_scale():
+            logging.debug("Increasing number of replicas")
             instance.update_params(numReplicas=orig_replicas + 1, wait_for_ready=True)
 
         def revert_scale():
+            logging.debug("Reverting number of replicas")
             instance.update_params(numReplicas=orig_replicas, wait_for_ready=True)
 
-        # change under traffic, then revert under traffic
-        from .suite_utils import (
-            change_then_revert,
-        )  # local import to avoid unused if step not selected
+        from .suite_utils import change_then_revert
 
         change_then_revert(instance, ssl, do_scale, revert_scale)
+        logging.debug("Validating data after replica scaling")
         assert_data(instance, ssl, msg="Data missing after replica scaling")
 
     # 6) Update memory (resize) — no revert required
     if _run_step(cfg, "resize"):
+        logging.info("Resizing instance memory")
         new_type = cfg["new_instance_type"] or cfg["orig_instance_type"]
         instance.update_instance_type(new_type, wait_until_ready=True)
+        logging.debug("Validating data after resize")
         assert_data(instance, ssl, msg="Data missing after resize")
 
     # 7) Upgrade (last)
     if _run_step(cfg, "upgrade"):
+        logging.info("Upgrading instance")
         instance.upgrade(
             service_id=cfg["service_id"],
             product_tier_id=instance._product_tier_id,
@@ -165,8 +183,12 @@ def test_replication_pack(instance):
             target_version=None,
             wait_until_ready=True,
         )
+        logging.debug("Validating data after upgrade")
         assert_data(instance, ssl, msg="Data missing after upgrade")
 
     # 8) OOM
     if _run_step(cfg, "oom"):
+        logging.info("Simulating OOM")
         stress_oom(instance, ssl=ssl, resource_key=rk)
+
+    logging.info("Completed test_replication_pack")

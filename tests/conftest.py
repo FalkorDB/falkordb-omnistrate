@@ -3,14 +3,18 @@ import time
 import socket
 import pytest
 import logging
-from random import randbytes
+import secrets
 
 from tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
 
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 def pytest_addoption(parser):
+    logging.info("Adding pytest options")
     add = parser.addoption
     # Cloud / env
     add("--cloud-provider", default=os.getenv("CLOUD_PROVIDER"))
@@ -69,13 +73,14 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope="session")
 def cfg(pytestconfig):
+    logging.info("Creating configuration fixture")
     opt = pytestconfig.getoption
     steps_raw = opt("--e2e-steps") or "all"
     e2e_steps = set(s.strip().lower() for s in steps_raw.split(",") if s.strip()) or {
         "all"
     }
 
-    return {
+    cfg_dict = {
         # Cloud / env
         "cloud_provider": opt("--cloud-provider"),
         "region": opt("--region"),
@@ -112,11 +117,17 @@ def cfg(pytestconfig):
         "omnistrate_user": os.getenv("OMNISTRATE_USERNAME"),
         "omnistrate_password": os.getenv("OMNISTRATE_PASSWORD"),
     }
+    logging.debug(f"Configuration: {cfg_dict}")
+    return cfg_dict
 
 
 @pytest.fixture(scope="session")
 def omnistrate(cfg):
+    logging.info("Creating OmnistrateFleetAPI instance")
     if not cfg["omnistrate_user"] or not cfg["omnistrate_password"]:
+        logging.error(
+            "Missing OMNISTRATE_USERNAME / OMNISTRATE_PASSWORD in environment"
+        )
         raise RuntimeError(
             "Missing OMNISTRATE_USERNAME / OMNISTRATE_PASSWORD in environment."
         )
@@ -127,6 +138,7 @@ def omnistrate(cfg):
 
 @pytest.fixture(scope="session")
 def service_model_parts(omnistrate: OmnistrateFleetAPI, cfg):
+    logging.info("Fetching service model parts")
     service = omnistrate.get_service(cfg["service_id"])
     tier = omnistrate.get_product_tier(
         service_id=cfg["service_id"],
@@ -137,16 +149,22 @@ def service_model_parts(omnistrate: OmnistrateFleetAPI, cfg):
     network = (
         omnistrate.network(cfg["custom_network"]) if cfg["custom_network"] else None
     )
+    logging.debug("Service model parts fetched successfully")
     return service, tier, sm, network
 
 
 def _resolve_hostname(endpoint: str, timeout=300, interval=1):
+    logging.info(f"Resolving hostname for endpoint: {endpoint}")
     start = time.time()
     while time.time() - start < timeout:
         try:
-            return socket.gethostbyname(endpoint)
-        except Exception:
+            resolved_ip = socket.gethostbyname(endpoint)
+            logging.debug(f"Resolved IP: {resolved_ip}")
+            return resolved_ip
+        except Exception as e:
+            logging.debug(f"Retrying DNS resolution for {endpoint}: {e}")
             time.sleep(interval)
+    logging.error(f"DNS not resolved for {endpoint} within {timeout}s")
     raise TimeoutError(f"DNS not resolved for {endpoint} within {timeout}s")
 
 
@@ -156,6 +174,7 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
     Provision once and yield a ready instance.
     Teardown at the end unless --persist-on-fail is set and tests failed.
     """
+    logging.info("Creating instance fixture")
     service, tier, sm, network = service_model_parts
 
     inst = omnistrate.instance(
@@ -174,7 +193,7 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
         deployment_failover_timeout_seconds=cfg["failover_timeout"],
     )
 
-    password = randbytes(16).hex()
+    password = secrets.token_hex(16)
     inst.create(
         wait_for_ready=True,
         deployment_cloud_provider=cfg["cloud_provider"],
@@ -212,4 +231,9 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
 
     failed = request.session.testsfailed > 0
     if not (failed and cfg["persist_on_fail"]):
+        logging.info("Deleting instance")
         inst.delete(network is not None)
+    else:
+        logging.warning(
+            "Instance retained due to test failures and persist-on-fail flag"
+        )

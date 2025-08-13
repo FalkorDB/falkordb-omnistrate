@@ -173,6 +173,7 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
     """
     Provision once and yield a ready instance.
     Teardown at the end unless --persist-on-fail is set and tests failed.
+    Ensure deletion even if the pipeline is canceled.
     """
     logging.info("Creating instance fixture")
     service, tier, sm, network = service_model_parts
@@ -227,13 +228,14 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
     inst.falkordb_password = password
     inst._product_tier_id = tier.product_tier_id  # for upgrade calls
 
-    yield inst
-
-    failed = request.session.testsfailed > 0
-    if not (failed and cfg["persist_on_fail"]):
-        logging.info("Deleting instance")
-        inst.delete(network is not None)
-    else:
-        logging.warning(
-            "Instance retained due to test failures and persist-on-fail flag"
-        )
+    try:
+        yield inst
+    finally:
+        failed = request.session.testsfailed > 0
+        if not (failed and cfg["persist_on_fail"]):
+            logging.info("Deleting instance")
+            inst.delete(network is not None)
+        else:
+            logging.warning(
+                "Instance retained due to test failures and persist-on-fail flag"
+            )

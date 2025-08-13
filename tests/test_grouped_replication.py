@@ -86,7 +86,7 @@ def test_replication_pack(instance):
     # 0) Ensure MZ distribution
     if "multi-zone" in cfg["resource_key"].lower():
         logging.info("Ensuring multi-zone distribution")
-        assert_multi_zone(instance, host_count=cfg["orig_cluster_replicas"])
+        assert_multi_zone(instance, host_count=cfg["orig_cluster_replicas"] + 1)
 
     # Seed data if any step runs
     logging.debug("Adding initial data to the instance")

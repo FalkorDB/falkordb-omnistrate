@@ -21,13 +21,6 @@ x-omnistrate-service-plan:
       timeUnit: hour
       price: 0.1
 
-x-internal-integrations:
-  logs:
-    provider: native
-
-x-omnistrate-integrations:
-  - omnistrateLogging:
-
 services:
   # Standalone
 

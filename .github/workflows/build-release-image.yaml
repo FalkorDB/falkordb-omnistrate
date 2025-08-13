@@ -15,7 +15,7 @@ concurrency:
 env:
   NODE_IMAGE_NAME: falkordb-node
   CLUSTER_IMAGE_NAME: falkordb-cluster
-  FALKORDB_VERSION: v4.10.2
+  FALKORDB_VERSION: v4.12.2
   CLUSTER_REBALANCE_IMAGE_NAME: falkordb-cluster-rebalance
 
 jobs:

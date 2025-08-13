@@ -20,6 +20,7 @@ else
   export ADMIN_PASSWORD=''
 fi
 
+FALKORDB_POST_UPGRADE_PASSWORD=${FALKORDB_POST_UPGRADE_PASSWORD:-''}
 RUN_SENTINEL=${RUN_SENTINEL:-0}
 RUN_NODE=${RUN_NODE:-1}
 RUN_METRICS=${RUN_METRICS:-1}
@@ -91,7 +92,8 @@ LOG_LEVEL=${LOG_LEVEL:-notice}
 
 DATE_NOW=$(date +"%Y%m%d%H%M%S")
 
-FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo ""; fi)
+
+FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo "/dev/null"; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'*/30 * * * *'}
 AOF_FILE_SIZE_TO_MONITOR=${AOF_FILE_SIZE_TO_MONITOR:-5} # 5MB
@@ -103,28 +105,26 @@ fi
 
 if [[ ! -s "$FALKORDB_HOME/run_bgrewriteaof" && ! -f "$FALKORDB_HOME/run_bgrewriteaof" ]]; then
   echo "Creating run_bgrewriteaof script"
-  echo """#!/bin/bash
+  echo "
+      #!/bin/bash
       set -e
+      AOF_FILE_SIZE_TO_MONITOR=\${AOF_FILE_SIZE_TO_MONITOR:-5}
+      ROOT_CA_PATH=\${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
+      TLS_CONNECTION_STRING=$(if [[ \$TLS == "true" ]]; then echo "--tls --cacert \$ROOT_CA_PATH"; else echo ""; fi)
       size=\$(stat -c%s $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof)
-      if (( size > $AOF_FILE_SIZE_TO_MONITOR*1024*1024 ));then
-        echo "File larger than 5MB, running BGREWRITEAOF" >>$FALKORDB_LOG_FILE_PATH
+      if [ \$size -gt \$((AOF_FILE_SIZE_TO_MONITOR * 1024 * 1024)) ]; then
+        echo \"File larger than \$AOF_FILE_SIZE_TO_MONITOR MB, running BGREWRITEAOF\"
         $(which redis-cli) -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING BGREWRITEAOF
       else
-        echo "File smaller than 5MB, not running BGREWRITEAOF" >>$FALKORDB_LOG_FILE_PATH
+        echo \"File smaller than \$AOF_FILE_SIZE_TO_MONITOR MB, not running BGREWRITEAOF\"
       fi
-      """ > "$FALKORDB_HOME/run_bgrewriteaof"
-  chmod +x "$FALKORDB_HOME/run_bgrewriteaof"
+      " > "$DATA_DIR/run_bgrewriteaof"
+  chmod +x "$DATA_DIR/run_bgrewriteaof"
+  ln -s "$DATA_DIR/run_bgrewriteaof" $FALKORDB_HOME/run_bgrewriteaof
   echo "run_bgrewriteaof script created"
 else
   echo "run_bgrewriteaof script already exists"
 fi
-
-
-rewrite_aof_cronjob() {
-  # This function runs the BGREWRITEAOF command every 12 hours to prevent the AOF file from growing too large.
-  # The command is run every 12 hours to prevent the AOF file from growing too large.
-  (crontab -l 2>/dev/null; echo "$AOF_CRON_EXPRESSION /bin/bash $FALKORDB_HOME/run_bgrewriteaof") | crontab -
-}
 
 dump_conf_files() {
   echo "Dumping configuration files"
@@ -205,6 +205,7 @@ handle_sigterm() {
   fi
   
   if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_sentinel_pid ]]; then
+
     kill -TERM $redis_exporter_sentinel_pid
   fi
 
@@ -387,7 +388,6 @@ create_user() {
     echo "Resetting admin password"
     redis-cli -p $NODE_PORT -a $CURRENT_ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET requirepass $ADMIN_PASSWORD
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET masterauth $ADMIN_PASSWORD
-
   fi
 
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY
@@ -430,6 +430,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
   sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_CONF_FILE
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" $NODE_CONF_FILE
+  sed -i "s/\$FALKORDB_POST_UPGRADE_PASSWORD/$FALKORDB_POST_UPGRADE_PASSWORD/g" $NODE_CONF_FILE
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_CACHE_SIZE/$FALKORDB_CACHE_SIZE/g" $NODE_CONF_FILE
@@ -517,10 +518,10 @@ if [[ ! "$NODE_NAME" =~ sentinel.* ]]; then
   rewrite_aof_cronjob
 fi
 
-# If TLS=true, create a job to rotate the certificate
+# If TLS=true, create a script to rotate the certificate
 if [[ "$TLS" == "true" ]]; then
   if [[ $RUN_NODE -eq 1 ]]; then
-    echo "Creating node certificate rotation job"
+    echo "Creating node certificate rotation job script"
     echo "
     #!/bin/bash
     set -e
@@ -528,7 +529,6 @@ if [[ "$TLS" == "true" ]]; then
     redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-cert-file $TLS_MOUNT_PATH/tls.crt
     " >$DATA_DIR/cert_rotate_node.sh
     chmod +x $DATA_DIR/cert_rotate_node.sh
-    (crontab -l 2>/dev/null; echo "0 0 * * * $DATA_DIR/cert_rotate_node.sh") | crontab -
   fi
 fi
 

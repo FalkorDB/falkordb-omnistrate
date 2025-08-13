@@ -120,7 +120,7 @@ def assert_multi_zone(instance, host_count=6):
     network_topology: dict = instance.get_network_topology(force_refresh=True)
     logging.debug(f"Network topology: {network_topology}")
     resource_key = next(
-        (k for [k, v] in network_topology.items() if v["resourceName"] == "-mz"),
+        (k for [k, v] in network_topology.items() if ("node-mz" in v["resourceName"]) or ("cluster-mz" in v["resourceName"])),
         None,
     )
 

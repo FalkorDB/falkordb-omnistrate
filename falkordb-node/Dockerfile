@@ -1,19 +1,5 @@
 ARG FALKORDB_VERSION=v4.12.2
 
-FROM falkordb/redis_exporter:v1.70.2-alpine AS redis_exporter
-
-
-FROM rust:1.82-slim AS healthcheck_builder
-
-RUN apt-get update -y && apt-get install -y pkg-config build-essential cmake libtool openssl libssl-dev
-
-WORKDIR /healthcheck
-
-COPY ../healthcheck_rs/ /healthcheck
-
-RUN cargo build --release
-
-
 FROM falkordb/falkordb:$FALKORDB_VERSION
 
 RUN apt-get update && apt-get install -y curl jq openssl cron supervisor gdb
@@ -30,7 +16,6 @@ RUN mkdir -p /var/lib/falkordb
 
 WORKDIR /falkordb
 
-COPY falkordb-node/sentinel.conf .
 COPY falkordb-node/node.conf .
 COPY falkordb-node/node-entrypoint.sh /usr/local/bin/
 COPY --from=redis_exporter /redis_exporter /usr/local/bin/

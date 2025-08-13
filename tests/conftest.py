@@ -15,8 +15,8 @@ def pytest_addoption(parser):
     # Cloud / env
     add("--cloud-provider", default=os.getenv("CLOUD_PROVIDER"))
     add("--region", default=os.getenv("CLOUD_REGION"))
-    add("--service-id", default=os.getenv("OMNI_SERVICE_ID"))
-    add("--environment-id", default=os.getenv("OMNI_ENV_ID"))
+    add("--service-id", default=os.getenv("SERVICE_ID"))
+    add("--environment-id", default=os.getenv("ENVIRONMENT_ID"))
     add("--subscription-id", default=os.getenv("SUBSCRIPTION_ID"))
 
     # Tier / topology

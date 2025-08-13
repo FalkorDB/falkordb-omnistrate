@@ -16,7 +16,7 @@ env:
   NODE_IMAGE_NAME: falkordb-node
   CLUSTER_IMAGE_NAME: falkordb-cluster
   CLUSTER_REBALANCE_IMAGE_NAME: falkordb-cluster-rebalance
-   HEALTHCHECK_IMAGE_NAME: falkordb-cloud-healthcheck
+  HEALTHCHECK_IMAGE_NAME: falkordb-cloud-healthcheck
   FALKORDB_EXPORTER_IMAGE_NAME: falkordb-cloud-exporter
   FALKORDB_SENTINEL_IMAGE_NAME: falkordb-cloud-sentinel
   FALKORDB_VERSION: v4.12.2

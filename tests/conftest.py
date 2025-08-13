@@ -110,8 +110,8 @@ def cfg(pytestconfig):
         "e2e_steps": e2e_steps,
         "new_instance_type": opt("--new-instance-type"),
         # Originals for reverts
-        "orig_host_count": opt("--host-count"),
-        "orig_cluster_replicas": opt("--cluster-replicas"),
+        "orig_host_count": int(opt("--host-count")),
+        "orig_cluster_replicas": int(opt("--cluster-replicas")),
         "orig_instance_type": opt("--instance-type"),
         # Auth (env)
         "omnistrate_user": os.getenv("OMNISTRATE_USERNAME"),

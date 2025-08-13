@@ -4,7 +4,9 @@ import logging
 from redis.exceptions import OutOfMemoryError
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 log = logging.getLogger(__name__)
 
@@ -24,12 +26,16 @@ def has_data(instance, ssl=False, key="test", min_rows=1):
     g = db.select_graph(key)
     rs = g.query("MATCH (n:Person) RETURN n")
     result = len(rs.result_set) >= min_rows
-    logging.debug(f"Graph '{key}' has {len(rs.result_set)} rows. Meets requirement: {result}")
+    logging.debug(
+        f"Graph '{key}' has {len(rs.result_set)} rows. Meets requirement: {result}"
+    )
     return result
 
 
 def assert_data(instance, ssl=False, key="test", min_rows=1, msg="data missing"):
-    logging.info(f"Asserting data presence in graph '{key}' with at least {min_rows} rows")
+    logging.info(
+        f"Asserting data presence in graph '{key}' with at least {min_rows} rows"
+    )
     if not has_data(instance, ssl=ssl, key=key, min_rows=min_rows):
         logging.error(msg)
         raise AssertionError(msg)
@@ -120,7 +126,11 @@ def assert_multi_zone(instance, host_count=6):
     network_topology: dict = instance.get_network_topology(force_refresh=True)
     logging.debug(f"Network topology: {network_topology}")
     resource_key = next(
-        (k for [k, v] in network_topology.items() if ("node-mz" in v["resourceName"]) or ("cluster-mz" in v["resourceName"])),
+        (
+            k
+            for [k, v] in network_topology.items()
+            if (("node-mz" in v["resourceName"]) or ("cluster-mz" in v["resourceName"]))
+        ),
         None,
     )
 

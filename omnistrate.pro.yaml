@@ -45,13 +45,6 @@ x-omnistrate-load-balancer:
           ingressPort: 26379
           backendPort: 26379
 
-x-internal-integrations:
-  logs:
-    provider: native
-
-x-omnistrate-integrations:
-  - omnistrateLogging
-
 x-rebalanceparam: &rebalanceparam
   x-omnistrate-api-params:
     - key: enableTLS
@@ -213,6 +206,128 @@ x-clusterparam: &clusterparam
       min: 0
       max: 2000000000
 
+
+x-post-upgrade-hook: &postupgradehook
+  commandTemplate: |
+    #!/bin/bash
+
+    # Exit on any error, undefined variables, and pipe failures
+    set -euo pipefail
+
+    # Constants
+    readonly LINK="Please refer to the documentation for instructions on how to resolve this issue: https://github.com/FalkorDB/runbooks/blob/main/alerts/SentinelSplitBrainAlertsRunbook.md"
+    readonly REDIS_USER="falkordbUpgradeUser"
+
+    # Derived configuration
+    readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
+    readonly RESOURCE_KEY=$([[ "$RESOURCE_ALIAS" =~ .*mz.* ]] && echo "mz" || echo "sz")
+    readonly INTERNAL_SUFFIX=$([[ "${NETWORKING_TYPE:-}" == "INTERNAL" ]] && echo "-internal" || echo "")
+
+    # Common Redis CLI options
+    readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+
+    # Function to execute Redis CLI commands with error handling
+    redis_exec() {
+        local host=$1 port=$2
+        shift 2
+        redis-cli $REDIS_OPTS -h "$host" -p "$port" "$@" || {
+            echo "$LINK" >&2
+            exit 1
+        }
+    }
+
+    # Function to get master address from sentinel
+    get_master_addr() {
+        local host=$1
+        local result
+        # Redis SENTINEL returns hostname and port on separate lines
+        result=$(redis_exec "$host" "$SENTINEL_PORT" SENTINEL get-master-addr-by-name "$MASTER_NAME" 2>/dev/null | {
+            read -r hostname
+            read -r port
+            echo "$hostname"
+        }) || return 1
+        [[ -n "$result" && "$result" != "null" ]] && echo "$result" || return 1
+    }
+
+    # Function to check if node is master
+    is_master() {
+        local host=$1
+        redis_exec "$host" "$NODE_PORT" info | grep -q "role:master"
+    }
+
+    # Function to resolve split brain for a specific sentinel
+    resolve_split_brain() {
+        local host=$1
+        echo "Resolving split brain for host: $host"
+        
+        redis_exec "$host" "$SENTINEL_PORT" SENTINEL remove "$MASTER_NAME"
+        redis_exec "$host" "$SENTINEL_PORT" SENTINEL MONITOR "$MASTER_NAME" "$true_master" "$NODE_PORT" "$SENTINEL_QUORUM"
+        redis_exec "$host" "$SENTINEL_PORT" SENTINEL FLUSHCONFIG
+    }
+
+    # Main execution
+    main() {
+        local -a hosts=()
+        local true_master=""
+        
+        # Get sentinel-0 master address
+        hosts[0]=$(get_master_addr "sentinel-${RESOURCE_KEY}-0")
+        
+        # Process replicas
+        for ((i = 0; i < NUM_REPLICAS; i++)); do
+            local node_host="node-${RESOURCE_KEY}-$i"
+            
+            # Get master address from this sentinel
+            hosts[$((i + 1))]=$(get_master_addr "$node_host")
+            
+            # Check if this node is the actual master
+            if is_master "$node_host"; then
+                true_master="${node_host}${INTERNAL_SUFFIX}.${EXTERNAL_DNS_SUFFIX}"
+            fi
+        done
+        
+        # Filter out empty/invalid responses
+        local -a valid_hosts=()
+        for host in "${hosts[@]}"; do
+            if [[ -n "$host" && "$host" != "null" ]]; then
+                valid_hosts+=("$host")
+            fi
+        done
+        
+        # Get unique hosts (split brain detection)
+        local -a unique_hosts
+        readarray -t unique_hosts < <(printf "%s\n" "${valid_hosts[@]}" | sort -u)
+        
+        [[ -z "$true_master" ]] && {
+            echo "Unable to determine the real master, aborting split-brain fix" >&2
+            exit 1
+          }
+
+        # Check for split brain condition
+        if [[ ${#unique_hosts[@]} -gt 1 ]]; then
+            echo "Split brain detected - ${#unique_hosts[@]} different masters reported"
+            echo "True master: $true_master"
+            
+            # Fix sentinel-0 if needed
+            if [[ "${hosts[0]}" != "$true_master" ]]; then
+                resolve_split_brain "sentinel-${RESOURCE_KEY}-0"
+            fi
+            
+            # Fix replica sentinels if needed
+            for ((i = 0; i < NUM_REPLICAS; i++)); do
+                if [[ "${hosts[$((i + 1))]}" != "$true_master" ]]; then
+                    resolve_split_brain "node-${RESOURCE_KEY}-$i"
+                fi
+            done
+            
+            echo "Split brain resolution completed"
+        else
+            echo "No split brain detected - all sentinels report same master: ${unique_hosts[0]}"
+        fi
+    }
+
+    # Run main function
+    main
 services:
   # Standalone
 
@@ -947,6 +1062,8 @@ services:
         required: false
         export: true
         defaultValue: "2"
+        parameterDependencyMap:
+          sentinel-sz: numReplicas
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -1101,12 +1218,14 @@ services:
       - DEBUG=0
       - REDIS_EXPORTER_DEBUG=false
       - SENTINEL_HOST=$sentinel-sz.sys.network.externalClusterEndpoint
+      - SENTINEL_QUORUM=2
       - SENTINEL_PORT=26379
       - MASTER_NAME=master
       - NODE_HOST=$sys.network.node.externalEndpoint
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
+      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1121,6 +1240,7 @@ services:
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - SKIP_HEALTH_CHECK=false
+      - NUM_REPLICAS=$var.numReplicas
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1160,6 +1280,9 @@ services:
             cpu: "200m"
             memory: 50Mi
     x-omnistrate-actionhooks:
+      - scope: CLUSTER
+        type: POST_UPGRADE
+        <<: *postupgradehook
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -1301,6 +1424,9 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
+      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - SENTINEL_QUORUM=2
+      - NODE_PORT=6379
       - DEBUG=0
       - REDIS_EXPORTER_DEBUG=false
       - SENTINEL_PORT=26379
@@ -1309,6 +1435,8 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - NODE_HOST=$sys.network.node.externalEndpoint
       - SENTINEL_IGNORE_MASTER_CHECK=true
+      - NUM_REPLICAS=$var.numReplicas
+      - MASTER_NAME=master
     ports:
       - "26379:26379"
     volumes:
@@ -1363,7 +1491,18 @@ services:
         modifiable: false
         required: true
         export: false
+      - key: numReplicas
+        description: Number of Replicas
+        name: Number of Replicas
+        type: Float64
+        modifiable: false
+        required: false
+        export: false
+        defaultValue: "2"
     x-omnistrate-actionhooks:
+      - scope: CLUSTER
+        type: POST_UPGRADE
+        <<: *postupgradehook
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -1680,6 +1819,8 @@ services:
         required: false
         export: true
         defaultValue: "2"
+        parameterDependencyMap:
+          sentinel-mz: numReplicas
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -1835,12 +1976,14 @@ services:
       - REDIS_EXPORTER_DEBUG=false
       - IS_MULTI_ZONE=1
       - SENTINEL_HOST=$sentinel-mz.sys.network.externalClusterEndpoint
+      - SENTINEL_QUORUM=2
       - SENTINEL_PORT=26379
       - MASTER_NAME=master
       - NODE_HOST=$sys.network.node.externalEndpoint
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
+      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
@@ -1855,6 +1998,7 @@ services:
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - SKIP_HEALTH_CHECK=false
+      - NUM_REPLICAS=$var.numReplicas
     ports:
       - "6379:6379"
       - "26379:26379"
@@ -1894,6 +2038,9 @@ services:
             cpu: "200m"
             memory: 50Mi
     x-omnistrate-actionhooks:
+      - scope: CLUSTER
+        type: POST_UPGRADE
+        <<: *postupgradehook
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -2034,6 +2181,9 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
+      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - SENTINEL_QUORUM=2
+      - NODE_PORT=6379
       - DEBUG=0
       - REDIS_EXPORTER_DEBUG=false
       - SENTINEL_PORT=26379
@@ -2042,6 +2192,8 @@ services:
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - NODE_HOST=$sys.network.node.externalEndpoint
       - SENTINEL_IGNORE_MASTER_CHECK=true
+      - NUM_REPLICAS=$var.numReplicas
+      - MASTER_NAME=master
     ports:
       - "26379:26379"
     volumes:
@@ -2096,7 +2248,18 @@ services:
         modifiable: false
         required: true
         export: false
+      - key: numReplicas
+        description: Number of Replicas
+        name: Number of Replicas
+        type: Float64
+        modifiable: false
+        required: false
+        export: false
+        defaultValue: "2"
     x-omnistrate-actionhooks:
+      - scope: CLUSTER
+        type: POST_UPGRADE
+        <<: *postupgradehook
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -2362,6 +2525,8 @@ services:
     depends_on:
       - cluster-sz
       - cluster-sz-rebalance
+  
+
 
   cluster-sz:
     x-omnistrate-mode-internal: true

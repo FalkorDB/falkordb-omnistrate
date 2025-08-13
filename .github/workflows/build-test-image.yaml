@@ -247,7 +247,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: azure
             cloudRegion: eastus2
             resourceKey: standalone
@@ -259,7 +259,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: azure
             cloudRegion: eastus2
             resourceKey: single-Zone
@@ -271,7 +271,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: azure
             cloudRegion: eastus2
             resourceKey: multi-Zone
@@ -283,7 +283,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: azure
             cloudRegion: eastus2
             resourceKey: cluster-Single-Zone
@@ -297,7 +297,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: azure
             cloudRegion: eastus2
             resourceKey: cluster-Multi-Zone
@@ -312,7 +312,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,update_memory,oom"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
@@ -325,7 +325,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,update_memory,oom"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
@@ -338,7 +338,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,update_memory,oom"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: multi-Zone
@@ -351,7 +351,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,update_memory,oom"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Single-Zone
@@ -366,7 +366,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,update_memory,oom"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Multi-Zone
@@ -382,7 +382,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: standalone
@@ -394,7 +394,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: single-Zone
@@ -406,7 +406,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: multi-Zone
@@ -418,7 +418,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: cluster-Single-Zone
@@ -432,7 +432,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart"
-            tierName: "enterprise-${{ github.ref_name }}"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: cluster-Multi-Zone
@@ -447,7 +447,7 @@ jobs:
             if: "true"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,oom"
-            tierName: "free-${{ github.ref_name }}"
+            tierName: "free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: free
@@ -457,7 +457,7 @@ jobs:
             if: "true"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,oom"
-            tierName: "startup-${{ github.ref_name }}"
+            tierName: "startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
@@ -467,7 +467,7 @@ jobs:
             if: "true"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,update_memory,oom"
-            tierName: "pro-${{ github.ref_name }}"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
@@ -479,7 +479,7 @@ jobs:
             if: "true"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,update_memory,oom"
-            tierName: "pro-${{ github.ref_name }}"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
@@ -491,7 +491,7 @@ jobs:
             if: "true"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,update_memory,oom"
-            tierName: "pro-${{ github.ref_name }}"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: multi-Zone
@@ -503,7 +503,7 @@ jobs:
             if: "true"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,update_memory,oom"
-            tierName: "pro-${{ github.ref_name }}"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Single-Zone
@@ -517,7 +517,7 @@ jobs:
             if: "true"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,update_memory,oom"
-            tierName: "pro-${{ github.ref_name }}"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Multi-Zone
@@ -532,7 +532,7 @@ jobs:
             runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart"
-            tierName: "pro-${{ github.ref_name }}"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: multi-Zone
@@ -545,7 +545,7 @@ jobs:
             runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart"
-            tierName: "pro-${{ github.ref_name }}"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: cluster-Multi-Zone

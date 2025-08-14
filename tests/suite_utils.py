@@ -122,6 +122,7 @@ def assert_multi_zone(instance, host_count=6):
     """
     Assert that the instance is multi-zone.
     """
+    host_count = int(host_count)
     logging.info("Asserting multi-zone topology")
     network_topology: dict = instance.get_network_topology(force_refresh=True)
     logging.debug(f"Network topology: {network_topology}")
@@ -145,7 +146,7 @@ def assert_multi_zone(instance, host_count=6):
     logging.debug("Host count provided: %d, Nodes found: %d", host_count, len(nodes))
     logging.debug("Nodes details: %s", nodes)
 
-    if len(nodes) != int(host_count):
+    if len(nodes) != host_count:
         logging.error(
             "Host count does not match number of nodes. Current host count: %d; Number of nodes: %d",
             host_count,

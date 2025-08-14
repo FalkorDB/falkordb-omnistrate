@@ -94,5 +94,6 @@ def test_standalone_pack(instance):
             ),
             network_type=cfg["network_type"],
         )
+        logging.debug("Passed OOM stress test")
 
     logging.info("Completed test_standalone_pack")

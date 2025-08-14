@@ -582,7 +582,7 @@ jobs:
         if: matrix.instances.if == 'true' || matrix.instances.if == true
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
-          echo "${HOME}/.local/bin" >> $GITHUB_PATH
+          export PATH="/root/.local/bin:$PATH"
           poetry install
 
       - name: ${{ matrix.instances.name }}
@@ -600,7 +600,7 @@ jobs:
           if ! command -v poetry &> /dev/null; then
             echo "Poetry could not be found, installing..."
             curl -sSL https://install.python-poetry.org | python3 -
-            echo "${HOME}/.local/bin" >> $GITHUB_PATH
+            export PATH="/root/.local/bin:$PATH"
             poetry install
           fi
           

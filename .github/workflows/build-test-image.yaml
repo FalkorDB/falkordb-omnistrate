@@ -579,21 +579,11 @@ jobs:
             ${{ runner.os }}-poetry-
 
       - name: Install Poetry
-        if: steps.cache.outputs.cache-hit != true && (matrix.instances.if == 'true' || matrix.instances.if == true)
-        env:
-          if: ${{ matrix.instances.if }}
-          if_equal_bool: ${{ matrix.instances.if == true }}
-          if_equal_str: ${{ matrix.instances.if == 'true' }}
+        if: matrix.instances.if == 'true' || matrix.instances.if == true
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "${HOME}/.local/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies
-        if: matrix.instances.if == 'true' || matrix.instances.if == true
-        run: |
-          export PATH="${HOME}/.local/bin:$PATH"
           poetry install
-          poetry --version || { echo "Poetry is not installed or not in PATH"; exit 1; }
 
       - name: ${{ matrix.instances.name }}
         if: matrix.instances.if == 'true' || matrix.instances.if == true
@@ -605,6 +595,15 @@ jobs:
           OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
         run: |
           set -euo pipefail
+          
+          # Check if poetry is installed. If not, install it.
+          if ! command -v poetry &> /dev/null; then
+            echo "Poetry could not be found, installing..."
+            curl -sSL https://install.python-poetry.org | python3 -
+            echo "${HOME}/.local/bin" >> $GITHUB_PATH
+            poetry install
+          fi
+          
           EXTRA_ARGS=()
 
           [[ -n "${{ matrix.instances.newInstanceType || '' }}" ]] && \

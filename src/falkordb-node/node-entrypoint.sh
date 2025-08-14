@@ -264,6 +264,15 @@ get_memory_limit() {
     ["c6i.8xlarge"]="62GB"
   )
 
+  # if memory limit is 1100M or 2200M, set it to 1GB or 2GB respectively
+  if [[ $MEMORY_LIMIT == *"M" ]]; then
+    if [[ $MEMORY_LIMIT == "1100M" ]]; then
+      MEMORY_LIMIT="1G"
+    elif [[ $MEMORY_LIMIT == "2200M" ]]; then
+      MEMORY_LIMIT="2G"
+    fi
+  fi
+
   if [[ -z $INSTANCE_TYPE && -z $MEMORY_LIMIT ]]; then
     echo "INSTANCE_TYPE is not set"
     MEMORY_LIMIT=$(get_default_memory_limit)

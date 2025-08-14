@@ -92,7 +92,7 @@ def change_then_revert(instance, ssl, do_fn, revert_fn):
     logging.info("Completed topology change and revert")
 
 
-def stress_oom(instance, ssl=False, resource_key=None):
+def stress_oom(instance, ssl=False, resource_key=None, query_size="small"):
     """
     Keep writing until we hit OOM.
     """
@@ -101,7 +101,7 @@ def stress_oom(instance, ssl=False, resource_key=None):
     g = db.select_graph("test")
     big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
-    q = small if resource_key == "free" else big
+    q = small if query_size == "small" else big
     while True:
         try:
             g.query(q)

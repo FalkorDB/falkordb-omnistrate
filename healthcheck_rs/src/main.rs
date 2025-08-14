@@ -168,17 +168,8 @@ fn get_health_config_from_configmap() -> Result<HealthConfig, Box<dyn std::error
                     Ok(HealthConfig::default())
                 }
             }
-            Ok(Err(err)) => {
-                eprintln!(
-                    "healthcheck: Failed to get ConfigMap {} in {}: {}",
-                    name, ns, err
-                );
-                Ok(HealthConfig::default())
-            }
-            Err(_) => {
-                eprintln!("healthcheck: ConfigMap fetch timed out; using defaults.");
-                Ok(HealthConfig::default())
-            }
+            Ok(Err(err)) => Ok(HealthConfig::default()),
+            Err(_) => Ok(HealthConfig::default()),
         }
     })?;
 

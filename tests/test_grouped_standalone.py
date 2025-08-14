@@ -43,7 +43,9 @@ def test_standalone_pack(instance):
         logging.info("Triggering failover")
         ep_id = instance.get_resource_id("node-s")
         instance.trigger_failover(
-            replica_id="node-s-0", wait_for_ready=True, resource_id=ep_id
+            replica_id="node-f-0" if "free" in cfg["tier_name"] else "node-s-0",
+            wait_for_ready=True,
+            resource_id=ep_id,
         )
         logging.debug("Validating data after failover")
         assert_data(instance, ssl, msg="Data lost after failover")
@@ -70,7 +72,6 @@ def test_standalone_pack(instance):
         stress_oom(
             instance,
             ssl=ssl,
-            resource_key=cfg["resource_key"],
             query_size=(
                 "small"
                 if "free" in cfg["tier_name"] or "startup" in cfg["tier_name"]

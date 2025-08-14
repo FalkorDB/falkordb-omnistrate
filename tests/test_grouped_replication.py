@@ -176,6 +176,6 @@ def test_replication_pack(instance):
     # 7) OOM
     if _run_step(cfg, "oom"):
         logging.info("Simulating OOM")
-        stress_oom(instance, ssl=ssl, resource_key=rk)
+        stress_oom(instance, ssl=ssl)
 
     logging.info("Completed test_replication_pack")

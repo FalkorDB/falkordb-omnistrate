@@ -105,6 +105,7 @@ def stress_oom(instance, ssl=False, resource_key=None):
     while True:
         try:
             g.query(q)
+            time.sleep(1)
         except Exception as e:
             # Different drivers raise different OOM types/strings; be lenient.
             if (

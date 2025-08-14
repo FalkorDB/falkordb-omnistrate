@@ -591,8 +591,9 @@ jobs:
       - name: Install dependencies
         if: matrix.instances.if == 'true' || matrix.instances.if == true
         run: |
-          export PATH="~/.local/bin:$PATH"
+          export PATH="${HOME}/.local/bin:$PATH"
           poetry install
+          poetry --version || { echo "Poetry is not installed or not in PATH"; exit 1; }
 
       - name: ${{ matrix.instances.name }}
         if: matrix.instances.if == 'true' || matrix.instances.if == true

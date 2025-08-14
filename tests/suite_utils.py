@@ -142,9 +142,14 @@ def assert_multi_zone(instance, host_count=6):
         logging.error("No nodes found in network topology")
         raise AssertionError("No nodes found in network topology")
 
-    if len(nodes) != host_count:
+    logging.debug("Host count provided: %d, Nodes found: %d", host_count, len(nodes))
+    logging.debug("Nodes details: %s", nodes)
+
+    if len(nodes) != int(host_count):
         logging.error(
-            f"Host count does not match number of nodes. Current host count: {host_count}; Number of nodes: {len(nodes)}"
+            "Host count does not match number of nodes. Current host count: %d; Number of nodes: %d",
+            host_count,
+            len(nodes),
         )
         raise AssertionError(
             f"Host count does not match number of nodes. Current host count: {host_count}; Number of nodes: {len(nodes)}"
@@ -153,7 +158,9 @@ def assert_multi_zone(instance, host_count=6):
     azs = set(node["availabilityZone"] for node in nodes)
     if len(azs) < 2:
         logging.error(
-            f"Multi-zone topology expected, but only found {len(azs)} availability zones: {azs}"
+            "Multi-zone topology expected, but only found %d availability zones: %s",
+            len(azs),
+            azs,
         )
         raise AssertionError(
             f"Multi-zone topology expected, but only found {len(azs)} availability zones: {azs}"

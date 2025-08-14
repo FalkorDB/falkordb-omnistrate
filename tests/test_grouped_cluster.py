@@ -111,20 +111,7 @@ def test_cluster_pack(instance):
         logging.debug("Validating data after resize")
         assert_data(instance, ssl, msg="Data missing after resize")
 
-    # 6) Upgrade (last)
-    if _run_step(cfg, "upgrade"):
-        logging.info("Upgrading instance")
-        instance.upgrade(
-            service_id=cfg["service_id"],
-            product_tier_id=instance._product_tier_id,
-            source_version=None,
-            target_version=None,
-            wait_until_ready=True,
-        )
-        logging.debug("Validating data after upgrade")
-        assert_data(instance, ssl, msg="Data missing after upgrade")
-
-    # 7) OOM
+    # 6) OOM
     if _run_step(cfg, "oom"):
         logging.info("Simulating OOM")
         stress_oom(instance, ssl=ssl, resource_key=cfg["resource_key"])

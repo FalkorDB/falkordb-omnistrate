@@ -25,7 +25,7 @@ jobs:
 
       - name: Run TLS Certificate Expiration Check
         run: |
-          poetry run python omnistrate_tests/test_tls_expiration.py \
+          poetry run python tests/test_tls_expiration.py \
             "${{ secrets.OMNISTRATE_USERNAME }}" \
             "${{ secrets.OMNISTRATE_PASSWORD }}" \
             "${{ secrets.PAGERDUTY_ROUTING_KEY }}" \

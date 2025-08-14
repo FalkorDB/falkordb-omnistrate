@@ -26,4 +26,4 @@ jobs:
       - name: Install requests module and run cleanup.py script to delete all instances (Omnistrate deployments) in QA environment
         run: |
           pip3 install --no-cache-dir requests
-          python3 ./cleanup/cleanup-qa-instances-script.py
+          python3 ./scripts/cleanup-qa-instances-script.py

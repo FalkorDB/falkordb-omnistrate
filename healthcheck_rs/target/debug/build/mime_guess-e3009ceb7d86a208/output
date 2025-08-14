@@ -1,0 +1,1 @@
+cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/Users/davidzimberknopf/falkordb-compose/healthcheck_rs/target/debug/build/mime_guess-e3009ceb7d86a208/out/mime_types_generated.rs

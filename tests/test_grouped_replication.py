@@ -209,5 +209,6 @@ def test_replication_pack(instance):
     if _run_step(cfg, "oom"):
         logging.info("Simulating OOM")
         stress_oom(instance, ssl=ssl, network_type=cfg["network_type"], query_size="big")
+        logging.debug("Passed OOM stress test")
 
     logging.info("Completed test_replication_pack")

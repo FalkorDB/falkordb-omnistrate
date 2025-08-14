@@ -114,6 +114,6 @@ def test_cluster_pack(instance):
     # 6) OOM
     if _run_step(cfg, "oom"):
         logging.info("Simulating OOM")
-        stress_oom(instance, ssl=ssl, resource_key=cfg["resource_key"])
+        stress_oom(instance, ssl=ssl)
 
     logging.info("Completed test_cluster_pack")

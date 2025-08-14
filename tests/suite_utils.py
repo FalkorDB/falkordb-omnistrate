@@ -92,11 +92,11 @@ def change_then_revert(instance, ssl, do_fn, revert_fn):
     logging.info("Completed topology change and revert")
 
 
-def stress_oom(instance, ssl=False, resource_key=None, query_size="small"):
+def stress_oom(instance, ssl=False, query_size="small"):
     """
     Keep writing until we hit OOM.
     """
-    logging.info("Starting stress test to trigger OOM")
+    logging.info("Starting stress test to trigger OOM with query size '%s'", query_size)
     db = instance.create_connection(ssl=ssl)
     g = db.select_graph("test")
     big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"

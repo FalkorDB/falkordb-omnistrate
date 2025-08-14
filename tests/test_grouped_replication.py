@@ -208,6 +208,6 @@ def test_replication_pack(instance):
     # 7) OOM
     if _run_step(cfg, "oom"):
         logging.info("Simulating OOM")
-        stress_oom(instance, ssl=ssl, network_type=cfg["network_type"])
+        stress_oom(instance, ssl=ssl, network_type=cfg["network_type"], query_size="big")
 
     logging.info("Completed test_replication_pack")

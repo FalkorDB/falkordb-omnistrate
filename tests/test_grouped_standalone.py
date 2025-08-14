@@ -36,7 +36,7 @@ def test_standalone_pack(instance):
     )
     if add_first:
         logging.debug("Adding initial data to the instance")
-        add_data(instance, ssl)
+        add_data(instance, ssl, network_type=cfg["network_type"])
 
     # 1) Failover & persistence
     if _run_step(cfg, "failover"):
@@ -48,7 +48,12 @@ def test_standalone_pack(instance):
             resource_id=ep_id,
         )
         logging.debug("Validating data after failover")
-        assert_data(instance, ssl, msg="Data lost after failover")
+        assert_data(
+            instance,
+            ssl,
+            msg="Data lost after failover",
+            network_type=cfg["network_type"],
+        )
 
     # 2) Stop/Start immediately after failover (or even if failover not selected)
     if _run_step(cfg, "stopstart"):
@@ -56,7 +61,12 @@ def test_standalone_pack(instance):
         instance.stop(wait_for_ready=True)
         instance.start(wait_for_ready=True)
         logging.debug("Validating data after stop/start")
-        assert_data(instance, ssl, msg="Data missing after stop/start")
+        assert_data(
+            instance,
+            ssl,
+            msg="Data missing after stop/start",
+            network_type=cfg["network_type"],
+        )
 
     # 3) Update memory (resize). No revert required by your policy.
     if _run_step(cfg, "resize"):
@@ -64,7 +74,12 @@ def test_standalone_pack(instance):
         new_type = cfg["new_instance_type"] or cfg["orig_instance_type"]
         instance.update_instance_type(new_type, wait_until_ready=True)
         logging.debug("Validating data after resize")
-        assert_data(instance, ssl, msg="Data missing after resize")
+        assert_data(
+            instance,
+            ssl,
+            msg="Data missing after resize",
+            network_type=cfg["network_type"],
+        )
 
     # 6) OOM
     if _run_step(cfg, "oom"):
@@ -77,6 +92,7 @@ def test_standalone_pack(instance):
                 if "free" in cfg["tier_name"] or "startup" in cfg["tier_name"]
                 else "big"
             ),
+            network_type=cfg["network_type"],
         )
 
     logging.info("Completed test_standalone_pack")

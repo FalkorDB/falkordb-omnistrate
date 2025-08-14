@@ -13,7 +13,9 @@ from redis.backoff import ExponentialBackoff
 from redis.exceptions import TimeoutError, ConnectionError, ReadOnlyError, ResponseError
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 def _run_step(cfg, name):
@@ -90,7 +92,7 @@ def test_replication_pack(instance):
 
     # Seed data if any step runs
     logging.debug("Adding initial data to the instance")
-    add_data(instance, ssl)
+    add_data(instance, ssl, network_type=cfg["network_type"])
 
     # 1) Failover & persistence
     if _run_step(cfg, "failover"):
@@ -112,7 +114,12 @@ def test_replication_pack(instance):
                 logging.debug("Retrying connection during failover")
                 time.sleep(5)
         logging.debug("Validating data after failover")
-        assert_data(instance, ssl, msg="Data lost after first failover")
+        assert_data(
+            instance,
+            ssl,
+            msg="Data lost after first failover",
+            network_type=cfg["network_type"],
+        )
 
     # 2) Stop/Start immediately after failover
     if _run_step(cfg, "stopstart"):
@@ -120,7 +127,12 @@ def test_replication_pack(instance):
         instance.stop(wait_for_ready=True)
         instance.start(wait_for_ready=True)
         logging.debug("Validating data after stop/start")
-        assert_data(instance, ssl, msg="Data missing after stop/start")
+        assert_data(
+            instance,
+            ssl,
+            msg="Data missing after stop/start",
+            network_type=cfg["network_type"],
+        )
 
     # 3) Sentinel failover
     if _run_step(cfg, "sentinel-failover"):
@@ -132,7 +144,12 @@ def test_replication_pack(instance):
             resource_id=instance.get_resource_id(f"sentinel-{id_key}"),
         )
         logging.debug("Validating data after sentinel failover")
-        assert_data(instance, ssl, msg="Data lost after sentinel failover")
+        assert_data(
+            instance,
+            ssl,
+            msg="Data lost after sentinel failover",
+            network_type=cfg["network_type"],
+        )
 
     # 4) Second master failover
     if _run_step(cfg, "second-failover"):
@@ -144,7 +161,12 @@ def test_replication_pack(instance):
             resource_id=instance.get_resource_id(f"node-{id_key}"),
         )
         logging.debug("Validating data after second failover")
-        assert_data(instance, ssl, msg="Data lost after second failover")
+        assert_data(
+            instance,
+            ssl,
+            msg="Data lost after second failover",
+            network_type=cfg["network_type"],
+        )
 
     # 5) Add/remove replica — MUST revert
     if _run_step(cfg, "scale-replicas"):
@@ -163,7 +185,12 @@ def test_replication_pack(instance):
 
         change_then_revert(instance, ssl, do_scale, revert_scale)
         logging.debug("Validating data after replica scaling")
-        assert_data(instance, ssl, msg="Data missing after replica scaling")
+        assert_data(
+            instance,
+            ssl,
+            msg="Data missing after replica scaling",
+            network_type=cfg["network_type"],
+        )
 
     # 6) Update memory (resize) — no revert required
     if _run_step(cfg, "resize"):
@@ -171,11 +198,16 @@ def test_replication_pack(instance):
         new_type = cfg["new_instance_type"] or cfg["orig_instance_type"]
         instance.update_instance_type(new_type, wait_until_ready=True)
         logging.debug("Validating data after resize")
-        assert_data(instance, ssl, msg="Data missing after resize")
+        assert_data(
+            instance,
+            ssl,
+            msg="Data missing after resize",
+            network_type=cfg["network_type"],
+        )
 
     # 7) OOM
     if _run_step(cfg, "oom"):
         logging.info("Simulating OOM")
-        stress_oom(instance, ssl=ssl)
+        stress_oom(instance, ssl=ssl, network_type=cfg["network_type"])
 
     logging.info("Completed test_replication_pack")

@@ -3,7 +3,10 @@ import pytest
 from .suite_utils import add_data, assert_data, stress_oom
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 def _run_step(cfg, name):
     steps = cfg["e2e_steps"]
@@ -28,7 +31,9 @@ def test_standalone_pack(instance):
         pytest.skip("No selected steps for standalone pack")
 
     # Prepare some data once if we run any data-affecting step
-    add_first = any(_run_step(cfg, s) for s in ("failover", "stopstart", "resize", "oom", "upgrade"))
+    add_first = any(
+        _run_step(cfg, s) for s in ("failover", "stopstart", "resize", "oom", "upgrade")
+    )
     if add_first:
         logging.debug("Adding initial data to the instance")
         add_data(instance, ssl)
@@ -37,7 +42,9 @@ def test_standalone_pack(instance):
     if _run_step(cfg, "failover"):
         logging.info("Triggering failover")
         ep_id = instance.get_resource_id("node-s")
-        instance.trigger_failover(replica_id="node-s-0", wait_for_ready=True, resource_id=ep_id)
+        instance.trigger_failover(
+            replica_id="node-s-0", wait_for_ready=True, resource_id=ep_id
+        )
         logging.debug("Validating data after failover")
         assert_data(instance, ssl, msg="Data lost after failover")
 
@@ -60,6 +67,15 @@ def test_standalone_pack(instance):
     # 6) OOM
     if _run_step(cfg, "oom"):
         logging.info("Simulating OOM")
-        stress_oom(instance, ssl=ssl, resource_key=cfg["resource_key"])
+        stress_oom(
+            instance,
+            ssl=ssl,
+            resource_key=cfg["resource_key"],
+            query_size=(
+                "small"
+                if "free" in cfg["tier_name"] or "startup" in cfg["tier_name"]
+                else "big"
+            ),
+        )
 
     logging.info("Completed test_standalone_pack")

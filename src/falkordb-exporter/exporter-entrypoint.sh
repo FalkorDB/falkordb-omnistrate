@@ -48,11 +48,11 @@ if [ -n "$RUN_METRICS" ] && [ "$RUN_METRICS" -eq "$RUN_METRICS" ] 2>/dev/null &&
   redis_url=$(if [ "$TLS" = "true" ]; then echo "rediss://localhost:$redis_port"; else echo "redis://localhost:$redis_port"; fi)
   exporter_address="0.0.0.0:$exporter_port"
   echo "Starting Metrics Exporter on $exporter_address for Redis at $redis_url"
+  export REDIS_PASSWORD="$ADMIN_PASSWORD"
   # shellcheck disable=SC2068
   exec redis_exporter \
     -skip-tls-verification \
     -redis.addr "$redis_url" \
-    -redis.password-file /run/secrets/adminpassword \
     -web.listen-address "$exporter_address" \
     -log-format json \
     -tls-server-min-version TLS1.3 \

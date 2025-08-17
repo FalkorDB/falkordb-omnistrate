@@ -357,8 +357,8 @@ services:
         export: true
         defaultValue: "1GB"
         labeledOptions:
-          1GB: "1100MB"
-          2GB: "2200MB"
+          1GB: "1200M"
+          2GB: "2200M"
       - key: resourceRequestCPU
         name: CPU Request
         description: CPU Request for the Falkordb instance

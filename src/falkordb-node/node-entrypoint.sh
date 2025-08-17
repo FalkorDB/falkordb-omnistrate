@@ -266,11 +266,11 @@ get_memory_limit() {
     ["c6i.8xlarge"]="62GB"
   )
 
-  # if memory limit is 1100M or 2200M, set it to 1GB or 2GB respectively
-  if [[ $MEMORY_LIMIT == *"M" ]]; then
-    if [[ $MEMORY_LIMIT == "1100M" ]]; then
+  # if memory limit is 1100MB or 2200MB, set it to 1GB or 2GB respectively
+  if [[ $MEMORY_LIMIT == *"MB" ]]; then
+    if [[ $MEMORY_LIMIT == "1100MB" ]]; then
       MEMORY_LIMIT="1G"
-    elif [[ $MEMORY_LIMIT == "2200M" ]]; then
+    elif [[ $MEMORY_LIMIT == "2200MB" ]]; then
       MEMORY_LIMIT="2G"
     fi
   fi

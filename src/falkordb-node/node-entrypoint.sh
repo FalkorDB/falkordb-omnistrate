@@ -448,6 +448,8 @@ get_self_host_ip
 
 if [ "$RUN_NODE" -eq "1" ]; then
 
+  # Update .SO path for old instances
+  sed -i "s|/FalkorDB/bin/src/falkordb.so|/var/lib/falkordb/bin/falkordb.so|g" $NODE_CONF_FILE
   sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_CONF_FILE
   sed -i "s/\$NODE_PORT/$NODE_PORT/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_POST_UPGRADE_PASSWORD/$FALKORDB_POST_UPGRADE_PASSWORD/g" $NODE_CONF_FILE

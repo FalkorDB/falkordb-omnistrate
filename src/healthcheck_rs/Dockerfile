@@ -4,7 +4,7 @@ RUN apt-get update -y && apt-get install -y pkg-config build-essential cmake lib
 
 WORKDIR /healthcheck
 
-COPY ../healthcheck_rs/ /healthcheck
+COPY src/healthcheck_rs/ /healthcheck
 
 RUN cargo build --release
 

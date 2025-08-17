@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 if [[ "$DATA_DIR" != '/data' ]]; then
   mkdir -p $DATA_DIR
   if [[ -d '/data' ]]; then
@@ -39,7 +39,7 @@ fi
 if [ -n "$4" ]; then
   is_cluster=$4
 else
-  is_cluster=${is_cluster:-:""}
+  is_cluster=${is_cluster:-""}
 fi
 
 if [ -n "$RUN_METRICS" ] && [ "$RUN_METRICS" -eq "$RUN_METRICS" ] 2>/dev/null && [ "$RUN_METRICS" -eq 1 ]; then
@@ -49,5 +49,12 @@ if [ -n "$RUN_METRICS" ] && [ "$RUN_METRICS" -eq "$RUN_METRICS" ] 2>/dev/null &&
   exporter_address="0.0.0.0:$exporter_port"
   echo "Starting Metrics Exporter on $exporter_address for Redis at $redis_url"
   # shellcheck disable=SC2068
-  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $redis_url -web.listen-address $exporter_address -log-format json -tls-server-min-version TLS1.3 -include-system-metrics $extra_args
+  exec redis_exporter \
+    -skip-tls-verification \
+    -redis.addr "$redis_url" \
+    -redis.password-file /run/secrets/adminpassword \
+    -web.listen-address "$exporter_address" \
+    -log-format json \
+    -tls-server-min-version TLS1.3 \
+    -include-system-metrics $extra_args
 fi

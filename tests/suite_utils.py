@@ -139,8 +139,9 @@ def stress_oom(
     db = instance.create_connection(ssl=ssl, network_type=network_type)
     g = db.select_graph("test")
     big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
+    medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
-    q = small if query_size == "small" else big
+    q = small if query_size == "small" else medium if query_size == "medium" else big
     while True:
         try:
             logging.debug("Executing query: %s", q)

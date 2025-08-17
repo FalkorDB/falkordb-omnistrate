@@ -89,8 +89,8 @@ def test_standalone_pack(instance):
             ssl=ssl,
             query_size=(
                 "small"
-                if "free" in cfg["tier_name"] or "startup" in cfg["tier_name"]
-                else "big"
+                if "free" in cfg["tier_name"]
+                else "medium" if "startup" in cfg["tier_name"] else "big"
             ),
             network_type=cfg["network_type"],
         )

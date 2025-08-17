@@ -32,6 +32,12 @@ jobs:
             image-name: falkordb-cluster
           - dockerfile: ./src/falkordb-cluster-rebalance/Dockerfile
             image-name: falkordb-cluster-rebalance
+          - dockerfile: ./src/healthcheck_rs/Dockerfile
+            image-name: falkordb-cloud-healthcheck
+          - dockerfile: ./src/falkordb-exporter/Dockerfile
+            image-name: falkordb-cloud-exporter
+          - dockerfile: ./src/falkordb-sentinel/Dockerfile
+            image-name: falkordb-cloud-sentinel
     steps:
       - run: ${{ tojson(github.event) }}
         shell: cat {0}

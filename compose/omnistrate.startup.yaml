@@ -421,6 +421,22 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+      sidecars:
+        oom_fix:
+          imageNameWithTag: busybox:latest
+          securityContext:
+            runAsGroup: 0
+            runAsNonRoot: false
+            runAsUser: 0
+            capabilities:
+              add:
+                - SYS_RESOURCE
+          command:
+            [
+              "sh",
+              "-c",
+              'pid=''''; while true; do newpid=$(pgrep -x -o redis-server); if [ -n "$newpid" ] && [ "$newpid" != "$pid" ]; then echo -1000 > /proc/$newpid/oom_score_adj 2>/dev/null && echo "[$(date -Iseconds)] Set oom_score_adj for redis-server (pid $newpid)" && pid=$newpid; fi; sleep 1; done',
+            ]
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK

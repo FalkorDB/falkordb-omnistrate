@@ -203,7 +203,7 @@ services:
         export: true
         defaultValue: "1GB"
         labeledOptions:
-          1GB: "1100M"
+          1GB: "1200M"
           2GB: "2200M"
         parameterDependencyMap:
           node-s: memoryRequestsAndLimits

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 if [[ "$DATA_DIR" != '/data' ]]; then
   mkdir -p $DATA_DIR
   if [[ -d '/data' ]]; then

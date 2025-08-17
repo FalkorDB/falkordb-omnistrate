@@ -527,10 +527,6 @@ fi
 #Start cron
 cron
 
-if [[ ! "$NODE_NAME" =~ sentinel.* ]]; then
-  rewrite_aof_cronjob
-fi
-
 # If TLS=true, create a script to rotate the certificate
 if [[ "$TLS" == "true" ]]; then
   if [[ $RUN_NODE -eq 1 ]]; then

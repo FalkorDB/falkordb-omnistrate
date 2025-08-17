@@ -504,8 +504,6 @@ ensure_replica_connects_to_the_right_master_ip
 #Start cron
 cron
 
-rewrite_aof_cronjob
-
 # If TLS=true, create a script to rotate the certificate
 if [[ "$TLS" == "true" ]]; then
   if [[ $RUN_NODE -eq 1 ]]; then

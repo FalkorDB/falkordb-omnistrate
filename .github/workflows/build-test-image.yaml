@@ -242,216 +242,216 @@ jobs:
       fail-fast: false
       matrix:
         instances:
-          # #################### ENTERPRISE • AZURE (non-TLS) ####################
-          # - name: "[01] enterprise/Standalone - AZURE/eastus2 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_standalone.py
-          #   tests: "failover,stopstart"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: azure
-          #   cloudRegion: eastus2
-          #   resourceKey: standalone
-          #   instanceType: Standard_B2ms
-          #   maxmemory: "2GB"
-          #   customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          #################### ENTERPRISE • AZURE (non-TLS) ####################
+          - name: "[01] enterprise/Standalone - AZURE/eastus2 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_standalone.py
+            tests: "failover,stopstart"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: azure
+            cloudRegion: eastus2
+            resourceKey: standalone
+            instanceType: Standard_B2ms
+            maxmemory: "2GB"
+            customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # - name: "[02] enterprise/SingleZone - AZURE/eastus2 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_replication.py
-          #   tests: "failover,stopstart"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: azure
-          #   cloudRegion: eastus2
-          #   resourceKey: single-Zone
-          #   instanceType: Standard_B2ms
-          #   maxmemory: "2GB"
-          #   customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - name: "[02] enterprise/SingleZone - AZURE/eastus2 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: azure
+            cloudRegion: eastus2
+            resourceKey: single-Zone
+            instanceType: Standard_B2ms
+            maxmemory: "2GB"
+            customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # - name: "[03] enterprise/MultiZone - AZURE/eastus2 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_replication.py
-          #   tests: "failover,stopstart"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: azure
-          #   cloudRegion: eastus2
-          #   resourceKey: multi-Zone
-          #   instanceType: Standard_B2ms
-          #   maxmemory: "2GB"
-          #   customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - name: "[03] enterprise/MultiZone - AZURE/eastus2 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: azure
+            cloudRegion: eastus2
+            resourceKey: multi-Zone
+            instanceType: Standard_B2ms
+            maxmemory: "2GB"
+            customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # - name: "[04] enterprise/ClusterSingleZone - AZURE/eastus2 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_cluster.py
-          #   tests: "failover,stopstart"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: azure
-          #   cloudRegion: eastus2
-          #   resourceKey: cluster-Single-Zone
-          #   instanceType: Standard_B2ms
-          #   hostCount: "6"
-          #   clusterReplicas: "1"
-          #   maxmemory: "2GB"
-          #   customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - name: "[04] enterprise/ClusterSingleZone - AZURE/eastus2 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: azure
+            cloudRegion: eastus2
+            resourceKey: cluster-Single-Zone
+            instanceType: Standard_B2ms
+            hostCount: "6"
+            clusterReplicas: "1"
+            maxmemory: "2GB"
+            customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # - name: "[05] enterprise/ClusterMultiZone - AZURE/eastus2 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_cluster.py
-          #   tests: "failover,stopstart"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: azure
-          #   cloudRegion: eastus2
-          #   resourceKey: cluster-Multi-Zone
-          #   instanceType: Standard_B2ms
-          #   hostCount: "6"
-          #   clusterReplicas: "1"
-          #   maxmemory: "2GB"
-          #   customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - name: "[05] enterprise/ClusterMultiZone - AZURE/eastus2 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: azure
+            cloudRegion: eastus2
+            resourceKey: cluster-Multi-Zone
+            instanceType: Standard_B2ms
+            hostCount: "6"
+            clusterReplicas: "1"
+            maxmemory: "2GB"
+            customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # ###################### ENTERPRISE • AWS (non-TLS) #####################
-          # - name: "[06] enterprise/Standalone - AWS/us-east-2 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_standalone.py
-          #   tests: "failover,stopstart,update_memory,oom"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: aws
-          #   cloudRegion: us-east-2
-          #   resourceKey: standalone
-          #   instanceType: t2.medium
-          #   newInstanceType: m6i.large
-          #   maxmemory: "2GB"
-          #   customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          ###################### ENTERPRISE • AWS (non-TLS) #####################
+          - name: "[06] enterprise/Standalone - AWS/us-east-2 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_standalone.py
+            tests: "failover,stopstart,update_memory,oom"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: standalone
+            instanceType: t2.medium
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
+            customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # - name: "[07] enterprise/SingleZone - AWS/us-east-2 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_replication.py
-          #   tests: "failover,stopstart,update_memory,oom"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: aws
-          #   cloudRegion: us-east-2
-          #   resourceKey: single-Zone
-          #   instanceType: t2.medium
-          #   newInstanceType: m6i.large
-          #   maxmemory: "2GB"
-          #   customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - name: "[07] enterprise/SingleZone - AWS/us-east-2 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart,update_memory,oom"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: single-Zone
+            instanceType: t2.medium
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
+            customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # - name: "[08] enterprise/MultiZone - AWS/us-east-2 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_replication.py
-          #   tests: "failover,stopstart,update_memory,oom"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: aws
-          #   cloudRegion: us-east-2
-          #   resourceKey: multi-Zone
-          #   instanceType: t2.medium
-          #   newInstanceType: m6i.large
-          #   maxmemory: "2GB"
-          #   customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - name: "[08] enterprise/MultiZone - AWS/us-east-2 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart,update_memory,oom"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: multi-Zone
+            instanceType: t2.medium
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
+            customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # - name: "[09] enterprise/ClusterSingleZone - AWS/us-east-2 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_cluster.py
-          #   tests: "failover,stopstart,update_memory,oom"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: aws
-          #   cloudRegion: us-east-2
-          #   resourceKey: cluster-Single-Zone
-          #   instanceType: t2.medium
-          #   hostCount: "6"
-          #   clusterReplicas: "1"
-          #   newInstanceType: m6i.large
-          #   maxmemory: "2GB"
-          #   customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - name: "[09] enterprise/ClusterSingleZone - AWS/us-east-2 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart,update_memory,oom"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: cluster-Single-Zone
+            instanceType: t2.medium
+            hostCount: "6"
+            clusterReplicas: "1"
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
+            customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # - name: "[10] enterprise/ClusterMultiZone - AWS/us-east-2 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_cluster.py
-          #   tests: "failover,stopstart,update_memory,oom"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: aws
-          #   cloudRegion: us-east-2
-          #   resourceKey: cluster-Multi-Zone
-          #   instanceType: t2.medium
-          #   hostCount: "6"
-          #   clusterReplicas: "1"
-          #   newInstanceType: m6i.large
-          #   maxmemory: "2GB"
-          #   customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - name: "[10] enterprise/ClusterMultiZone - AWS/us-east-2 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart,update_memory,oom"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: cluster-Multi-Zone
+            instanceType: t2.medium
+            hostCount: "6"
+            clusterReplicas: "1"
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
+            customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # ###################### ENTERPRISE • GCP (non-TLS) #####################
-          # - name: "[11] enterprise/Standalone - GCP/us-central1 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_standalone.py
-          #   tests: "failover,stopstart"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: gcp
-          #   cloudRegion: us-central1
-          #   resourceKey: standalone
-          #   instanceType: e2-medium
-          #   maxmemory: "2GB"
-          #   customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          ###################### ENTERPRISE • GCP (non-TLS) #####################
+          - name: "[11] enterprise/Standalone - GCP/us-central1 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_standalone.py
+            tests: "failover,stopstart"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            resourceKey: standalone
+            instanceType: e2-medium
+            maxmemory: "2GB"
+            customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # - name: "[12] enterprise/SingleZone - GCP/us-central1 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_replication.py
-          #   tests: "failover,stopstart"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: gcp
-          #   cloudRegion: us-central1
-          #   resourceKey: single-Zone
-          #   instanceType: e2-medium
-          #   maxmemory: "2GB"
-          #   customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - name: "[12] enterprise/SingleZone - GCP/us-central1 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            resourceKey: single-Zone
+            instanceType: e2-medium
+            maxmemory: "2GB"
+            customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # - name: "[13] enterprise/MultiZone - GCP/us-central1 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_replication.py
-          #   tests: "failover,stopstart"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: gcp
-          #   cloudRegion: us-central1
-          #   resourceKey: multi-Zone
-          #   instanceType: e2-medium
-          #   maxmemory: "2GB"
-          #   customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - name: "[13] enterprise/MultiZone - GCP/us-central1 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            resourceKey: multi-Zone
+            instanceType: e2-medium
+            maxmemory: "2GB"
+            customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # - name: "[14] enterprise/ClusterSingleZone - GCP/us-central1 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_cluster.py
-          #   tests: "failover,stopstart"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: gcp
-          #   cloudRegion: us-central1
-          #   resourceKey: cluster-Single-Zone
-          #   instanceType: e2-medium
-          #   hostCount: "6"
-          #   clusterReplicas: "1"
-          #   maxmemory: "2GB"
-          #   customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - name: "[14] enterprise/ClusterSingleZone - GCP/us-central1 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            resourceKey: cluster-Single-Zone
+            instanceType: e2-medium
+            hostCount: "6"
+            clusterReplicas: "1"
+            maxmemory: "2GB"
+            customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # - name: "[15] enterprise/ClusterMultiZone - GCP/us-central1 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   testFile: tests/test_grouped_cluster.py
-          #   tests: "failover,stopstart"
-          #   tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: gcp
-          #   cloudRegion: us-central1
-          #   resourceKey: cluster-Multi-Zone
-          #   instanceType: e2-medium
-          #   hostCount: "6"
-          #   clusterReplicas: "1"
-          #   maxmemory: "2GB"
-          #   customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          - name: "[15] enterprise/ClusterMultiZone - GCP/us-central1 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart"
+            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            resourceKey: cluster-Multi-Zone
+            instanceType: e2-medium
+            hostCount: "6"
+            clusterReplicas: "1"
+            maxmemory: "2GB"
+            customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-          # ######################## NON-ENTERPRISE • AWS ONLY #####################
-          # - name: "[16] free/Standalone - AWS/us-east-2 - Grouped"
-          #   if: "true"
-          #   testFile: tests/test_grouped_standalone.py
-          #   tests: "failover,stopstart,oom"
-          #   tierName: "free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: aws
-          #   cloudRegion: us-east-2
-          #   resourceKey: free
-          #   maxmemory: "1GB"
+          ######################## NON-ENTERPRISE • AWS ONLY #####################
+          - name: "[16] free/Standalone - AWS/us-east-2 - Grouped"
+            if: "true"
+            testFile: tests/test_grouped_standalone.py
+            tests: "failover,stopstart,oom"
+            tierName: "free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: free
+            maxmemory: "1GB"
 
           - name: "[17] startup/Standalone - AWS/us-east-2 - Grouped"
             if: "true"
@@ -463,97 +463,97 @@ jobs:
             resourceKey: standalone
             maxmemory: "1GB"
 
-          # - name: "[18] pro/Standalone - AWS/us-east-2 - Grouped"
-          #   if: "true"
-          #   testFile: tests/test_grouped_standalone.py
-          #   tests: "failover,stopstart,update_memory,oom"
-          #   tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: aws
-          #   cloudRegion: us-east-2
-          #   resourceKey: standalone
-          #   instanceType: t2.medium
-          #   newInstanceType: m6i.large
-          #   maxmemory: "2GB"
+          - name: "[18] pro/Standalone - AWS/us-east-2 - Grouped"
+            if: "true"
+            testFile: tests/test_grouped_standalone.py
+            tests: "failover,stopstart,update_memory,oom"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: standalone
+            instanceType: t2.medium
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
 
-          # - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
-          #   if: "true"
-          #   testFile: tests/test_grouped_replication.py
-          #   tests: "failover,stopstart,update_memory,oom"
-          #   tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: aws
-          #   cloudRegion: us-east-2
-          #   resourceKey: single-Zone
-          #   instanceType: t2.medium
-          #   newInstanceType: m6i.large
-          #   maxmemory: "2GB"
+          - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
+            if: "true"
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart,update_memory,oom"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: single-Zone
+            instanceType: t2.medium
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
 
-          # - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
-          #   if: "true"
-          #   testFile: tests/test_grouped_replication.py
-          #   tests: "failover,stopstart,update_memory,oom"
-          #   tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: aws
-          #   cloudRegion: us-east-2
-          #   resourceKey: multi-Zone
-          #   instanceType: t2.medium
-          #   newInstanceType: m6i.large
-          #   maxmemory: "2GB"
+          - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
+            if: "true"
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart,update_memory,oom"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: multi-Zone
+            instanceType: t2.medium
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
 
-          # - name: "[21] pro/ClusterSingleZone - AWS/us-east-2 - Grouped"
-          #   if: "true"
-          #   testFile: tests/test_grouped_cluster.py
-          #   tests: "failover,stopstart,update_memory,oom"
-          #   tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: aws
-          #   cloudRegion: us-east-2
-          #   resourceKey: cluster-Single-Zone
-          #   instanceType: t2.medium
-          #   hostCount: "6"
-          #   clusterReplicas: "1"
-          #   newInstanceType: m6i.large
-          #   maxmemory: "2GB"
+          - name: "[21] pro/ClusterSingleZone - AWS/us-east-2 - Grouped"
+            if: "true"
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart,update_memory,oom"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: cluster-Single-Zone
+            instanceType: t2.medium
+            hostCount: "6"
+            clusterReplicas: "1"
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
 
-          # - name: "[22] pro/ClusterMultiZone - AWS/us-east-2 - Grouped"
-          #   if: "true"
-          #   testFile: tests/test_grouped_cluster.py
-          #   tests: "failover,stopstart,update_memory,oom"
-          #   tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: aws
-          #   cloudRegion: us-east-2
-          #   resourceKey: cluster-Multi-Zone
-          #   instanceType: t2.medium
-          #   hostCount: "6"
-          #   clusterReplicas: "1"
-          #   newInstanceType: m6i.large
-          #   maxmemory: "2GB"
-          # ######################## PRIVATE • GCP (INTERNAL) ########################
-          # - name: "[23] pro/MultiZone - PRIVATE/GCP/us-central1 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
-          #   testFile: tests/test_grouped_replication.py
-          #   tests: "failover,stopstart"
-          #   tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: gcp
-          #   cloudRegion: us-central1
-          #   resourceKey: multi-Zone
-          #   instanceType: e2-medium
-          #   maxmemory: "2GB"
-          #   networkType: INTERNAL
+          - name: "[22] pro/ClusterMultiZone - AWS/us-east-2 - Grouped"
+            if: "true"
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart,update_memory,oom"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: cluster-Multi-Zone
+            instanceType: t2.medium
+            hostCount: "6"
+            clusterReplicas: "1"
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
+          ######################## PRIVATE • GCP (INTERNAL) ########################
+          - name: "[23] pro/MultiZone - PRIVATE/GCP/us-central1 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            resourceKey: multi-Zone
+            instanceType: e2-medium
+            maxmemory: "2GB"
+            networkType: INTERNAL
 
-          # - name: "[24] pro/ClusterMultiZone - PRIVATE/GCP/us-central1 - Grouped"
-          #   if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
-          #   runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
-          #   testFile: tests/test_grouped_cluster.py
-          #   tests: "failover,stopstart"
-          #   tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
-          #   cloudProvider: gcp
-          #   cloudRegion: us-central1
-          #   resourceKey: cluster-Multi-Zone
-          #   instanceType: e2-medium
-          #   hostCount: "6"
-          #   clusterReplicas: "1"
-          #   maxmemory: "2GB"
-          #   networkType: INTERNAL
+          - name: "[24] pro/ClusterMultiZone - PRIVATE/GCP/us-central1 - Grouped"
+            if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
+            runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: gcp
+            cloudRegion: us-central1
+            resourceKey: cluster-Multi-Zone
+            instanceType: e2-medium
+            hostCount: "6"
+            clusterReplicas: "1"
+            maxmemory: "2GB"
+            networkType: INTERNAL
 
     steps:
       - name: Checkout

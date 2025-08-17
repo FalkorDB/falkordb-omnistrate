@@ -257,6 +257,8 @@ handle_sigterm() {
   if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $healthcheck_pid ]]; then
     kill -TERM $healthcheck_pid
   fi
+
+  exit 0
 }
 
 trap handle_sigterm SIGTERM

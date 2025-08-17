@@ -422,8 +422,11 @@ services:
       enableMultiZone: false
       enableEndpointPerReplica: true
       sidecars:
-        oom_fix:
+        oom_score_patch:
           imageNameWithTag: busybox:latest
+          resourceLimits:
+            cpu: "20m"
+            memory: "32Mi"
           securityContext:
             runAsGroup: 0
             runAsNonRoot: false

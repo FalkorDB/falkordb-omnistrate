@@ -721,12 +721,12 @@ services:
         healthcheck:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "20m"
             memory: 30Mi
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "50m"
             memory: 50Mi
     x-omnistrate-actionhooks:
       - scope: NODE
@@ -1230,24 +1230,24 @@ services:
         healthcheck:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "20m"
             memory: 30Mi
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "50m"
             memory: 50Mi
         healthcheck-sentinel:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "20m"
             memory: 30Mi
           args:
             - sentinel
         exporter-sentinel:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "50m"
             memory: 50Mi
           args:
             - "26379"
@@ -1445,14 +1445,14 @@ services:
         healthcheck-sentinel:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "20m"
             memory: 30Mi
           args:
             - sentinel
         exporter-sentinel:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "50m"
             memory: 50Mi
           args:
             - "26379"
@@ -1986,24 +1986,24 @@ services:
         healthcheck:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "20m"
             memory: 30Mi
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "50m"
             memory: 50Mi
         healthcheck-sentinel:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "20m"
             memory: 30Mi
           args:
             - sentinel
         exporter-sentinel:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "50m"
             memory: 50Mi
           args:
             - "26379"
@@ -2200,14 +2200,14 @@ services:
         healthcheck-sentinel:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "20m"
             memory: 30Mi
           args:
             - sentinel
         exporter-sentinel:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "50m"
             memory: 50Mi
           args:
             - "26379"
@@ -2569,12 +2569,12 @@ services:
         healthcheck:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "20m"
             memory: 30Mi
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "50m"
             memory: 50Mi
           args:
             - "6379"
@@ -2937,12 +2937,12 @@ services:
         healthcheck:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "20m"
             memory: 30Mi
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "50m"
             memory: 50Mi
           args:
             - "6379"

@@ -164,7 +164,7 @@ services:
         healthcheck:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "20m"
             memory: 30Mi
         oom_score_patch:
           imageNameWithTag: busybox:latest

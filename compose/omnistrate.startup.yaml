@@ -425,12 +425,12 @@ services:
         healthcheck:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "20m"
             memory: 30Mi
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "50m"
             memory: 50Mi
         oom_score_patch:
           imageNameWithTag: busybox:latest

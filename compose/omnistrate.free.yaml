@@ -1,0 +1,257 @@
+version: "3.9"
+
+x-omnistrate-service-plan:
+  name: "FalkorDB Free"
+  tenancyType: "OMNISTRATE_MULTI_TENANCY"
+  deployment:
+    hostedDeployment:
+      GcpProjectId: "$GcpProjectId"
+      GcpProjectNumber: "$GcpProjectNumber"
+      GcpServiceAccountEmail: "$GcpServiceAccountEmail"
+      AwsAccountId: "$AwsAccountId"
+      AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+  validPaymentMethodRequired: false
+  maxNumberOfInstancesAllowed: 1
+  billingProductID: "free"
+
+services:
+  # Free
+  Free:
+    x-omnistrate-mode-internal: false
+    image: omnistrate/noop
+    x-omnistrate-api-params:
+      - key: name
+        description: The name of the FalkorDB instance
+        name: Name
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: FalkorDB Instance
+        export: true
+      - key: description
+        description: A description of the FalkorDB instance
+        name: Description
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: Description
+        export: true
+      # - key: enableTLS
+      #   description: Whether to enable TLS for the database
+      #   name: Enable TLS
+      #   type: Boolean
+      #   modifiable: false
+      #   required: true
+      #   export: true
+      #   defaultValue: "false"
+      #   parameterDependencyMap:
+      #     node-f: enableTLS
+      - key: falkordbUser
+        description: Choose a default username for your database
+        name: FalkorDB User
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "falkordb"
+        parameterDependencyMap:
+          node-f: falkordbUser
+      - key: falkordbPassword
+        description: Choose a default password for your database
+        name: FalkorDB Password
+        type: Password
+        modifiable: false
+        required: true
+        export: false
+        parameterDependencyMap:
+          node-f: falkordbPassword
+    depends_on:
+      - node-f
+
+  node-f:
+    x-omnistrate-mode-internal: true
+    image: $FalkorDBNodeImage
+    x-omnistrate-compute:
+      replicaCount: 1
+    x-omnistrate-api-params:
+      - key: name
+        description: The name of the FalkorDB instance
+        name: Name
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: My favorite database
+        export: true
+      - key: description
+        description: A description of the FalkorDB instance
+        name: Description
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: Description
+        export: true
+      - key: falkordbUser
+        description: Choose a default username for your database
+        name: FalkorDB User
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "falkordb"
+      - key: falkordbPassword
+        description: Choose a default password for your database
+        name: FalkorDB Password
+        type: Password
+        modifiable: false
+        required: true
+        export: false
+      # - key: enableTLS
+      #   description: Whether to enable TLS for the database
+      #   name: Enable TLS
+      #   type: Boolean
+      #   modifiable: false
+      #   required: true
+      #   export: true
+      #   defaultValue: "false"
+    volumes:
+      - source: ./data
+        target: /data
+        type: bind
+        x-omnistrate-storage:
+          gcp:
+            instanceStorageType: GCP::PD_BALANCED
+            instanceStorageSizeGi: 10
+          aws:
+            instanceStorageType: AWS::EBS_GP3
+            instanceStorageSizeGi: 10
+    secrets:
+      - source: adminpasspath
+        target: /run/secrets/adminpassword
+      - source: falkordbpasspath
+        target: /run/secrets/falkordbpassword
+
+    environment:
+      - RUN_NODE=1
+      - RUN_SENTINEL=0
+      - RUN_METRICS=0
+      - RUN_HEALTH_CHECK=1
+      - BROWSER=0
+      - NODE_HOST=$sys.network.node.externalEndpoint
+      - NODE_PORT=6379
+      # - TLS=$var.enableTLS
+      # Disable TLS for free tier
+      - TLS=false
+      - FALKORDB_USER=$var.falkordbUser
+      - DATA_DIR=/var/lib/falkordb
+      - INSTANCE_TYPE=e2-custom-small-1024
+      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - FALKORDB_CACHE_SIZE=25
+      - FALKORDB_NODE_CREATION_BUFFER=16384
+      - FALKORDB_MAX_QUEUED_QUERIES=50
+      - FALKORDB_TIMEOUT_MAX=0
+      - FALKORDB_TIMEOUT_DEFAULT=0
+      - FALKORDB_RESULT_SET_SIZE=10000
+      - FALKORDB_QUERY_MEM_CAPACITY=52428800
+      - PERSISTENCE_AOF_CONFIG=no
+      - SKIP_HEALTH_CHECK=false
+    ports:
+      - "6379:6379"
+      # - "9121:9121"
+    x-omnistrate-capabilities:
+      enableMultiZone: false
+      enableEndpointPerReplica: true
+      sidecars:
+        oom_score_patch:
+          imageNameWithTag: busybox:latest
+          resourceLimits:
+            cpu: "20m"
+            memory: "32Mi"
+          securityContext:
+            runAsGroup: 0
+            runAsNonRoot: false
+            runAsUser: 0
+            capabilities:
+              add:
+                - SYS_RESOURCE
+          command:
+            [
+              "sh",
+              "-c",
+              'while true; do for d in /proc/[0-9]*; do comm=$(cat "$d/comm" 2>/dev/null); case "$comm" in redis-server*|healthcheck*) pid=${d#/proc/}; cur=$(cat "$d/oom_score_adj" 2>/dev/null || echo); if [ "$cur" != "-1000" ]; then echo -1000 > "$d/oom_score_adj" 2>/dev/null && echo "[$(date +%FT%T%z)] set oom_score_adj=-1000 for $comm (pid $pid)"; fi ;; esac; done; sleep 1; done',
+            ]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 200M
+        reservations:
+          cpus: "0.1"
+          memory: 100M
+    x-omnistrate-actionhooks:
+      - scope: NODE
+        type: STARTUP_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          STARTUP_CHECK_URL="${STARTUP_CHECK_HOST:-localhost}:${STARTUP_CHECK_PORT:-8081}/startup"
+          call_startup_check() {
+
+            echo "Startup check URL: $STARTUP_CHECK_URL"
+            curl -sf $STARTUP_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Startup check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_startup_check
+          fi
+      - scope: NODE
+        type: READINESS_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          READINESS_CHECK_URL="${READY_CHECK_HOST:-localhost}:${READY_CHECK_PORT:-8081}/readiness"
+          call_readiness_check() {
+
+            echo "Ready check URL: $READINESS_CHECK_URL"
+            curl -sf $READINESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Readiness check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+            call_readiness_check
+          fi
+
+      - scope: NODE
+        type: HEALTH_CHECK
+        commandTemplate: |
+          #!/bin/bash
+
+          LIVENESS_CHECK_URL="${HEALTH_CHECK_HOST:-localhost}:${HEALTH_CHECK_PORT:-8081}/liveness"
+          call_liveness_check() {
+
+            echo "Health check URL: $LIVENESS_CHECK_URL"
+            curl -sf $LIVENESS_CHECK_URL
+            
+            if [ $? -ne 0 ]; then
+              echo "Health check failed"
+              exit 1
+            fi
+          }
+
+          if [[ ! -z RUN_HEALTH_CHECK ]] && [[ $RUN_HEALTH_CHECK -eq 1 ]];then
+          call_liveness_check
+          fi
+
+secrets:
+  adminpasspath:
+    file: ./secrets/adminpassword
+  falkordbpasspath:
+    file: ./secrets/falkordbpassword

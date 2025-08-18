@@ -172,7 +172,7 @@ def assert_multi_zone(instance: OmnistrateFleetInstance, host_count=6):
         (
             k
             for [k, v] in network_topology.items()
-            if (("node-mz" in v["resourceName"]) or ("cluster-mz" in v["resourceName"]))
+            if ((v["resourceName"] == "node-mz") or (v["resourceName"] == "cluster-mz"))
         ),
         None,
     )

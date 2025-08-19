@@ -31,6 +31,7 @@ def test_cluster_pack(instance):
     valid = {
         "failover",
         "stopstart",
+        "network_change",
         "scale-shards",
         "scale-replicas",
         "resize",
@@ -74,6 +75,29 @@ def test_cluster_pack(instance):
             instance,
             ssl,
             msg="Data missing after stop/start",
+            network_type=cfg["network_type"],
+        )
+
+    if _run_step(cfg, "network_change"):
+        old_network = cfg["network_type"]
+        new_network = "PRIVATE" if old_network == "PUBLIC" else "PUBLIC"
+        logging.info(f"Changing network type from {old_network} to {new_network}")
+        instance.update_params(network_type=new_network, wait_until_ready=True)
+        cfg["network_type"] = new_network
+        if old_network == "PRIVATE":
+            assert_data(
+                instance,
+                ssl,
+                msg=f"Data missing after network change to {new_network}",
+                network_type=cfg["network_type"],
+            )
+        logging.info(f"Changing back network type from {new_network} to {old_network}")
+        instance.update_params(network_type=old_network, wait_until_ready=True)
+        cfg["network_type"] = old_network
+        assert_data(
+            instance,
+            ssl,
+            msg=f"Data missing after network change back to {old_network}",
             network_type=cfg["network_type"],
         )
 
@@ -149,8 +173,9 @@ def test_cluster_pack(instance):
     # 6) OOM
     if _run_step(cfg, "oom"):
         logging.info("Simulating OOM")
-        stress_oom(instance, ssl=ssl, network_type=cfg["network_type"], query_size="big")
+        stress_oom(
+            instance, ssl=ssl, network_type=cfg["network_type"], query_size="big"
+        )
         logging.debug("Passed OOM stress test")
-    
 
     logging.info("Completed test_cluster_pack")

@@ -2,18 +2,22 @@ import sys
 import signal
 from random import randbytes
 import threading
-from .utils import get_last_gh_tag
 import socket
 import logging
-
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
-
+import requests
 import time
 import os
-from tests.classes.omnistrate_fleet_instance import OmnistrateFleetInstance
-from tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
-from tests.classes.omnistrate_types import TierVersionStatus
 import argparse
+
+# Add the parent directory to sys.path to fix import errors
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+#pylint: disable=import-error
+from classes.omnistrate_fleet_instance import OmnistrateFleetInstance
+from classes.omnistrate_fleet_api import OmnistrateFleetAPI
+from classes.omnistrate_types import TierVersionStatus
+
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("omnistrate_user")
@@ -72,6 +76,16 @@ if not args.persist_instance_on_fail:
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
+def get_last_gh_tag():
+    """Get the last tag from GitHub."""
+    response = requests.get(
+        "https://api.github.com/repos/FalkorDB/falkordb-omnistrate/tags",
+        timeout=60,
+    )
+
+    response.raise_for_status()
+
+    return response.json()[0]["name"]
 
 def test_upgrade_version():
     global instance
@@ -81,12 +95,23 @@ def test_upgrade_version():
         password=args.omnistrate_password,
     )
 
+    if not args.service_id:
+        raise ValueError(f"Missing service ID")
+    if not args.environment_id:
+        raise ValueError(f"Missing environment ID")
+    if not args.ref_name:
+        raise ValueError(f"Missing ref name")
+
     service = omnistrate.get_service(args.service_id)
+    
     product_tier = omnistrate.get_product_tier(
         service_id=args.service_id,
         environment_id=args.environment_id,
         tier_name=args.ref_name,
     )
+    if not product_tier:
+        raise ValueError(f"Missing product tier: {args.ref_name}")
+
     service_model = omnistrate.get_service_model(
         args.service_id, product_tier.service_model_id
     )

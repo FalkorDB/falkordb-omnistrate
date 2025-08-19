@@ -33,7 +33,7 @@ headers = {
 
 # Get all instances
 try:
-    response = requests.get(get_instances_url, headers=headers)
+    response = requests.get(get_instances_url + (f"?ProductTierId={os.getenv('OMNISTRATE_PRODUCT_TIER_ID')}" if os.getenv("OMNISTRATE_PRODUCT_TIER_ID") else ""), headers=headers)
     response.raise_for_status()
     instances = response.json().get("resourceInstances", [])
 except requests.exceptions.RequestException as e:

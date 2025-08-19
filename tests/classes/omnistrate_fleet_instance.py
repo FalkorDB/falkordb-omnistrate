@@ -556,6 +556,7 @@ class OmnistrateFleetInstance:
                     password=self.falkordb_password,
                     ssl=ssl,
                     retry_on_error=[
+                        ConnectionError,
                         ConnectionRefusedError,
                         TimeoutError,
                         socket.timeout,
@@ -568,6 +569,7 @@ class OmnistrateFleetInstance:
                         retries=3,
                         backoff=backoff.ExponentialBackoff(base=1, cap=10),
                         supported_errors=(
+                            ConnectionError,
                             ConnectionRefusedError,
                             TimeoutError,
                             socket.timeout,

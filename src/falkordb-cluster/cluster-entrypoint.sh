@@ -501,23 +501,8 @@ fi
 meet_unknown_nodes
 ensure_replica_connects_to_the_right_master_ip
 
-if [[ $RUN_HEALTH_CHECK -eq 1 ]]; then
-  # Check if healthcheck binary exists
-  if [ -f /usr/local/bin/healthcheck ]; then
-    echo "Starting Healthcheck"
-    healthcheck | awk '{ print "**HEALTHCHECK**: " $0 }' >>$FALKORDB_LOG_FILE_PATH &
-  else
-    echo "Healthcheck binary not found"
-  fi
-fi
-
-if [[ $RUN_METRICS -eq 1 ]]; then
-  echo "Starting Metrics"
-  aof_metric_export=$(if [[ $PERSISTENCE_AOF_CONFIG != "no" ]]; then echo "-include-aof-file-size"; else echo ""; fi)
-  exporter_url=$(if [[ $TLS == "true" ]]; then echo "rediss://localhost:$NODE_PORT"; else echo "redis://localhost:$NODE_PORT"; fi)
-  redis_exporter -skip-tls-verification -redis.password $ADMIN_PASSWORD -redis.addr $exporter_url -log-format json -is-cluster -tls-server-min-version TLS1.3 -include-system-metrics -is-falkordb -slowlog-history-enabled $aof_metric_export >>$FALKORDB_LOG_FILE_PATH &
-  redis_exporter_pid=$!
-fi
+#Start cron
+cron
 
 # If TLS=true, create a script to rotate the certificate
 if [[ "$TLS" == "true" ]]; then

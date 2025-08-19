@@ -1,4 +1,4 @@
-ARG FALKORDB_VERSION=v4.12.3
+ARG FALKORDB_VERSION=v4.8.8
 
 FROM falkordb/falkordb:$FALKORDB_VERSION
 
@@ -12,22 +12,19 @@ RUN useradd -u 1000 -m falkordb && usermod -aG crontab falkordb && \
   chmod u+s /usr/sbin/cron
 
 
-RUN mkdir -p /var/lib/falkordb
+RUN mkdir -p /falkordb
 
 WORKDIR /falkordb
 
-COPY src/falkordb-node/node.conf .
-COPY src/falkordb-node/node-entrypoint.sh /usr/local/bin/
-COPY scripts/download-debug-so.sh /falkordb/download-debug-so.sh
+COPY src/falkordb-sentinel/sentinel.conf .
+COPY src/falkordb-sentinel/sentinel-entrypoint.sh /usr/local/bin/
 
-RUN chown falkordb:falkordb /var/lib/falkordb/* && \
-  chmod +x /usr/local/bin/node-entrypoint.sh && \
+RUN chown falkordb:falkordb /falkordb/* && \
+  chmod +x /usr/local/bin/sentinel-entrypoint.sh && \
   mkdir -p /var/lib/falkordb && \
-  mkdir -p /var/lib/falkordb/scripts && \
   chown falkordb:falkordb /var/lib/falkordb && \
-  chmod 700 /var/lib/falkordb && \
-  chmod +x /falkordb/download-debug-so.sh
+  chmod 700 /var/lib/falkordb
 
 ENV FALKORDB_HOME=/var/lib/falkordb
 
-ENTRYPOINT [ "node-entrypoint.sh" ]
+ENTRYPOINT [ "sentinel-entrypoint.sh" ]

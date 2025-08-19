@@ -53,7 +53,7 @@ def test_cluster_pack(instance):
     if _run_step(cfg, "failover"):
         logging.info("Triggering failover")
         rep_id = (
-            "cluster-sz-1" if "Single-Zone" in cfg["resource_key"] else "cluster-mz-4"
+            "cluster-mz-4" if "Multi-Zone" in cfg["resource_key"] else "cluster-sz-4"
         )
         instance.trigger_failover(replica_id=rep_id, wait_for_ready=True)
         logging.debug("Validating data after failover")
@@ -149,8 +149,9 @@ def test_cluster_pack(instance):
     # 6) OOM
     if _run_step(cfg, "oom"):
         logging.info("Simulating OOM")
-        stress_oom(instance, ssl=ssl, network_type=cfg["network_type"], query_size="big")
+        stress_oom(
+            instance, ssl=ssl, network_type=cfg["network_type"], query_size="big"
+        )
         logging.debug("Passed OOM stress test")
-    
 
     logging.info("Completed test_cluster_pack")

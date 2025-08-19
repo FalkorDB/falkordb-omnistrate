@@ -2,6 +2,7 @@ use k8s_openapi::api::core::v1::ConfigMap;
 use kube::{Api, Client}; // Removed unused Config import
 use once_cell::sync::Lazy;
 use rouille::{router, Response, Server};
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::env;
@@ -346,7 +347,28 @@ fn get_redis_url(password: &str, node_port: &str) -> String {
 }
 
 fn check_sentinel(con: &mut redis::Connection) -> Result<bool, redis::RedisError> {
-    Ok(redis::cmd("PING").query::<String>(con)? == "PONG")
+    // required for the sentinel only pod to allow the other pods to be scheduled
+    if env::var("SENTINEL_IGNORE_MASTER_CHECK").as_deref() == Ok("true") {
+        return Ok(true);
+    }
+
+    // check that it has a master
+    let master_info: Vec<HashMap<String, String>> = redis::cmd("SENTINEL")
+        .arg("masters")
+        .query(con)
+        .map_err(|err| {
+            eprintln!("Failed to get sentinel masters: {}", err);
+            err
+        })?;
+    if master_info.is_empty() {
+        eprintln!("No master found in sentinel");
+        return Err(redis::RedisError::from((
+            redis::ErrorKind::ResponseError,
+            "No master found in sentinel",
+        )));
+    }
+
+    return Ok(true);
 }
 
 fn get_redis_role(db_info: &str) -> Result<&str, redis::RedisError> {

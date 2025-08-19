@@ -660,7 +660,7 @@ jobs:
             EXTRA_ARGS+=(--custom-network "${{ matrix.instances.customNetwork }}")
 
           [[ -n "${{ matrix.instances.tls || '' }}" ]] && \
-            EXTRA_ARGS+=(--tls "${{ matrix.instances.tls }}")
+            EXTRA_ARGS+=(--tls)
 
           poetry run pytest -s -v "${{ matrix.instances.testFile }}" \
             --e2e-steps "${{ matrix.instances.tests }}" \

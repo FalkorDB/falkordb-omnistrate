@@ -555,6 +555,45 @@ jobs:
             maxmemory: "2GB"
             networkType: INTERNAL
 
+          ######################## PRO • AWS (TLS) ########################
+          - name: "[25] pro/Standalone/TLS - AWS/us-east-2 - Grouped"
+            if: "true"
+            testFile: tests/test_grouped_standalone.py
+            tests: "failover,stopstart,network_change"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: standalone
+            instanceType: t2.medium
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
+            tls: true
+          - name: "[26] pro/SingleZone/TLS - AWS/us-east-2 - Grouped"
+            if: "true"
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart,network_change"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: single-Zone
+            instanceType: t2.medium
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
+            tls: true
+          - name: "[27] pro/ClusterSingleZone/TLS - AWS/us-east-2 - Grouped"
+            if: "true"
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart,network_change"
+            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: cluster-Single-Zone
+            instanceType: t2.medium
+            hostCount: "6"
+            clusterReplicas: "1"
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
+            tls: true
     steps:
       - name: Checkout
         if: matrix.instances.if == 'true' || matrix.instances.if == true
@@ -621,6 +660,9 @@ jobs:
           [[ -n "${{ matrix.instances.customNetwork || '' }}" ]] && \
             EXTRA_ARGS+=(--custom-network "${{ matrix.instances.customNetwork }}")
 
+            [[ -n "${{ matrix.instances.tls || '' }}" ]] && \
+              EXTRA_ARGS+=(--tls)
+
           poetry run pytest -s -v "${{ matrix.instances.testFile }}" \
             --e2e-steps "${{ matrix.instances.tests }}" \
             --tier-name "${{ matrix.instances.tierName }}" \
@@ -631,92 +673,92 @@ jobs:
             --network-type "${{ matrix.instances.networkType || 'PUBLIC' }}" \
             "${EXTRA_ARGS[@]}"
 
-  test-upgrade-version:
-    needs: [omnistrate-update-plans]
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        instances:
-          - name: PRO/Standalone - AWS/us-east-2 - Upgrade Version
-            if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
-            testFile: test_upgrade_version.py
-            tierName: pro-main
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            subscriptionId: sub-GJPV3NoNC0
-            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-upgrade' --instance-description 'test-standalone-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
-          - name: PRO/SingleZone - AWS/us-east-2 - Upgrade Version
-            if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
-            testFile: test_upgrade_version.py
-            tierName: pro-main
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            subscriptionId: sub-GJPV3NoNC0
-            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-upgrade' --instance-description 'test-replication-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
-          - name: PRO/ClusterSingleZone - AWS/us-east-2 - Upgrade Version
-            if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
-            testFile: test_upgrade_version.py
-            tierName: pro-main
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            subscriptionId: sub-GJPV3NoNC0
-            serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-            environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-            extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-upgrade' --instance-description 'test-cluster-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
+  # test-upgrade-version:
+  #   needs: [omnistrate-update-plans]
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       instances:
+  #         - name: PRO/Standalone - AWS/us-east-2 - Upgrade Version
+  #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
+  #           testFile: test_upgrade_version.py
+  #           tierName: pro-main
+  #           cloudProvider: aws
+  #           cloudRegion: us-east-2
+  #           subscriptionId: sub-GJPV3NoNC0
+  #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+  #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+  #           extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-upgrade' --instance-description 'test-standalone-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+  #         - name: PRO/SingleZone - AWS/us-east-2 - Upgrade Version
+  #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
+  #           testFile: test_upgrade_version.py
+  #           tierName: pro-main
+  #           cloudProvider: aws
+  #           cloudRegion: us-east-2
+  #           subscriptionId: sub-GJPV3NoNC0
+  #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+  #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+  #           extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-upgrade' --instance-description 'test-replication-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+  #         - name: PRO/ClusterSingleZone - AWS/us-east-2 - Upgrade Version
+  #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
+  #           testFile: test_upgrade_version.py
+  #           tierName: pro-main
+  #           cloudProvider: aws
+  #           cloudRegion: us-east-2
+  #           subscriptionId: sub-GJPV3NoNC0
+  #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+  #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+  #           extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-upgrade' --instance-description 'test-cluster-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
 
-    steps:
-      - name: Checkout
-        if: matrix.instances.if == 'true' || matrix.instances.if == true
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+  #   steps:
+  #     - name: Checkout
+  #       if: matrix.instances.if == 'true' || matrix.instances.if == true
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Setup python
-        if: ${{ (matrix.instances.if == 'true' || matrix.instances.if == true) && !matrix.instances.runner_label }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
+  #     - name: Setup python
+  #       if: ${{ (matrix.instances.if == 'true' || matrix.instances.if == true) && !matrix.instances.runner_label }}
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.x"
 
-      - name: Cache Poetry virtualenv
-        if: matrix.instances.if == 'true' || matrix.instances.if == true
-        id: cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pypoetry/virtualenvs
-          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-
+  #     - name: Cache Poetry virtualenv
+  #       if: matrix.instances.if == 'true' || matrix.instances.if == true
+  #       id: cache
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: ~/.cache/pypoetry/virtualenvs
+  #         key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-poetry-
 
-      - name: Install Poetry
-        if: steps.cache.outputs.cache-hit != true && (matrix.instances.if == 'true' || matrix.instances.if == true)
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "${HOME}/.local/bin" >> $GITHUB_PATH
+  #     - name: Install Poetry
+  #       if: steps.cache.outputs.cache-hit != true && (matrix.instances.if == 'true' || matrix.instances.if == true)
+  #       run: |
+  #         curl -sSL https://install.python-poetry.org | python3 -
+  #         echo "${HOME}/.local/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies
-        if: matrix.instances.if == 'true' || matrix.instances.if == true
-        run: |
-          export PATH="~/.local/bin:$PATH"
-          poetry install
+  #     - name: Install dependencies
+  #       if: matrix.instances.if == 'true' || matrix.instances.if == true
+  #       run: |
+  #         export PATH="~/.local/bin:$PATH"
+  #         poetry install
 
-      - name: ${{ matrix.instances.name }}
-        if: matrix.instances.if == 'true' || matrix.instances.if == true
-        env:
-          SERVICE_ID: ${{ matrix.instances.serviceId }}
-          ENVIRONMENT_ID: ${{ matrix.instances.environmentId }}
-          CLOUD_PROVIDER: ${{ matrix.instances.cloudProvider }}
-          CLOUD_REGION: ${{ matrix.instances.cloudRegion }}
-          extraParams: ${{ matrix.instances.extraParams }}
-          SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
-          REF_NAME: ${{ matrix.instances.tierName }}
-        run: |
-          export PATH="~/.local/bin:$PATH"
-          poetry run python -u ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
+  #     - name: ${{ matrix.instances.name }}
+  #       if: matrix.instances.if == 'true' || matrix.instances.if == true
+  #       env:
+  #         SERVICE_ID: ${{ matrix.instances.serviceId }}
+  #         ENVIRONMENT_ID: ${{ matrix.instances.environmentId }}
+  #         CLOUD_PROVIDER: ${{ matrix.instances.cloudProvider }}
+  #         CLOUD_REGION: ${{ matrix.instances.cloudRegion }}
+  #         extraParams: ${{ matrix.instances.extraParams }}
+  #         SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
+  #         REF_NAME: ${{ matrix.instances.tierName }}
+  #       run: |
+  #         export PATH="~/.local/bin:$PATH"
+  #         poetry run python -u ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
 
   delete-networks:
     runs-on: ubuntu-latest

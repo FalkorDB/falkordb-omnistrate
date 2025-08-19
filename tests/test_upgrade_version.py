@@ -1,22 +1,9 @@
 import sys
 import signal
 from random import randbytes
-from pathlib import Path  # if you haven't already done so
 import threading
-# pylint: disable=no-name-in-module
 from .utils import get_last_gh_tag
 import socket
-
-file = Path(__file__).resolve()
-parent, root = file.parent, file.parents[1]
-sys.path.append(str(root))
-
-# Additionally remove the current file's directory from sys.path
-from contextlib import suppress
-
-with suppress(ValueError):
-    sys.path.remove(str(parent))
-
 import logging
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
@@ -172,17 +159,18 @@ def test_upgrade_version():
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
             product_tier_version=last_tier.version,
-            custom_network_id=network.network_id if network else None
-
+            custom_network_id=network.network_id if network else None,
         )
 
         try:
             ip = resolve_hostname(instance=instance)
-            logging.info(f"Instance endpoint {instance.get_cluster_endpoint()['endpoint']} resolved to {ip}")
+            logging.info(
+                f"Instance endpoint {instance.get_cluster_endpoint()['endpoint']} resolved to {ip}"
+            )
         except TimeoutError as e:
             logging.error(f"DNS resolution failed: {e}")
             raise Exception("Instance endpoint not ready: DNS resolution failed") from e
-        
+
         # 3. Add data to the instance
         add_data(instance)
 
@@ -278,13 +266,14 @@ def test_zero_downtime(
         error_signal.set()
         raise e
 
-def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
+
+def resolve_hostname(instance: OmnistrateFleetInstance, timeout=300, interval=1):
     """Check if the instance's main endpoint is resolvable.
     Args:
         instance: The OmnistrateFleetInstance to check
         timeout: Maximum time in seconds to wait for resolution (default: 30)
         interval: Time in seconds between retry attempts (default: 1)
-    
+
     Returns:
         str: The resolved IP address
 
@@ -295,13 +284,13 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
     """
     if interval <= 0 or timeout <= 0:
         raise ValueError("Interval and timeout must be positive")
-    
+
     cluster_endpoint = instance.get_cluster_endpoint()
 
-    if not cluster_endpoint or 'endpoint' not in cluster_endpoint:
+    if not cluster_endpoint or "endpoint" not in cluster_endpoint:
         raise KeyError("Missing endpoint information in cluster configuration")
 
-    hostname = cluster_endpoint['endpoint']
+    hostname = cluster_endpoint["endpoint"]
     start_time = time.time()
 
     while time.time() - start_time < timeout:
@@ -311,8 +300,11 @@ def resolve_hostname(instance: OmnistrateFleetInstance,timeout=300, interval=1):
         except (socket.gaierror, socket.error) as e:
             logging.debug(f"DNS resolution attempt failed: {e}")
             time.sleep(interval)
-     
-    raise TimeoutError(f"Unable to resolve hostname '{hostname}' within {timeout} seconds.")
+
+    raise TimeoutError(
+        f"Unable to resolve hostname '{hostname}' within {timeout} seconds."
+    )
+
 
 if __name__ == "__main__":
     test_upgrade_version()

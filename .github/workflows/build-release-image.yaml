@@ -117,7 +117,7 @@ jobs:
 
       - name: Create FALKORDB_PASSWORD/ADMIN_PASSWORD files
         run: |
-          export sec=$(grep '^secrets' omnistrate.free.yaml)
+          export sec=$(grep '^secrets' compose/mnistrate.free.yaml)
           if [[ -n "$sec" ]];then
             mkdir -p secrets || { echo "Failed to create secrets directory"; exit 1; }
             echo '{{ $var.falkordbPassword }}' > ./secrets/falkordbpassword || { echo "Failed to write falkordbpassword"; exit 1; }

@@ -706,6 +706,17 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "20m"
+            memory: 30Mi
+        exporter:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "50m"
+            memory: 50Mi
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK
@@ -1204,6 +1215,38 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "20m"
+            memory: 30Mi
+        exporter:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "50m"
+            memory: 50Mi
+        healthcheck-sentinel:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "20m"
+            memory: 30Mi
+          args:
+            - sentinel
+        exporter-sentinel:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "50m"
+            memory: 50Mi
+          args:
+            - "26379"
+            - "9122"
+            - "0"
+        sentinel:
+          imageNameWithTag: $FalkorDBSentinelImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 50Mi
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: POST_UPGRADE
@@ -1336,7 +1379,7 @@ services:
 
   sentinel-sz:
     x-omnistrate-mode-internal: true
-    image: $FalkorDBNodeImage
+    image: $FalkorDBSentinelImage
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:
@@ -1360,6 +1403,7 @@ services:
       - DATA_DIR=/var/lib/falkordb
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - NODE_HOST=$sys.network.node.externalEndpoint
+      - SENTINEL_IGNORE_MASTER_CHECK=true
       - NUM_REPLICAS=$var.numReplicas
       - MASTER_NAME=master
     ports:
@@ -1386,6 +1430,23 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck-sentinel:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "20m"
+            memory: 30Mi
+          args:
+            - sentinel
+        exporter-sentinel:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "50m"
+            memory: 50Mi
+          args:
+            - "26379"
+            - "9122"
+            - "0"
     x-omnistrate-api-params:
       - key: enableTLS
         description: Whether to enable TLS for the database
@@ -1910,6 +1971,38 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: true
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "20m"
+            memory: 30Mi
+        exporter:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "50m"
+            memory: 50Mi
+        healthcheck-sentinel:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "20m"
+            memory: 30Mi
+          args:
+            - sentinel
+        exporter-sentinel:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "50m"
+            memory: 50Mi
+          args:
+            - "26379"
+            - "9122"
+            - "0"
+        sentinel:
+          imageNameWithTag: $FalkorDBSentinelImage
+          resourceLimits:
+            cpu: "200m"
+            memory: 50Mi
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: POST_UPGRADE
@@ -2041,7 +2134,7 @@ services:
 
   sentinel-mz:
     x-omnistrate-mode-internal: true
-    image: $FalkorDBNodeImage
+    image: $FalkorDBSentinelImage
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:
@@ -2065,6 +2158,7 @@ services:
       - DATA_DIR=/var/lib/falkordb
       - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
       - NODE_HOST=$sys.network.node.externalEndpoint
+      - SENTINEL_IGNORE_MASTER_CHECK=true
       - NUM_REPLICAS=$var.numReplicas
       - MASTER_NAME=master
     ports:
@@ -2091,6 +2185,23 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck-sentinel:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "20m"
+            memory: 30Mi
+          args:
+            - sentinel
+        exporter-sentinel:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "50m"
+            memory: 50Mi
+          args:
+            - "26379"
+            - "9122"
+            - "0"
     x-omnistrate-api-params:
       - key: enableTLS
         description: Whether to enable TLS for the database
@@ -2440,6 +2551,22 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "20m"
+            memory: 30Mi
+        exporter:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "50m"
+            memory: 50Mi
+          args:
+            - "6379"
+            - "9121"
+            - "1"
+            - "--is-cluster"
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK
@@ -2788,6 +2915,22 @@ services:
     x-omnistrate-capabilities:
       enableMultiZone: true
       enableEndpointPerReplica: true
+      sidecars:
+        healthcheck:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "20m"
+            memory: 30Mi
+        exporter:
+          imageNameWithTag: $FalkorDBExporterImage
+          resourceLimits:
+            cpu: "50m"
+            memory: 50Mi
+          args:
+            - "6379"
+            - "9121"
+            - "1"
+            - "--is-cluster"
     x-omnistrate-actionhooks:
       - scope: NODE
         type: STARTUP_CHECK

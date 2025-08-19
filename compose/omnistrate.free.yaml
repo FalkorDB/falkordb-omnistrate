@@ -161,6 +161,11 @@ services:
       enableMultiZone: false
       enableEndpointPerReplica: true
       sidecars:
+        healthcheck:
+          imageNameWithTag: $FalkorDBHealthcheckImage
+          resourceLimits:
+            cpu: "20m"
+            memory: 30Mi
         oom_score_patch:
           imageNameWithTag: busybox:latest
           resourceLimits:

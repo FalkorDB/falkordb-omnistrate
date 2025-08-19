@@ -24,6 +24,9 @@ env:
   NODE_IMAGE_NAME: falkordb-node
   CLUSTER_IMAGE_NAME: falkordb-cluster
   CLUSTER_REBALANCE_IMAGE_NAME: falkordb-cluster-rebalance
+  HEALTHCHECK_IMAGE_NAME: falkordb-cloud-healthcheck
+  FALKORDB_EXPORTER_IMAGE_NAME: falkordb-cloud-exporter
+  FALKORDB_SENTINEL_IMAGE_NAME: falkordb-cloud-sentinel
   FALKORDB_VERSION: v4.12.3
   FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
   PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
@@ -80,6 +83,12 @@ jobs:
             image-name: falkordb-cluster
           - dockerfile: ./src/falkordb-cluster-rebalance/Dockerfile
             image-name: falkordb-cluster-rebalance
+          - dockerfile: ./src/healthcheck_rs/Dockerfile
+            image-name: falkordb-cloud-healthcheck
+          - dockerfile: ./src/falkordb-exporter/Dockerfile
+            image-name: falkordb-cloud-exporter
+          - dockerfile: ./src/falkordb-sentinel/Dockerfile
+            image-name: falkordb-cloud-sentinel
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -156,6 +165,9 @@ jobs:
           sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBHealthcheckImage/falkordb\/${{ env.HEALTHCHECK_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBExporterImage/falkordb\/${{ env.FALKORDB_EXPORTER_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBSentinelImage/falkordb\/${{ env.FALKORDB_SENTINEL_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
           sed -i 's/$MeteringBucketName/${{ secrets.METERING_BUCKET_NAME }}/g' ${{ matrix.plans.file }}
           sed -i 's/${{ matrix.plans.plan-name }}/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
 

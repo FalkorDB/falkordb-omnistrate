@@ -54,7 +54,7 @@ def test_cluster_pack(instance):
     if _run_step(cfg, "failover"):
         logging.info("Triggering failover")
         rep_id = (
-            "cluster-sz-1" if "Single-Zone" in cfg["resource_key"] else "cluster-mz-4"
+            "cluster-mz-4" if "Multi-Zone" in cfg["resource_key"] else "cluster-sz-4"
         )
         instance.trigger_failover(replica_id=rep_id, wait_for_ready=True)
         logging.debug("Validating data after failover")

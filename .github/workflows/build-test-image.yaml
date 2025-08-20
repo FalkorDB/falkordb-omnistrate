@@ -323,7 +323,7 @@ jobs:
           - name: "[06] enterprise/Standalone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -336,7 +336,7 @@ jobs:
           - name: "[07] enterprise/SingleZone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -349,7 +349,7 @@ jobs:
           - name: "[08] enterprise/MultiZone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -362,7 +362,7 @@ jobs:
           - name: "[09] enterprise/ClusterSingleZone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -377,7 +377,7 @@ jobs:
           - name: "[10] enterprise/ClusterMultiZone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -478,7 +478,7 @@ jobs:
           - name: "[18] pro/Standalone - AWS/us-east-2 - Grouped"
             if: "true"
             testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -490,7 +490,7 @@ jobs:
           - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
             if: "true"
             testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -502,7 +502,7 @@ jobs:
           - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
             if: "true"
             testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -514,7 +514,7 @@ jobs:
           - name: "[21] pro/ClusterSingleZone - AWS/us-east-2 - Grouped"
             if: "true"
             testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -528,7 +528,7 @@ jobs:
           - name: "[22] pro/ClusterMultiZone - AWS/us-east-2 - Grouped"
             if: "true"
             testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -543,7 +543,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
             testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart"
+            tests: "failover,stopstart,network_change"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: gcp
             cloudRegion: us-central1
@@ -556,7 +556,7 @@ jobs:
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
             testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart"
+            tests: "failover,stopstart,network_change"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: gcp
             cloudRegion: us-central1
@@ -566,7 +566,6 @@ jobs:
             clusterReplicas: "1"
             maxmemory: "2GB"
             networkType: INTERNAL
-
           ######################## PRO • AWS (TLS) ########################
           - name: "[25] pro/Standalone/TLS - AWS/us-east-2 - Grouped"
             if: "true"
@@ -646,7 +645,7 @@ jobs:
           OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
         run: |
           set -euo pipefail
-          
+
           # Check if poetry is installed. If not, install it.
           if ! command -v poetry &> /dev/null; then
             echo "Poetry could not be found, installing..."
@@ -654,7 +653,7 @@ jobs:
             export PATH="/root/.local/bin:$PATH"
             poetry install
           fi
-          
+
           EXTRA_ARGS=()
 
           [[ -n "${{ matrix.instances.newInstanceType || '' }}" ]] && \
@@ -672,8 +671,8 @@ jobs:
           [[ -n "${{ matrix.instances.customNetwork || '' }}" ]] && \
             EXTRA_ARGS+=(--custom-network "${{ matrix.instances.customNetwork }}")
 
-            [[ -n "${{ matrix.instances.tls || '' }}" ]] && \
-              EXTRA_ARGS+=(--tls)
+          [[ -n "${{ matrix.instances.tls || '' }}" ]] && \
+            EXTRA_ARGS+=(--tls)
 
           poetry run pytest -s -v "${{ matrix.instances.testFile }}" \
             --e2e-steps "${{ matrix.instances.tests }}" \

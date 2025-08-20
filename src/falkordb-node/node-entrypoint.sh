@@ -85,7 +85,6 @@ if [[ $(basename "$DATA_DIR") != 'data' ]];then DATA_DIR=$DATA_DIR/data;fi
 
 DEBUG=${DEBUG:-0}
 REPLACE_NODE_CONF=${REPLACE_NODE_CONF:-0}
-REPLACE_SENTINEL_CONF=${REPLACE_SENTINEL_CONF:-0}
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
 AUTH_CONNECTION_STRING="-a $ADMIN_PASSWORD --no-auth-warning"
 SAVE_LOGS_TO_FILE=${SAVE_LOGS_TO_FILE:-1}
@@ -93,10 +92,9 @@ LOG_LEVEL=${LOG_LEVEL:-notice}
 
 DATE_NOW=$(date +"%Y%m%d%H%M%S")
 
+
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo "/dev/null"; fi)
-SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo "/dev/null"; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
-SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'*/30 * * * *'}
 AOF_FILE_SIZE_TO_MONITOR=${AOF_FILE_SIZE_TO_MONITOR:-5} # 5MB
 
@@ -458,19 +456,10 @@ if [ ! -f $NODE_CONF_FILE ] || [ "$REPLACE_NODE_CONF" -eq "1" ]; then
   cp /falkordb/node.conf $NODE_CONF_FILE
 fi
 
-# If sentinel.conf doesn't exist or $REPLACE_SENTINEL_CONF=1, copy it from /falkordb
-if [ ! -f $SENTINEL_CONF_FILE ] || [ "$REPLACE_SENTINEL_CONF" -eq "1" ]; then
-  echo "Copying sentinel.conf from /falkordb"
-  cp /falkordb/sentinel.conf $SENTINEL_CONF_FILE
-fi
-
 # Create log files if they don't exist
 if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
   if [ "$RUN_NODE" -eq "1" ]; then
     touch $FALKORDB_LOG_FILE_PATH
-  fi
-  if [ "$RUN_SENTINEL" -eq "1" ]; then
-    touch $SENTINEL_LOG_FILE_PATH
   fi
 fi
 
@@ -678,17 +667,6 @@ fi
 
 # If TLS=true, create a script to rotate the certificate
 if [[ "$TLS" == "true" ]]; then
-  if [[ $RUN_SENTINEL -eq 1 ]]; then
-    echo "Creating sentinel certificate rotation job script"
-    echo "
-    #!/bin/bash
-    set -e
-    echo 'Restarting sentinel'
-    supervisorctl -c $DATA_DIR/supervisord.conf restart redis-sentinel
-    " >$DATA_DIR/cert_rotate_sentinel.sh
-    chmod +x $DATA_DIR/cert_rotate_sentinel.sh
-  fi
-
   if [[ $RUN_NODE -eq 1 ]]; then
     echo "Creating node certificate rotation job script"
     echo "

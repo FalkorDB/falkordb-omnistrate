@@ -1,19 +1,5 @@
 ARG FALKORDB_VERSION=v4.12.3
 
-FROM falkordb/redis_exporter:v1.70.2-alpine AS redis_exporter
-
-
-FROM rust:1.82-slim AS healthcheck_builder
-
-RUN apt-get update -y && apt-get install -y pkg-config build-essential cmake libtool openssl libssl-dev
-
-WORKDIR /healthcheck
-
-COPY src/healthcheck_rs/ /healthcheck
-
-RUN cargo build --release
-
-
 FROM falkordb/falkordb:$FALKORDB_VERSION
 
 RUN apt-get update && apt-get install -y curl jq openssl cron gdb
@@ -28,8 +14,6 @@ WORKDIR /falkordb
 
 COPY src/falkordb-cluster/node.conf .
 COPY src/falkordb-cluster/cluster-entrypoint.sh /usr/local/bin/
-COPY --from=redis_exporter /redis_exporter /usr/local/bin/
-COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/local/bin/healthcheck
 COPY scripts/download-debug-so.sh .
 
 RUN chown falkordb:falkordb /falkordb/* && \

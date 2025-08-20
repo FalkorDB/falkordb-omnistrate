@@ -24,6 +24,7 @@ RUN_METRICS=${RUN_METRICS:-1}
 RUN_HEALTH_CHECK=${RUN_HEALTH_CHECK:-1}
 TLS=${TLS:-false}
 NODE_INDEX=${NODE_INDEX:-0}
+NETWORKING_TYPE=${NETWORKING_TYPE:-"PUBLIC"}
 INSTANCE_TYPE=${INSTANCE_TYPE:-''}
 PERSISTENCE_RDB_CONFIG_INPUT=${PERSISTENCE_RDB_CONFIG_INPUT:-'low'}
 PERSISTENCE_RDB_CONFIG=${PERSISTENCE_RDB_CONFIG:-'86400 1 21600 100 3600 10000'}
@@ -248,14 +249,6 @@ handle_sigterm() {
 
   if [[ ! -z $falkordb_pid ]]; then
     kill -TERM $falkordb_pid
-  fi
-
-  if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
-    kill -TERM $redis_exporter_pid
-  fi
-
-  if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $healthcheck_pid ]]; then
-    kill -TERM $healthcheck_pid
   fi
 
   exit 0
@@ -500,9 +493,6 @@ fi
 # Run this before health check to prevent client connections until discrepancies are resolved.
 meet_unknown_nodes
 ensure_replica_connects_to_the_right_master_ip
-
-#Start cron
-cron
 
 # If TLS=true, create a script to rotate the certificate
 if [[ "$TLS" == "true" ]]; then

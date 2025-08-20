@@ -28,6 +28,7 @@ RUN_HEALTH_CHECK=${RUN_HEALTH_CHECK:-1}
 RUN_HEALTH_CHECK_SENTINEL=${RUN_HEALTH_CHECK_SENTINEL:-1}
 TLS=${TLS:-false}
 NODE_INDEX=${NODE_INDEX:-0}
+NETWORKING_TYPE=${NETWORKING_TYPE:-"PUBLIC"}
 INSTANCE_TYPE=${INSTANCE_TYPE:-''}
 PERSISTENCE_RDB_CONFIG_INPUT=${PERSISTENCE_RDB_CONFIG_INPUT:-'low'}
 PERSISTENCE_RDB_CONFIG=${PERSISTENCE_RDB_CONFIG:-'86400 1 21600 100 3600 10000'}
@@ -418,10 +419,12 @@ handle_network_type_changed() {
   if [[ $RUN_NODE -eq 1 ]]; then
     echo "Setting replica-announce-ip to $NODE_HOST"
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET replica-announce-ip $NODE_HOST
+    config_rewrite
   fi
   if [[ $RUN_SENTINEL -eq 1 ]]; then
     echo "Setting sentinel announce-ip to $NODE_HOST"
     redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET announce-ip $NODE_HOST
+    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
   fi
 }
 
@@ -551,83 +554,6 @@ if [ "$RUN_NODE" -eq "1" ]; then
   fi
 
   config_rewrite
-fi
-
-if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" == "1" ]]); then
-  sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
-  sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
-  sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
-  sed -i "s/\$FALKORDB_POST_UPGRADE_PASSWORD/$FALKORDB_POST_UPGRADE_PASSWORD/g" $SENTINEL_CONF_FILE
-  sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $SENTINEL_CONF_FILE
-
-  sed -i "s/\$SENTINEL_HOST/$NODE_HOST/g" $SENTINEL_CONF_FILE
-
-  echo "Starting Sentinel"
-
-  if [[ $TLS == "true" ]]; then
-    echo "port 0" >>$SENTINEL_CONF_FILE
-    echo "tls-port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
-    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$SENTINEL_CONF_FILE
-    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$SENTINEL_CONF_FILE
-    echo "tls-ca-cert-file $ROOT_CA_PATH" >>$SENTINEL_CONF_FILE
-    echo "tls-replication yes" >>$SENTINEL_CONF_FILE
-    echo "tls-auth-clients no" >>$SENTINEL_CONF_FILE
-  else
-    echo "port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
-  fi
-
-  # Start Sentinel supervisord service
-  echo "
-  [inet_http_server]
-  port = 127.0.0.1:9001
-
-  [supervisord]
-  nodaemon=true
-  logfile=/dev/null
-  stdout_logfile=/dev/stdout
-  stdout_logfile_maxbytes=0
-  stderr_logfile=/dev/stderr
-  stderr_logfile_maxbytes=0
-  pidfile=/var/run/supervisord.pid
-
-  [supervisorctl]
-  serverurl=http://127.0.0.1:9001
-
-  [rpcinterface:supervisor]
-  supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
-
-  [program:redis-sentinel]
-  command=redis-server $SENTINEL_CONF_FILE --sentinel
-  autorestart=true
-  stdout_logfile=$SENTINEL_LOG_FILE_PATH
-  stderr_logfile=$SENTINEL_LOG_FILE_PATH
-  " > $DATA_DIR/supervisord.conf
-
-  tail -F $SENTINEL_LOG_FILE_PATH &
-  
-  supervisord -c $DATA_DIR/supervisord.conf &
-
-  sleep 10
-
-  # If FALKORDB_MASTER_HOST is not empty, add monitor to sentinel
-  if [[ ! -z $FALKORDB_MASTER_HOST ]]; then
-    log "Master Name: $MASTER_NAME\Master Host: $FALKORDB_MASTER_HOST\Master Port: $FALKORDB_MASTER_PORT_NUMBER\nSentinel Quorum: $SENTINEL_QUORUM"
-    wait_until_node_host_resolves $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER
-    response=$(redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER $SENTINEL_QUORUM)
-
-    if [[ "$response" == "ERR Invalid IP address or hostname specified" ]]; then
-      echo """
-        The hostname $NODE_HOST for the node $HOSTNAME was resolved successfully the first time but failed to do so a second time,
-        this  caused the SENTINEL MONITOR command failed.
-      """
-      exit 1
-    fi
-
-    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
-    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
-    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
-    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
-  fi
 fi
 
 check_network_type_changes

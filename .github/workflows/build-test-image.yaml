@@ -323,7 +323,7 @@ jobs:
           - name: "[06] enterprise/Standalone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart,update_memory,oom,network_change"
+            tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -336,7 +336,7 @@ jobs:
           - name: "[07] enterprise/SingleZone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,update_memory,oom,network_change"
+            tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -349,7 +349,7 @@ jobs:
           - name: "[08] enterprise/MultiZone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,update_memory,oom,network_change"
+            tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -362,7 +362,7 @@ jobs:
           - name: "[09] enterprise/ClusterSingleZone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,update_memory,oom,network_change"
+            tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -377,7 +377,7 @@ jobs:
           - name: "[10] enterprise/ClusterMultiZone - AWS/us-east-2 - Grouped"
             if: "${{ contains(github.ref, 'refs/tags/v') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}"
             testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,update_memory,oom,network_change"
+            tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -478,7 +478,7 @@ jobs:
           - name: "[18] pro/Standalone - AWS/us-east-2 - Grouped"
             if: "true"
             testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -490,7 +490,7 @@ jobs:
           - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
             if: "true"
             testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -502,7 +502,7 @@ jobs:
           - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
             if: "true"
             testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -514,7 +514,7 @@ jobs:
           - name: "[21] pro/ClusterSingleZone - AWS/us-east-2 - Grouped"
             if: "true"
             testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -528,7 +528,7 @@ jobs:
           - name: "[22] pro/ClusterMultiZone - AWS/us-east-2 - Grouped"
             if: "true"
             testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,update_memory,oom"
+            tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2

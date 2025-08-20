@@ -59,6 +59,18 @@ if [[ $(basename "$DATA_DIR") != 'data' ]]; then DATA_DIR=$DATA_DIR/data; fi
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 
+handle_sigterm() {
+  echo "Caught SIGTERM"
+  echo "Stopping FalkorDB"
+
+  redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
+  redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SHUTDOWN
+
+  exit 0
+}
+
+trap handle_sigterm SIGTERM
+
 wait_until_node_host_resolves() {
   # If $1 is an IP address, return
   if [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then

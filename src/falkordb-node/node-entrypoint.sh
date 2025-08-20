@@ -28,6 +28,7 @@ RUN_HEALTH_CHECK=${RUN_HEALTH_CHECK:-1}
 RUN_HEALTH_CHECK_SENTINEL=${RUN_HEALTH_CHECK_SENTINEL:-1}
 TLS=${TLS:-false}
 NODE_INDEX=${NODE_INDEX:-0}
+NETWORKING_TYPE=${NETWORKING_TYPE:-"PUBLIC"}
 INSTANCE_TYPE=${INSTANCE_TYPE:-''}
 PERSISTENCE_RDB_CONFIG_INPUT=${PERSISTENCE_RDB_CONFIG_INPUT:-'low'}
 PERSISTENCE_RDB_CONFIG=${PERSISTENCE_RDB_CONFIG:-'86400 1 21600 100 3600 10000'}
@@ -193,28 +194,6 @@ handle_sigterm() {
     if [[ "$role" =~ ^role:master ]]; then IS_REPLICA=0; fi
     remove_master_from_group
     redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SHUTDOWN
-  fi
-
-  if [[ $RUN_SENTINEL -eq 1 ]]; then
-    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
-    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SHUTDOWN
-  fi
-
-  if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_pid ]]; then
-    kill -TERM $redis_exporter_pid
-  fi
-  
-  if [[ $RUN_METRICS -eq 1 && ! -z $redis_exporter_sentinel_pid ]]; then
-
-    kill -TERM $redis_exporter_sentinel_pid
-  fi
-
-  if [[ $RUN_HEALTH_CHECK -eq 1 && ! -z $healthcheck_pid ]]; then
-    kill -TERM $healthcheck_pid
-  fi
-
-  if [[ $RUN_HEALTH_CHECK_SENTINEL -eq 1 && ! -z $sentinel_healthcheck_pid ]]; then
-    kill -TERM $sentinel_healthcheck_pid
   fi
 
   exit 0
@@ -412,6 +391,37 @@ config_rewrite() {
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG REWRITE
 }
 
+handle_network_type_changed() {
+  # the node itself should have it's replica-announce-ip parameter set to the new $NODE_HOST value
+  # if sentinel is running, set the sentinel announce-ip parameter to the new $NODE_HOST value
+  if [[ $RUN_NODE -eq 1 ]]; then
+    echo "Setting replica-announce-ip to $NODE_HOST"
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET replica-announce-ip $NODE_HOST
+    config_rewrite
+  fi
+  if [[ $RUN_SENTINEL -eq 1 ]]; then
+    echo "Setting sentinel announce-ip to $NODE_HOST"
+    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET announce-ip $NODE_HOST
+    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
+  fi
+}
+
+check_network_type_changes() {
+  # Check if network type has changed
+  if [[ -f $DATA_DIR/network_type ]]; then
+    current_network_type=$(cat "$DATA_DIR/network_type")
+    if [[ "$current_network_type" != "$NETWORKING_TYPE" ]]; then
+      echo "Network type has changed from $current_network_type to $NETWORKING_TYPE"
+      echo "$NETWORKING_TYPE" >"$DATA_DIR/network_type"
+      # If network type has changed, rewrite config
+      handle_network_type_changed
+    fi
+  else
+    echo "Network type file not found, creating it"
+    echo "$NETWORKING_TYPE" >"$DATA_DIR/network_type"
+  fi
+}
+
 if [ -f $NODE_CONF_FILE ]; then
   # Get current admin password
   CURRENT_ADMIN_PASSWORD=$(cat $NODE_CONF_FILE | grep -oP '(?<=requirepass ).*' | sed 's/\"//g')
@@ -524,8 +534,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   config_rewrite
 fi
 
-#Start cron
-cron
+check_network_type_changes
 
 # If TLS=true, create a script to rotate the certificate
 if [[ "$TLS" == "true" ]]; then

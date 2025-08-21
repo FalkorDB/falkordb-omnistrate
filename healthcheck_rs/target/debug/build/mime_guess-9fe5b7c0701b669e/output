@@ -1,1 +1,0 @@
-cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/Users/muhammadqadora/github/falkordb-omnistrate/healthcheck_rs/target/debug/build/mime_guess-9fe5b7c0701b669e/out/mime_types_generated.rs

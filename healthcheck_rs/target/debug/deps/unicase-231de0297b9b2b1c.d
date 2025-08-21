@@ -1,0 +1,10 @@
+/Users/muhammadqadora/github/falkordb-omnistrate/healthcheck_rs/target/debug/deps/libunicase-231de0297b9b2b1c.rmeta: /Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs /Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs /Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs /Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs
+
+/Users/muhammadqadora/github/falkordb-omnistrate/healthcheck_rs/target/debug/deps/libunicase-231de0297b9b2b1c.rlib: /Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs /Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs /Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs /Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs
+
+/Users/muhammadqadora/github/falkordb-omnistrate/healthcheck_rs/target/debug/deps/unicase-231de0297b9b2b1c.d: /Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs /Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs /Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs /Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs
+
+/Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/lib.rs:
+/Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/ascii.rs:
+/Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/mod.rs:
+/Users/muhammadqadora/.cargo/registry/src/index.crates.io-6f17d22bba15001f/unicase-2.7.0/src/unicode/map.rs:

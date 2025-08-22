@@ -1472,9 +1472,9 @@ services:
         export: true
         defaultValue: "2"
     x-omnistrate-actionhooks:
-      - scope: CLUSTER
-        type: POST_UPGRADE
-        <<: *postupgradehook
+      # - scope: CLUSTER
+      #   type: POST_UPGRADE
+      #   <<: *postupgradehook
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -2227,9 +2227,9 @@ services:
         export: true
         defaultValue: "2"
     x-omnistrate-actionhooks:
-      - scope: CLUSTER
-        type: POST_UPGRADE
-        <<: *postupgradehook
+      # - scope: CLUSTER
+      #   type: POST_UPGRADE
+      #   <<: *postupgradehook
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |

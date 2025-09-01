@@ -23,6 +23,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # Test modes: basic (PR commits) or full (releases and scheduled runs)
+  TEST_MODE: ${{ (contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule') && 'full' || 'basic' }}
+  
   NODE_IMAGE_NAME: falkordb-node
   CLUSTER_IMAGE_NAME: falkordb-cluster
   CLUSTER_REBALANCE_IMAGE_NAME: falkordb-cluster-rebalance
@@ -30,9 +33,9 @@ env:
   FALKORDB_EXPORTER_IMAGE_NAME: falkordb-cloud-exporter
   FALKORDB_SENTINEL_IMAGE_NAME: falkordb-cloud-sentinel
   FALKORDB_VERSION: v4.12.3
-  FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-  PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-  ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+  FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
+  PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
+  ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
   GCP_NETWORK_NAME: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
   AWS_NETWORK_NAME: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
   AZURE_NETWORK_NAME: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
@@ -208,13 +211,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        if: ${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}
+        if: ${{ env.TEST_MODE == 'full' }}
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Create Omnistrate Custom Network - GCP
-        if: ${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}
+        if: ${{ env.TEST_MODE == 'full' }}
         uses: ./.github/actions/create-omnistrate-custom-network
         id: create_custom_network_gcp
         with:
@@ -226,7 +229,7 @@ jobs:
           name: ${{ env.GCP_NETWORK_NAME}}
 
       - name: Create Omnistrate Custom Network - AWS
-        if: ${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}
+        if: ${{ env.TEST_MODE == 'full' }}
         uses: ./.github/actions/create-omnistrate-custom-network
         id: create_custom_network_aws
         with:
@@ -238,7 +241,7 @@ jobs:
           name: ${{ env.AWS_NETWORK_NAME }}
 
       - name: Create Omnistrate Custom Network - AZURE
-        if: ${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}
+        if: ${{ env.TEST_MODE == 'full' }}
         uses: ./.github/actions/create-omnistrate-custom-network
         id: create_custom_network_azure
         with:
@@ -258,7 +261,7 @@ jobs:
         instances:
           #################### ENTERPRISE • AZURE (non-TLS) ####################
           - name: "[01] enterprise/Standalone - AZURE/eastus2 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -270,7 +273,7 @@ jobs:
             customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
           - name: "[02] enterprise/SingleZone - AZURE/eastus2 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -282,7 +285,7 @@ jobs:
             customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
           - name: "[03] enterprise/MultiZone - AZURE/eastus2 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -294,7 +297,7 @@ jobs:
             customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
           - name: "[04] enterprise/ClusterSingleZone - AZURE/eastus2 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -308,7 +311,7 @@ jobs:
             customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
           - name: "[05] enterprise/ClusterMultiZone - AZURE/eastus2 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -323,7 +326,7 @@ jobs:
 
           ###################### ENTERPRISE • AWS (non-TLS) #####################
           - name: "[06] enterprise/Standalone - AWS/us-east-2 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -336,7 +339,7 @@ jobs:
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
           - name: "[07] enterprise/SingleZone - AWS/us-east-2 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -349,7 +352,7 @@ jobs:
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
           - name: "[08] enterprise/MultiZone - AWS/us-east-2 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -362,7 +365,7 @@ jobs:
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
           - name: "[09] enterprise/ClusterSingleZone - AWS/us-east-2 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -377,7 +380,7 @@ jobs:
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
           - name: "[10] enterprise/ClusterMultiZone - AWS/us-east-2 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,resize,oom,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -393,7 +396,7 @@ jobs:
 
           ###################### ENTERPRISE • GCP (non-TLS) #####################
           - name: "[11] enterprise/Standalone - GCP/us-central1 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -405,7 +408,7 @@ jobs:
             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
           - name: "[12] enterprise/SingleZone - GCP/us-central1 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -417,7 +420,7 @@ jobs:
             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
           - name: "[13] enterprise/MultiZone - GCP/us-central1 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -429,7 +432,7 @@ jobs:
             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
           - name: "[14] enterprise/ClusterSingleZone - GCP/us-central1 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -443,7 +446,7 @@ jobs:
             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
           - name: "[15] enterprise/ClusterMultiZone - GCP/us-central1 - Grouped"
-            if: "${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' }}"
+            if: "full"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -458,7 +461,7 @@ jobs:
 
           ######################## NON-ENTERPRISE • AWS ONLY #####################
           - name: "[16] free/Standalone - AWS/us-east-2 - Grouped"
-            if: "true"
+            if: "basic"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,oom"
             tierName: "free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -468,7 +471,7 @@ jobs:
             maxmemory: "1GB"
 
           - name: "[17] startup/Standalone - AWS/us-east-2 - Grouped"
-            if: "true"
+            if: "basic"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,oom"
             tierName: "startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -478,7 +481,7 @@ jobs:
             maxmemory: "1GB"
 
           - name: "[18] pro/Standalone - AWS/us-east-2 - Grouped"
-            if: "true"
+            if: "basic"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -490,7 +493,7 @@ jobs:
             maxmemory: "2GB"
 
           - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
-            if: "true"
+            if: "basic"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -502,7 +505,7 @@ jobs:
             maxmemory: "2GB"
 
           - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
-            if: "true"
+            if: "basic"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -514,7 +517,7 @@ jobs:
             maxmemory: "2GB"
 
           - name: "[21] pro/ClusterSingleZone - AWS/us-east-2 - Grouped"
-            if: "true"
+            if: "basic"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -528,7 +531,7 @@ jobs:
             maxmemory: "2GB"
 
           - name: "[22] pro/ClusterMultiZone - AWS/us-east-2 - Grouped"
-            if: "true"
+            if: "basic"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,resize,oom"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -542,7 +545,7 @@ jobs:
             maxmemory: "2GB"
           ######################## PRIVATE • GCP (INTERNAL) ########################
           - name: "[23] pro/MultiZone - PRIVATE/GCP/us-central1 - Grouped"
-            if: "true"
+            if: "basic"
             runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,network_change"
@@ -555,7 +558,7 @@ jobs:
             networkType: INTERNAL
 
           - name: "[24] pro/ClusterMultiZone - PRIVATE/GCP/us-central1 - Grouped"
-            if: "true"
+            if: "basic"
             runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,network_change"
@@ -570,7 +573,7 @@ jobs:
             networkType: INTERNAL
           ######################## PRO • AWS (TLS) ########################
           - name: "[25] pro/Standalone/TLS - AWS/us-east-2 - Grouped"
-            if: "true"
+            if: "basic"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,network_change"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -582,7 +585,7 @@ jobs:
             maxmemory: "2GB"
             tls: true
           - name: "[26] pro/SingleZone/TLS - AWS/us-east-2 - Grouped"
-            if: "true"
+            if: "basic"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,network_change"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -594,7 +597,7 @@ jobs:
             maxmemory: "2GB"
             tls: true
           - name: "[27] pro/ClusterSingleZone/TLS - AWS/us-east-2 - Grouped"
-            if: "true"
+            if: "basic"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,network_change"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}"
@@ -609,19 +612,19 @@ jobs:
             tls: true
     steps:
       - name: Checkout
-        if: matrix.instances.if == 'true' || matrix.instances.if == true
+        if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup python
-        if: ${{ (matrix.instances.if == 'true' || matrix.instances.if == true) && matrix.instances.runner_label == '' }}
+        if: ((matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')) && matrix.instances.runner_label == ''
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
       - name: Cache Poetry virtualenv
-        if: matrix.instances.if == 'true' || matrix.instances.if == true
+        if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
         id: cache
         uses: actions/cache@v4
         with:
@@ -631,14 +634,14 @@ jobs:
             ${{ runner.os }}-poetry-
 
       - name: Install Poetry
-        if: matrix.instances.if == 'true' || matrix.instances.if == true
+        if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="/root/.local/bin:$PATH"
           poetry install
 
       - name: ${{ matrix.instances.name }}
-        if: matrix.instances.if == 'true' || matrix.instances.if == true
+        if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
         env:
           SERVICE_ID: ${{ env.SERVICE_ID }}
           ENVIRONMENT_ID: ${{ env.ENVIRONMENT_ID }}

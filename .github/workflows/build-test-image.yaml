@@ -545,7 +545,7 @@ jobs:
             maxmemory: "2GB"
           ######################## PRIVATE • GCP (INTERNAL) ########################
           - name: "[23] pro/MultiZone - PRIVATE/GCP/us-central1 - Grouped"
-            if: "basic"
+            if: "full"
             runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,network_change"
@@ -558,7 +558,7 @@ jobs:
             networkType: INTERNAL
 
           - name: "[24] pro/ClusterMultiZone - PRIVATE/GCP/us-central1 - Grouped"
-            if: "basic"
+            if: "full"
             runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,network_change"

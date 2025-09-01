@@ -3,6 +3,7 @@ import threading
 import logging
 from redis.exceptions import OutOfMemoryError
 from .classes.omnistrate_fleet_instance import OmnistrateFleetInstance
+from subprocess import run
 
 # Configure logging
 logging.basicConfig(
@@ -137,11 +138,19 @@ def stress_oom(
     """
     logging.info("Starting stress test to trigger OOM with query size '%s'", query_size)
     db = instance.create_connection(ssl=ssl, network_type=network_type)
-    g = db.select_graph("test")
     big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
     medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
+    if query_size == "big":
+        print("Inserting big data")
+        run('falkordb-bulk-insert test -n ./scripts/large_data.csv', shell=True, text=True)
+    elif query_size == "medium":
+        print("Inserting medium data")
+        run('falkordb-bulk-insert test -n ./scripts/medium_data.csv', shell=True, text=True)
+    
     q = small if query_size == "small" else medium if query_size == "medium" else big
+
+    g = db.select_graph("test")
     while True:
         try:
             logging.debug("Executing query: %s", q)

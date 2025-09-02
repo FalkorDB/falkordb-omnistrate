@@ -138,7 +138,7 @@ def stress_oom(
     Keep writing until we hit OOM.
     """
     logging.info("Starting stress test to trigger OOM with query size '%s'", query_size)
-    cluster_endpoint , port = instance.get_cluster_endpoint()['endpoint'], instance.get_cluster_endpoint()['port'][0]
+    cluster_endpoint , port = instance.get_cluster_endpoint()['endpoint'], instance.get_cluster_endpoint()['ports'][0]
     db = instance.create_connection(ssl=ssl, network_type=network_type)
     big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
     medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"

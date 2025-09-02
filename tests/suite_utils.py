@@ -146,11 +146,11 @@ def stress_oom(
     if query_size == "big":
         logging.info("Inserting big data")
         result = run(f'falkordb-bulk-insert test -n {workspace}/scripts/large_data.csv', shell=True, text=True, capture_output=True)
-        logging.info("Big data insert result: %s", result.stdout)
+        logging.info("Big data insert result: %s", result.stdout, result.stderr)
     elif query_size == "medium":
         logging.info("Inserting medium data")
         result = run(f'falkordb-bulk-insert test -n {workspace}/scripts/medium_data.csv', shell=True, text=True, capture_output=True)
-        logging.info("Medium data insert result: %s", result.stdout)
+        logging.info("Medium data insert result: %s", result.stdout, result.stderr)
 
     q = small if query_size == "small" else medium if query_size == "medium" else big
 

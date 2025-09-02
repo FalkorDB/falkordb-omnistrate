@@ -138,18 +138,21 @@ def stress_oom(
     Keep writing until we hit OOM.
     """
     logging.info("Starting stress test to trigger OOM with query size '%s'", query_size)
+    cluster_endpoint , port = instance.get_cluster_endpoint()['endpoint'], instance.get_cluster_endpoint()['port']
     db = instance.create_connection(ssl=ssl, network_type=network_type)
     big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
     medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
+    scheme = "rediss" if ssl else "redis"
+    url = f'{scheme}://falkordb:{instance.falkordb_password}@{cluster_endpoint}:{port}'
     workspace = os.getenv("GITHUB_WORKSPACE", ".")
     if query_size == "big":
         logging.info("Inserting big data")
-        result = run(f'falkordb-bulk-insert test -n {workspace}/scripts/large_data.csv', shell=True, text=True, capture_output=True)
+        result = run(f'falkordb-bulk-insert test -u redis://falkordb:{instance.falkordb_password}@{cluster_endpoint}:{port} -n {workspace}/scripts/large_data.csv', shell=True, text=True, capture_output=True)
         print("Big data insert result:", result.stdout, result.stderr)
     elif query_size == "medium":
         logging.info("Inserting medium data")
-        result = run(f'falkordb-bulk-insert test -n {workspace}/scripts/medium_data.csv', shell=True, text=True, capture_output=True)
+        result = run(f'falkordb-bulk-insert test -u redis://falkordb:{instance.falkordb_password}@{cluster_endpoint}:{port} -n {workspace}/scripts/medium_data.csv', shell=True, text=True, capture_output=True)
         print("Medium data insert result:", result.stdout, result.stderr)
 
     q = small if query_size == "small" else medium if query_size == "medium" else big

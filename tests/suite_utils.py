@@ -147,12 +147,18 @@ def stress_oom(
     url = f'{scheme}://falkordb:{instance.falkordb_password}@{cluster_endpoint}:{port}'
     if query_size == "big":
         logging.info("Inserting large data")
-        result = run(f'falkordb-bulk-insert g -u {url} -n ./scripts/large_data.csv', shell=True, text=True, capture_output=True)
-        logging.info(f"large data insert result: {result.stdout} {result.stderr}")
+        try:
+            result = run(f'falkordb-bulk-insert g -u {url} -n ./scripts/large_data.csv', shell=True, text=True, capture_output=True)
+            logging.info(f"large data insert result: {result.stdout}")
+        except Exception as e:
+            raise Exception(f"Error inserting large data: {e}")
     elif query_size == "medium":
         logging.info("Inserting medium data")
-        result = run(f'falkordb-bulk-insert g -u {url} -n ./scripts/medium_data.csv', shell=True, text=True, capture_output=True)
-        logging.info(f"Medium data insert result - stdout: {result.stdout}")
+        try:
+            result = run(f'falkordb-bulk-insert g -u {url} -n ./scripts/medium_data.csv', shell=True, text=True, capture_output=True)
+            logging.info(f"Medium data insert result - stdout: {result.stdout}")
+        except Exception as e:
+            raise Exception(f"Error inserting medium data: {e}")
 
     q = small if query_size == "small" else medium if query_size == "medium" else big
 

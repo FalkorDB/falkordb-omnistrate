@@ -32,7 +32,7 @@ env:
   HEALTHCHECK_IMAGE_NAME: falkordb-cloud-healthcheck
   FALKORDB_EXPORTER_IMAGE_NAME: falkordb-cloud-exporter
   FALKORDB_SENTINEL_IMAGE_NAME: falkordb-cloud-sentinel
-  FALKORDB_VERSION: v4.12.3
+  FALKORDB_VERSION: v4.12.5
   FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
   PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
   ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
@@ -333,8 +333,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
+            instanceType: m6i.large
+            newInstanceType: t2.medium
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
@@ -346,8 +346,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
+            instanceType: m6i.large
+            newInstanceType: t2.medium
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
@@ -359,8 +359,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: multi-Zone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
+            instanceType: m6i.large
+            newInstanceType: t2.medium
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
@@ -372,10 +372,10 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Single-Zone
-            instanceType: t2.medium
+            instanceType: m6i.large
             hostCount: "6"
             clusterReplicas: "1"
-            newInstanceType: m6i.large
+            newInstanceType: t2.medium
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
@@ -387,10 +387,10 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Multi-Zone
-            instanceType: t2.medium
+            instanceType: m6i.large
             hostCount: "6"
             clusterReplicas: "1"
-            newInstanceType: m6i.large
+            newInstanceType: t2.medium
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
 
@@ -488,8 +488,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
+            instanceType: m6i.large
+            newInstanceType: t2.medium
             maxmemory: "2GB"
 
           - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
@@ -500,8 +500,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
+            instanceType: m6i.large
+            newInstanceType: t2.medium
             maxmemory: "2GB"
 
           - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
@@ -512,8 +512,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: multi-Zone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
+            instanceType: m6i.large
+            newInstanceType: t2.medium
             maxmemory: "2GB"
 
           - name: "[21] pro/ClusterSingleZone - AWS/us-east-2 - Grouped"
@@ -524,10 +524,10 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Single-Zone
-            instanceType: t2.medium
+            instanceType: m6i.large
             hostCount: "6"
             clusterReplicas: "1"
-            newInstanceType: m6i.large
+            newInstanceType: t2.medium
             maxmemory: "2GB"
 
           - name: "[22] pro/ClusterMultiZone - AWS/us-east-2 - Grouped"
@@ -538,10 +538,10 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Multi-Zone
-            instanceType: t2.medium
+            instanceType: m6i.large
             hostCount: "6"
             clusterReplicas: "1"
-            newInstanceType: m6i.large
+            newInstanceType: t2.medium
             maxmemory: "2GB"
           ######################## PRIVATE • GCP (INTERNAL) ########################
           - name: "[23] pro/MultiZone - PRIVATE/GCP/us-central1 - Grouped"
@@ -580,8 +580,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
+            instanceType: m6i.large
+            newInstanceType: t2.medium
             maxmemory: "2GB"
             tls: true
           - name: "[26] pro/SingleZone/TLS - AWS/us-east-2 - Grouped"
@@ -592,8 +592,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
+            instanceType: m6i.large
+            newInstanceType: t2.medium
             maxmemory: "2GB"
             tls: true
           - name: "[27] pro/ClusterSingleZone/TLS - AWS/us-east-2 - Grouped"
@@ -604,10 +604,10 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Single-Zone
-            instanceType: t2.medium
+            instanceType: m6i.large
             hostCount: "6"
             clusterReplicas: "1"
-            newInstanceType: m6i.large
+            newInstanceType: t2.medium
             maxmemory: "2GB"
             tls: true
     steps:

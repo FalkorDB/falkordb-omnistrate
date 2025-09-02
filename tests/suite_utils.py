@@ -141,6 +141,7 @@ def stress_oom(
     big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
     medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
+    run('ls -larh; ls -larh ./scripts', shell=True, text=True)
     if query_size == "big":
         logging.info("Inserting big data")
         result = run('falkordb-bulk-insert test -n ./scripts/large_data.csv', shell=True, text=True, capture_output=True)

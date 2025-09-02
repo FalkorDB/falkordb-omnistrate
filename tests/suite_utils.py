@@ -146,18 +146,19 @@ def stress_oom(
     scheme = "rediss" if ssl else "redis"
     url = f'{scheme}://falkordb:{instance.falkordb_password}@{cluster_endpoint}:{port}'
     workspace = os.getenv("GITHUB_WORKSPACE", ".")
+    run("ls -larh; ls -larh scripts",shell=True, text=True)
     if query_size == "big":
         logging.info("Inserting big data")
-        result = run(f'falkordb-bulk-insert test -u redis://falkordb:{instance.falkordb_password}@{cluster_endpoint}:{port} -n {workspace}/scripts/large_data.csv', shell=True, text=True, capture_output=True)
-        print("Big data insert result:", result.stdout, result.stderr)
+        result = run(f'falkordb-bulk-insert g -u {url} -n {workspace}/scripts/large_data.csv', shell=True, text=True, capture_output=True)
+        logging.info(f"Big data insert result: {result.stdout} {result.stderr}")
     elif query_size == "medium":
         logging.info("Inserting medium data")
-        result = run(f'falkordb-bulk-insert test -u redis://falkordb:{instance.falkordb_password}@{cluster_endpoint}:{port} -n {workspace}/scripts/medium_data.csv', shell=True, text=True, capture_output=True)
-        print("Medium data insert result:", result.stdout, result.stderr)
+        result = run(f'falkordb-bulk-insert g -u {url} -n {workspace}/scripts/medium_data.csv', shell=True, text=True, capture_output=True)
+        logging.info(f"Medium data insert result - stdout: {result.stdout}, stderr: {result.stderr}")
 
     q = small if query_size == "small" else medium if query_size == "medium" else big
 
-    g = db.select_graph("test")
+    g = db.select_graph("g")
     while True:
         try:
             logging.debug("Executing query: %s", q)

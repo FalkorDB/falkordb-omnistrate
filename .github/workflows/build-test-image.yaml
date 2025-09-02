@@ -615,6 +615,7 @@ jobs:
         if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
         uses: actions/checkout@v4
         with:
+          lfs: true
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup python

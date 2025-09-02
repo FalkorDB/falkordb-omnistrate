@@ -142,12 +142,14 @@ def stress_oom(
     medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
     if query_size == "big":
-        print("Inserting big data")
-        run('falkordb-bulk-insert test -n ./scripts/large_data.csv', shell=True, text=True)
+        logging.info("Inserting big data")
+        result = run('falkordb-bulk-insert test -n ./scripts/large_data.csv', shell=True, text=True, capture_output=True)
+        logging.info("Big data insert result: %s", result.stdout)
     elif query_size == "medium":
-        print("Inserting medium data")
-        run('falkordb-bulk-insert test -n ./scripts/medium_data.csv', shell=True, text=True)
-    
+        logging.info("Inserting medium data")
+        result = run('falkordb-bulk-insert test -n ./scripts/medium_data.csv', shell=True, text=True, capture_output=True)
+        logging.info("Medium data insert result: %s", result.stdout)
+
     q = small if query_size == "small" else medium if query_size == "medium" else big
 
     g = db.select_graph("test")

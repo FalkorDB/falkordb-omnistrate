@@ -4,6 +4,7 @@ import logging
 from redis.exceptions import OutOfMemoryError
 from .classes.omnistrate_fleet_instance import OmnistrateFleetInstance
 from subprocess import run
+import os
 
 # Configure logging
 logging.basicConfig(
@@ -141,14 +142,15 @@ def stress_oom(
     big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
     medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
-    run('ls -larh; ls -larh ./scripts', shell=True, text=True)
+    workspace = os.getenv("GITHUB_WORKSPACE", ".")
+    run(f"ls -larh {workspace}/scripts", shell=True, text=True)
     if query_size == "big":
         logging.info("Inserting big data")
-        result = run('falkordb-bulk-insert test -n ./scripts/large_data.csv', shell=True, text=True, capture_output=True)
+        result = run(f'falkordb-bulk-insert test -n {workspace}/scripts/large_data.csv', shell=True, text=True, capture_output=True)
         logging.info("Big data insert result: %s", result.stdout)
     elif query_size == "medium":
         logging.info("Inserting medium data")
-        result = run('falkordb-bulk-insert test -n ./scripts/medium_data.csv', shell=True, text=True, capture_output=True)
+        result = run(f'falkordb-bulk-insert test -n {workspace}/scripts/medium_data.csv', shell=True, text=True, capture_output=True)
         logging.info("Medium data insert result: %s", result.stdout)
 
     q = small if query_size == "small" else medium if query_size == "medium" else big

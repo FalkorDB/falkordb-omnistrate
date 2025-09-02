@@ -145,15 +145,14 @@ def stress_oom(
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
     scheme = "rediss" if ssl else "redis"
     url = f'{scheme}://falkordb:{instance.falkordb_password}@{cluster_endpoint}:{port}'
-    run("ls -larh; ls -larh scripts",shell=True, text=True)
     if query_size == "big":
-        logging.info("Inserting big data")
+        logging.info("Inserting large data")
         result = run(f'falkordb-bulk-insert g -u {url} -n ./scripts/large_data.csv', shell=True, text=True, capture_output=True)
-        logging.info(f"Big data insert result: {result.stdout} {result.stderr}")
+        logging.info(f"large data insert result: {result.stdout} {result.stderr}")
     elif query_size == "medium":
         logging.info("Inserting medium data")
         result = run(f'falkordb-bulk-insert g -u {url} -n ./scripts/medium_data.csv', shell=True, text=True, capture_output=True)
-        logging.info(f"Medium data insert result - stdout: {result.stdout}, stderr: {result.stderr}")
+        logging.info(f"Medium data insert result - stdout: {result.stdout}")
 
     q = small if query_size == "small" else medium if query_size == "medium" else big
 

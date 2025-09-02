@@ -3,7 +3,7 @@ import threading
 import logging
 from redis.exceptions import OutOfMemoryError
 from .classes.omnistrate_fleet_instance import OmnistrateFleetInstance
-from subprocess import run
+
 import os
 
 # Configure logging
@@ -138,31 +138,32 @@ def stress_oom(
     Keep writing until we hit OOM.
     """
     logging.info("Starting stress test to trigger OOM with query size '%s'", query_size)
-    cluster_endpoint , port = instance.get_cluster_endpoint()['endpoint'], instance.get_cluster_endpoint()['ports'][0]
     db = instance.create_connection(ssl=ssl, network_type=network_type)
+    g = db.select_graph("test")
     big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
     medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
-    scheme = "rediss" if ssl else "redis"
-    url = f'{scheme}://falkordb:{instance.falkordb_password}@{cluster_endpoint}:{port}'
+    ref = os.getenv("GITHUB_REF_NAME", "")
+    ref2 = os.getenv("GITHUB_REF", "")
+    # Extract branch
+    logging.debug(f"GITHUB_REF_NAME: {ref}, GITHUB_REF: {ref2}")
+    # Determine CSV file and execute query for big/medium sizes
     if query_size == "big":
-        logging.info("Inserting large data")
-        try:
-            result = run(f'falkordb-bulk-insert g -u {url} -n ./scripts/large_data.csv', shell=True, text=True, capture_output=True)
-            logging.info(f"large data insert result: {result.stdout}")
-        except Exception as e:
-            raise Exception(f"Error inserting large data: {e}")
+        csv_size = "large_data.csv"
     elif query_size == "medium":
-        logging.info("Inserting medium data")
-        try:
-            result = run(f'falkordb-bulk-insert g -u {url} -n ./scripts/medium_data.csv', shell=True, text=True, capture_output=True)
-            logging.info(f"Medium data insert result - stdout: {result.stdout}")
-        except Exception as e:
-            raise Exception(f"Error inserting medium data: {e}")
+        csv_size = "medium_data.csv"
+    
+    if query_size in ["big", "medium"]:
+        cypher_query = f'''
+LOAD CSV WITH HEADERS FROM "https://media.githubusercontent.com/media/FalkorDB/falkordb-omnistrate/refs/heads/{ref}/scripts/{csv_size}"
+AS row
+WITH keys(row) as headers, row
+CREATE (:Person {{name: row[headers[0]], age: toInteger(row[headers[1]])}})
+'''
+        g.query(cypher_query)
 
     q = small if query_size == "small" else medium if query_size == "medium" else big
 
-    g = db.select_graph("g")
     while True:
         try:
             logging.debug("Executing query: %s", q)

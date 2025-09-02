@@ -4,6 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, ready_for_review]
     paths:
+      - "scripts/**"
       - "src/**"
       - "tests/**"
       - "compose/**"
@@ -617,7 +618,9 @@ jobs:
         with:
           lfs: true
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
+      - name: List scripts directory
+        run: ls -larh ./scripts
+      
       - name: Setup python
         if: ((matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')) && matrix.instances.runner_label == ''
         uses: actions/setup-python@v5

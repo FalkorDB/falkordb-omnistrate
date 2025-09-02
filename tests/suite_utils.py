@@ -143,7 +143,6 @@ def stress_oom(
     medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
     workspace = os.getenv("GITHUB_WORKSPACE", ".")
-    run(f"ls -larh {workspace}/scripts", shell=True, text=True)
     if query_size == "big":
         logging.info("Inserting big data")
         result = run(f'falkordb-bulk-insert test -n {workspace}/scripts/large_data.csv', shell=True, text=True, capture_output=True)

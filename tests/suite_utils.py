@@ -154,7 +154,7 @@ def stress_oom(
     if query_size in ["big", "medium"]:
         for _ in range(0,count):
             cypher_query = f'''
-            LOAD CSV WITH HEADERS FROM "https://media.githubusercontent.com/media/FalkorDB/falkordb-omnistrate/refs/heads/{ref}/scripts/data.csv"
+            LOAD CSV FROM "https://media.githubusercontent.com/media/FalkorDB/falkordb-omnistrate/refs/heads/{ref}/scripts/data.csv" 
             AS row
             CREATE (:Person {{name: row[0], age: toInteger(row[1])}})
             '''

@@ -151,15 +151,26 @@ def stress_oom(
     LOAD CSV FROM "https://media.githubusercontent.com/media/FalkorDB/falkordb-omnistrate/refs/heads/{ref}/scripts/data.csv" AS row CREATE (:Person {{name: row[0], age: toInteger(row[1])}})
     '''
 
-    if query_size == "big":
-        count = 32
-    elif query_size == "medium":
-        count = 3
-
     if query_size in ["big", "medium"]:
         logging.info("Loading Data from CSV to speed up OOM trigger")
-        for i in range(0,count):
-            g.query(cypher_query)
+        if query_size == "big":
+            while True:
+                memory_str = db.connection.execute_command("INFO","MEMORY")['used_memory_human']
+                if 'M' in memory_str:
+                    continue
+                memory = float(memory_str.replace("G", ""))
+                if memory > float(5.5):
+                    break
+                time.sleep(1)
+                g.query(cypher_query)
+        elif query_size == "medium":
+            while True:
+                memory = float(db.connection.execute_command("INFO","MEMORY")['used_memory_human'].replace("M", ""))
+                if memory > float(800):
+                    break
+                time.sleep(1)
+                g.query(cypher_query)
+
 
     q = small if query_size == "small" else medium if query_size == "medium" else big
 

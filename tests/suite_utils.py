@@ -155,6 +155,7 @@ def stress_oom(
         logging.info("Loading Data from CSV to speed up OOM trigger")
         if query_size == "big":
             while True:
+                g.query(cypher_query)
                 memory_str = db.connection.execute_command("INFO","MEMORY")['used_memory_human']
                 if 'M' in memory_str:
                     continue
@@ -162,14 +163,13 @@ def stress_oom(
                 if memory > float(5.5):
                     break
                 time.sleep(1)
-                g.query(cypher_query)
         elif query_size == "medium":
             while True:
+                g.query(cypher_query)
                 memory = float(db.connection.execute_command("INFO","MEMORY")['used_memory_human'].replace("M", ""))
                 if memory > float(800):
                     break
                 time.sleep(1)
-                g.query(cypher_query)
 
 
     q = small if query_size == "small" else medium if query_size == "medium" else big

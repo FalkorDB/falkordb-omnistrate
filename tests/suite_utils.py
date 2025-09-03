@@ -145,16 +145,16 @@ def stress_oom(
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
 
     ref = os.getenv("BRANCH_NAME")
-    print("Branch Name:",ref)
+    logging.info(f"Branch Name: {ref}")
 
     cypher_query = f'''
     LOAD CSV FROM "https://media.githubusercontent.com/media/FalkorDB/falkordb-omnistrate/refs/heads/{ref}/scripts/data.csv" AS row CREATE (:Person {{name: row[0], age: toInteger(row[1])}})
     '''
 
     if query_size == "big":
-        count = 10
+        count = 32
     elif query_size == "medium":
-        count = 5
+        count = 3
 
     if query_size in ["big", "medium"]:
         logging.info("Loading Data from CSV to speed up OOM trigger")

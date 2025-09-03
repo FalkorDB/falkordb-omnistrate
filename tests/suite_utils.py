@@ -143,10 +143,9 @@ def stress_oom(
     big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
     medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
-    ref = os.getenv("GITHUB_REF_NAME", "")
-    ref2 = os.getenv("GITHUB_REF", "")
+    ref = os.getenv("BRANCH_NAME", "")
     # Extract branch
-    logging.debug(f"GITHUB_REF_NAME: {ref}, GITHUB_REF: {ref2}")
+    logging.debug(f"BRANCH_NAME: {ref}")
     # Determine CSV file and execute query for big/medium sizes
     if query_size == "big":
         csv_size = "large_data.csv"

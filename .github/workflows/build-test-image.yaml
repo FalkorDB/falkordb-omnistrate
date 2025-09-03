@@ -39,7 +39,7 @@ env:
   GCP_NETWORK_NAME: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
   AWS_NETWORK_NAME: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
   AZURE_NETWORK_NAME: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || github.event_name == 'schedule' && 'schedule' }}
-
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SERVICE_ID: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
   ENVIRONMENT_ID: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
   SUBSCRIPTION_ID: sub-GJPV3NoNC0

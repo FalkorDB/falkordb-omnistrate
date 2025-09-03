@@ -1,7 +1,9 @@
 name: Retag Dev
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - '396-*'
 
 jobs:
   retag:

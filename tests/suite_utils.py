@@ -143,8 +143,8 @@ def stress_oom(
     big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
     medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
-
-    ref = os.getenv("BRANCH_NAME")
+    
+    ref = os.getenv("BRANCH_NAME","392-only-shared-aws-tests-to-run-at-every-commit")
     logging.info(f"Branch Name: {ref}")
 
     cypher_query = f'''
@@ -154,23 +154,17 @@ def stress_oom(
     if query_size in ["big", "medium"]:
         logging.info("Loading Data from CSV to speed up OOM trigger")
         if query_size == "big":
-            while True:
+            for i in range(0,13):
                 g.query(cypher_query)
+                # log memory usage
                 memory_str = db.connection.execute_command("INFO","MEMORY")['used_memory_human']
-                if 'M' in memory_str:
-                    continue
-                memory = float(memory_str.replace("G", ""))
-                if memory > float(5.5):
-                    break
-                time.sleep(1)
-        elif query_size == "medium":
-            while True:
+                logging.info(f"Memory usage before loading data (iteration {i}): {memory_str}")
+        if query_size == "medium":
+            for i in range(0,4):
                 g.query(cypher_query)
-                memory = float(db.connection.execute_command("INFO","MEMORY")['used_memory_human'].replace("M", ""))
-                if memory > float(800):
-                    break
-                time.sleep(1)
-
+                # log memory usage
+                memory_str = db.connection.execute_command("INFO","MEMORY")['used_memory_human']
+                logging.info(f"Memory usage before loading data (iteration {i}): {memory_str}")
 
     q = small if query_size == "small" else medium if query_size == "medium" else big
 
@@ -190,7 +184,6 @@ def stress_oom(
                 return
             logging.exception("Unexpected error during stress test")
             raise
-
 
 def assert_multi_zone(instance: OmnistrateFleetInstance, host_count=6):
     """

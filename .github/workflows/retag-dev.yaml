@@ -1,0 +1,42 @@
+name: Retag Dev
+
+on:
+  push:
+    branches:
+      - '396-*'
+
+jobs:
+  retag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Retag and push image
+        run: |
+          docker pull falkordb/falkordb-node:dev-7daf45d90ddd3339dc2052d5be36b7674982d9ca
+          docker tag falkordb/falkordb-node:dev-7daf45d90ddd3339dc2052d5be36b7674982d9ca falkordb/falkordb-node:v0.4.9
+          docker push falkordb/falkordb-node:v0.4.9
+          docker pull falkordb/falkordb-cluster:dev-7daf45d90ddd3339dc2052d5be36b7674982d9ca
+          docker tag falkordb/falkordb-cluster:dev-7daf45d90ddd3339dc2052d5be36b7674982d9ca falkordb/falkordb-cluster:v0.4.9
+          docker push falkordb/falkordb-cluster:v0.4.9
+          docker pull falkordb/falkordb-cluster-rebalance:dev-7daf45d90ddd3339dc2052d5be36b7674982d9ca
+          docker tag falkordb/falkordb-cluster-rebalance:dev-7daf45d90ddd3339dc2052d5be36b7674982d9ca falkordb/falkordb-cluster-rebalance:v0.4.9
+          docker push falkordb/falkordb-cluster-rebalance:v0.4.9
+          docker pull falkordb/falkordb-cloud-healthcheck:dev-7daf45d90ddd3339dc2052d5be36b7674982d9ca
+          docker tag falkordb/falkordb-cloud-healthcheck:dev-7daf45d90ddd3339dc2052d5be36b7674982d9ca falkordb/falkordb-cloud-healthcheck:v0.4.9
+          docker push falkordb/falkordb-cloud-healthcheck:v0.4.9
+          docker pull falkordb/falkordb-cloud-exporter:dev-7daf45d90ddd3339dc2052d5be36b7674982d9ca
+          docker tag falkordb/falkordb-cloud-exporter:dev-7daf45d90ddd3339dc2052d5be36b7674982d9ca falkordb/falkordb-cloud-exporter:v0.4.9
+          docker push falkordb/falkordb-cloud-exporter:v0.4.9
+          docker pull falkordb/falkordb-cloud-sentinel:dev-7daf45d90ddd3339dc2052d5be36b7674982d9ca
+          docker tag falkordb/falkordb-cloud-sentinel:dev-7daf45d90ddd3339dc2052d5be36b7674982d9ca falkordb/falkordb-cloud-sentinel:v0.4.9
+          docker push falkordb/falkordb-cloud-sentinel:v0.4.9

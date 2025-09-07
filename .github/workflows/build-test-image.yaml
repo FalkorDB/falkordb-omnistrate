@@ -60,6 +60,7 @@ jobs:
     steps:
       - name: Create runners
         id: create-runner
+        if: env.TEST_MODE == 'full'
         uses: FalkorDB/gce-github-runner@install_docker
         with:
           token: ${{ secrets.GH_SA_TOKEN }}

@@ -165,6 +165,7 @@ def test_cluster_pack(instance):
             network_type=cfg["network_type"],
             query_size="big",
             stress_oomers=10,
+            is_cluster=True,
         )
         logging.debug("Passed OOM stress test")
 

@@ -65,6 +65,7 @@ def assert_data(
         raise AssertionError(msg)
     logging.debug(f"Assertion passed for graph '{key}' with at least {min_rows} rows")
 
+
 def zero_downtime_worker(
     stop_evt,
     error_evt,
@@ -135,6 +136,7 @@ def stress_oom(
     query_size="small",
     network_type="PUBLIC",
     stress_oomers=5,
+    is_cluster=False,
 ):
     """
     Keep writing until we hit OOM.
@@ -195,9 +197,13 @@ def stress_oom(
                 raise AssertionError(
                     "Stress worker raised an unexpected error, OOM did not occur"
                 ) from exc
-            
-    g.client.execute_command("FLUSHALL", target_nodes="ALL_NODES")
-    g.client.execute_command("BGREWRITEAOF", target_nodes="ALL_NODES")
+
+    if is_cluster:
+        g.client.execute_command("FLUSHALL", target_nodes="ALL_NODES")
+        g.client.execute_command("BGREWRITEAOF", target_nodes="ALL_NODES")
+    else:
+        g.client.execute_command("FLUSHALL")
+        g.client.execute_command("BGREWRITEAOF")
 
 
 def assert_multi_zone(instance: OmnistrateFleetInstance, host_count=6):

@@ -154,7 +154,7 @@ def stress_oom(
         g.query(cypher_query)
         logging.info("Preloaded OOM dataset successfully")
     except Exception as e:
-        logging.error("Failed to preload OOM dataset")
+        logging.error("Failed to preload OOM dataset:" + str(e))
         raise AssertionError("Failed to preload OOM dataset") from e
 
     q = small if query_size == "small" else medium if query_size == "medium" else big

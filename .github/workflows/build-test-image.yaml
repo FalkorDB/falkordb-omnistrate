@@ -57,6 +57,7 @@ jobs:
             arm: false
             image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
     runs-on: ubuntu-latest
+    # Only create runners for tagged releases and scheduled runs
     if: contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule'
     steps:
       - name: Create runners
@@ -208,15 +209,14 @@ jobs:
   create-custom-networks:
     needs: omnistrate-update-plans
     runs-on: ubuntu-latest
+    if: contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule'
     steps:
       - name: Checkout
-        if: ${{ env.TEST_MODE == 'full' }}
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Create Omnistrate Custom Network - GCP
-        if: ${{ env.TEST_MODE == 'full' }}
         uses: ./.github/actions/create-omnistrate-custom-network
         id: create_custom_network_gcp
         with:
@@ -228,7 +228,6 @@ jobs:
           name: ${{ env.GCP_NETWORK_NAME}}
 
       - name: Create Omnistrate Custom Network - AWS
-        if: ${{ env.TEST_MODE == 'full' }}
         uses: ./.github/actions/create-omnistrate-custom-network
         id: create_custom_network_aws
         with:
@@ -240,7 +239,6 @@ jobs:
           name: ${{ env.AWS_NETWORK_NAME }}
 
       - name: Create Omnistrate Custom Network - AZURE
-        if: ${{ env.TEST_MODE == 'full' }}
         uses: ./.github/actions/create-omnistrate-custom-network
         id: create_custom_network_azure
         with:
@@ -253,6 +251,7 @@ jobs:
 
   test:
     needs: [create-custom-networks, create-runners]
+    if: always()
     runs-on: ${{ matrix.instances.runner_label || 'ubuntu-latest' }}
     strategy:
       fail-fast: false

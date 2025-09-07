@@ -91,20 +91,6 @@ def test_standalone_pack(instance):
             network_type=cfg["network_type"],
         )
 
-    # 3) Update memory (resize). No revert required by your policy.
-    if _run_step(cfg, "resize"):
-        logging.info("Resizing instance memory")
-        new_type = cfg["new_instance_type"] or cfg["orig_instance_type"]
-        instance.update_instance_type(new_type, wait_until_ready=True)
-        logging.debug("Validating data after resize")
-        assert_data(
-            instance,
-            ssl,
-            msg="Data missing after resize",
-            network_type=cfg["network_type"],
-        )
-
-    # 6) OOM
     if _run_step(cfg, "oom"):
         logging.info("Simulating OOM")
         stress_oom(
@@ -118,5 +104,17 @@ def test_standalone_pack(instance):
             network_type=cfg["network_type"],
         )
         logging.debug("Passed OOM stress test")
+
+    if _run_step(cfg, "resize"):
+        logging.info("Resizing instance memory")
+        new_type = cfg["new_instance_type"] or cfg["orig_instance_type"]
+        instance.update_instance_type(new_type, wait_until_ready=True)
+        logging.debug("Validating data after resize")
+        assert_data(
+            instance,
+            ssl,
+            msg="Data missing after resize",
+            network_type=cfg["network_type"],
+        )
 
     logging.info("Completed test_standalone_pack")

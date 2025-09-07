@@ -135,6 +135,7 @@ def stress_oom(
     ssl=False,
     query_size="small",
     network_type="PUBLIC",
+    stress_oomers=5,
 ):
     """
     Keep writing until we hit OOM.
@@ -176,7 +177,7 @@ def stress_oom(
                 logging.exception("Unexpected error during stress test in worker")
                 raise
 
-    num_clients = int(os.environ.get("STRESS_OOM_CLIENTS", 5))
+    num_clients = int(os.environ.get("STRESS_OOM_CLIENTS", stress_oomers))
     logging.info(f"Running stress test with {num_clients} parallel clients")
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_clients) as executor:

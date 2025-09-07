@@ -199,8 +199,8 @@ def stress_oom(
                 ) from exc
 
     if is_cluster:
-        g.client.execute_command("FLUSHALL", target_nodes="ALL_NODES")
-        g.client.execute_command("BGREWRITEAOF", target_nodes="ALL_NODES")
+        g.client.execute_command("FLUSHALL", target_nodes="all")
+        g.client.execute_command("BGREWRITEAOF", target_nodes="all")
     else:
         g.client.execute_command("FLUSHALL")
         g.client.execute_command("BGREWRITEAOF")

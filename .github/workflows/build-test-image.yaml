@@ -8,6 +8,8 @@ on:
       - "tests/**"
       - "compose/**"
   push:
+    tags:
+      - "v*"
     paths:
       - "src/**"
       - "tests/**"

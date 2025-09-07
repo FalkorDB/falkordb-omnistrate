@@ -4,6 +4,10 @@ import logging
 from redis.exceptions import OutOfMemoryError
 from .classes.omnistrate_fleet_instance import OmnistrateFleetInstance
 
+import concurrent.futures
+
+import os
+
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -131,6 +135,8 @@ def stress_oom(
     ssl=False,
     query_size="small",
     network_type="PUBLIC",
+    stress_oomers=5,
+    is_cluster=False,
 ):
     """
     Keep writing until we hit OOM.
@@ -141,23 +147,63 @@ def stress_oom(
     big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
     medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
-    q = small if query_size == "small" else medium if query_size == "medium" else big
-    while True:
+
+    if query_size in ("medium", "big"):
         try:
-            logging.debug("Executing query: %s", q)
-            g.query(q)
-            time.sleep(1)
+            cypher_query = f"""
+            LOAD CSV FROM "https://storage.googleapis.com/falkordb-benchmark-datasets/oom_dataset.csv" AS row CREATE (:Person {{name: row[0], age: toInteger(row[1])}})
+            """
+            g.query(cypher_query)
+            logging.info("Preloaded OOM dataset successfully")
         except Exception as e:
-            # Different drivers raise different OOM types/strings; be lenient.
-            if (
-                isinstance(e, OutOfMemoryError)
-                or "OOM" in str(e).upper()
-                or "OUT OF MEMORY" in str(e).upper()
-            ):
-                logging.warning("Out of memory condition triggered")
-                return
-            logging.exception("Unexpected error during stress test")
-            raise
+            logging.error("Failed to preload OOM dataset:" + str(e))
+            raise AssertionError("Failed to preload OOM dataset") from e
+
+    q = small if query_size == "small" else medium if query_size == "medium" else big
+
+    def stress_worker():
+        while True:
+            try:
+                logging.debug("Executing query: %s", q)
+                g.query(q)
+                time.sleep(1)
+            except Exception as e:
+                if (
+                    isinstance(e, OutOfMemoryError)
+                    or "OOM" in str(e).upper()
+                    or "OUT OF MEMORY" in str(e).upper()
+                ):
+                    logging.warning("Out of memory condition triggered in worker")
+                    return "OOM"
+                logging.exception("Unexpected error during stress test in worker")
+                raise
+
+    num_clients = int(os.environ.get("STRESS_OOM_CLIENTS", stress_oomers))
+    logging.info(f"Running stress test with {num_clients} parallel clients")
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_clients) as executor:
+        futures = [executor.submit(stress_worker) for _ in range(num_clients)]
+        # Wait for any worker to hit OOM or error
+        done, _ = concurrent.futures.wait(
+            futures, return_when=concurrent.futures.FIRST_EXCEPTION
+        )
+        # Cancel remaining workers
+        for f in futures:
+            f.cancel()
+        # Check if any worker raised an unexpected error (not OOM)
+        for f in done:
+            exc = f.exception()
+            if exc is not None:
+                raise AssertionError(
+                    "Stress worker raised an unexpected error, OOM did not occur"
+                ) from exc
+
+    if is_cluster:
+        g.client.execute_command("FLUSHALL", target_nodes="primaries")
+        g.client.execute_command("BGREWRITEAOF", target_nodes="primaries")
+    else:
+        g.client.execute_command("FLUSHALL")
+        g.client.execute_command("BGREWRITEAOF")
 
 
 def assert_multi_zone(instance: OmnistrateFleetInstance, host_count=6):

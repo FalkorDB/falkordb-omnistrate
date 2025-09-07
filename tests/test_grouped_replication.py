@@ -216,9 +216,24 @@ def test_replication_pack(instance):
             network_type=cfg["network_type"],
         )
 
-    # 6) Update memory (resize) — no revert required
+    if _run_step(cfg, "oom"):
+        logging.info("Simulating OOM")
+        stress_oom(
+            instance,
+            ssl=ssl,
+            network_type=cfg["network_type"],
+            query_size="big",
+            stress_oomers=10,
+        )
+        logging.debug("Passed OOM stress test")
+
     if _run_step(cfg, "resize"):
         logging.info("Resizing instance memory")
+        add_data(
+            instance,
+            ssl=ssl,
+            network_type=cfg["network_type"],
+        )
         new_type = cfg["new_instance_type"] or cfg["orig_instance_type"]
         instance.update_instance_type(new_type, wait_until_ready=True)
         logging.debug("Validating data after resize")
@@ -228,13 +243,5 @@ def test_replication_pack(instance):
             msg="Data missing after resize",
             network_type=cfg["network_type"],
         )
-
-    # 7) OOM
-    if _run_step(cfg, "oom"):
-        logging.info("Simulating OOM")
-        stress_oom(
-            instance, ssl=ssl, network_type=cfg["network_type"], query_size="big"
-        )
-        logging.debug("Passed OOM stress test")
 
     logging.info("Completed test_replication_pack")

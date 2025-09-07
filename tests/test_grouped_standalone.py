@@ -107,6 +107,11 @@ def test_standalone_pack(instance):
 
     if _run_step(cfg, "resize"):
         logging.info("Resizing instance memory")
+        add_data(
+            instance,
+            ssl=ssl,
+            network_type=cfg["network_type"],
+        )
         new_type = cfg["new_instance_type"] or cfg["orig_instance_type"]
         instance.update_instance_type(new_type, wait_until_ready=True)
         logging.debug("Validating data after resize")

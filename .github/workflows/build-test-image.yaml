@@ -57,10 +57,10 @@ jobs:
             arm: false
             image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
     runs-on: ubuntu-latest
+    if: contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule'
     steps:
       - name: Create runners
         id: create-runner
-        if: env.TEST_MODE == 'full'
         uses: FalkorDB/gce-github-runner@install_docker
         with:
           token: ${{ secrets.GH_SA_TOKEN }}

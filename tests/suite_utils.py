@@ -146,16 +146,16 @@ def stress_oom(
     medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
 
-    cypher_query = f"""
-    LOAD CSV FROM "https://storage.googleapis.com/falkordb-benchmark-datasets/oom_dataset.csv" AS row CREATE (:Person {{name: row[0], age: toInteger(row[1])}})
-    """
-
-    try:
-        g.query(cypher_query)
-        logging.info("Preloaded OOM dataset successfully")
-    except Exception as e:
-        logging.error("Failed to preload OOM dataset:" + str(e))
-        raise AssertionError("Failed to preload OOM dataset") from e
+    if query_size in ("medium", "big"):
+        try:
+            cypher_query = f"""
+            LOAD CSV FROM "https://storage.googleapis.com/falkordb-benchmark-datasets/oom_dataset.csv" AS row CREATE (:Person {{name: row[0], age: toInteger(row[1])}})
+            """
+            g.query(cypher_query)
+            logging.info("Preloaded OOM dataset successfully")
+        except Exception as e:
+            logging.error("Failed to preload OOM dataset:" + str(e))
+            raise AssertionError("Failed to preload OOM dataset") from e
 
     q = small if query_size == "small" else medium if query_size == "medium" else big
 
@@ -195,6 +195,7 @@ def stress_oom(
                 raise AssertionError(
                     "Stress worker raised an unexpected error, OOM did not occur"
                 ) from exc
+
 
 def assert_multi_zone(instance: OmnistrateFleetInstance, host_count=6):
     """

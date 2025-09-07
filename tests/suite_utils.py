@@ -196,8 +196,8 @@ def stress_oom(
                     "Stress worker raised an unexpected error, OOM did not occur"
                 ) from exc
             
-    g.client.execute_command("FLUSHALL")
-    g.client.execute_command("BGREWRITEAOF")
+    g.client.execute_command("FLUSHALL", target_nodes="ALL_NODES")
+    g.client.execute_command("BGREWRITEAOF", target_nodes="ALL_NODES")
 
 
 def assert_multi_zone(instance: OmnistrateFleetInstance, host_count=6):

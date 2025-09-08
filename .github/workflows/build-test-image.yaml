@@ -42,12 +42,12 @@ env:
   FALKORDB_EXPORTER_IMAGE_NAME: falkordb-cloud-exporter
   FALKORDB_SENTINEL_IMAGE_NAME: falkordb-cloud-sentinel
   FALKORDB_VERSION: v4.12.5
-  FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' }}
-  PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' }}
-  ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' }}
-  GCP_NETWORK_NAME: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' }}
-  AWS_NETWORK_NAME: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' }}
-  AZURE_NETWORK_NAME: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' }}
+  FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+  PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+  ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+  GCP_NETWORK_NAME: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+  AWS_NETWORK_NAME: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+  AZURE_NETWORK_NAME: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SERVICE_ID: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
   ENVIRONMENT_ID: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}

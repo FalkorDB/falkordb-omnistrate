@@ -1,7 +1,7 @@
 import time
 import threading
 import logging
-from redis.exceptions import OutOfMemoryError
+from redis.exceptions import OutOfMemoryError, ReadOnlyError
 from .classes.omnistrate_fleet_instance import OmnistrateFleetInstance
 
 import concurrent.futures
@@ -199,8 +199,14 @@ def stress_oom(
                 ) from exc
 
     if is_cluster:
-        g.client.execute_command("FLUSHALL", target_nodes="primaries")
-        g.client.execute_command("BGREWRITEAOF", target_nodes="primaries")
+        try:
+            g.client.execute_command("FLUSHALL", target_nodes="primaries")
+            g.client.execute_command("BGREWRITEAOF", target_nodes="primaries")
+        except ReadOnlyError:
+            logging.warning("Primary nodes are read-only, re-initializing cache")
+            g.client.nodes_manager.initialize()
+            g.client.execute_command("FLUSHALL", target_nodes="primaries")
+            g.client.execute_command("BGREWRITEAOF", target_nodes="primaries")
     else:
         g.client.execute_command("FLUSHALL")
         g.client.execute_command("BGREWRITEAOF")

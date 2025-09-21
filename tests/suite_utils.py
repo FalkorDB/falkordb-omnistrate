@@ -204,7 +204,7 @@ def stress_oom(
             g.client.execute_command("BGREWRITEAOF", target_nodes="primaries")
         except ReadOnlyError:
             logging.warning("Primary nodes are read-only, re-initializing cache")
-            g.client.nodes_manager.initialize()
+            g.client.connection.nodes_manager.initialize()
             g.client.execute_command("FLUSHALL", target_nodes="primaries")
             g.client.execute_command("BGREWRITEAOF", target_nodes="primaries")
     else:

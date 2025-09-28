@@ -201,15 +201,22 @@ def stress_oom(
     if is_cluster:
         try:
             g.client.execute_command("FLUSHALL", target_nodes="primaries")
-            g.client.execute_command("BGREWRITEAOF", target_nodes="primaries")
+            try_bgrewriteaof(g.client, target_nodes="primaries")
         except ReadOnlyError:
             logging.warning("Primary nodes are read-only, re-initializing cache")
             g.client.connection.nodes_manager.initialize()
             g.client.execute_command("FLUSHALL", target_nodes="primaries")
-            g.client.execute_command("BGREWRITEAOF", target_nodes="primaries")
+            try_bgrewriteaof(g.client, target_nodes="primaries")
     else:
         g.client.execute_command("FLUSHALL")
-        g.client.execute_command("BGREWRITEAOF")
+        try_bgrewriteaof(g.client)
+
+
+def try_bgrewriteaof(client, **kwargs):
+    try:
+        client.execute_command("BGREWRITEAOF", **kwargs)
+    except Exception as e:
+        logging.warning("BGREWRITEAOF failed, %s", e)
 
 
 def assert_multi_zone(instance: OmnistrateFleetInstance, host_count=6):

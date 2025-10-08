@@ -434,7 +434,7 @@ check_network_type_changes() {
 
 if [ -f $NODE_CONF_FILE ]; then
   # Get current admin password
-  CURRENT_ADMIN_PASSWORD=$(cat $NODE_CONF_FILE | grep -oP '(?<=requirepass ).*' | sed 's/\"//g')
+  CURRENT_ADMIN_PASSWORD=$(awk '/^requirepass / {print $2}' $NODE_CONF_FILE | sed 's/\"//g')
   # If current admin password is different from the new one, reset it
   if [[ "$CURRENT_ADMIN_PASSWORD" != "$ADMIN_PASSWORD" ]]; then
     RESET_ADMIN_PASSWORD=1

@@ -1,6 +1,6 @@
-ARG FALKORDB_VERSION=v4.14.0
+ARG FALKORDB_VERSION=v4.14.0-alpine
 
-FROM falkordb/falkordb:$FALKORDB_VERSION
+FROM falkordb/falkordb-server:$FALKORDB_VERSION
 
 RUN apt-get update && apt-get install -y curl jq openssl cron gdb
 

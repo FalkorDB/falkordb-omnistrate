@@ -2,7 +2,7 @@ ARG FALKORDB_VERSION=v4.14.0-alpine
 
 FROM falkordb/falkordb-server:$FALKORDB_VERSION
 
-RUN apt-get update && apt-get install -y curl jq openssl cron gdb
+RUN apk add --no-cache curl jq openssl cron supervisor gdb
 
 RUN useradd -u 1000 -m falkordb && usermod -aG crontab falkordb && \
   touch /var/run/crond.pid && chown root:crontab /var/run/crond.pid \

@@ -12,6 +12,10 @@ COPY src/falkordb-node/node.conf .
 COPY src/falkordb-node/node-entrypoint.sh /usr/local/bin/
 COPY scripts/download-debug-so.sh /falkordb/download-debug-so.sh
 
+# create falkordb user and group
+RUN addgroup -S falkordb && \
+    adduser -S falkordb -G falkordb
+
 RUN chown falkordb:falkordb /var/lib/falkordb/* && \
   chmod +x /usr/local/bin/node-entrypoint.sh && \
   mkdir -p /var/lib/falkordb && \

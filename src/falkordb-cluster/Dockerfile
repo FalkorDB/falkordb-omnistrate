@@ -10,6 +10,10 @@ COPY src/falkordb-cluster/node.conf .
 COPY src/falkordb-cluster/cluster-entrypoint.sh /usr/local/bin/
 COPY scripts/download-debug-so.sh .
 
+# create falkordb user and group
+RUN addgroup -S falkordb && \
+    adduser -S falkordb -G falkordb
+
 RUN chown falkordb:falkordb /falkordb/* && \
   chmod +x /usr/local/bin/cluster-entrypoint.sh && \
   mkdir -p /var/lib/falkordb && \

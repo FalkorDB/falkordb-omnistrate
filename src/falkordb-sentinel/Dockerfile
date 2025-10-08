@@ -11,6 +11,10 @@ WORKDIR /falkordb
 COPY src/falkordb-sentinel/sentinel.conf .
 COPY src/falkordb-sentinel/sentinel-entrypoint.sh /usr/local/bin/
 
+# create falkordb user and group
+RUN addgroup -S falkordb && \
+    adduser -S falkordb -G falkordb
+
 RUN chown falkordb:falkordb /falkordb/* && \
   chmod +x /usr/local/bin/sentinel-entrypoint.sh && \
   mkdir -p /var/lib/falkordb && \

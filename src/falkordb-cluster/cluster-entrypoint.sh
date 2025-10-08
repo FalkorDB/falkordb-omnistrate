@@ -373,6 +373,15 @@ set_aof_persistence_config() {
   fi
 }
 
+set_max_info_queries() {
+  # if MAX_INFO_QUERIES does not exist in node.conf, set it to 1
+  if ! grep -q "MAX_INFO_QUERIES 1" $NODE_CONF_FILE; then
+    local max_info_queries=${FALKORDB_MAX_INFO_QUERIES:-1}
+    echo "Setting max info queries to $max_info_queries"
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING GRAPH.CONFIG SET MAX_INFO_QUERIES $max_info_queries
+  fi
+}
+
 config_rewrite() {
   echo "Rewriting configuration"
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG REWRITE
@@ -475,6 +484,7 @@ create_user
 set_memory_limit
 set_rdb_persistence_config
 set_aof_persistence_config
+set_max_info_queries
 
 config_rewrite
 

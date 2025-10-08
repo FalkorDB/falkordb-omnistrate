@@ -373,6 +373,15 @@ set_persistence_config() {
   fi
 }
 
+set_max_info_queries() {
+  # if MAX_INFO_QUERIES does not exist in node.conf, set it to 1
+  if ! grep -q "MAX_INFO_QUERIES 1" $NODE_CONF_FILE; then
+    local max_info_queries=${FALKORDB_MAX_INFO_QUERIES:-1}
+    echo "Setting max info queries to $max_info_queries"
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING GRAPH.CONFIG SET MAX_INFO_QUERIES $max_info_queries
+  fi
+}
+
 create_user() {
   echo "Creating falkordb user"
 
@@ -535,6 +544,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   config_rewrite
 fi
 
+set_max_info_queries
 check_network_type_changes
 
 # If TLS=true, create a script to rotate the certificate

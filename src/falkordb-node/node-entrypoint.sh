@@ -479,22 +479,28 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
   is_replica
   if [[ $IS_REPLICA -eq 1 ]]; then
-    echo "replicaof $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER" >>$NODE_CONF_FILE
+    if ! grep -q "^replicaof " "$NODE_CONF_FILE"; then
+      echo "replicaof $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER" >>"$NODE_CONF_FILE"
+    fi
     echo "Starting Replica"
   else
     echo "Starting Master"
   fi
 
   if [[ $TLS == "true" ]]; then
-    echo "port 0" >>$NODE_CONF_FILE
-    echo "tls-port $NODE_PORT" >>$NODE_CONF_FILE
-    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$NODE_CONF_FILE
-    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$NODE_CONF_FILE
-    echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
-    echo "tls-replication yes" >>$NODE_CONF_FILE
-    echo "tls-auth-clients no" >>$NODE_CONF_FILE
+    if ! grep -q "^tls-port $NODE_PORT" "$NODE_CONF_FILE"; then
+      echo "port 0" >>$NODE_CONF_FILE
+      echo "tls-port $NODE_PORT" >>$NODE_CONF_FILE
+      echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$NODE_CONF_FILE
+      echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$NODE_CONF_FILE
+      echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
+      echo "tls-replication yes" >>$NODE_CONF_FILE
+      echo "tls-auth-clients no" >>$NODE_CONF_FILE
+    fi
   else
-    echo "port $NODE_PORT" >>$NODE_CONF_FILE
+    if ! grep -q "^port $NODE_PORT" "$NODE_CONF_FILE"; then
+      echo "port $NODE_PORT" >>$NODE_CONF_FILE
+    fi
   fi
 
   redis-server $NODE_CONF_FILE --logfile $FALKORDB_LOG_FILE_PATH &

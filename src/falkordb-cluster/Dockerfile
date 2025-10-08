@@ -2,7 +2,8 @@ ARG FALKORDB_VERSION=v4.14.0-alpine
 
 FROM falkordb/falkordb-server:$FALKORDB_VERSION
 
-RUN apk add --no-cache curl jq openssl supervisor gdb
+RUN apk update && \
+    apk add --no-cache bash curl jq openssl supervisor gdb
 
 WORKDIR /falkordb
 

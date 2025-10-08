@@ -665,7 +665,7 @@ services:
       - FALKORDB_USER=$var.falkordbUser
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
-      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - ROOT_CA_PATH=/etc/ssl/certs/ca-cert-GlobalSign_Root_CA_-_R6.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
@@ -1154,7 +1154,7 @@ services:
       - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
-      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - ROOT_CA_PATH=/etc/ssl/certs/ca-cert-GlobalSign_Root_CA_-_R6.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
@@ -1359,7 +1359,7 @@ services:
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - DATA_DIR=/var/lib/falkordb
-      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - ROOT_CA_PATH=/etc/ssl/certs/ca-cert-GlobalSign_Root_CA_-_R6.pem
       - NODE_HOST=$sys.network.node.externalEndpoint
       - SENTINEL_IGNORE_MASTER_CHECK=true
       - NUM_REPLICAS=$var.numReplicas
@@ -1892,7 +1892,7 @@ services:
       - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
-      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - ROOT_CA_PATH=/etc/ssl/certs/ca-cert-GlobalSign_Root_CA_-_R6.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
@@ -2096,7 +2096,7 @@ services:
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
       - DATA_DIR=/var/lib/falkordb
-      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - ROOT_CA_PATH=/etc/ssl/certs/ca-cert-GlobalSign_Root_CA_-_R6.pem
       - NODE_HOST=$sys.network.node.externalEndpoint
       - SENTINEL_IGNORE_MASTER_CHECK=true
       - NUM_REPLICAS=$var.numReplicas
@@ -2461,7 +2461,7 @@ services:
       - FALKORDB_USER=$var.falkordbUser
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
-      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - ROOT_CA_PATH=/etc/ssl/certs/ca-cert-GlobalSign_Root_CA_-_R6.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize
@@ -2816,7 +2816,7 @@ services:
       - FALKORDB_USER=$var.falkordbUser
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
-      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - ROOT_CA_PATH=/etc/ssl/certs/ca-cert-GlobalSign_Root_CA_-_R6.pem
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize

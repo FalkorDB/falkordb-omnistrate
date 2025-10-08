@@ -69,7 +69,7 @@ SENTINEL_QUORUM=${SENTINEL_QUORUM:-2}
 FALKORDB_MASTER_HOST=''
 FALKORDB_MASTER_PORT_NUMBER=${MASTER_PORT:-6379}
 IS_REPLICA=${IS_REPLICA:-0}
-ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
+ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/ca-cert-GlobalSign_Root_CA_-_R6.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
 DATA_DIR=${DATA_DIR:-"${FALKORDB_HOME}/data"}
 
@@ -108,7 +108,7 @@ echo "
     #!/bin/bash
     set -e
     AOF_FILE_SIZE_TO_MONITOR=\${AOF_FILE_SIZE_TO_MONITOR:-5}
-    ROOT_CA_PATH=\${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
+    ROOT_CA_PATH=\${ROOT_CA_PATH:-/etc/ssl/certs/ca-cert-GlobalSign_Root_CA_-_R6.pem}
     TLS_CONNECTION_STRING=$(if [[ \$TLS == "true" ]]; then echo "--tls --cacert \$ROOT_CA_PATH"; else echo ""; fi)
     size=0
     for file in $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof; do

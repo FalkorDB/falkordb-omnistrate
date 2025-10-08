@@ -59,7 +59,7 @@ NODE_HOST=${NODE_HOST:-localhost}
 NODE_PORT=${NODE_PORT:-6379}
 BUS_PORT=${BUS_PORT:-16379}
 
-ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
+ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/ca-cert-GlobalSign_Root_CA_-_R6.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
 DATA_DIR=${DATA_DIR:-"${FALKORDB_HOME}/data"}
 
@@ -96,7 +96,7 @@ if [[ ! -s "$FALKORDB_HOME/run_bgrewriteaof" && ! -f "$FALKORDB_HOME/run_bgrewri
       #!/bin/bash
       set -e
       AOF_FILE_SIZE_TO_MONITOR=\${AOF_FILE_SIZE_TO_MONITOR:-5}
-      ROOT_CA_PATH=\${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
+      ROOT_CA_PATH=\${ROOT_CA_PATH:-/etc/ssl/certs/ca-cert-GlobalSign_Root_CA_-_R6.pem}
       TLS_CONNECTION_STRING=$(if [[ \$TLS == "true" ]]; then echo "--tls --cacert \$ROOT_CA_PATH"; else echo ""; fi)
       size=\$(stat -c%s $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof)
       if [ \$size -gt \$((AOF_FILE_SIZE_TO_MONITOR * 1024 * 1024)) ]; then

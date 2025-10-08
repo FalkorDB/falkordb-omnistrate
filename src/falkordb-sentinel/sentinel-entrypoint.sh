@@ -35,7 +35,7 @@ NODE_HOST=${NODE_HOST:-localhost}
 NODE_PORT=${NODE_PORT:-6379}
 SENTINEL_HOST=sentinel-$(echo $RESOURCE_ALIAS | cut -d "-" -f 2)-0.$LOCAL_DNS_SUFFIX
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
-ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
+ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/ca-cert-GlobalSign_Root_CA_-_R6.pem}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
 AUTH_CONNECTION_STRING="-a $ADMIN_PASSWORD --no-auth-warning"

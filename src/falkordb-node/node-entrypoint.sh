@@ -96,7 +96,6 @@ DATE_NOW=$(date +"%Y%m%d%H%M%S")
 
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo "/dev/null"; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
-AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'*/30 * * * *'}
 AOF_FILE_SIZE_TO_MONITOR=${AOF_FILE_SIZE_TO_MONITOR:-5} # 5MB
 
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then

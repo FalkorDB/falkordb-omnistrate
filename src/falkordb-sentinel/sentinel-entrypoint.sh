@@ -217,15 +217,11 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   fi
 fi
 
-#Start cron
-cron
 
 # If TLS=true, create a job to rotate the certificate
 if [[ "$TLS" == "true" ]]; then
   if [[ $RUN_SENTINEL -eq 1 ]]; then
-    backoff=$(shuf -i 1-59 -n 1)
-    cron="$backoff 0 * * *"
-    echo "Creating sentinel certificate rotation job. Cron: $cron"
+    echo "Creating sentinel certificate rotation job."
     echo "
     #!/bin/bash
     set -e
@@ -233,10 +229,6 @@ if [[ "$TLS" == "true" ]]; then
     supervisorctl -c $DATA_DIR/supervisord.conf restart redis-sentinel
     " >$DATA_DIR/cert_rotate_sentinel.sh
     chmod +x $DATA_DIR/cert_rotate_sentinel.sh
-    (
-      crontab -l 2>/dev/null
-      echo "$cron $DATA_DIR/cert_rotate_sentinel.sh"
-    ) | crontab -
   fi
 fi
 

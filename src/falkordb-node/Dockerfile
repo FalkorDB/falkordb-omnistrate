@@ -2,15 +2,7 @@ ARG FALKORDB_VERSION=v4.14.0-alpine
 
 FROM falkordb/falkordb-server:$FALKORDB_VERSION
 
-RUN apk add --no-cache curl jq openssl dcron supervisor gdb
-
-RUN useradd -u 1000 -m falkordb && usermod -aG crontab falkordb && \
-  touch /var/run/crond.pid && chown root:crontab /var/run/crond.pid && \
-  touch /var/run/supervisord.pid && chown falkordb:falkordb /var/run/supervisord.pid && \
-  chmod 660 /var/run/crond.pid && \
-  chmod 660 /var/run/supervisord.pid && \
-  chmod u+s /usr/sbin/cron
-
+RUN apk add --no-cache curl jq openssl supervisor gdb shadow
 
 RUN mkdir -p /var/lib/falkordb
 

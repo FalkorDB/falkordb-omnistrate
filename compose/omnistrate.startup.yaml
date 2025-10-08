@@ -388,7 +388,7 @@ services:
       - DATA_DIR=/var/lib/falkordb
       - RANDOM_NODE_PORT=$sys.network.node.externalPorts["6379"]
       - MEMORY_LIMIT=$var.memoryRequestsAndLimits
-      - ROOT_CA_PATH=/etc/ssl/certs/ca-cert-GlobalSign_Root_CA_-_R6.pem
+      - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
       - PERSISTENCE_RDB_CONFIG_INPUT=$var.RDBPersistenceConfig
       - PERSISTENCE_AOF_CONFIG=$var.AOFPersistenceConfig
       - FALKORDB_CACHE_SIZE=$var.falkorDBCacheSize

@@ -144,7 +144,7 @@ services:
       - FALKORDB_USER=$var.falkordbUser
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=e2-custom-small-1024
-      - ROOT_CA_PATH=/etc/ssl/certs/GlobalSign_Root_CA.pem
+      - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
       - FALKORDB_CACHE_SIZE=25
       - FALKORDB_NODE_CREATION_BUFFER=16384
       - FALKORDB_MAX_QUEUED_QUERIES=50

@@ -69,7 +69,7 @@ SENTINEL_QUORUM=${SENTINEL_QUORUM:-2}
 FALKORDB_MASTER_HOST=''
 FALKORDB_MASTER_PORT_NUMBER=${MASTER_PORT:-6379}
 IS_REPLICA=${IS_REPLICA:-0}
-ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
+ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
 DATA_DIR=${DATA_DIR:-"${FALKORDB_HOME}/data"}
 
@@ -96,7 +96,6 @@ DATE_NOW=$(date +"%Y%m%d%H%M%S")
 
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo "/dev/null"; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
-AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'*/30 * * * *'}
 AOF_FILE_SIZE_TO_MONITOR=${AOF_FILE_SIZE_TO_MONITOR:-5} # 5MB
 
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
@@ -109,7 +108,7 @@ echo "
     #!/bin/bash
     set -e
     AOF_FILE_SIZE_TO_MONITOR=\${AOF_FILE_SIZE_TO_MONITOR:-5}
-    ROOT_CA_PATH=\${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
+    ROOT_CA_PATH=\${ROOT_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
     TLS_CONNECTION_STRING=$(if [[ \$TLS == "true" ]]; then echo "--tls --cacert \$ROOT_CA_PATH"; else echo ""; fi)
     size=0
     for file in $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof; do
@@ -373,6 +372,15 @@ set_persistence_config() {
   fi
 }
 
+set_max_info_queries() {
+  # if MAX_INFO_QUERIES does not exist in node.conf, set it to 1
+  if ! grep -q "MAX_INFO_QUERIES 1" $NODE_CONF_FILE; then
+    local max_info_queries=${FALKORDB_MAX_INFO_QUERIES:-1}
+    echo "Setting max info queries to $max_info_queries"
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING GRAPH.CONFIG SET MAX_INFO_QUERIES $max_info_queries
+  fi
+}
+
 create_user() {
   echo "Creating falkordb user"
 
@@ -426,7 +434,7 @@ check_network_type_changes() {
 
 if [ -f $NODE_CONF_FILE ]; then
   # Get current admin password
-  CURRENT_ADMIN_PASSWORD=$(cat $NODE_CONF_FILE | grep -oP '(?<=requirepass ).*' | sed 's/\"//g')
+  CURRENT_ADMIN_PASSWORD=$(awk '/^requirepass / {print $2}' $NODE_CONF_FILE | sed 's/\"//g')
   # If current admin password is different from the new one, reset it
   if [[ "$CURRENT_ADMIN_PASSWORD" != "$ADMIN_PASSWORD" ]]; then
     RESET_ADMIN_PASSWORD=1
@@ -470,22 +478,28 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
   is_replica
   if [[ $IS_REPLICA -eq 1 ]]; then
-    echo "replicaof $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER" >>$NODE_CONF_FILE
+    if ! grep -q "^replicaof " "$NODE_CONF_FILE"; then
+      echo "replicaof $FALKORDB_MASTER_HOST $FALKORDB_MASTER_PORT_NUMBER" >>"$NODE_CONF_FILE"
+    fi
     echo "Starting Replica"
   else
     echo "Starting Master"
   fi
 
   if [[ $TLS == "true" ]]; then
-    echo "port 0" >>$NODE_CONF_FILE
-    echo "tls-port $NODE_PORT" >>$NODE_CONF_FILE
-    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$NODE_CONF_FILE
-    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$NODE_CONF_FILE
-    echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
-    echo "tls-replication yes" >>$NODE_CONF_FILE
-    echo "tls-auth-clients no" >>$NODE_CONF_FILE
+    if ! grep -q "^tls-port $NODE_PORT" "$NODE_CONF_FILE"; then
+      echo "port 0" >>$NODE_CONF_FILE
+      echo "tls-port $NODE_PORT" >>$NODE_CONF_FILE
+      echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$NODE_CONF_FILE
+      echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$NODE_CONF_FILE
+      echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
+      echo "tls-replication yes" >>$NODE_CONF_FILE
+      echo "tls-auth-clients no" >>$NODE_CONF_FILE
+    fi
   else
-    echo "port $NODE_PORT" >>$NODE_CONF_FILE
+    if ! grep -q "^port $NODE_PORT" "$NODE_CONF_FILE"; then
+      echo "port $NODE_PORT" >>$NODE_CONF_FILE
+    fi
   fi
 
   redis-server $NODE_CONF_FILE --logfile $FALKORDB_LOG_FILE_PATH &
@@ -535,6 +549,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   config_rewrite
 fi
 
+set_max_info_queries
 check_network_type_changes
 
 # If TLS=true, create a script to rotate the certificate

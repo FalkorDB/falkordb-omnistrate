@@ -854,6 +854,7 @@ services:
           - c6i.8xlarge
         parameterDependencyMap:
           node-sz: nodeInstanceType
+
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -862,6 +863,8 @@ services:
         required: false
         export: false
         defaultValue: "2"
+        min: 2
+        max: 2
         parameterDependencyMap:
           node-sz: numReplicas
       - key: enableTLS
@@ -1611,6 +1614,7 @@ services:
           - c6i.8xlarge
         parameterDependencyMap:
           node-mz: nodeInstanceType
+
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1619,6 +1623,8 @@ services:
         required: false
         export: false
         defaultValue: "2"
+        min: 2
+        max: 2
         parameterDependencyMap:
           node-mz: numReplicas
       - key: enableTLS

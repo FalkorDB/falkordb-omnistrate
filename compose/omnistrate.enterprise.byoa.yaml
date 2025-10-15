@@ -820,6 +820,8 @@ services:
         required: false
         export: false
         defaultValue: "2"
+        min: 2
+        max: 2
         parameterDependencyMap:
           node-sz: numReplicas
       - key: enableTLS
@@ -1569,6 +1571,7 @@ services:
         defaultValue: e2-custom-4-8192
         parameterDependencyMap:
           node-mz: nodeInstanceType
+
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1577,6 +1580,8 @@ services:
         required: false
         export: false
         defaultValue: "2"
+        min: 2
+        max: 2
         parameterDependencyMap:
           node-mz: numReplicas
       - key: enableTLS

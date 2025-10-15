@@ -39,7 +39,6 @@ FALKORDB_TIMEOUT_DEFAULT=${FALKORDB_TIMEOUT_DEFAULT:-0}
 FALKORDB_VKEY_MAX_ENTITY_COUNT=${FALKORDB_VKEY_MAX_ENTITY_COUNT:-4611686000000000000}
 FALKORDB_EFFECTS_THRESHOLD=${FALKORDB_EFFECTS_THRESHOLD:-0}
 MEMORY_LIMIT=${MEMORY_LIMIT:-''}
-AOF_CRON_EXPRESSION=${AOF_CRON_EXPRESSION:-'*/30 * * * *'}
 AOF_FILE_SIZE_TO_MONITOR=${AOF_FILE_SIZE_TO_MONITOR:-5} # 5MB
 
 # If vars are <nil>, set it to 0
@@ -60,7 +59,7 @@ NODE_HOST=${NODE_HOST:-localhost}
 NODE_PORT=${NODE_PORT:-6379}
 BUS_PORT=${BUS_PORT:-16379}
 
-ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
+ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
 DATA_DIR=${DATA_DIR:-"${FALKORDB_HOME}/data"}
 
@@ -97,7 +96,7 @@ if [[ ! -s "$FALKORDB_HOME/run_bgrewriteaof" && ! -f "$FALKORDB_HOME/run_bgrewri
       #!/bin/bash
       set -e
       AOF_FILE_SIZE_TO_MONITOR=\${AOF_FILE_SIZE_TO_MONITOR:-5}
-      ROOT_CA_PATH=\${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
+      ROOT_CA_PATH=\${ROOT_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
       TLS_CONNECTION_STRING=$(if [[ \$TLS == "true" ]]; then echo "--tls --cacert \$ROOT_CA_PATH"; else echo ""; fi)
       size=\$(stat -c%s $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof)
       if [ \$size -gt \$((AOF_FILE_SIZE_TO_MONITOR * 1024 * 1024)) ]; then
@@ -373,6 +372,15 @@ set_aof_persistence_config() {
   fi
 }
 
+set_max_info_queries() {
+  # if MAX_INFO_QUERIES does not exist in node.conf, set it to 1
+  if ! grep -q "MAX_INFO_QUERIES 1" $NODE_CONF_FILE; then
+    local max_info_queries=${FALKORDB_MAX_INFO_QUERIES:-1}
+    echo "Setting max info queries to $max_info_queries"
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING GRAPH.CONFIG SET MAX_INFO_QUERIES $max_info_queries
+  fi
+}
+
 config_rewrite() {
   echo "Rewriting configuration"
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG REWRITE
@@ -475,6 +483,7 @@ create_user
 set_memory_limit
 set_rdb_persistence_config
 set_aof_persistence_config
+set_max_info_queries
 
 config_rewrite
 

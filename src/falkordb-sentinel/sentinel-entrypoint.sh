@@ -35,7 +35,7 @@ NODE_HOST=${NODE_HOST:-localhost}
 NODE_PORT=${NODE_PORT:-6379}
 SENTINEL_HOST=sentinel-$(echo $RESOURCE_ALIAS | cut -d "-" -f 2)-0.$LOCAL_DNS_SUFFIX
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
-ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/GlobalSign_Root_CA.pem}
+ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
 AUTH_CONNECTION_STRING="-a $ADMIN_PASSWORD --no-auth-warning"
@@ -217,15 +217,11 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   fi
 fi
 
-#Start cron
-cron
 
 # If TLS=true, create a job to rotate the certificate
 if [[ "$TLS" == "true" ]]; then
   if [[ $RUN_SENTINEL -eq 1 ]]; then
-    backoff=$(shuf -i 1-59 -n 1)
-    cron="$backoff 0 * * *"
-    echo "Creating sentinel certificate rotation job. Cron: $cron"
+    echo "Creating sentinel certificate rotation job."
     echo "
     #!/bin/bash
     set -e
@@ -233,10 +229,6 @@ if [[ "$TLS" == "true" ]]; then
     supervisorctl -c $DATA_DIR/supervisord.conf restart redis-sentinel
     " >$DATA_DIR/cert_rotate_sentinel.sh
     chmod +x $DATA_DIR/cert_rotate_sentinel.sh
-    (
-      crontab -l 2>/dev/null
-      echo "$cron $DATA_DIR/cert_rotate_sentinel.sh"
-    ) | crontab -
   fi
 fi
 

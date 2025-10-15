@@ -1278,7 +1278,7 @@ services:
           imageNameWithTag: $FalkorDBSentinelImage
           resourceLimits:
             cpu: "200m"
-            memory: 50Mi
+            memory: 100Mi
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: POST_UPGRADE
@@ -2036,7 +2036,7 @@ services:
           imageNameWithTag: $FalkorDBSentinelImage
           resourceLimits:
             cpu: "200m"
-            memory: 50Mi
+            memory: 100Mi
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: POST_UPGRADE

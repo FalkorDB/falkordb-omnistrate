@@ -830,6 +830,7 @@ services:
           - c6i.8xlarge
         parameterDependencyMap:
           node-sz: nodeInstanceType
+
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -838,6 +839,8 @@ services:
         required: false
         export: false
         defaultValue: "2"
+        min: 2
+        max: 2
         parameterDependencyMap:
           node-sz: numReplicas
       - key: enableTLS
@@ -1236,7 +1239,7 @@ services:
           imageNameWithTag: $FalkorDBSentinelImage
           resourceLimits:
             cpu: "200m"
-            memory: 50Mi
+            memory: 100Mi
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: POST_UPGRADE
@@ -1569,6 +1572,7 @@ services:
           - c6i.8xlarge
         parameterDependencyMap:
           node-mz: nodeInstanceType
+
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1577,6 +1581,8 @@ services:
         required: false
         export: false
         defaultValue: "2"
+        min: 2
+        max: 2
         parameterDependencyMap:
           node-mz: numReplicas
       - key: enableTLS
@@ -1976,7 +1982,7 @@ services:
           imageNameWithTag: $FalkorDBSentinelImage
           resourceLimits:
             cpu: "200m"
-            memory: 50Mi
+            memory: 100Mi
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: POST_UPGRADE

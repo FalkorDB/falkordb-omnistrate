@@ -1,0 +1,222 @@
+name: Bump FalkorDB Version
+
+on:
+  repository_dispatch:
+    types: [bump-falkordb-version]
+  workflow_dispatch:
+    inputs:
+      new_version:
+        description: "New FalkorDB version (e.g., v4.14.4)"
+        required: true
+        type: string
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract current FalkorDB version
+        id: extract_version
+        run: |
+          # Extract current version from build-release-image.yaml
+          CURRENT_VERSION=$(grep "FALKORDB_VERSION:" .github/workflows/build-release-image.yaml | head -1 | cut -d':' -f2 | xargs)
+          echo "Current version found: $CURRENT_VERSION"
+
+          # Extract base version without -alpine suffix
+          CURRENT_BASE_VERSION=$(echo "$CURRENT_VERSION" | sed 's/-alpine$//')
+          echo "Current base version: $CURRENT_BASE_VERSION"
+
+          NEW_VERSION="${{ github.event_name == 'workflow_dispatch' && inputs.new_version || github.event.client_payload.new_version }}"
+          # Prepare new version with -alpine suffix
+          NEW_VERSION_ALPINE="$NEW_VERSION-alpine"
+          echo "New version with alpine: $NEW_VERSION_ALPINE"
+
+          # Set outputs
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "current_base_version=$CURRENT_BASE_VERSION" >> $GITHUB_OUTPUT
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_version_alpine=$NEW_VERSION_ALPINE" >> $GITHUB_OUTPUT
+
+      - name: Create issue for version bump
+        id: create_issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Bump FalkorDB to version ${{ steps.extract_version.outputs.new_version }}`,
+              body: `This issue tracks the version bump from ${{ steps.extract_version.outputs.current_base_version }} to ${{ steps.extract_version.outputs.new_version }}.
+
+              ## Changes to be made:
+              - Update FALKORDB_VERSION in GitHub Actions workflows
+              - Update FALKORDB_VERSION in Dockerfiles
+              - Update any other references to the FalkorDB version
+              
+              ## Files to be updated:
+              - .github/workflows/build-release-image.yaml
+              - .github/workflows/build-test-image.yaml
+              - src/falkordb-node/Dockerfile
+              - src/falkordb-cluster/Dockerfile
+              - src/falkordb-sentinel/Dockerfile
+              
+              This issue will be automatically closed when the corresponding PR is merged.`,
+              labels: ['enhancement', 'version-bump']
+            });
+            console.log(`Created issue #${issue.data.number}`);
+            return issue.data.number;
+
+      - name: Create branch for version bump
+        run: |
+          BRANCH_NAME="bump-falkordb-${{ steps.extract_version.outputs.new_version }}"
+          # Remove special characters from branch name
+          BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9.-]/-/g')
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          git checkout -b "$BRANCH_NAME"
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Update version in workflows
+        run: |
+          CURRENT_VERSION="${{ steps.extract_version.outputs.current_version }}"
+          NEW_VERSION="${{ steps.extract_version.outputs.new_version_alpine }}"
+          ESCAPED_CURRENT_VERSION=$(printf '%s\n' "$CURRENT_VERSION" | sed -e 's/[]\/$*.^[]/\\&/g')
+          ESCAPED_NEW_VERSION=$(printf '%s\n' "$NEW_VERSION" | sed -e 's/[]\/$*.^[]/\\&/g')
+          
+          # Update build-release-image.yaml
+          sed -i "s/FALKORDB_VERSION: $ESCAPED_CURRENT_VERSION/FALKORDB_VERSION: $ESCAPED_NEW_VERSION/g" .github/workflows/build-release-image.yaml
+
+          # Update build-test-image.yaml
+          sed -i "s/FALKORDB_VERSION: $ESCAPED_CURRENT_VERSION/FALKORDB_VERSION: $ESCAPED_NEW_VERSION/g" .github/workflows/build-test-image.yaml
+
+      - name: Update version in Dockerfiles
+        run: |
+          CURRENT_VERSION="${{ steps.extract_version.outputs.current_version }}"
+          NEW_VERSION="${{ steps.extract_version.outputs.new_version_alpine }}"
+          ESCAPED_CURRENT_VERSION=$(printf '%s\n' "$CURRENT_VERSION" | sed -e 's/[]\/$*.^[]/\\&/g')
+          ESCAPED_NEW_VERSION=$(printf '%s\n' "$NEW_VERSION" | sed -e 's/[]\/$*.^[]/\\&/g')
+          
+          # Update falkordb-node Dockerfile
+          sed -i "s/ARG FALKORDB_VERSION=$ESCAPED_CURRENT_VERSION/ARG FALKORDB_VERSION=$ESCAPED_NEW_VERSION/g" src/falkordb-node/Dockerfile
+
+          # Update falkordb-cluster Dockerfile
+          sed -i "s/ARG FALKORDB_VERSION=$ESCAPED_CURRENT_VERSION/ARG FALKORDB_VERSION=$ESCAPED_NEW_VERSION/g" src/falkordb-cluster/Dockerfile
+
+          # Update falkordb-sentinel Dockerfile
+          sed -i "s/ARG FALKORDB_VERSION=$ESCAPED_CURRENT_VERSION/ARG FALKORDB_VERSION=$ESCAPED_NEW_VERSION/g" src/falkordb-sentinel/Dockerfile
+
+      - name: Verify changes
+        run: |
+          echo "=== Files that will be changed ==="
+          git diff --name-only
+          echo ""
+          echo "=== Summary of changes ==="
+          git diff --stat
+          echo ""
+          echo "=== Detailed changes ==="
+          git diff
+
+      - name: Commit changes
+        run: |
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Bump FalkorDB version from ${{ steps.extract_version.outputs.current_base_version }} to ${{ steps.extract_version.outputs.new_version }}"
+
+          Closes #${{ steps.create_issue.outputs.result }}
+
+          Updated files:
+          - .github/workflows/build-release-image.yaml
+          - .github/workflows/build-test-image.yaml
+          - src/falkordb-node/Dockerfile
+          - src/falkordb-cluster/Dockerfile
+          - src/falkordb-sentinel/Dockerfile"
+
+      - name: Push changes
+        run: |
+          git push origin "${{ env.BRANCH_NAME }}"
+
+      - name: Create Pull Request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Bump FalkorDB to version ${{ steps.extract_version.outputs.new_version }}`,
+              head: '${{ env.BRANCH_NAME }}',
+              base: 'main',
+              body: `## 🚀 Version Bump: FalkorDB ${{ steps.extract_version.outputs.current_base_version }} → ${{ steps.extract_version.outputs.new_version }}
+
+              This PR updates the FalkorDB version across all relevant files.
+
+              ### 📋 Changes Made:
+              - ✅ Updated \`FALKORDB_VERSION\` in GitHub Actions workflows
+              - ✅ Updated \`FALKORDB_VERSION\` in Dockerfiles
+              - ✅ Verified all references are updated consistently
+
+              ### 📁 Files Updated:
+              - \`.github/workflows/build-release-image.yaml\`
+              - \`.github/workflows/build-test-image.yaml\`
+              - \`src/falkordb-node/Dockerfile\`
+              - \`src/falkordb-cluster/Dockerfile\`
+              - \`src/falkordb-sentinel/Dockerfile\`
+
+              ### 🔗 Related Issue:
+              Closes #${{ steps.create_issue.outputs.result }}
+
+              ### ✅ Testing:
+              - [ ] Verify Docker builds complete successfully
+              - [ ] Confirm workflows run without errors
+              - [ ] Test deployment with new version
+
+              ---
+              *This PR was automatically generated by the Bump FalkorDB Version workflow.*`,
+              draft: false
+            });
+
+            console.log(`Created PR #${pr.data.number}: ${pr.data.html_url}`);
+
+            // Add labels to the PR
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.data.number,
+              labels: ['enhancement', 'version-bump', 'automated']
+            });
+
+            // Request review (you can customize this section with specific reviewers)
+            await github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.data.number,
+              reviewers: ['dudizimber']
+            });
+
+      - name: Summary
+        run: |
+          echo "✅ Version bump workflow completed successfully!"
+          echo "📋 Summary:"
+          echo "   - Created issue for tracking"
+          echo "   - Created branch: ${{ env.BRANCH_NAME }}"
+          echo "   - Updated FalkorDB version from ${{ steps.extract_version.outputs.current_base_version }} to ${{ steps.extract_version.outputs.new_version }}"
+          echo "   - Created pull request for review"
+          echo ""
+          echo "🔍 Next steps:"
+          echo "   1. Review the created pull request"
+          echo "   2. Test the changes in a development environment"
+          echo "   3. Merge the PR when ready"

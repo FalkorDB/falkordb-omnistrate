@@ -201,14 +201,6 @@ jobs:
               labels: ['enhancement', 'version-bump', 'automated']
             });
 
-            // Request review (you can customize this section with specific reviewers)
-            await github.rest.pulls.requestReviewers({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: pr.data.number,
-              reviewers: ['dudizimber']
-            });
-
       - name: Summary
         run: |
           echo "✅ Version bump workflow completed successfully!"

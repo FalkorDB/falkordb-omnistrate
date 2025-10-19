@@ -135,7 +135,7 @@ jobs:
             echo "No changes to commit"
             exit 0
           fi
-          git commit -m "Bump FalkorDB version from ${{ steps.extract_version.outputs.current_base_version }} to ${{ steps.extract_version.outputs.new_version }}"
+          git commit -m "Bump FalkorDB version from ${{ steps.extract_version.outputs.current_base_version }} to ${{ steps.extract_version.outputs.new_version }}
 
           Closes #${{ steps.create_issue.outputs.result }}
 

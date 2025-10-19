@@ -96,10 +96,10 @@ jobs:
           ESCAPED_NEW_VERSION=$(printf '%s\n' "$NEW_VERSION" | sed -e 's/[]\/$*.^[]/\\&/g')
           
           # Update build-release-image.yaml
-          sed -i 's/FALKORDB_VERSION: $ESCAPED_CURRENT_VERSION/FALKORDB_VERSION: $ESCAPED_NEW_VERSION/g' .github/workflows/build-release-image.yaml
+          sed -i "s/FALKORDB_VERSION: $ESCAPED_CURRENT_VERSION/FALKORDB_VERSION: $ESCAPED_NEW_VERSION/g" .github/workflows/build-release-image.yaml
 
           # Update build-test-image.yaml
-          sed -i 's/FALKORDB_VERSION: $ESCAPED_CURRENT_VERSION/FALKORDB_VERSION: $ESCAPED_NEW_VERSION/g' .github/workflows/build-test-image.yaml
+          sed -i "s/FALKORDB_VERSION: $ESCAPED_CURRENT_VERSION/FALKORDB_VERSION: $ESCAPED_NEW_VERSION/g" .github/workflows/build-test-image.yaml
 
       - name: Update version in Dockerfiles
         run: |
@@ -109,13 +109,13 @@ jobs:
           ESCAPED_NEW_VERSION=$(printf '%s\n' "$NEW_VERSION" | sed -e 's/[]\/$*.^[]/\\&/g')
           
           # Update falkordb-node Dockerfile
-          sed -i 's/ARG FALKORDB_VERSION=$ESCAPED_CURRENT_VERSION/ARG FALKORDB_VERSION=$ESCAPED_NEW_VERSION/g' src/falkordb-node/Dockerfile
+          sed -i "s/ARG FALKORDB_VERSION=$ESCAPED_CURRENT_VERSION/ARG FALKORDB_VERSION=$ESCAPED_NEW_VERSION/g" src/falkordb-node/Dockerfile
 
           # Update falkordb-cluster Dockerfile
-          sed -i 's/ARG FALKORDB_VERSION=$ESCAPED_CURRENT_VERSION/ARG FALKORDB_VERSION=$ESCAPED_NEW_VERSION/g' src/falkordb-cluster/Dockerfile
+          sed -i "s/ARG FALKORDB_VERSION=$ESCAPED_CURRENT_VERSION/ARG FALKORDB_VERSION=$ESCAPED_NEW_VERSION/g" src/falkordb-cluster/Dockerfile
 
           # Update falkordb-sentinel Dockerfile
-          sed -i 's/ARG FALKORDB_VERSION=$ESCAPED_CURRENT_VERSION/ARG FALKORDB_VERSION=$ESCAPED_NEW_VERSION/g' src/falkordb-sentinel/Dockerfile
+          sed -i "s/ARG FALKORDB_VERSION=$ESCAPED_CURRENT_VERSION/ARG FALKORDB_VERSION=$ESCAPED_NEW_VERSION/g" src/falkordb-sentinel/Dockerfile
 
       - name: Verify changes
         run: |

@@ -43,7 +43,7 @@ def test_standalone_pack(instance):
         logging.info("Triggering failover")
         ep_id = instance.get_resource_id("node-s")
         instance.trigger_failover(
-            replica_id="node-f-0" if "free" in cfg["tier_name"] else "node-s-0",
+            replica_id="node-f-0" if cfg["tier_name"].startswith("free") else "node-s-0",
             wait_for_ready=True,
             resource_id=ep_id,
         )

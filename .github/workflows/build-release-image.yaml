@@ -7,6 +7,11 @@ on:
       - completed
     branches: ["v*.*.*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v1.2.3)'
+        required: true
+        type: string
 
 concurrency:
   group: falkordb-node-release
@@ -23,7 +28,7 @@ env:
   
 jobs:
   build-and-push:
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -47,6 +52,17 @@ jobs:
       
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.workflow_run.head_branch }}
+
+      - name: Set release tag
+        id: set_tag
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -64,7 +80,7 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           push: true
-          tags: falkordb/${{ matrix.image-name }}:${{ github.event.workflow_run.head_branch }}, falkordb/${{ matrix.image-name }}:latest
+          tags: falkordb/${{ matrix.image-name }}:${{ steps.set_tag.outputs.tag }}, falkordb/${{ matrix.image-name }}:latest
 
   omnistrate-update-plans:
     needs: build-and-push
@@ -93,6 +109,18 @@ jobs:
       - name: Checkout
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.workflow_run.head_branch }}
+
+      - name: Set release tag
+        if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
+        id: set_tag
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Replace Variables
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
@@ -105,12 +133,12 @@ jobs:
           sed -i 's|$AwsBootstrapRoleAccountArn|${{ vars.AWS_BOOTSTRAP_ROLE_ACCOUNT_ARN }}|g' ${{ matrix.plans.file }}
           sed -i 's/$AzureSubscriptionId/${{ vars.AZURE_SUBSCRIPTION_ID }}/g' ${{ matrix.plans.file }}
           sed -i 's/$AzureTenantId/${{ vars.AZURE_TENANT_ID }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:${{ github.event.workflow_run.head_branch }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:${{ github.event.workflow_run.head_branch }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:${{ github.event.workflow_run.head_branch }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBHealthcheckImage/falkordb\/${{ env.HEALTHCHECK_IMAGE_NAME }}:${{ github.event.workflow_run.head_branch }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBExporterImage/falkordb\/${{ env.FALKORDB_EXPORTER_IMAGE_NAME }}:${{ github.event.workflow_run.head_branch }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBSentinelImage/falkordb\/${{ env.FALKORDB_SENTINEL_IMAGE_NAME }}:${{ github.event.workflow_run.head_branch }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:${{ steps.set_tag.outputs.tag }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:${{ steps.set_tag.outputs.tag }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:${{ steps.set_tag.outputs.tag }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBHealthcheckImage/falkordb\/${{ env.HEALTHCHECK_IMAGE_NAME }}:${{ steps.set_tag.outputs.tag }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBExporterImage/falkordb\/${{ env.FALKORDB_EXPORTER_IMAGE_NAME }}:${{ steps.set_tag.outputs.tag }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$FalkorDBSentinelImage/falkordb\/${{ env.FALKORDB_SENTINEL_IMAGE_NAME }}:${{ steps.set_tag.outputs.tag }}/g' ${{ matrix.plans.file }}
           sed -i 's/$MeteringBucketName/${{ secrets.METERING_BUCKET_NAME }}/g' ${{ matrix.plans.file }}
 
       - name: Remove e2-machine from pro and enterprise
@@ -149,4 +177,4 @@ jobs:
           service-name: ${{ matrix.plans.name }}
           environment: dev
           environment-type: dev
-          release-description: "${{ github.event.workflow_run.head_branch }}"
+          release-description: "${{ steps.set_tag.outputs.tag }}"

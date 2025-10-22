@@ -679,6 +679,7 @@ services:
       - SKIP_HEALTH_CHECK=false
     ports:
       - "6379:6379"
+      - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -1172,6 +1173,8 @@ services:
     ports:
       - "6379:6379"
       - "26379:26379"
+      - "9121:9121"
+      - "9122:9122"
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -1368,6 +1371,7 @@ services:
       - MASTER_NAME=master
     ports:
       - "26379:26379"
+      - "9122:9122"
     volumes:
       - source: ./data
         target: /data
@@ -1913,6 +1917,8 @@ services:
     ports:
       - "6379:6379"
       - "26379:26379"
+      - "9121:9121"
+      - "9122:9122"
     x-omnistrate-capabilities:
       enableMultiZone: true
       enableEndpointPerReplica: true
@@ -2108,6 +2114,7 @@ services:
       - MASTER_NAME=master
     ports:
       - "26379:26379"
+      - "9122:9122"
     volumes:
       - source: ./data
         target: /data
@@ -2482,6 +2489,7 @@ services:
     ports:
       - "6379"
       - "16379"
+      - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: false
       enableEndpointPerReplica: true
@@ -2835,6 +2843,7 @@ services:
     ports:
       - "6379"
       - "16379"
+      - "9121:9121"
     x-omnistrate-capabilities:
       enableMultiZone: true
       enableEndpointPerReplica: true

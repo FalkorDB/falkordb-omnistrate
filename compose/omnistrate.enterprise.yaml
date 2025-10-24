@@ -118,7 +118,7 @@ x-clusterparam: &clusterparam
       defaultValue: "25"
       limits:
         min: 0
-      max: 256
+        max: 256
     - key: falkorDBNodeCreationBuffer
       description: Choose the buffer size for your database
       name: FalkorDB Node Creation Buffer
@@ -129,7 +129,7 @@ x-clusterparam: &clusterparam
       defaultValue: "16384"
       limits:
         min: 256
-      max: 32768
+        max: 32768
     - key: falkorDBMaxQueuedQueries
       description: Choose the max queued queries for your database
       name: FalkorDB Max Queued Queries
@@ -140,7 +140,7 @@ x-clusterparam: &clusterparam
       defaultValue: "50"
       limits:
         min: 0
-      max: 512
+        max: 512
     - key: falkorDBTimeoutMax
       description: Choose the timeout max for your database
       name: FalkorDB Timeout Max
@@ -151,7 +151,7 @@ x-clusterparam: &clusterparam
       defaultValue: "0"
       limits:
         min: 0
-      max: 45000
+        max: 45000
     - key: falkorDBTimeoutDefault
       description: Choose the timeout default for your database
       name: FalkorDB Timeout Default
@@ -162,7 +162,7 @@ x-clusterparam: &clusterparam
       defaultValue: "0"
       limits:
         min: 0
-      max: 45000
+        max: 45000
     - key: falkorDBResultSetSize
       description: Choose the result set size for your database
       name: FalkorDB Result Set Size
@@ -173,7 +173,7 @@ x-clusterparam: &clusterparam
       defaultValue: "0"
       limits:
         min: 0
-      max: 1000000
+        max: 1000000
     - key: falkorDBQueryMemCapacity
       description: Choose the query mem capacity for your database
       name: FalkorDB Query Mem Capacity
@@ -184,7 +184,7 @@ x-clusterparam: &clusterparam
       defaultValue: "0"
       limits:
         min: 0
-      max: 2000000000
+        max: 2000000000
     - key: maxMemory
       description: Choose the maxmemory for your database (do not exceed InstanceType memory)
       name: FalkorDB Maxmemory

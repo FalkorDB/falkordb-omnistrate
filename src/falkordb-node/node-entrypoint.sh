@@ -487,6 +487,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   fi
 
   if [[ $TLS == "true" ]]; then
+    sed -i "s|/etc/ssl/certs/GlobalSign_Root_CA.pem|${ROOT_CA_PATH}|g" "$NODE_CONF_FILE"
     if ! grep -q "^tls-port $NODE_PORT" "$NODE_CONF_FILE"; then
       echo "port 0" >>$NODE_CONF_FILE
       echo "tls-port $NODE_PORT" >>$NODE_CONF_FILE

@@ -430,6 +430,7 @@ run_node() {
 
   # Update .SO path for old instances
   sed -i "s|/FalkorDB/bin/src/bin/falkordb.so|/var/lib/falkordb/bin/falkordb.so|g" $NODE_CONF_FILE
+  sed -i "s|/etc/ssl/certs/GlobalSign_Root_CA.pem|${ROOT_CA_PATH}|g" "$NODE_CONF_FILE"
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $NODE_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $NODE_CONF_FILE
   sed -i "s/\$NODE_HOST/$NODE_HOST/g" $NODE_CONF_FILE
@@ -445,14 +446,17 @@ run_node() {
   echo "dir $DATA_DIR/$i" >>$NODE_CONF_FILE
 
   if [[ $TLS == "true" ]]; then
-    echo "port 0" >>$NODE_CONF_FILE
-    echo "tls-port $NODE_PORT" >>$NODE_CONF_FILE
-    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$NODE_CONF_FILE
-    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$NODE_CONF_FILE
-    echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
-    echo "tls-cluster yes" >>$NODE_CONF_FILE
-    echo "tls-auth-clients no" >>$NODE_CONF_FILE
-    echo "tls-replication yes" >>$NODE_CONF_FILE
+    sed -i "s|/etc/ssl/certs/GlobalSign_Root_CA.pem|${ROOT_CA_PATH}|g" "$NODE_CONF_FILE"
+    if ! grep -q "^tls-port $NODE_PORT" "$NODE_CONF_FILE"; then
+      echo "port 0" >>$NODE_CONF_FILE
+      echo "tls-port $NODE_PORT" >>$NODE_CONF_FILE
+      echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$NODE_CONF_FILE
+      echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$NODE_CONF_FILE
+      echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
+      echo "tls-cluster yes" >>$NODE_CONF_FILE
+      echo "tls-auth-clients no" >>$NODE_CONF_FILE
+      echo "tls-replication yes" >>$NODE_CONF_FILE
+    fi
   else
     echo "port $NODE_PORT" >>$NODE_CONF_FILE
   fi

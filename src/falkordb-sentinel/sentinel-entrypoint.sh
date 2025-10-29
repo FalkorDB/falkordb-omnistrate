@@ -149,13 +149,16 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   echo "Starting Sentinel"
 
   if [[ $TLS == "true" ]]; then
-    echo "port 0" >>$SENTINEL_CONF_FILE
-    echo "tls-port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
-    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$SENTINEL_CONF_FILE
-    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$SENTINEL_CONF_FILE
-    echo "tls-ca-cert-file $ROOT_CA_PATH" >>$SENTINEL_CONF_FILE
-    echo "tls-replication yes" >>$SENTINEL_CONF_FILE
-    echo "tls-auth-clients no" >>$SENTINEL_CONF_FILE
+    sed -i "s|/etc/ssl/certs/GlobalSign_Root_CA.pem|${ROOT_CA_PATH}|g" "$SENTINEL_CONF_FILE"
+    if ! grep -q "^tls-port $SENTINEL_PORT" "$SENTINEL_CONF_FILE"; then
+      echo "port 0" >>$SENTINEL_CONF_FILE
+      echo "tls-port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
+      echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$SENTINEL_CONF_FILE
+      echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$SENTINEL_CONF_FILE
+      echo "tls-ca-cert-file $ROOT_CA_PATH" >>$SENTINEL_CONF_FILE
+      echo "tls-replication yes" >>$SENTINEL_CONF_FILE
+      echo "tls-auth-clients no" >>$SENTINEL_CONF_FILE
+    fi
   else
     echo "port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
   fi

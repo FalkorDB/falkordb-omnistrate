@@ -1,0 +1,6 @@
+dependencies:
+- name: kblib
+  repository: file://../kubeblocks-addons/addons-cluster/kblib
+  version: 0.1.2
+digest: sha256:8b4f9bb88400245c78932a6cc19c8e9343bd9aa32ce68b65cf881521d9e32e9e
+generated: "2025-10-29T10:03:00.182011+02:00"

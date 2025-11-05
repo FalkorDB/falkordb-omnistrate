@@ -1,0 +1,29 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: falkordb-test
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      # Map port 6379 for FalkorDB NodePort access
+      - containerPort: 30379
+        hostPort: 6379
+        protocol: TCP
+      # Map port 80 for HTTP
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+      # Map port 443 for HTTPS
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
+  - role: worker
+  - role: worker
+networking:
+  apiServerAddress: "127.0.0.1"
+  apiServerPort: 6443

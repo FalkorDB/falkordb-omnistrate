@@ -1,0 +1,174 @@
+{{- if and .Values.falkordbUser.username .Values.falkordbUser.password }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "kblib.clusterName" . }}-create-user-job
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "kblib.clusterLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 10
+  template:
+    metadata:
+      name: {{ include "kblib.clusterName" . }}-create-user
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "kblib.clusterName" . }}-create-user-sa
+      containers:
+      - name: create-user
+        image: bitnami/kubectl:latest
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          
+          echo "Waiting for cluster to be ready..."
+          # Wait for cluster to reach Running phase
+          while true; do
+            PHASE=$(kubectl get cluster {{ include "kblib.clusterName" . }} -n {{ .Release.Namespace }} -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+            if [ "$PHASE" = "Running" ]; then
+              echo "Cluster is running"
+              break
+            fi
+            echo "Cluster phase: $PHASE, waiting..."
+            sleep 5
+          done
+          
+          echo "Waiting for pods to be ready..."
+          # Wait for at least one pod to be ready
+          kubectl wait --for=condition=ready pod \
+            -l app.kubernetes.io/instance={{ include "kblib.clusterName" . }} \
+            -n {{ .Release.Namespace }} \
+            --timeout=300s
+          
+          echo "Creating OpsRequest for user creation..."
+          {{- if eq .Values.mode "cluster" }}
+          # Create OpsRequest for cluster mode (shards)
+          cat <<EOF | kubectl apply -f -
+          apiVersion: operations.kubeblocks.io/v1alpha1
+          kind: OpsRequest
+          metadata:
+            name: {{ include "kblib.clusterName" . }}-create-falkordb-user
+            namespace: {{ .Release.Namespace }}
+            labels: {{ include "kblib.clusterLabels" . | nindent 14 }}
+          spec:
+            clusterName: {{ include "kblib.clusterName" . }}
+            type: Custom
+            custom:
+              opsDefinitionName: falkordb-shard-account-ops
+              components:
+                - componentName: shard
+                  parameters:
+                  - name: ACL_COMMAND
+                    value: {{ include "falkordb-cluster.aclCreateCommand" . | quote }}
+                  - name: SHARD_MODE
+                    value: "TRUE"
+                  - name: REPLICAS
+                    value: {{ include "falkordb-cluster.aclCreateCommandReplicas" . | quote }}
+          EOF
+          {{- else }}
+          # Create OpsRequest for standalone/replication mode
+          cat <<EOF | kubectl apply -f -
+          apiVersion: operations.kubeblocks.io/v1alpha1
+          kind: OpsRequest
+          metadata:
+            name: {{ include "kblib.clusterName" . }}-create-falkordb-user
+            namespace: {{ .Release.Namespace }}
+            labels: {{ include "kblib.clusterLabels" . | nindent 14 }}
+          spec:
+            clusterName: {{ include "kblib.clusterName" . }}
+            type: Custom
+            custom:
+              opsDefinitionName: falkordb-master-account-ops
+              components:
+                - componentName: falkordb
+                  parameters:
+                  - name: ACL_COMMAND
+                    value: {{ include "falkordb-cluster.aclCreateCommand" . | quote }}
+                  - name: REPLICAS
+                    value: {{ .Values.replicas | quote }}
+          EOF
+          
+          {{- if .Values.sentinel.enabled }}
+          echo "Creating OpsRequest for sentinel user creation..."
+          # Create separate OpsRequest for sentinel
+          cat <<EOF | kubectl apply -f -
+          apiVersion: operations.kubeblocks.io/v1alpha1
+          kind: OpsRequest
+          metadata:
+            name: {{ include "kblib.clusterName" . }}-create-sentinel-user
+            namespace: {{ .Release.Namespace }}
+            labels: {{ include "kblib.clusterLabels" . | nindent 14 }}
+          spec:
+            clusterName: {{ include "kblib.clusterName" . }}
+            type: Custom
+            custom:
+              opsDefinitionName: falkordb-sent-account-ops
+              components:
+                - componentName: falkordb-sent
+                  parameters:
+                  - name: ACL_COMMAND
+                    value: {{ include "falkordb-cluster.aclSentinelCreateCommand" . | quote }}
+                  - name: REPLICAS
+                    value: {{ .Values.sentinel.replicas | quote }}
+          EOF
+          {{- end }}
+          {{- end }}
+          
+          echo "OpsRequest created successfully"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "kblib.clusterName" . }}-create-user-sa
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "kblib.clusterLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "kblib.clusterName" . }}-create-user-role
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "kblib.clusterLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+- apiGroups: ["apps.kubeblocks.io"]
+  resources: ["clusters"]
+  verbs: ["get", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["operations.kubeblocks.io"]
+  resources: ["opsrequests"]
+  verbs: ["create", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "kblib.clusterName" . }}-create-user-binding
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "kblib.clusterLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "kblib.clusterName" . }}-create-user-role
+subjects:
+- kind: ServiceAccount
+  name: {{ include "kblib.clusterName" . }}-create-user-sa
+  namespace: {{ .Release.Namespace }}
+{{- end }}

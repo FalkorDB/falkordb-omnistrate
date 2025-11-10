@@ -1,0 +1,20 @@
+name: Delete unused free tier instances
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *' # Daily at 02:00 UTC
+
+jobs:
+  delete-unused-free-instances:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login and delete unused stopped free tier instances
+        uses: docker://ghcr.io/omnistrate/ctl:0.11.7
+        with:
+          entrypoint: /bin/sh
+          args: -c "apk add jq && /usr/local/bin/omnistrate-ctl login --email ${{ secrets.OMNISTRATE_USERNAME }} --password ${{ secrets.OMNISTRATE_PASSWORD }} && /github/workspace/scripts/delete-unused-stopped-free-instances.sh"

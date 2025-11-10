@@ -8,6 +8,8 @@ on:
 jobs:
   delete-unused-free-instances:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout

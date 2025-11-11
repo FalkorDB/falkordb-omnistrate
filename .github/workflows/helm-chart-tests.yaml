@@ -47,6 +47,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -203,15 +204,18 @@ jobs:
           kubectl get pods -n kb-system
 
       - name: Install FalkorDB addon
-        working-directory: helm/kubeblocks/kubeblocks-addons
         run: |
-          if [ -d "addons/falkordb" ]; then
-            helm dependency build addons/falkordb || true
-            helm upgrade --install falkordb --namespace kb-system addons/falkordb --wait --timeout 5m
+          ADDON_PATH="helm/kubeblocks/kubeblocks-addons/addons/falkordb"
+          if [ -d "$ADDON_PATH" ]; then
+            echo "Building FalkorDB addon dependencies..."
+            helm dependency build "$ADDON_PATH" || true
+            echo "Installing FalkorDB addon..."
+            helm upgrade --install falkordb --namespace kb-system "$ADDON_PATH" --wait --timeout 5m
             sleep 10
             kubectl -n kb-system get clusterdefinitions
           else
-            echo "FalkorDB addon directory not found"
+            echo "FalkorDB addon directory not found at $ADDON_PATH"
+            ls -la helm/kubeblocks/kubeblocks-addons/ || echo "kubeblocks-addons directory not found"
             exit 1
           fi
 

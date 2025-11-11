@@ -12,13 +12,13 @@ on:
     paths:
       - "helm/kubeblocks/**"
   schedule:
-    - cron: "0 0 * * *"  # Run daily at midnight UTC
+    - cron: "0 0 * * *" # Run daily at midnight UTC
   workflow_dispatch:
     inputs:
       test_type:
-        description: 'Type of tests to run'
+        description: "Type of tests to run"
         required: false
-        default: 'all'
+        default: "all"
         type: choice
         options:
           - all
@@ -48,6 +48,12 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           submodules: true
+
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          repository: apecloud/kubeblocks-addons
+          path: helm/kubeblocks
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -131,6 +137,12 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           submodules: true
+
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          repository: apecloud/kubeblocks-addons
+          path: helm/kubeblocks
 
       - name: Verify submodules
         run: |
@@ -265,7 +277,7 @@ jobs:
             helm uninstall test-cluster -n ${{ env.NAMESPACE }} || true
             sleep 5
           fi
-          
+
           # Cleanup any leftover PVCs
           kubectl delete pvc -n ${{ env.NAMESPACE }} -l app.kubernetes.io/instance=test-cluster --ignore-not-found=true || true
 
@@ -284,25 +296,25 @@ jobs:
         run: |
           echo "=== Cluster Definitions ==="
           kubectl get clusterdefinitions -n kb-system
-          
+
           echo "=== Clusters ==="
           kubectl get clusters -n ${{ env.NAMESPACE }}
-          
+
           echo "=== Pods ==="
           kubectl get pods -n ${{ env.NAMESPACE }} -o wide
-          
+
           echo "=== Pod Logs ==="
           for pod in $(kubectl get pods -n ${{ env.NAMESPACE }} -o name); do
             echo "--- $pod ---"
             kubectl logs -n ${{ env.NAMESPACE }} $pod --all-containers --tail=100 || true
           done
-          
+
           echo "=== Events ==="
           kubectl get events -n ${{ env.NAMESPACE }} --sort-by='.lastTimestamp'
-          
+
           echo "=== KubeBlocks Pods ==="
           kubectl get pods -n kb-system
-          
+
           echo "=== KubeBlocks Logs ==="
           for pod in $(kubectl get pods -n kb-system -o name); do
             echo "--- $pod ---"
@@ -334,17 +346,17 @@ jobs:
         run: |
           echo "Unit Tests: ${{ needs.unit-tests.result }}"
           echo "Integration Tests: ${{ needs.integration-tests.result }}"
-          
+
           if [ "${{ needs.unit-tests.result }}" != "success" ]; then
             echo "❌ Unit tests failed"
             exit 1
           fi
-          
+
           if [ "${{ needs.integration-tests.result }}" != "success" ] && [ "${{ needs.integration-tests.result }}" != "skipped" ]; then
             echo "❌ Integration tests failed"
             exit 1
           fi
-          
+
           echo "✅ All tests passed!"
 
       - name: Post summary

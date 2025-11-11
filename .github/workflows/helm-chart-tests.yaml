@@ -50,7 +50,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          repository: apecloud/kubeblocks
+          repository: apecloud/kubeblocks-addons
           path: helm/kubeblocks/kubeblocks-addons
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -136,7 +136,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          repository: apecloud/kubeblocks
+          repository: apecloud/kubeblocks-addons
           path: helm/kubeblocks/kubeblocks-addons
 
       - name: Verify submodules

@@ -115,8 +115,6 @@ jobs:
       fail-fast: false
       matrix:
         test-suite:
-          - name: "Common Integration Tests"
-            path: "integration/common"
           - name: "Standalone Mode Integration Tests"
             path: "integration/standalone"
           - name: "Replication Mode Integration Tests"

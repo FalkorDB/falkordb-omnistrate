@@ -146,6 +146,8 @@ echo -e "${GREEN}Setup complete!${NC}"
 echo ""
 echo "Cluster info:"
 kubectl cluster-info --context kind-falkordb-test
+
+kubectl create ns demo
 echo ""
 echo -e "${GREEN}You can now run tests with:${NC}"
 echo "  cd $SCRIPT_DIR"

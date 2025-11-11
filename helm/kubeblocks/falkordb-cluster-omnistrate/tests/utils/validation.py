@@ -5,37 +5,52 @@ Validation utilities for Helm chart testing.
 from typing import Dict, Any, List, Optional
 
 
-def get_falkordb_container_name(pod_name, namespace='default'):
+def get_falkordb_container_name(pod_name, namespace="default"):
     """
     Get the correct container name for a FalkorDB pod by inspecting the pod.
-    
+
     Args:
         pod_name: Name of the pod to inspect
         namespace: Kubernetes namespace
-    
+
     Returns:
         str: Container name or None if not found
     """
     import subprocess
     import logging
-    
+
     try:
-        check_cmd = ['kubectl', 'get', 'pod', pod_name, '-n', namespace, '-o', 'jsonpath={.spec.containers[*].name}']
+        check_cmd = [
+            "kubectl",
+            "get",
+            "pod",
+            pod_name,
+            "-n",
+            namespace,
+            "-o",
+            "jsonpath={.spec.containers[*].name}",
+        ]
         result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=10)
         if result.returncode == 0:
             containers = result.stdout.strip().split()
-            logging.getLogger(__name__).info(f"Pod {pod_name} has containers: {containers}")
-            
+            logging.getLogger(__name__).info(
+                f"Pod {pod_name} has containers: {containers}"
+            )
+
             # Try container names in order of preference
-            container_candidates = ['falkordb-cluster', 'falkordb', 'redis', 'server']
+            container_candidates = ["falkordb-cluster", "falkordb", "redis", "server"]
             for candidate in container_candidates:
                 if candidate in containers:
                     return candidate
-            
-            logging.getLogger(__name__).error(f"Could not find FalkorDB container in pod {pod_name}. Available: {containers}")
+
+            logging.getLogger(__name__).error(
+                f"Could not find FalkorDB container in pod {pod_name}. Available: {containers}"
+            )
             return None
         else:
-            logging.getLogger(__name__).error(f"Failed to get pod info: {result.stderr}")
+            logging.getLogger(__name__).error(
+                f"Failed to get pod info: {result.stderr}"
+            )
             return None
     except Exception as e:
         logging.getLogger(__name__).error(f"Error checking pod containers: {e}")
@@ -296,12 +311,56 @@ def validate_job_configuration(
 
     # Check for basic ACL commands
     required_acl_commands = [
-        "+@all",
-        "-@dangerous",
-        "-flushdb",
-        "-flushall",
-        "-keys",
-        "-acl",
+        "+INFO",
+        "+CLIENT",
+        "+DBSIZE",
+        "+PING",
+        "+HELLO",
+        "+AUTH",
+        "+RESTORE",
+        "+DUMP",
+        "+DEL",
+        "+EXISTS",
+        "+UNLINK",
+        "+TYPE",
+        "+FLUSHALL",
+        "+TOUCH",
+        "+EXPIRE",
+        "+PEXPIREAT",
+        "+TTL",
+        "+PTTL",
+        "+EXPIRETIME",
+        "+RENAME",
+        "+RENAMENX",
+        "+SCAN",
+        "+DISCARD",
+        "+EXEC",
+        "+MULTI",
+        "+UNWATCH",
+        "+WATCH",
+        "+ECHO",
+        "+SLOWLOG",
+        "+WAIT",
+        "+WAITAOF",
+        "+GET",
+        "+SET",
+        "+GRAPH.INFO",
+        "+GRAPH.LIST",
+        "+GRAPH.QUERY",
+        "+GRAPH.RO_QUERY",
+        "+GRAPH.EXPLAIN",
+        "+GRAPH.PROFILE",
+        "+GRAPH.DELETE",
+        "+GRAPH.CONSTRAINT",
+        "+GRAPH.SLOWLOG",
+        "+GRAPH.BULK",
+        "+GRAPH.CONFIG",
+        "+GRAPH.COPY",
+        "+CLUSTER",
+        "+COMMAND",
+        "+GRAPH.MEMORY",
+        "+MEMORY",
+        "+BGREWRITEAOF",
     ]
     for cmd in required_acl_commands:
         if cmd not in script:
@@ -390,28 +449,30 @@ def validate_replicas_configuration(
     return errors
 
 
-def validate_falkordb_connection_in_cluster(pod_name, namespace, username, password, timeout=60):
+def validate_falkordb_connection_in_cluster(
+    pod_name, namespace, username, password, timeout=60
+):
     """
     Validate FalkorDB connection by running redis-cli inside the pod using kubectl exec.
     This avoids DNS resolution issues and package installation problems.
-    
+
     Args:
         pod_name: Name of the pod to test
         namespace: Kubernetes namespace
         username: Username for FalkorDB authentication
         password: Password for FalkorDB authentication
         timeout: Timeout in seconds
-    
+
     Returns:
         bool: True if connection successful
     """
     import subprocess
     import logging
-    
+
     logger = logging.getLogger(__name__)
-    
+
     # Shell script that will run inside the pod using redis-cli
-    test_script = f'''#!/bin/bash
+    test_script = f"""#!/bin/bash
 set -e
 
 # Test basic connectivity using redis-cli
@@ -432,25 +493,35 @@ else
     echo "FAILED: Ping test failed"
     exit 1
 fi
-'''
-    
+"""
+
     try:
         # Use kubectl exec to run the test script inside the pod directly
         exec_cmd = [
-            'kubectl', 'exec', f'{pod_name}',
-            '-n', namespace,
-            '-c', 'falkordb-cluster',  # Target the main container
-            '--',
-            'sh', '-c', test_script
+            "kubectl",
+            "exec",
+            f"{pod_name}",
+            "-n",
+            namespace,
+            "-c",
+            "falkordb-cluster",  # Target the main container
+            "--",
+            "sh",
+            "-c",
+            test_script,
         ]
-        
-        logger.info(f"Running connection test inside pod via kubectl exec on {pod_name}")
-        result = subprocess.run(exec_cmd, capture_output=True, text=True, timeout=timeout)
-        
+
+        logger.info(
+            f"Running connection test inside pod via kubectl exec on {pod_name}"
+        )
+        result = subprocess.run(
+            exec_cmd, capture_output=True, text=True, timeout=timeout
+        )
+
         logger.info(f"Connection test return code: {result.returncode}")
         logger.info(f"Connection test stdout: {result.stdout}")
         logger.info(f"Connection test stderr: {result.stderr}")
-        
+
         if result.returncode == 0 and "SUCCESS" in result.stdout:
             logger.info(f"FalkorDB connection test successful for {pod_name}")
             return True
@@ -460,7 +531,7 @@ fi
             logger.error(f"Full stdout: {result.stdout}")
             logger.error(f"Full stderr: {result.stderr}")
             return False
-            
+
     except subprocess.TimeoutExpired:
         logger.error(f"Connection test timed out for {pod_name}")
         return False
@@ -469,10 +540,12 @@ fi
         return False
 
 
-def validate_falkordb_connection(host, port, username, password, timeout=30, is_cluster=False):
+def validate_falkordb_connection(
+    host, port, username, password, timeout=30, is_cluster=False
+):
     """
     Validate FalkorDB connection.
-    
+
     Args:
         host: FalkorDB host
         port: FalkorDB port
@@ -480,101 +553,114 @@ def validate_falkordb_connection(host, port, username, password, timeout=30, is_
         password: Password for authentication
         timeout: Connection timeout in seconds
         is_cluster: Whether this is a cluster mode connection (affects connection strategy)
-    
+
     Returns:
         bool: True if connection successful
     """
     import logging
     import socket
+
     logger = logging.getLogger(__name__)
-    
+
     try:
         # First check if port is reachable
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(timeout)
         result = sock.connect_ex((host, port))
         sock.close()
-        
+
         if result != 0:
             logger.error(f"Cannot connect to {host}:{port} - port not reachable")
             return False
-        
+
         # Try Redis client connection with authentication
         try:
             import redis
-            
+
             r = redis.Redis(
-                host=host, 
-                port=port, 
-                username=username, 
-                password=password, 
+                host=host,
+                port=port,
+                username=username,
+                password=password,
                 socket_connect_timeout=timeout,
                 socket_timeout=timeout,
-                decode_responses=True
+                decode_responses=True,
             )
-            
+
             # Test connection with PING
             result = r.ping()
             if result:
-                logger.info(f"Successfully connected to FalkorDB at {host}:{port} with Redis client")
+                logger.info(
+                    f"Successfully connected to FalkorDB at {host}:{port} with Redis client"
+                )
                 r.close()
                 return True
-                
+
         except Exception as redis_error:
             logger.debug(f"Redis client connection failed: {redis_error}")
-        
+
         # Try FalkorDB client as fallback
         try:
             import falkordb
-            
+
             conn = falkordb.FalkorDB(
-                host=host, 
-                port=port, 
-                username=username, 
-                password=password
+                host=host, port=port, username=username, password=password
             )
-            
+
             # Test with a simple command
             result = conn.execute_command("PING")
             if result:
-                logger.info(f"Successfully connected to FalkorDB at {host}:{port} with FalkorDB client")
+                logger.info(
+                    f"Successfully connected to FalkorDB at {host}:{port} with FalkorDB client"
+                )
                 conn.close()
                 return True
-                
+
         except Exception as falkor_error:
             logger.debug(f"FalkorDB client connection failed: {falkor_error}")
-        
+
         logger.error(f"All connection attempts failed for {host}:{port}")
         return False
-        
+
     except Exception as e:
         logger.error(f"Connection validation failed: {e}")
         return False
 
 
-def validate_falkordb_connection_in_replication(pod_name, namespace, username, password, timeout=60):
+def validate_falkordb_connection_in_replication(
+    pod_name, namespace, username, password, timeout=60
+):
     """
     Validate FalkorDB connection in replication mode by running redis-cli inside the pod using kubectl exec.
     This uses the same reliable approach as cluster tests.
-    
+
     Args:
         pod_name: Name of the pod to test
         namespace: Kubernetes namespace
         username: Username for FalkorDB authentication
         password: Password for FalkorDB authentication
         timeout: Timeout in seconds
-    
+
     Returns:
         bool: True if connection successful
     """
     import subprocess
     import logging
-    
+
     logger = logging.getLogger(__name__)
-    
+
     # First, check if pod exists and what containers it has
     try:
-        check_cmd = ['kubectl', 'get', 'pod', pod_name, '-n', namespace, '-o', 'jsonpath={.spec.containers[*].name}']
+        check_cmd = [
+            "kubectl",
+            "get",
+            "pod",
+            pod_name,
+            "-n",
+            namespace,
+            "-o",
+            "jsonpath={.spec.containers[*].name}",
+        ]
         result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=10)
         if result.returncode == 0:
             containers = result.stdout.strip().split()
@@ -585,22 +671,24 @@ def validate_falkordb_connection_in_replication(pod_name, namespace, username, p
     except Exception as e:
         logger.error(f"Error checking pod containers: {e}")
         return False
-    
+
     # Try to identify the correct container name
-    container_name = 'falkordb-cluster'
-    if 'falkordb-cluster' not in containers:
+    container_name = "falkordb-cluster"
+    if "falkordb-cluster" not in containers:
         # Try alternative container names commonly used in replication mode
-        for alt_name in ['falkordb', 'redis', 'server']:
+        for alt_name in ["falkordb", "redis", "server"]:
             if alt_name in containers:
                 container_name = alt_name
                 logger.info(f"Using container name: {container_name}")
                 break
         else:
-            logger.error(f"Could not find FalkorDB container in pod {pod_name}. Available: {containers}")
+            logger.error(
+                f"Could not find FalkorDB container in pod {pod_name}. Available: {containers}"
+            )
             return False
-    
+
     # Shell script that will run inside the pod using redis-cli
-    test_script = f'''#!/bin/bash
+    test_script = f"""#!/bin/bash
 set -e
 
 # Test basic connectivity using redis-cli
@@ -621,26 +709,31 @@ else
     echo "FAILED: Ping test failed"
     exit 1
 fi
-'''
-    
+"""
+
     try:
         # Use kubectl exec to run the test script inside the pod directly
         exec_cmd = [
-            'kubectl', 'exec', f'{pod_name}',
-            '-n', namespace,
-            '-c', container_name,
-            '--',
-            'sh', '-c', test_script
+            "kubectl",
+            "exec",
+            f"{pod_name}",
+            "-n",
+            namespace,
+            "-c",
+            container_name,
+            "--",
+            "sh",
+            "-c",
+            test_script,
         ]
-        
-        logger.info(f"Running validation command in pod {pod_name} container {container_name}")
-        result = subprocess.run(
-            exec_cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout
+
+        logger.info(
+            f"Running validation command in pod {pod_name} container {container_name}"
         )
-        
+        result = subprocess.run(
+            exec_cmd, capture_output=True, text=True, timeout=timeout
+        )
+
         if result.returncode == 0:
             logger.info(f"Connection validation successful for pod {pod_name}")
             logger.debug(f"Output: {result.stdout}")
@@ -651,7 +744,7 @@ fi
             logger.error(f"Stdout: {result.stdout}")
             logger.error(f"Stderr: {result.stderr}")
             return False
-    
+
     except subprocess.TimeoutExpired:
         logger.error(f"Connection validation timed out for pod {pod_name}")
         return False
@@ -660,7 +753,9 @@ fi
         return False
 
 
-def validate_replication_status(pod_name, namespace, username, password, expected_replicas=1, timeout=60):
+def validate_replication_status(
+    pod_name, namespace, username, password, expected_replicas=1, timeout=60
+):
     """
     Validate replication status in FalkorDB using kubectl exec.
     This uses the reliable approach like cluster tests.
@@ -678,22 +773,29 @@ def validate_replication_status(pod_name, namespace, username, password, expecte
     """
     import subprocess
     import logging
-    
+
     logger = logging.getLogger(__name__)
-    
+
     # First, find the correct container name
     container_name = None
-    container_candidates = ['falkordb-cluster', 'falkordb', 'redis', 'server']
-    
+    container_candidates = ["falkordb-cluster", "falkordb", "redis", "server"]
+
     for candidate in container_candidates:
         try:
             # Test if container exists by trying to get its status
             test_cmd = [
-                'kubectl', 'get', 'pod', pod_name,
-                '-n', namespace,
-                '-o', f'jsonpath={{.spec.containers[?(@.name=="{candidate}")].name}}'
+                "kubectl",
+                "get",
+                "pod",
+                pod_name,
+                "-n",
+                namespace,
+                "-o",
+                f'jsonpath={{.spec.containers[?(@.name=="{candidate}")].name}}',
             ]
-            result = subprocess.run(test_cmd, capture_output=True, text=True, timeout=10)
+            result = subprocess.run(
+                test_cmd, capture_output=True, text=True, timeout=10
+            )
             if result.returncode == 0 and result.stdout.strip() == candidate:
                 container_name = candidate
                 logger.debug(f"Found container {container_name} in pod {pod_name}")
@@ -701,13 +803,13 @@ def validate_replication_status(pod_name, namespace, username, password, expecte
         except Exception as e:
             logger.debug(f"Container {candidate} test failed: {e}")
             continue
-    
+
     if not container_name:
         logger.error(f"Could not find valid container in pod {pod_name}")
         return False
-    
+
     # Shell script to check replication status
-    test_script = f'''#!/bin/bash
+    test_script = f"""#!/bin/bash
 set -e
 
 # Get replication info using redis-cli
@@ -726,25 +828,28 @@ else
     echo "FAILED: Could not get replication info"
     exit 1
 fi
-'''
-    
+"""
+
     try:
         exec_cmd = [
-            'kubectl', 'exec', f'{pod_name}',
-            '-n', namespace,
-            '-c', container_name,
-            '--',
-            'sh', '-c', test_script
+            "kubectl",
+            "exec",
+            f"{pod_name}",
+            "-n",
+            namespace,
+            "-c",
+            container_name,
+            "--",
+            "sh",
+            "-c",
+            test_script,
         ]
-        
+
         logger.debug(f"Checking replication status in pod {pod_name}")
         result = subprocess.run(
-            exec_cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout
+            exec_cmd, capture_output=True, text=True, timeout=timeout
         )
-        
+
         if result.returncode == 0:
             logger.info(f"Replication status validation successful for pod {pod_name}")
             logger.debug(f"Output: {result.stdout}")
@@ -755,7 +860,7 @@ fi
             logger.error(f"Stdout: {result.stdout}")
             logger.error(f"Stderr: {result.stderr}")
             return False
-    
+
     except subprocess.TimeoutExpired:
         logger.error(f"Replication status validation timed out for pod {pod_name}")
         return False
@@ -764,7 +869,9 @@ fi
         return False
 
 
-def validate_cluster_status(pod_name, namespace, username, password, expected_nodes=3, timeout=60):
+def validate_cluster_status(
+    pod_name, namespace, username, password, expected_nodes=3, timeout=60
+):
     """
     Validate cluster status in FalkorDB using kubectl exec.
     This runs inside the cluster to avoid DNS resolution issues.
@@ -782,11 +889,11 @@ def validate_cluster_status(pod_name, namespace, username, password, expected_no
     """
     import subprocess
     import logging
-    
+
     logger = logging.getLogger(__name__)
-    
+
     # Python test script that will run inside the pod
-    test_script = f'''#!/bin/bash
+    test_script = f"""#!/bin/bash
 set -e
 
 # Test basic connectivity first
@@ -818,32 +925,40 @@ fi
 echo "CLUSTER_NODES:0"
 echo "FAILED: No cluster information available"
 exit 1
-'''
-    
+"""
+
     try:
         # Use kubectl exec to run the test script inside the pod directly
         exec_cmd = [
-            'kubectl', 'exec', f'{pod_name}',
-            '-n', namespace,
-            '-c', 'falkordb-cluster',  # Target the main container
-            '--',
-            'sh', '-c', test_script
+            "kubectl",
+            "exec",
+            f"{pod_name}",
+            "-n",
+            namespace,
+            "-c",
+            "falkordb-cluster",  # Target the main container
+            "--",
+            "sh",
+            "-c",
+            test_script,
         ]
-        
+
         logger.info(f"Running cluster status check via kubectl exec on {pod_name}")
-        result = subprocess.run(exec_cmd, capture_output=True, text=True, timeout=timeout)
-        
+        result = subprocess.run(
+            exec_cmd, capture_output=True, text=True, timeout=timeout
+        )
+
         logger.info(f"Exec command return code: {result.returncode}")
         logger.info(f"Exec command stdout: {result.stdout}")
         logger.info(f"Exec command stderr: {result.stderr}")
-        
+
         # Parse the number of cluster nodes from output
         cluster_nodes = 0
         if result.returncode == 0:
-            for line in result.stdout.split('\n'):
-                if line.startswith('CLUSTER_NODES:'):
+            for line in result.stdout.split("\n"):
+                if line.startswith("CLUSTER_NODES:"):
                     try:
-                        cluster_nodes = int(line.split(':')[1])
+                        cluster_nodes = int(line.split(":")[1])
                         break
                     except (ValueError, IndexError):
                         pass
@@ -852,14 +967,18 @@ exit 1
             logger.error(f"kubectl exec failed with return code {result.returncode}")
             logger.error(f"Full stdout: {result.stdout}")
             logger.error(f"Full stderr: {result.stderr}")
-        
+
         if cluster_nodes >= expected_nodes:
-            logger.info(f"Cluster status validation successful: {cluster_nodes} nodes found (expected >= {expected_nodes})")
+            logger.info(
+                f"Cluster status validation successful: {cluster_nodes} nodes found (expected >= {expected_nodes})"
+            )
             return cluster_nodes
         else:
-            logger.warning(f"Cluster status validation failed: {cluster_nodes} nodes found (expected >= {expected_nodes})")
+            logger.warning(
+                f"Cluster status validation failed: {cluster_nodes} nodes found (expected >= {expected_nodes})"
+            )
             return cluster_nodes
-            
+
     except subprocess.TimeoutExpired:
         logger.error(f"Cluster status check timed out for {pod_name}")
         return 0

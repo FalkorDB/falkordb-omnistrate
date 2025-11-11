@@ -49,7 +49,7 @@ def test_values():
         "version": "4.12.5",
         "mode": "standalone",
         "replicas": 1,
-        "instanceType": "e2-medium",
+        "instanceType": "low",
         "storage": 20,
         "hostNetworkEnabled": False,
         "nodePortEnabled": False,
@@ -88,6 +88,17 @@ def namespace(request):
 def skip_cleanup(request):
     """Return whether to skip cleanup."""
     return request.config.getoption("--skip-cleanup")
+
+
+@pytest.fixture(scope="module")
+def worker_id(request):
+    """
+    Return the worker ID for pytest-xdist parallel execution.
+    Returns 'master' for single-process execution.
+    """
+    if hasattr(request.config, 'workerinput'):
+        return request.config.workerinput['workerid']
+    return 'master'
 
 
 def render_helm_template(chart_path, values, release_name="test", namespace="default"):
@@ -138,7 +149,7 @@ def render_helm_template(chart_path, values, release_name="test", namespace="def
         os.unlink(values_file)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def helm_render(chart_path):
     """Fixture to render Helm templates."""
     def _render(values, release_name="test", namespace="default"):

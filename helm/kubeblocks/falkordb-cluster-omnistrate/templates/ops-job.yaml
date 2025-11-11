@@ -19,17 +19,24 @@ spec:
       serviceAccountName: {{ include "kblib.clusterName" . }}-create-user-sa
       containers:
       - name: create-user
-        image: bitnami/kubectl:latest
+        image: alpine/k8s:1.28.3
         command:
         - /bin/bash
         - -c
         - |
           set -e
           
+          # Set namespace variable
+          NAMESPACE="{{ .Release.Namespace }}"
+          if [ -z "$NAMESPACE" ]; then
+            NAMESPACE="default"
+          fi
+          
+          echo "Using namespace: $NAMESPACE"
           echo "Waiting for cluster to be ready..."
           # Wait for cluster to reach Running phase
           while true; do
-            PHASE=$(kubectl get cluster {{ include "kblib.clusterName" . }} -n {{ .Release.Namespace }} -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+            PHASE=$(kubectl get cluster {{ include "kblib.clusterName" . }} -n "$NAMESPACE" -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
             if [ "$PHASE" = "Running" ]; then
               echo "Cluster is running"
               break
@@ -42,7 +49,7 @@ spec:
           # Wait for at least one pod to be ready
           kubectl wait --for=condition=ready pod \
             -l app.kubernetes.io/instance={{ include "kblib.clusterName" . }} \
-            -n {{ .Release.Namespace }} \
+            -n "$NAMESPACE" \
             --timeout=300s
           
           echo "Creating OpsRequest for user creation..."

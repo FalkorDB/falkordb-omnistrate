@@ -55,14 +55,14 @@ def skip_cleanup(request):
     return request.config.getoption("--skip-cleanup")
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def integration_values():
     """Return default integration test values."""
     return {
         "version": "4.12.5",
         "mode": "standalone",
         "replicas": 1,
-        "instanceType": "e2-medium",
+        "instanceType": "low",
         "storage": 20,
         "hostNetworkEnabled": False,
         "nodePortEnabled": False,

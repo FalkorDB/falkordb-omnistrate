@@ -88,7 +88,10 @@ Map instance type to CPU and memory resources
 */}}
 {{- define "falkordb-cluster.instanceTypeResources" -}}
 {{- $instanceType := .Values.instanceType -}}
-{{- if eq $instanceType "e2-medium" }}
+{{- if eq $instanceType "low" }}
+cpu: "1"
+memory: "100Mi"
+{{- else if eq $instanceType "e2-medium" }}
 cpu: "1"
 memory: "4Gi"
 {{- else if eq $instanceType "e2-standard-2" }}

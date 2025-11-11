@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 @pytest.fixture(scope="module")
 def deployed_standalone_cluster(k8s_custom_client, chart_path, integration_values, namespace):
     """Deploy a standalone FalkorDB cluster using helm and wait for it to be ready."""
-    cluster_name = "test-standalone-cluster"
+    cluster_name = "standalone"
+    cluster = None
+    should_cleanup = False
     
     # Check if cluster already exists
     try:
@@ -29,84 +31,105 @@ def deployed_standalone_cluster(k8s_custom_client, chart_path, integration_value
             name=cluster_name,
         )
         logger.info(f"Cluster {cluster_name} already exists, using it")
-        return existing_cluster
+        cluster = existing_cluster
+        should_cleanup = False
     except Exception:
         pass  # Cluster doesn't exist, we'll create it
     
-    import tempfile
-    import yaml
+    if cluster is None:
+        import tempfile
+        import yaml
+        
+        # Package the chart first
+        logger.info(f"Packaging chart from {chart_path}")
+        package_result = subprocess.run(
+            ["helm", "package", str(chart_path)],
+            cwd=str(chart_path.parent),
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        
+        # Find the package file
+        package_line = [line for line in package_result.stdout.split('\n') if 'Successfully packaged' in line][0]
+        package_path = package_line.split(': ')[-1].strip()
+        logger.info(f"Using packaged chart: {package_path}")
+        
+        values_file = None
+        
+        try:
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+                yaml.dump(integration_values, f)
+                values_file = f.name
+            
+            # Deploy using helm
+            cmd = [
+                "helm", "install", cluster_name,
+                package_path,
+                "--namespace", namespace,
+                "--create-namespace",
+                "--values", values_file,
+                "--wait",
+                "--timeout", "10m"
+            ]
+            
+            logger.info(f"Deploying cluster with: {' '.join(cmd)}")
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            logger.info(f"Helm install output: {result.stdout}")
+            
+            # Wait for cluster to be ready
+            max_wait = 600
+            start_time = time.time()
+            
+            while time.time() - start_time < max_wait:
+                try:
+                    cluster = k8s_custom_client.get_namespaced_custom_object(
+                        group="apps.kubeblocks.io",
+                        version="v1",
+                        namespace=namespace,
+                        plural="clusters",
+                        name=cluster_name,
+                    )
+                    
+                    phase = cluster.get("status", {}).get("phase", "")
+                    if phase == "Running":
+                        logger.info(f"Cluster {cluster_name} is running")
+                        should_cleanup = True
+                        break
+                    
+                    logger.info(f"Waiting for cluster to be ready, current phase: {phase}")
+                    time.sleep(10)
+                except Exception as e:
+                    logger.info(f"Waiting for cluster to be created: {e}")
+                    time.sleep(10)
+            
+            if cluster is None or cluster.get("status", {}).get("phase", "") != "Running":
+                pytest.fail(f"Cluster did not become ready within {max_wait}s")
+            
+        except subprocess.CalledProcessError as e:
+            pytest.fail(f"Failed to deploy cluster: {e.stderr}")
+        finally:
+            # Cleanup temp files
+            if values_file:
+                Path(values_file).unlink(missing_ok=True)
+            Path(package_path).unlink(missing_ok=True)
     
-    # Package the chart first
-    logger.info(f"Packaging chart from {chart_path}")
-    package_result = subprocess.run(
-        ["helm", "package", str(chart_path)],
-        cwd=str(chart_path.parent),
-        capture_output=True,
-        text=True,
-        check=True
-    )
+    # Yield the cluster for use in tests
+    yield cluster
     
-    # Find the package file
-    package_line = [line for line in package_result.stdout.split('\n') if 'Successfully packaged' in line][0]
-    package_path = package_line.split(': ')[-1].strip()
-    logger.info(f"Using packaged chart: {package_path}")
-    
-    values_file = None
-    
-    try:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
-            yaml.dump(integration_values, f)
-            values_file = f.name
-        
-        # Deploy using helm
-        cmd = [
-            "helm", "install", cluster_name,
-            package_path,
-            "--namespace", namespace,
-            "--create-namespace",
-            "--values", values_file,
-            "--wait",
-            "--timeout", "10m"
-        ]
-        
-        logger.info(f"Deploying cluster with: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        logger.info(f"Helm install output: {result.stdout}")
-        
-        # Wait for cluster to be ready
-        max_wait = 600
-        start_time = time.time()
-        
-        while time.time() - start_time < max_wait:
-            try:
-                cluster = k8s_custom_client.get_namespaced_custom_object(
-                    group="apps.kubeblocks.io",
-                    version="v1",
-                    namespace=namespace,
-                    plural="clusters",
-                    name=cluster_name,
-                )
-                
-                phase = cluster.get("status", {}).get("phase", "")
-                if phase == "Running":
-                    logger.info(f"Cluster {cluster_name} is running")
-                    return cluster
-                
-                logger.info(f"Waiting for cluster to be ready, current phase: {phase}")
-                time.sleep(10)
-            except Exception as e:
-                logger.info(f"Waiting for cluster to be created: {e}")
-                time.sleep(10)
-        
-        pytest.fail(f"Cluster did not become ready within {max_wait}s")
-        
-    except subprocess.CalledProcessError as e:
-        pytest.fail(f"Failed to deploy cluster: {e.stderr}")
-    finally:
-        # Cleanup temp files
-        if values_file:
-            Path(values_file).unlink(missing_ok=True)
-        Path(package_path).unlink(missing_ok=True)
+    # Teardown: Delete the cluster after all tests are done
+    if should_cleanup:
+        logger.info(f"Cleaning up cluster {cluster_name}")
+        try:
+            subprocess.run(
+                ["helm", "uninstall", cluster_name, "--namespace", namespace],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            logger.info(f"Cluster {cluster_name} uninstalled successfully")
+        except Exception as e:
+            logger.error(f"Failed to uninstall cluster {cluster_name}: {e}")
 
 
 @pytest.fixture
@@ -187,11 +210,6 @@ def falkordb_connection(k8s_client, deployed_standalone_cluster, namespace):
                 raise
     
     # Cleanup
-    try:
-        db.close()
-    except Exception:
-        pass
-    
     try:
         proc.terminate()
         proc.wait(timeout=5)

@@ -109,7 +109,7 @@ echo -e "${GREEN}Running tests...${NC}"
 cd "$SCRIPT_DIR"
 
 # Build pytest arguments
-PYTEST_ARGS="-v --tb=short"
+PYTEST_ARGS="-v -n 3 --dist=loadfile --tb=short"
 PYTEST_ARGS="$PYTEST_ARGS --cluster-name=$CLUSTER_NAME"
 PYTEST_ARGS="$PYTEST_ARGS --namespace=$NAMESPACE"
 

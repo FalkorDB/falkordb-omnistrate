@@ -103,10 +103,10 @@ fi
         read_script = f"""#!/bin/bash
 set -e
 
-# Query test data using GRAPH.QUERY
-if result=$(redis-cli -u "redis://{username}:{password}@localhost:6379/" GRAPH.QUERY clustergraph "MATCH (n:TestNode) RETURN count(n)" 2>/dev/null); then
-    # Extract count from the result - redis-cli returns results in a specific format
-    count=$(echo "$result" | grep -o '[0-9]\\+' | head -1)
+# Query test data using GRAPH.QUERY with CSV format for easier parsing
+if result=$(redis-cli -u "redis://{username}:{password}@localhost:6379/" --csv GRAPH.QUERY clustergraph "MATCH (n:TestNode) RETURN count(n) AS cnt" 2>/dev/null); then
+    # Extract count from CSV output (last line, second column)
+    count=$(echo "$result" | tail -1 | cut -d',' -f2 | tr -d '"' | grep -o '[0-9]\\+')
     if [ -n "$count" ]; then
         echo "COUNT:$count"
         echo "SUCCESS: Found $count test nodes"
@@ -247,10 +247,10 @@ fi
         read_script = f"""#!/bin/bash
 set -e
 
-# Query resilience test data using GRAPH.QUERY
-if result=$(redis-cli -u "redis://{username}:{password}@localhost:6379/" GRAPH.QUERY resilience_test "MATCH (n:ResilienceTest) RETURN count(n)" 2>/dev/null); then
-    # Extract count from the result - redis-cli returns results in a specific format
-    count=$(echo "$result" | grep -o '[0-9]\\+' | head -1)
+# Query resilience test data using GRAPH.QUERY with CSV format
+if result=$(redis-cli -u "redis://{username}:{password}@localhost:6379/" --csv GRAPH.QUERY resilience_test "MATCH (n:ResilienceTest) RETURN count(n) AS cnt" 2>/dev/null); then
+    # Extract count from CSV output (last line, second column)
+    count=$(echo "$result" | tail -1 | cut -d',' -f2 | tr -d '"' | grep -o '[0-9]\\+')
     if [ -n "$count" ]; then
         echo "COUNT:$count"
         echo "SUCCESS: Found $count resilience test records"
@@ -392,17 +392,17 @@ fi
         read_script = f"""#!/bin/bash
 set -e
 
-# Query scaling test data using GRAPH.QUERY with specific phase filter
-if result=$(redis-cli -u "redis://{username}:{password}@localhost:6379/" GRAPH.QUERY scaling_test "MATCH (n:ScalingTest {{phase: 'initial'}}) RETURN count(n)" 2>/dev/null); then
-    # Extract count from the result - redis-cli returns results in a specific format
-    count=$(echo "$result" | grep -o '[0-9]\\+' | head -1)
+# Query scaling test data using GRAPH.QUERY with specific phase filter and CSV format
+if result=$(redis-cli -u "redis://{username}:{password}@localhost:6379/" --csv GRAPH.QUERY scaling_test "MATCH (n:ScalingTest {{phase: 'before_scale'}}) RETURN count(n) AS cnt" 2>/dev/null); then
+    # Extract count from CSV output (last line, second column)
+    count=$(echo "$result" | tail -1 | cut -d',' -f2 | tr -d '"' | grep -o '[0-9]\\+')
     if [ -n "$count" ]; then
         echo "COUNT:$count"
-        echo "SUCCESS: Found $count initial phase scaling test records"
+        echo "SUCCESS: Found $count before_scale phase scaling test records"
         exit 0
     else
         echo "COUNT:0"
-        echo "SUCCESS: No initial phase scaling test records found (empty result)"
+        echo "SUCCESS: No before_scale phase scaling test records found (empty result)"
         exit 0
     fi
 else
@@ -488,9 +488,10 @@ creation_time=$(python3 -c "print(($creation_end_time - $start_time) / 100000000
 # Start timing for query
 query_start_time=$(date +%s%N)
 
-# Query the count
-count_result=$(redis-cli -u "redis://{username}:{password}@localhost:6379/" GRAPH.QUERY performance_test "MATCH (n:PerfTest) RETURN count(n)" 2>/dev/null)
-count=$(echo "$count_result" | grep -o '[0-9]\\+' | head -1)
+# Query the count - use --csv format for easier parsing
+count_result=$(redis-cli -u "redis://{username}:{password}@localhost:6379/" --csv GRAPH.QUERY performance_test "MATCH (n:PerfTest) RETURN count(n) AS cnt" 2>/dev/null)
+# Extract just the count value from CSV output (should be in format: "cnt","100")
+count=$(echo "$count_result" | tail -1 | cut -d',' -f2 | tr -d '"' | grep -o '[0-9]\\+')
 
 query_end_time=$(date +%s%N)
 query_time=$(python3 -c "print(($query_end_time - $query_start_time) / 1000000000.0)")

@@ -18,9 +18,10 @@ jobs:
       - name: Login and delete unused stopped free tier instances
         run: |
           docker run --rm \
+            --entrypoint /bin/sh \
             -v ${{ github.workspace }}/scripts:/scripts:ro \
             ghcr.io/omnistrate/ctl:0.11.7 \
-            /bin/sh -c "
+            -c "
               apk add jq && \
               /usr/local/bin/omnistrate-ctl login --email '${{ secrets.OMNISTRATE_USERNAME }}' --password '${{ secrets.OMNISTRATE_PASSWORD }}' && \
               /bin/sh /scripts/delete-unused-stopped-free-instances.sh

@@ -42,7 +42,8 @@ class TestClusterIntegration:
 set -e
 
 # Write test data using GRAPH.QUERY
-if redis-cli -u "redis://{username}:{password}@localhost:6379/" GRAPH.QUERY clustergraph "CREATE (:TestNode {{id: '{node_id}', data: '{data_value}'}})" >/dev/null 2>&1; then
+# Use -c flag to enable cluster mode and follow MOVED redirects
+if redis-cli -c -u "redis://{username}:{password}@localhost:6379/" GRAPH.QUERY clustergraph "CREATE (:TestNode {{id: '{node_id}', data: '{data_value}'}})" >/dev/null 2>&1; then
     echo "SUCCESS: Test data written for {node_id}"
     exit 0
 else
@@ -104,7 +105,8 @@ fi
 set -e
 
 # Query test data using GRAPH.QUERY with raw format
-result=$(redis-cli -u "redis://{username}:{password}@localhost:6379/" --raw GRAPH.QUERY clustergraph "MATCH (n:TestNode) RETURN count(n)" 2>&1)
+# Use -c flag to enable cluster mode and follow MOVED redirects
+result=$(redis-cli -c -u "redis://{username}:{password}@localhost:6379/" --raw GRAPH.QUERY clustergraph "MATCH (n:TestNode) RETURN count(n)" 2>&1)
 
 # Parse the count - look for a line that contains only digits using awk
 count=$(echo "$result" | awk '/^[0-9]+$/{{print; exit}}')
@@ -178,7 +180,8 @@ exit 0
 set -e
 
 # Write resilience test data using GRAPH.QUERY
-if redis-cli -u "redis://{username}:{password}@localhost:6379/" GRAPH.QUERY resilience_test "CREATE (:ResilienceTest {{id: '{test_id}', timestamp: timestamp()}})" >/dev/null 2>&1; then
+# Use -c flag to enable cluster mode and follow MOVED redirects
+if redis-cli -c -u "redis://{username}:{password}@localhost:6379/" GRAPH.QUERY resilience_test "CREATE (:ResilienceTest {{id: '{test_id}', timestamp: timestamp()}})" >/dev/null 2>&1; then
     echo "SUCCESS: Resilience test data written for {test_id}"
     exit 0
 else
@@ -242,7 +245,8 @@ fi
 set -e
 
 # Query resilience test data using GRAPH.QUERY with raw format
-result=$(redis-cli -u "redis://{username}:{password}@localhost:6379/" --raw GRAPH.QUERY resilience_test "MATCH (n:ResilienceTest) RETURN count(n)" 2>&1)
+# Use -c flag to enable cluster mode and follow MOVED redirects
+result=$(redis-cli -c -u "redis://{username}:{password}@localhost:6379/" --raw GRAPH.QUERY resilience_test "MATCH (n:ResilienceTest) RETURN count(n)" 2>&1)
 
 # Parse the count - look for a line that contains only digits using awk
 count=$(echo "$result" | awk '/^[0-9]+$/{{print; exit}}')
@@ -317,7 +321,8 @@ exit 0
 set -e
 
 # Write scaling test data using GRAPH.QUERY
-if redis-cli -u "redis://{username}:{password}@localhost:6379/" GRAPH.QUERY scaling_test "CREATE (:ScalingTest {{phase: '{phase}', nodes: {node_count}}})" >/dev/null 2>&1; then
+# Use -c flag to enable cluster mode and follow MOVED redirects
+if redis-cli -c -u "redis://{username}:{password}@localhost:6379/" GRAPH.QUERY scaling_test "CREATE (:ScalingTest {{phase: '{phase}', nodes: {node_count}}})" >/dev/null 2>&1; then
     echo "SUCCESS: Scaling test data written for phase {phase}"
     exit 0
 else
@@ -381,7 +386,8 @@ fi
 set -e
 
 # Query scaling test data using GRAPH.QUERY with specific phase filter and raw format
-result=$(redis-cli -u "redis://{username}:{password}@localhost:6379/" --raw GRAPH.QUERY scaling_test "MATCH (n:ScalingTest {{phase: 'before_scale'}}) RETURN count(n)" 2>&1)
+# Use -c flag to enable cluster mode and follow MOVED redirects
+result=$(redis-cli -c -u "redis://{username}:{password}@localhost:6379/" --raw GRAPH.QUERY scaling_test "MATCH (n:ScalingTest {{phase: 'before_scale'}}) RETURN count(n)" 2>&1)
 
 # Parse the count - look for a line that contains only digits using awk
 count=$(echo "$result" | awk '/^[0-9]+$/{{print; exit}}')
@@ -454,14 +460,15 @@ exit 0
         perf_script = f"""#!/bin/bash
 set -e
 
-redis-cli -u "redis://{username}:{password}@localhost:6379/" FLUSHALL >/dev/null 2>&1
+# Use -c flag for cluster mode throughout
+redis-cli -c -u "redis://{username}:{password}@localhost:6379/" FLUSHALL >/dev/null 2>&1
 
 # Start timing for node creation (nanoseconds for better precision)
 start_time=$(date +%s%N)
 
 # Create 100 nodes in a loop
 for i in $(seq 0 99); do
-    redis-cli -u "redis://{username}:{password}@localhost:6379/" GRAPH.QUERY performance_test "CREATE (:PerfTest {{id: $i, batch: 'performance_test'}})" >/dev/null 2>&1
+    redis-cli -c -u "redis://{username}:{password}@localhost:6379/" GRAPH.QUERY performance_test "CREATE (:PerfTest {{id: $i, batch: 'performance_test'}})" >/dev/null 2>&1
 done
 
 creation_end_time=$(date +%s%N)
@@ -471,7 +478,8 @@ creation_time=$(python3 -c "print(($creation_end_time - $start_time) / 100000000
 query_start_time=$(date +%s%N)
 
 # Query the count - use raw format to get just the result
-count_result=$(redis-cli -u "redis://{username}:{password}@localhost:6379/" --raw GRAPH.QUERY performance_test "MATCH (n:PerfTest) RETURN count(n)" 2>&1)
+# Use -c flag to enable cluster mode and follow MOVED redirects
+count_result=$(redis-cli -c -u "redis://{username}:{password}@localhost:6379/" --raw GRAPH.QUERY performance_test "MATCH (n:PerfTest) RETURN count(n)" 2>&1)
 
 # Debug: show the raw output with line numbers
 echo "DEBUG_RAW_OUTPUT_START"

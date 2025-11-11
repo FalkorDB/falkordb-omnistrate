@@ -16,7 +16,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Login and delete unused stopped free tier instances
-        uses: docker://ghcr.io/omnistrate/ctl:0.11.7
-        with:
-          entrypoint: /bin/sh
-          args: -c "apk add jq && /usr/local/bin/omnistrate-ctl login --email ${{ secrets.OMNISTRATE_USERNAME }} --password ${{ secrets.OMNISTRATE_PASSWORD }} && /github/workspace/scripts/delete-unused-stopped-free-instances.sh"
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/scripts:/scripts:ro \
+            ghcr.io/omnistrate/ctl:0.11.7 \
+            /bin/sh -c "
+              apk add jq && \
+              /usr/local/bin/omnistrate-ctl login --email '${{ secrets.OMNISTRATE_USERNAME }}' --password '${{ secrets.OMNISTRATE_PASSWORD }}' && \
+              /bin/sh /scripts/delete-unused-stopped-free-instances.sh
+            "

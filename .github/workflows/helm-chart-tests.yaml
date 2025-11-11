@@ -117,16 +117,12 @@ jobs:
         test-suite:
           - name: "Common Integration Tests"
             path: "integration/common"
-            marker: "integration"
           - name: "Standalone Mode Integration Tests"
             path: "integration/standalone"
-            marker: "integration"
           - name: "Replication Mode Integration Tests"
             path: "integration/replication"
-            marker: "integration"
           - name: "Cluster Mode Integration Tests"
             path: "integration/cluster"
-            marker: "integration"
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -282,8 +278,6 @@ jobs:
           poetry run pytest -v -s --tb=short \
             --cluster-name=${{ env.CLUSTER_NAME }} \
             --namespace=${{ env.NAMESPACE }} \
-            -m ${{ matrix.test-suite.marker }} \
-            --timeout=1800 \
             ${{ matrix.test-suite.path }}
 
       - name: Collect logs on failure

@@ -488,10 +488,15 @@ creation_time=$(python3 -c "print(($creation_end_time - $start_time) / 100000000
 # Start timing for query
 query_start_time=$(date +%s%N)
 
-# Query the count - use --csv format for easier parsing
+# Query the count - use --csv format and parse more carefully
 count_result=$(redis-cli -u "redis://{username}:{password}@localhost:6379/" --csv GRAPH.QUERY performance_test "MATCH (n:PerfTest) RETURN count(n) AS cnt" 2>/dev/null)
-# Extract just the count value from CSV output (should be in format: "cnt","100")
-count=$(echo "$count_result" | tail -1 | cut -d',' -f2 | tr -d '"' | grep -o '[0-9]\\+')
+
+# Debug: show the raw output
+echo "DEBUG_RAW_OUTPUT:$count_result"
+
+# Parse CSV output - skip header line and get the value from the data row
+# The CSV output should have format like: "cnt"\n"100"
+count=$(echo "$count_result" | sed -n '2p' | tr -d '"' | tr -d ',' | grep -o '^[0-9]\\+$' || echo "0")
 
 query_end_time=$(date +%s%N)
 query_time=$(python3 -c "print(($query_end_time - $query_start_time) / 1000000000.0)")
@@ -528,21 +533,30 @@ echo "SUCCESS: Performance test completed"
             node_count = 0
 
             if result.returncode == 0:
+                # Log the full output for debugging
+                logger.info(f"Performance test output:\n{result.stdout}")
+                
                 for line in result.stdout.split("\n"):
-                    if line.startswith("CREATION_TIME:"):
+                    if line.startswith("DEBUG_RAW_OUTPUT:"):
+                        logger.info(f"Redis-cli raw output: {line.split(':', 1)[1]}")
+                    elif line.startswith("CREATION_TIME:"):
                         try:
-                            creation_time = float(line.split(":")[1])
+                            creation_time = float(line.split(":", 1)[1])
                         except (ValueError, IndexError):
                             pass
                     elif line.startswith("QUERY_TIME:"):
                         try:
-                            query_time = float(line.split(":")[1])
+                            query_time = float(line.split(":", 1)[1])
                         except (ValueError, IndexError):
                             pass
                     elif line.startswith("NODE_COUNT:"):
                         try:
-                            node_count = int(line.split(":")[1])
-                        except (ValueError, IndexError):
+                            # Split only on first colon and strip whitespace
+                            count_str = line.split(":", 1)[1].strip()
+                            node_count = int(count_str)
+                            logger.info(f"Parsed node count: {node_count} from string '{count_str}'")
+                        except (ValueError, IndexError) as e:
+                            logger.error(f"Failed to parse node count from line '{line}': {e}")
                             pass
             else:
                 logger.error(f"Performance test failed: {result.stderr}")

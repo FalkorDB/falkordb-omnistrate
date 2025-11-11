@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           submodules: recursive
@@ -126,11 +126,24 @@ jobs:
             marker: "integration"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           submodules: recursive
+
+      - name: Verify submodules
+        run: |
+          echo "Checking submodule status..."
+          git submodule status
+          echo "Listing kubeblocks-addons directory..."
+          ls -la helm/kubeblocks/kubeblocks-addons/ || echo "Directory not found"
+          if [ ! -d "helm/kubeblocks/kubeblocks-addons/addons" ]; then
+            echo "Submodule content not found, initializing manually..."
+            git submodule update --init --recursive
+          fi
+          echo "Final check:"
+          ls -la helm/kubeblocks/kubeblocks-addons/addons/ || echo "Addons directory still not found"
 
       - name: Set up Python
         uses: actions/setup-python@v5

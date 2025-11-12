@@ -5,6 +5,9 @@ import time
 import json
 import subprocess
 import pytest
+import threading
+from collections import defaultdict
+from datetime import datetime
 
 
 from ...utils.validation import (
@@ -13,6 +16,136 @@ from ...utils.validation import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class AvailabilityMonitor:
+    """Monitor database availability during operations by continuously querying."""
+    
+    def __init__(self, pod_list, namespace, username, password, container_name="falkordb-cluster", query_interval=1.0):
+        self.pod_list = pod_list
+        self.namespace = namespace
+        self.username = username
+        self.password = password
+        self.container_name = container_name
+        self.query_interval = query_interval
+        
+        self.running = False
+        self.thread = None
+        self.results = {
+            'total_queries': 0,
+            'successful_queries': 0,
+            'failed_queries': 0,
+            'latencies': [],
+            'errors': defaultdict(int),
+            'start_time': None,
+            'end_time': None
+        }
+    
+    def _query_pod(self, pod_name):
+        """Execute a simple read query against a pod."""
+        query_script = f'''#!/bin/bash
+redis-cli -c -u "redis://{self.username}:{self.password}@localhost:6379/" \\
+    GRAPH.RO_QUERY availability_test "RETURN 1" 2>&1 || echo "QUERY_FAILED"
+'''
+        
+        exec_cmd = [
+            'kubectl', 'exec', pod_name,
+            '-n', self.namespace,
+            '-c', self.container_name,
+            '--',
+            'sh', '-c', query_script
+        ]
+        
+        start = time.time()
+        try:
+            result = subprocess.run(exec_cmd, capture_output=True, text=True, timeout=5)
+            latency = time.time() - start
+            
+            if result.returncode == 0 and "QUERY_FAILED" not in result.stdout:
+                return True, latency, None
+            else:
+                error = result.stderr if result.stderr else result.stdout
+                return False, latency, error
+        except subprocess.TimeoutExpired:
+            return False, time.time() - start, "Timeout"
+        except Exception as e:
+            return False, time.time() - start, str(e)
+    
+    def _monitor_loop(self):
+        """Background thread that continuously queries the database."""
+        while self.running:
+            # Try to query one of the pods (round-robin)
+            pod_index = self.results['total_queries'] % len(self.pod_list)
+            pod_name = self.pod_list[pod_index]
+            
+            success, latency, error = self._query_pod(pod_name)
+            
+            self.results['total_queries'] += 1
+            if success:
+                self.results['successful_queries'] += 1
+                self.results['latencies'].append(latency)
+            else:
+                self.results['failed_queries'] += 1
+                if error:
+                    self.results['errors'][error[:100]] += 1  # Truncate error message
+            
+            time.sleep(self.query_interval)
+    
+    def start(self):
+        """Start monitoring in background thread."""
+        if self.running:
+            return
+        
+        self.running = True
+        self.results['start_time'] = datetime.now()
+        self.thread = threading.Thread(target=self._monitor_loop, daemon=True)
+        self.thread.start()
+        logger.info(f"Started availability monitoring (interval: {self.query_interval}s)")
+    
+    def stop(self):
+        """Stop monitoring and return results."""
+        if not self.running:
+            return self.results
+        
+        self.running = False
+        self.results['end_time'] = datetime.now()
+        
+        if self.thread:
+            self.thread.join(timeout=10)
+        
+        # Calculate statistics
+        total = self.results['total_queries']
+        success = self.results['successful_queries']
+        
+        if total > 0:
+            availability_pct = (success / total) * 100
+            self.results['availability_percentage'] = availability_pct
+        
+        if self.results['latencies']:
+            sorted_latencies = sorted(self.results['latencies'])
+            self.results['latency_p50'] = sorted_latencies[len(sorted_latencies) // 2]
+            self.results['latency_p95'] = sorted_latencies[int(len(sorted_latencies) * 0.95)]
+            self.results['latency_p99'] = sorted_latencies[int(len(sorted_latencies) * 0.99)]
+            self.results['latency_avg'] = sum(sorted_latencies) / len(sorted_latencies)
+        
+        duration = (self.results['end_time'] - self.results['start_time']).total_seconds()
+        logger.info(f"Availability monitoring stopped. Duration: {duration:.1f}s")
+        logger.info(f"  Total queries: {total}")
+        logger.info(f"  Successful: {success} ({availability_pct:.2f}%)")
+        logger.info(f"  Failed: {self.results['failed_queries']}")
+        
+        if self.results['latencies']:
+            logger.info(f"  Latency - Avg: {self.results['latency_avg']*1000:.1f}ms, "
+                       f"P50: {self.results['latency_p50']*1000:.1f}ms, "
+                       f"P95: {self.results['latency_p95']*1000:.1f}ms, "
+                       f"P99: {self.results['latency_p99']*1000:.1f}ms")
+        
+        if self.results['errors']:
+            logger.info(f"  Error summary:")
+            for error, count in list(self.results['errors'].items())[:5]:  # Show top 5 errors
+                logger.info(f"    - {error}: {count} times")
+        
+        return self.results
 
 
 @pytest.mark.integration
@@ -1032,6 +1165,17 @@ redis-cli -u "redis://{cluster_info['username']}:{cluster_info['password']}@loca
         assert patch_result.returncode == 0, f"Failed to patch cluster: {patch_result.stderr}"
         logger.info("Cluster resources patched successfully")
 
+        # Start availability monitoring BEFORE pods restart
+        logger.info("Starting availability monitoring during vertical scaling...")
+        monitor = AvailabilityMonitor(
+            pod_list=cluster_info["pods"],
+            namespace=cluster_info["namespace"],
+            username=cluster_info["username"],
+            password=cluster_info["password"],
+            query_interval=2.0  # Query every 2 seconds
+        )
+        monitor.start()
+        
         # Wait for pods to restart with new resources
         logger.info("Waiting for pods to restart with new resources...")
         time.sleep(60)  # Give time for pods to restart
@@ -1069,6 +1213,27 @@ redis-cli -u "redis://{cluster_info['username']}:{cluster_info['password']}@loca
             time.sleep(10)
         
         assert pods_ready, f"Pods did not become ready within {max_wait}s after vertical scaling"
+
+        # Stop availability monitoring and check results
+        availability_results = monitor.stop()
+        
+        # Verify availability during scaling
+        # For cluster mode with rolling updates, we expect high availability (>80%)
+        # Some brief downtime is acceptable during pod restarts
+        min_availability = 80.0
+        actual_availability = availability_results.get('availability_percentage', 0)
+        
+        logger.info("=" * 60)
+        logger.info("AVAILABILITY DURING VERTICAL SCALING:")
+        logger.info(f"  Availability: {actual_availability:.2f}% (target: >{min_availability}%)")
+        logger.info(f"  Total queries: {availability_results['total_queries']}")
+        logger.info(f"  Successful: {availability_results['successful_queries']}")
+        logger.info(f"  Failed: {availability_results['failed_queries']}")
+        logger.info("=" * 60)
+        
+        assert actual_availability >= min_availability, \
+            f"Availability during vertical scaling was {actual_availability:.2f}%, expected >{min_availability}%. " \
+            f"Cluster should maintain availability during rolling updates."
 
         # Get updated pod list after scaling
         result = subprocess.run(

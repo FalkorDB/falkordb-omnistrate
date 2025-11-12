@@ -925,17 +925,20 @@ redis-cli -u "redis://{cluster_info['username']}:{cluster_info['password']}@loca
         
         logger.info("Testing cluster vertical scaling...")
 
-        # Write initial data
+        # Write initial data using "before_scale" phase to match the read function
         logger.info("Writing initial data before scaling...")
         initial_data_written = self._write_scaling_test_data_in_cluster(
             cluster_info["pods"][0],
             cluster_info["namespace"],
             cluster_info["username"],
             cluster_info["password"],
-            "before_vertical_scale",
+            "before_scale",  # Match the phase name used in read function
             len(cluster_info["pods"]),
         )
         assert initial_data_written, "Could not write initial data"
+        
+        # Wait for data to be available across cluster
+        time.sleep(5)
         
         # Verify initial data
         initial_count = self._read_scaling_test_data_in_cluster(
@@ -1067,10 +1070,22 @@ redis-cli -u "redis://{cluster_info['username']}:{cluster_info['password']}@loca
         
         assert pods_ready, f"Pods did not become ready within {max_wait}s after vertical scaling"
 
+        # Get updated pod list after scaling
+        result = subprocess.run(
+            ["kubectl", "get", "pods", "-n", cluster_info["namespace"],
+             "-l", f"app.kubernetes.io/instance={cluster_info['name']}",
+             "-o", "jsonpath={.items[*].metadata.name}"],
+            capture_output=True, text=True
+        )
+        current_pods = result.stdout.strip().split()
+        # Filter to only FalkorDB pods (exclude sentinel)
+        current_falkordb_pods = [p for p in current_pods if 'shard' in p and 'sent' not in p]
+        logger.info(f"Current pods after scaling: {current_falkordb_pods}")
+
         # Verify data persisted after scaling
         logger.info("Verifying data persistence after vertical scaling...")
         post_scale_count = self._read_scaling_test_data_in_cluster(
-            cluster_info["pods"][0], cluster_info["namespace"], 
+            current_falkordb_pods[0], cluster_info["namespace"], 
             cluster_info["username"], cluster_info["password"]
         )
         assert post_scale_count == initial_count, \
@@ -1317,24 +1332,60 @@ fi
             'sh', '-c', test_functionality_script
         ]
         
-        # Verify functionality with retry
-        max_retries = 3
+        # Verify functionality with retry - try multiple pods if needed
+        max_retries = 5
         cluster_functional = False
+        
+        # Get current pod list
+        result = subprocess.run(
+            ["kubectl", "get", "pods", "-n", cluster_info["namespace"],
+             "-l", f"app.kubernetes.io/instance={cluster_info['name']}",
+             "-o", "jsonpath={{.items[*].metadata.name}}"],
+            capture_output=True, text=True
+        )
+        current_pods = result.stdout.strip().split()
+        # Filter to FalkorDB cluster pods (those with 'shard' but not sentinel)
+        current_falkordb_pods = [p for p in current_pods if 'shard' in p and 'sent' not in p]
+        
+        # If no pods found in new format, fallback to using cluster_info pods
+        if not current_falkordb_pods:
+            current_falkordb_pods = [p for p in cluster_info["pods"] if 'shard' in p and 'sent' not in p]
+            if not current_falkordb_pods:  # Still empty, use all pods
+                current_falkordb_pods = cluster_info["pods"]
+        
+        logger.info(f"Testing functionality on pods: {current_falkordb_pods}")
+        
         for attempt in range(max_retries):
+            # Try a different pod each attempt
+            test_pod = current_falkordb_pods[attempt % len(current_falkordb_pods)]
+            
+            exec_cmd = [
+                'kubectl', 'exec', test_pod,
+                '-n', cluster_info['namespace'],
+                '-c', 'falkordb-cluster',
+                '--',
+                'sh', '-c', test_functionality_script
+            ]
+            
             try:
                 result = subprocess.run(exec_cmd, capture_output=True, text=True, timeout=30)
                 if result.returncode == 0 and "SUCCESS" in result.stdout:
-                    logger.info("✓ Cluster is functional after OOM test")
+                    logger.info(f"✓ Cluster is functional after OOM test (verified on pod: {test_pod})")
                     cluster_functional = True
                     break
                 else:
                     if attempt < max_retries - 1:
-                        logger.info(f"Cluster not ready, retry {attempt + 1}/{max_retries}")
+                        logger.info(f"Cluster not ready on pod {test_pod}, retry {attempt + 1}/{max_retries}")
                         time.sleep(10)
+                    else:
+                        logger.error(f"Pod {test_pod} stderr: {result.stderr}")
+                        logger.error(f"Pod {test_pod} stdout: {result.stdout}")
             except Exception as e:
                 if attempt < max_retries - 1:
-                    logger.info(f"Retry {attempt + 1}/{max_retries} after error: {e}")
+                    logger.info(f"Retry {attempt + 1}/{max_retries} after error on pod {test_pod}: {e}")
                     time.sleep(10)
+                else:
+                    logger.error(f"Final attempt failed on pod {test_pod}: {e}")
         
         assert cluster_functional, "Cluster should remain functional after OOM test"
 
@@ -1480,6 +1531,43 @@ fi
         cluster_info = clean_graphs
         
         logger.info("Testing data persistence through scaling operations...")
+
+        # Wait for all pods to be fully ready and scheduled
+        logger.info("Waiting for all pods to be ready...")
+        max_wait = 120
+        start_wait = time.time()
+        all_pods_ready = False
+        
+        while time.time() - start_wait < max_wait:
+            result = subprocess.run(
+                ["kubectl", "get", "pods", "-n", cluster_info["namespace"],
+                 "-l", f"app.kubernetes.io/instance={cluster_info['name']}",
+                 "-o", "json"],
+                capture_output=True, text=True
+            )
+            
+            if result.returncode == 0:
+                pods_data = json.loads(result.stdout)
+                pods = pods_data.get("items", [])
+                ready_pods = [
+                    p for p in pods 
+                    if p.get("status", {}).get("phase") == "Running" and
+                       p.get("spec", {}).get("nodeName") is not None and  # Has host assigned
+                       any(c.get("type") == "Ready" and c.get("status") == "True" 
+                           for c in p.get("status", {}).get("conditions", []))
+                ]
+                
+                if len(ready_pods) >= len(cluster_info["pods"]):
+                    all_pods_ready = True
+                    logger.info(f"All pods ready and scheduled: {len(ready_pods)} pods")
+                    break
+                else:
+                    elapsed = int(time.time() - start_wait)
+                    logger.info(f"Waiting for pods to be fully ready... ({len(ready_pods)}/{len(cluster_info['pods'])} ready, {elapsed}s elapsed)")
+            
+            time.sleep(5)
+        
+        assert all_pods_ready, f"Pods did not become fully ready within {max_wait}s"
 
         # Create initial dataset with known values
         logger.info("Creating initial dataset...")

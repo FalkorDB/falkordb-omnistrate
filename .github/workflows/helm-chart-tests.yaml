@@ -308,12 +308,6 @@ jobs:
             kubectl logs -n kb-system $pod --tail=100 || true
           done
 
-      - name: Cleanup test resources
-        if: always()
-        run: |
-          helm uninstall test-cluster -n ${{ env.NAMESPACE }} --ignore-not-found || true
-          kubectl delete namespace ${{ env.NAMESPACE }} --ignore-not-found || true
-
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4

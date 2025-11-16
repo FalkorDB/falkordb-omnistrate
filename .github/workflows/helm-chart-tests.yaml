@@ -317,9 +317,150 @@ jobs:
             helm/kubeblocks/falkordb-cluster-omnistrate/tests/.pytest_cache/
             helm/kubeblocks/falkordb-cluster-omnistrate/tests/test-results/
 
+  package-and-push-helm-chart:
+    name: Package and Push Helm Chart
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all') ||
+      contains(github.ref, 'refs/tags/v')
+    outputs:
+      chart-version: ${{ steps.package.outputs.chart-version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Determine chart version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" =~ ^refs/tags/v ]]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION="0.0.0-dev-${{ github.run_id }}"
+          fi
+          echo "chart-version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Chart version: $VERSION"
+
+      - name: Update Chart.yaml version
+        working-directory: helm/kubeblocks/falkordb-cluster-omnistrate
+        run: |
+          sed -i "s/^version:.*/version: ${{ steps.version.outputs.chart-version }}/" Chart.yaml
+          cat Chart.yaml
+
+      - name: Build Helm chart dependencies
+        working-directory: helm/kubeblocks/falkordb-cluster-omnistrate
+        run: |
+          helm dependency build
+
+      - name: Package Helm chart
+        id: package
+        working-directory: helm/kubeblocks/falkordb-cluster-omnistrate
+        run: |
+          helm package . --destination /tmp/charts
+          echo "chart-version=${{ steps.version.outputs.chart-version }}" >> $GITHUB_OUTPUT
+          ls -la /tmp/charts
+
+      - name: Configure Git for GitHub Pages
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v5
+        with:
+          ref: gh-pages
+          path: gh-pages
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Helm repository index
+        run: |
+          mkdir -p gh-pages/charts
+          cp /tmp/charts/*.tgz gh-pages/charts/
+          helm repo index gh-pages/charts --url https://falkordb.github.io/helm-charts/charts
+
+      - name: Push to gh-pages
+        working-directory: gh-pages
+        run: |
+          git add charts/
+          git commit -m "Add Helm chart version ${{ steps.version.outputs.chart-version }}" || echo "No changes to commit"
+          git push origin gh-pages
+
+  update-omnistrate-plans:
+    name: Update Omnistrate Plans
+    runs-on: ubuntu-latest
+    needs: package-and-push-helm-chart
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all') ||
+      contains(github.ref, 'refs/tags/v')
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        plans:
+          - service-name: KubeBlocks
+            plan-name: Pro
+            file: kubeblocks.pro.yaml
+            key: pro
+            tier-name: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+          - service-name: KubeBlocks
+            plan-name: Enterprise
+            file: kubeblocks.enterprise.yaml
+            key: enterprise
+            tier-name: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Replace Variables
+        working-directory: compose
+        env:
+          CHART_VERSION: ${{ needs.package-and-push-helm-chart.outputs.chart-version }}
+        run: |
+          sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$AwsAccountId/${{ vars.AWS_ACCOUNT_ID }}/g' ${{ matrix.plans.file }}
+          sed -i 's|$AwsBootstrapRoleAccountArn|${{ vars.AWS_BOOTSTRAP_ROLE_ACCOUNT_ARN }}|g' ${{ matrix.plans.file }}
+          sed -i 's/$AzureSubscriptionId/${{ vars.AZURE_SUBSCRIPTION_ID }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$AzureTenantId/${{ vars.AZURE_TENANT_ID }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$MeteringBucketName/${{ secrets.METERING_BUCKET_NAME }}/g' ${{ matrix.plans.file }}
+          sed -i 's|$ChartVersion|'"${CHART_VERSION}"'|g' ${{ matrix.plans.file }}
+          sed -i 's|$ChartRepoURL|https://falkordb.github.io/helm-charts/|g' ${{ matrix.plans.file }}
+          sed -i 's|$FalkorDBVersion|v4.14.2-alpine|g' ${{ matrix.plans.file }}
+
+      - name: Upload yaml as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.plans.file }}
+          path: compose/${{ matrix.plans.file }}
+
+      - name: Update Omnistrate plan
+        uses: ./.github/actions/update-omnistrate-plan
+        id: update_omnistrate_plan
+        with:
+          username: ${{ secrets.OMNISTRATE_USERNAME }}
+          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          file: compose/${{ matrix.plans.file }}
+          service-name: ${{ matrix.plans.service-name }}
+          environment: dev
+          environment-type: dev
+          release-description: helm-chart-${{ needs.package-and-push-helm-chart.outputs.chart-version }}
+
   omnistrate-e2e-tests:
     name: Omnistrate E2E Tests
     runs-on: ubuntu-latest
+    needs: update-omnistrate-plans
     if: always()
     env:
       # Test mode: basic runs on schedule/manual full, full runs on tags
@@ -328,32 +469,72 @@ jobs:
       fail-fast: false
       matrix:
         instances:
-          ######################## NON-ENTERPRISE • AWS ONLY (BASIC) #####################
-          - name: "[01] free/Standalone - AWS/us-east-1"
+          ######################## PRO • AWS (BASIC) #####################
+          - name: "[01] pro/Standalone - AWS/us-east-1"
             if: "basic"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,oom"
-            tierName: "Free"
-            cloudProvider: aws
-            cloudRegion: us-east-1
-            resourceKey: free
-            maxmemory: "1GB"
-
-          - name: "[02] startup/Standalone - AWS/us-east-1"
-            if: "basic"
-            testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart,oom"
-            tierName: "Startup"
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
             resourceKey: standalone
-            maxmemory: "1GB"
+            instanceType: t2.medium
+            maxmemory: "2GB"
 
-          - name: "[03] pro/Standalone - AWS/us-east-1"
+          - name: "[02] pro/SingleZone - AWS/us-east-1"
             if: "basic"
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart,oom"
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-1
+            resourceKey: single-Zone
+            instanceType: t2.medium
+            maxmemory: "2GB"
+
+          - name: "[03] pro/MultiZone - AWS/us-east-1"
+            if: "basic"
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart,oom"
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-1
+            resourceKey: multi-Zone
+            instanceType: t2.medium
+            maxmemory: "2GB"
+
+          - name: "[04] pro/ClusterSingleZone - AWS/us-east-1"
+            if: "basic"
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart,oom"
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-1
+            resourceKey: cluster-Single-Zone
+            instanceType: t2.medium
+            hostCount: "6"
+            clusterReplicas: "1"
+            maxmemory: "2GB"
+
+          - name: "[05] pro/ClusterMultiZone - AWS/us-east-1"
+            if: "basic"
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart,oom"
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-1
+            resourceKey: cluster-Multi-Zone
+            instanceType: t2.medium
+            hostCount: "6"
+            clusterReplicas: "1"
+            maxmemory: "2GB"
+
+          ######################## ENTERPRISE • AWS (FULL) ########################
+          - name: "[06] enterprise/Standalone - AWS/us-east-1"
+            if: "full"
             testFile: tests/test_grouped_standalone.py
             tests: "failover,stopstart,oom,resize"
-            tierName: "Pro"
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
             resourceKey: standalone
@@ -361,11 +542,11 @@ jobs:
             newInstanceType: m6i.large
             maxmemory: "2GB"
 
-          - name: "[04] pro/SingleZone - AWS/us-east-1"
-            if: "basic"
+          - name: "[07] enterprise/SingleZone - AWS/us-east-1"
+            if: "full"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,oom,resize"
-            tierName: "Pro"
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
             resourceKey: single-Zone
@@ -373,11 +554,11 @@ jobs:
             newInstanceType: m6i.large
             maxmemory: "2GB"
 
-          - name: "[05] pro/MultiZone - AWS/us-east-1"
-            if: "basic"
+          - name: "[08] enterprise/MultiZone - AWS/us-east-1"
+            if: "full"
             testFile: tests/test_grouped_replication.py
             tests: "failover,stopstart,oom,resize"
-            tierName: "Pro"
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
             resourceKey: multi-Zone
@@ -385,11 +566,11 @@ jobs:
             newInstanceType: m6i.large
             maxmemory: "2GB"
 
-          - name: "[06] pro/ClusterSingleZone - AWS/us-east-1"
-            if: "basic"
+          - name: "[09] enterprise/ClusterSingleZone - AWS/us-east-1"
+            if: "full"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,oom,resize"
-            tierName: "Pro"
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
             resourceKey: cluster-Single-Zone
@@ -399,11 +580,11 @@ jobs:
             newInstanceType: m6i.large
             maxmemory: "2GB"
 
-          - name: "[07] pro/ClusterMultiZone - AWS/us-east-1"
-            if: "basic"
+          - name: "[10] enterprise/ClusterMultiZone - AWS/us-east-1"
+            if: "full"
             testFile: tests/test_grouped_cluster.py
             tests: "failover,stopstart,oom,resize"
-            tierName: "Pro"
+            tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
             resourceKey: cluster-Multi-Zone
@@ -412,45 +593,6 @@ jobs:
             clusterReplicas: "1"
             newInstanceType: m6i.large
             maxmemory: "2GB"
-
-          ######################## PRO • AWS (TLS - BASIC) ########################
-          - name: "[08] pro/Standalone/TLS - AWS/us-east-1"
-            if: "basic"
-            testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart"
-            tierName: "Pro"
-            cloudProvider: aws
-            cloudRegion: us-east-1
-            resourceKey: standalone
-            instanceType: t2.medium
-            maxmemory: "2GB"
-            tls: true
-
-          - name: "[09] pro/SingleZone/TLS - AWS/us-east-1"
-            if: "basic"
-            testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart"
-            tierName: "Pro"
-            cloudProvider: aws
-            cloudRegion: us-east-1
-            resourceKey: single-Zone
-            instanceType: t2.medium
-            maxmemory: "2GB"
-            tls: true
-
-          - name: "[10] pro/ClusterSingleZone/TLS - AWS/us-east-1"
-            if: "basic"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart"
-            tierName: "Pro"
-            cloudProvider: aws
-            cloudRegion: us-east-1
-            resourceKey: cluster-Single-Zone
-            instanceType: t2.medium
-            hostCount: "6"
-            clusterReplicas: "1"
-            maxmemory: "2GB"
-            tls: true
 
     steps:
       - name: Checkout

@@ -1,32 +1,34 @@
 # yaml-language-server: $schema=https://api.omnistrate.cloud/2022-09-01-00/schema/service-spec-schema.json
 
-name: Kubeblocks Startup
+name: Kubeblocks Enterprise
 tenancyType: CUSTOM_TENANCY
 deployment:
   hostedDeployment:
-    GcpProjectId: "app-plane-dev-f7a2434f"
-    GcpProjectNumber: "747498641488"
-    GcpServiceAccountEmail: "omni-btstrp-org-q9h5kjuc0n@app-plane-dev-f7a2434f.iam.gserviceaccount.com"
-    AwsAccountId: "637423310747"
-    AWSBootstrapRoleAccountArn: "arn:aws:iam::637423310747:role/omnistrate-bootstrap-role"
+    GcpProjectId: "$GcpProjectId"
+    GcpProjectNumber: "$GcpProjectNumber"
+    GcpServiceAccountEmail: "$GcpServiceAccountEmail"
+    AwsAccountId: "$AwsAccountId"
+    AWSBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+    AzureSubscriptionId: "$AzureSubscriptionId"
+    AzureTenantId: "$AzureTenantId"
 metering:
   gcsBucketName: $MeteringBucketName
 pricing:
   - dimension: cpu
     unit: cores
     timeUnit: hour
-    price: 0.2
+    price: 0.3
   - dimension: memory
     unit: GiB
     timeUnit: hour
-    price: 0.01
-maxNumberOfInstancesAllowed: 10
+    price: 0.015
+maxNumberOfInstancesAllowed: 100
 validPaymentMethodRequired: true
-billingProductID: "pro"
+billingProductID: "enterprise"
 
 services:
   - name: FalkorDB Standalone
-    description: A FalkorDB Standalone database service managed by KubeBlocks.
+    description: A FalkorDB Standalone database service managed by KubeBlocks (Enterprise tier).
     apiParameters:
       - key: name
         description: Name
@@ -62,10 +64,15 @@ services:
           - t2.medium
           - m6i.large
           - m6i.xlarge
+          - m6i.2xlarge
           - c6i.xlarge
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
+          - Standard_B2ms
+          - Standard_D2s_v3
+          - Standard_D4s_v3
+          - Standard_D8s_v3
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -195,6 +202,8 @@ services:
           cloudProvider: gcp
         - apiParam: nodeInstanceType
           cloudProvider: aws
+        - apiParam: nodeInstanceType
+          cloudProvider: azure
     network:
       ports:
         - 6379
@@ -276,7 +285,7 @@ services:
         enableTLS: $var.enableTLS
 
   - name: FalkorDB Replication
-    description: A FalkorDB Replication (primary-replica) service managed by KubeBlocks (Pro tier).
+    description: A FalkorDB Replication (primary-replica) service managed by KubeBlocks (Enterprise tier).
     apiParameters:
       - key: name
         description: Name
@@ -317,6 +326,10 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
+          - Standard_B2ms
+          - Standard_D2s_v3
+          - Standard_D4s_v3
+          - Standard_D8s_v3
       - key: numReplicas
         description: Number of Replicas (includes 1 primary + replicas)
         name: Number of Replicas
@@ -457,6 +470,8 @@ services:
           cloudProvider: gcp
         - apiParam: nodeInstanceType
           cloudProvider: aws
+        - apiParam: nodeInstanceType
+          cloudProvider: azure
     network:
       ports:
         - 6379
@@ -552,7 +567,7 @@ services:
         enableTLS: $var.enableTLS
 
   - name: FalkorDB Cluster
-    description: A FalkorDB Cluster Single Zone (sharded cluster) service managed by KubeBlocks (Pro tier).
+    description: A FalkorDB Cluster Single Zone (sharded cluster) service managed by KubeBlocks (Enterprise tier).
     apiParameters:
       - key: name
         description: Name
@@ -593,6 +608,10 @@ services:
           - c6i.2xlarge
           - c6i.4xlarge
           - c6i.8xlarge
+          - Standard_B2ms
+          - Standard_D2s_v3
+          - Standard_D4s_v3
+          - Standard_D8s_v3
       - key: shardCount
         description: Number of shards in the cluster
         name: Shard Count
@@ -744,6 +763,8 @@ services:
           cloudProvider: gcp
         - apiParam: nodeInstanceType
           cloudProvider: aws
+        - apiParam: nodeInstanceType
+          cloudProvider: azure
     network:
       ports:
         - 6379

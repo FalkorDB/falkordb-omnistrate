@@ -11,6 +11,7 @@ on:
       - "v*"
     paths:
       - "helm/kubeblocks/**"
+      - ".github/workflows/helm-chart-tests.yaml"
   schedule:
     - cron: "0 0 * * *" # Run daily at midnight UTC
   workflow_dispatch:

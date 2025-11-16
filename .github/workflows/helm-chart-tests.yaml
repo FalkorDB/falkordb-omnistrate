@@ -317,16 +317,239 @@ jobs:
             helm/kubeblocks/falkordb-cluster-omnistrate/tests/.pytest_cache/
             helm/kubeblocks/falkordb-cluster-omnistrate/tests/test-results/
 
+  omnistrate-e2e-tests:
+    name: Omnistrate E2E Tests
+    runs-on: ubuntu-latest
+    if: always()
+    env:
+      # Test mode: basic runs on schedule/manual full, full runs on tags
+      TEST_MODE: ${{ (contains(github.ref, 'refs/tags/v')) && 'full' || 'basic' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        instances:
+          ######################## NON-ENTERPRISE • AWS ONLY (BASIC) #####################
+          - name: "[01] free/Standalone - AWS/us-east-1"
+            if: "basic"
+            testFile: tests/test_grouped_standalone.py
+            tests: "failover,stopstart,oom"
+            tierName: "Free"
+            cloudProvider: aws
+            cloudRegion: us-east-1
+            resourceKey: free
+            maxmemory: "1GB"
+
+          - name: "[02] startup/Standalone - AWS/us-east-1"
+            if: "basic"
+            testFile: tests/test_grouped_standalone.py
+            tests: "failover,stopstart,oom"
+            tierName: "Startup"
+            cloudProvider: aws
+            cloudRegion: us-east-1
+            resourceKey: standalone
+            maxmemory: "1GB"
+
+          - name: "[03] pro/Standalone - AWS/us-east-1"
+            if: "basic"
+            testFile: tests/test_grouped_standalone.py
+            tests: "failover,stopstart,oom,resize"
+            tierName: "Pro"
+            cloudProvider: aws
+            cloudRegion: us-east-1
+            resourceKey: standalone
+            instanceType: t2.medium
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
+
+          - name: "[04] pro/SingleZone - AWS/us-east-1"
+            if: "basic"
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart,oom,resize"
+            tierName: "Pro"
+            cloudProvider: aws
+            cloudRegion: us-east-1
+            resourceKey: single-Zone
+            instanceType: t2.medium
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
+
+          - name: "[05] pro/MultiZone - AWS/us-east-1"
+            if: "basic"
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart,oom,resize"
+            tierName: "Pro"
+            cloudProvider: aws
+            cloudRegion: us-east-1
+            resourceKey: multi-Zone
+            instanceType: t2.medium
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
+
+          - name: "[06] pro/ClusterSingleZone - AWS/us-east-1"
+            if: "basic"
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart,oom,resize"
+            tierName: "Pro"
+            cloudProvider: aws
+            cloudRegion: us-east-1
+            resourceKey: cluster-Single-Zone
+            instanceType: t2.medium
+            hostCount: "6"
+            clusterReplicas: "1"
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
+
+          - name: "[07] pro/ClusterMultiZone - AWS/us-east-1"
+            if: "basic"
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart,oom,resize"
+            tierName: "Pro"
+            cloudProvider: aws
+            cloudRegion: us-east-1
+            resourceKey: cluster-Multi-Zone
+            instanceType: t2.medium
+            hostCount: "6"
+            clusterReplicas: "1"
+            newInstanceType: m6i.large
+            maxmemory: "2GB"
+
+          ######################## PRO • AWS (TLS - BASIC) ########################
+          - name: "[08] pro/Standalone/TLS - AWS/us-east-1"
+            if: "basic"
+            testFile: tests/test_grouped_standalone.py
+            tests: "failover,stopstart"
+            tierName: "Pro"
+            cloudProvider: aws
+            cloudRegion: us-east-1
+            resourceKey: standalone
+            instanceType: t2.medium
+            maxmemory: "2GB"
+            tls: true
+
+          - name: "[09] pro/SingleZone/TLS - AWS/us-east-1"
+            if: "basic"
+            testFile: tests/test_grouped_replication.py
+            tests: "failover,stopstart"
+            tierName: "Pro"
+            cloudProvider: aws
+            cloudRegion: us-east-1
+            resourceKey: single-Zone
+            instanceType: t2.medium
+            maxmemory: "2GB"
+            tls: true
+
+          - name: "[10] pro/ClusterSingleZone/TLS - AWS/us-east-1"
+            if: "basic"
+            testFile: tests/test_grouped_cluster.py
+            tests: "failover,stopstart"
+            tierName: "Pro"
+            cloudProvider: aws
+            cloudRegion: us-east-1
+            resourceKey: cluster-Single-Zone
+            instanceType: t2.medium
+            hostCount: "6"
+            clusterReplicas: "1"
+            maxmemory: "2GB"
+            tls: true
+
+    steps:
+      - name: Checkout
+        if: (matrix.instances.if == 'basic' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all'))) || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Python
+        if: (matrix.instances.if == 'basic' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all'))) || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache Poetry virtualenv
+        if: (matrix.instances.if == 'basic' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all'))) || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: ${{ runner.os }}-poetry-helm-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-helm-
+            ${{ runner.os }}-poetry-
+
+      - name: Install Poetry
+        if: (matrix.instances.if == 'basic' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all'))) || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install Python dependencies
+        if: (matrix.instances.if == 'basic' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all'))) || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
+        run: |
+          poetry install
+
+      - name: ${{ matrix.instances.name }}
+        if: (matrix.instances.if == 'basic' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all'))) || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
+        env:
+          SERVICE_ID: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          ENVIRONMENT_ID: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}
+          SUBSCRIPTION_ID: sub-GJPV3NoNC0
+          OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
+          OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          EXTRA_ARGS=()
+
+          [[ -n "${{ matrix.instances.newInstanceType || '' }}" ]] && \
+            EXTRA_ARGS+=(--new-instance-type "${{ matrix.instances.newInstanceType }}")
+
+          [[ -n "${{ matrix.instances.hostCount || '' }}" ]] && \
+            EXTRA_ARGS+=(--host-count "${{ matrix.instances.hostCount }}")
+
+          [[ -n "${{ matrix.instances.clusterReplicas || '' }}" ]] && \
+            EXTRA_ARGS+=(--cluster-replicas "${{ matrix.instances.clusterReplicas }}")
+
+          [[ -n "${{ matrix.instances.maxmemory || '' }}" ]] && \
+            EXTRA_ARGS+=(--maxmemory "${{ matrix.instances.maxmemory }}")
+
+          [[ -n "${{ matrix.instances.instanceType || '' }}" ]] && \
+            EXTRA_ARGS+=(--instance-type "${{ matrix.instances.instanceType }}")
+
+          [[ -n "${{ matrix.instances.tls || '' }}" ]] && \
+            EXTRA_ARGS+=(--tls)
+
+          poetry run pytest -s -v "${{ matrix.instances.testFile }}" \
+            --service-id "$SERVICE_ID" \
+            --environment-id "$ENVIRONMENT_ID" \
+            --subscription-id "$SUBSCRIPTION_ID" \
+            --tier-name "${{ matrix.instances.tierName }}" \
+            --cloud-provider "${{ matrix.instances.cloudProvider }}" \
+            --region "${{ matrix.instances.cloudRegion }}" \
+            --resource-key "${{ matrix.instances.resourceKey }}" \
+            --instance-name "helm-e2e-${{ matrix.instances.resourceKey }}-${{ github.run_id }}" \
+            --e2e-steps "${{ matrix.instances.tests }}" \
+            --network-type "${{ matrix.instances.networkType || 'PUBLIC' }}" \
+            "${EXTRA_ARGS[@]}"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: omnistrate-e2e-test-results-${{ matrix.instances.name }}
+          path: |
+            .pytest_cache/
+            test-results/
+
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests]
+    needs: [unit-tests, integration-tests, omnistrate-e2e-tests]
     if: always()
     steps:
       - name: Check test results
         run: |
           echo "Unit Tests: ${{ needs.unit-tests.result }}"
           echo "Integration Tests: ${{ needs.integration-tests.result }}"
+          echo "Omnistrate E2E Tests: ${{ needs.omnistrate-e2e-tests.result }}"
 
           if [ "${{ needs.unit-tests.result }}" != "success" ]; then
             echo "❌ Unit tests failed"
@@ -335,6 +558,11 @@ jobs:
 
           if [ "${{ needs.integration-tests.result }}" != "success" ] && [ "${{ needs.integration-tests.result }}" != "skipped" ]; then
             echo "❌ Integration tests failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.omnistrate-e2e-tests.result }}" != "success" ] && [ "${{ needs.omnistrate-e2e-tests.result }}" != "skipped" ]; then
+            echo "❌ Omnistrate E2E tests failed"
             exit 1
           fi
 
@@ -349,6 +577,7 @@ jobs:
           echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Unit Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Integration Tests | ${{ needs.integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Omnistrate E2E Tests | ${{ needs.omnistrate-e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Ref:** ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY

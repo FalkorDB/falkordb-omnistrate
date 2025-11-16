@@ -1,854 +1,854 @@
-name: Build and test image
+# name: Build and test image
 
-on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review]
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "compose/**"
-  push:
-    tags:
-      - "v*"
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "compose/**"
-  schedule:
-    - cron: "0 0 * * *"
-  workflow_dispatch:
-    inputs:
-      test_mode:
-        description: 'Test mode to run'
-        required: false
-        default: 'basic'
-        type: choice
-        options:
-          - basic
-          - full
+# on:
+#   pull_request:
+#     types: [opened, synchronize, ready_for_review]
+#     paths:
+#       - "src/**"
+#       - "tests/**"
+#       - "compose/**"
+#   push:
+#     tags:
+#       - "v*"
+#     paths:
+#       - "src/**"
+#       - "tests/**"
+#       - "compose/**"
+#   schedule:
+#     - cron: "0 0 * * *"
+#   workflow_dispatch:
+#     inputs:
+#       test_mode:
+#         description: 'Test mode to run'
+#         required: false
+#         default: 'basic'
+#         type: choice
+#         options:
+#           - basic
+#           - full
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.ref }}
+#   cancel-in-progress: false
 
-env:
-  # Test modes: basic (PR commits) or full (releases and scheduled runs)
-  TEST_MODE: ${{ (contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full') && 'full' || 'basic' }}
+# env:
+#   # Test modes: basic (PR commits) or full (releases and scheduled runs)
+#   TEST_MODE: ${{ (contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full') && 'full' || 'basic' }}
   
-  NODE_IMAGE_NAME: falkordb-node
-  CLUSTER_IMAGE_NAME: falkordb-cluster
-  CLUSTER_REBALANCE_IMAGE_NAME: falkordb-cluster-rebalance
-  HEALTHCHECK_IMAGE_NAME: falkordb-cloud-healthcheck
-  FALKORDB_EXPORTER_IMAGE_NAME: falkordb-cloud-exporter
-  FALKORDB_SENTINEL_IMAGE_NAME: falkordb-cloud-sentinel
-  FALKORDB_VERSION: v4.14.2-alpine
-  FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-  PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-  ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-  GCP_NETWORK_NAME: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-  AWS_NETWORK_NAME: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-  AZURE_NETWORK_NAME: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-  SERVICE_ID: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-  ENVIRONMENT_ID: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-  SUBSCRIPTION_ID: sub-GJPV3NoNC0
-jobs:
-  create-runners:
-    strategy:
-      matrix:
-        machines:
-          - name: replication-runner-private-gcp
-            machine_type: e2-medium
-            runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
-            arm: false
-            image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
-          - name: cluster-runner-private-gcp
-            machine_type: e2-medium
-            runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
-            arm: false
-            image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
-    runs-on: ubuntu-latest
-    # Only create runners for tagged releases and scheduled runs
-    if: contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full'
-    steps:
-      - name: Create runners
-        id: create-runner
-        uses: FalkorDB/gce-github-runner@install_docker
-        with:
-          token: ${{ secrets.GH_SA_TOKEN }}
-          project_id: ${{ vars.GCP_PROJECT_ID }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
-          machine_zone: ${{ vars.GCP_ZONE }}
-          network: n-hcjx5tis6bc
-          subnet: s-hcjx5tis6bc-pod
-          disk_size: 100
-          machine_type: ${{ matrix.machines.machine_type }}
-          runner_label: ${{ matrix.machines.runner_label }}
-          arm: ${{ matrix.machines.arm }}
-          image: ${{ matrix.machines.image }}
+#   NODE_IMAGE_NAME: falkordb-node
+#   CLUSTER_IMAGE_NAME: falkordb-cluster
+#   CLUSTER_REBALANCE_IMAGE_NAME: falkordb-cluster-rebalance
+#   HEALTHCHECK_IMAGE_NAME: falkordb-cloud-healthcheck
+#   FALKORDB_EXPORTER_IMAGE_NAME: falkordb-cloud-exporter
+#   FALKORDB_SENTINEL_IMAGE_NAME: falkordb-cloud-sentinel
+#   FALKORDB_VERSION: v4.14.2-alpine
+#   FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#   PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#   ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#   GCP_NETWORK_NAME: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#   AWS_NETWORK_NAME: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#   AZURE_NETWORK_NAME: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+#   SERVICE_ID: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+#   ENVIRONMENT_ID: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+#   SUBSCRIPTION_ID: sub-GJPV3NoNC0
+# jobs:
+#   create-runners:
+#     strategy:
+#       matrix:
+#         machines:
+#           - name: replication-runner-private-gcp
+#             machine_type: e2-medium
+#             runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
+#             arm: false
+#             image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
+#           - name: cluster-runner-private-gcp
+#             machine_type: e2-medium
+#             runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
+#             arm: false
+#             image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
+#     runs-on: ubuntu-latest
+#     # Only create runners for tagged releases and scheduled runs
+#     if: contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full'
+#     steps:
+#       - name: Create runners
+#         id: create-runner
+#         uses: FalkorDB/gce-github-runner@install_docker
+#         with:
+#           token: ${{ secrets.GH_SA_TOKEN }}
+#           project_id: ${{ vars.GCP_PROJECT_ID }}
+#           service_account_key: ${{ secrets.GCP_SA_KEY }}
+#           machine_zone: ${{ vars.GCP_ZONE }}
+#           network: n-hcjx5tis6bc
+#           subnet: s-hcjx5tis6bc-pod
+#           disk_size: 100
+#           machine_type: ${{ matrix.machines.machine_type }}
+#           runner_label: ${{ matrix.machines.runner_label }}
+#           arm: ${{ matrix.machines.arm }}
+#           image: ${{ matrix.machines.image }}
 
-  build-and-push:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - dockerfile: ./src/falkordb-node/Dockerfile
-            image-name: falkordb-node
-          - dockerfile: ./src/falkordb-cluster/Dockerfile
-            image-name: falkordb-cluster
-          - dockerfile: ./src/falkordb-cluster-rebalance/Dockerfile
-            image-name: falkordb-cluster-rebalance
-          - dockerfile: ./src/healthcheck_rs/Dockerfile
-            image-name: falkordb-cloud-healthcheck
-          - dockerfile: ./src/falkordb-exporter/Dockerfile
-            image-name: falkordb-cloud-exporter
-          - dockerfile: ./src/falkordb-sentinel/Dockerfile
-            image-name: falkordb-cloud-sentinel
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+#   build-and-push:
+#     runs-on: ubuntu-latest
+#     strategy:
+#       fail-fast: true
+#       matrix:
+#         include:
+#           - dockerfile: ./src/falkordb-node/Dockerfile
+#             image-name: falkordb-node
+#           - dockerfile: ./src/falkordb-cluster/Dockerfile
+#             image-name: falkordb-cluster
+#           - dockerfile: ./src/falkordb-cluster-rebalance/Dockerfile
+#             image-name: falkordb-cluster-rebalance
+#           - dockerfile: ./src/healthcheck_rs/Dockerfile
+#             image-name: falkordb-cloud-healthcheck
+#           - dockerfile: ./src/falkordb-exporter/Dockerfile
+#             image-name: falkordb-cloud-exporter
+#           - dockerfile: ./src/falkordb-sentinel/Dockerfile
+#             image-name: falkordb-cloud-sentinel
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#         with:
+#           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v3
 
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ matrix.image-name }}-${{ hashFiles(matrix.dockerfile) }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-${{ matrix.image-name }}-
+#       - name: Cache Docker layers
+#         uses: actions/cache@v4
+#         with:
+#           path: /tmp/.buildx-cache
+#           key: ${{ runner.os }}-buildx-${{ matrix.image-name }}-${{ hashFiles(matrix.dockerfile) }}
+#           restore-keys: |
+#             ${{ runner.os }}-buildx-${{ matrix.image-name }}-
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+#       - name: Login to Docker Hub
+#         uses: docker/login-action@v3
+#         with:
+#           username: ${{ secrets.DOCKER_USERNAME }}
+#           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          build-args: FALKORDB_VERSION=${{ env.FALKORDB_VERSION }}
-          context: .
-          file: ${{ matrix.dockerfile }}
-          push: true
-          tags: falkordb/${{ matrix.image-name }}:dev-${{ github.event.head_commit.id || github.run_id }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
+#       - name: Build and push
+#         uses: docker/build-push-action@v6
+#         with:
+#           build-args: FALKORDB_VERSION=${{ env.FALKORDB_VERSION }}
+#           context: .
+#           file: ${{ matrix.dockerfile }}
+#           push: true
+#           tags: falkordb/${{ matrix.image-name }}:dev-${{ github.event.head_commit.id || github.run_id }}
+#           cache-from: type=local,src=/tmp/.buildx-cache
+#           cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
 
-  omnistrate-update-plans:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        plans:
-          - service-name: FalkorDB
-            plan-name: FalkorDB Free
-            file: omnistrate.free.yaml
-            key: free
-            tier-name: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-          - service-name: FalkorDB
-            plan-name: FalkorDB Pro
-            file: omnistrate.pro.yaml
-            key: pro
-            tier-name: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-          - service-name: FalkorDB
-            plan-name: FalkorDB Enterprise
-            file: omnistrate.enterprise.yaml
-            key: enterprise
-            tier-name: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-          - service-name: FalkorDB
-            plan-name: FalkorDB Startup
-            file: omnistrate.startup.yaml
-            key: startup
-            tier-name: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-          - service-name: FalkorDB
-            plan-name: FalkorDB Enterprise BYOA
-            file: omnistrate.enterprise.byoa.yaml
-            key: enterprise-byoa
-            tier-name: enterprise-byoa-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+#   omnistrate-update-plans:
+#     needs: build-and-push
+#     runs-on: ubuntu-latest
+#     strategy:
+#       fail-fast: false
+#       max-parallel: 1
+#       matrix:
+#         plans:
+#           - service-name: FalkorDB
+#             plan-name: FalkorDB Free
+#             file: omnistrate.free.yaml
+#             key: free
+#             tier-name: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - service-name: FalkorDB
+#             plan-name: FalkorDB Pro
+#             file: omnistrate.pro.yaml
+#             key: pro
+#             tier-name: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - service-name: FalkorDB
+#             plan-name: FalkorDB Enterprise
+#             file: omnistrate.enterprise.yaml
+#             key: enterprise
+#             tier-name: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - service-name: FalkorDB
+#             plan-name: FalkorDB Startup
+#             file: omnistrate.startup.yaml
+#             key: startup
+#             tier-name: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - service-name: FalkorDB
+#             plan-name: FalkorDB Enterprise BYOA
+#             file: omnistrate.enterprise.byoa.yaml
+#             key: enterprise-byoa
+#             tier-name: enterprise-byoa-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#         with:
+#           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Replace Variables
-        working-directory: compose
-        run: |
-          sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$AwsAccountId/${{ vars.AWS_ACCOUNT_ID }}/g' ${{ matrix.plans.file }}
-          sed -i 's|$AwsBootstrapRoleAccountArn|${{ vars.AWS_BOOTSTRAP_ROLE_ACCOUNT_ARN }}|g' ${{ matrix.plans.file }}
-          sed -i 's/$AzureSubscriptionId/${{ vars.AZURE_SUBSCRIPTION_ID }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$AzureTenantId/${{ vars.AZURE_TENANT_ID }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBHealthcheckImage/falkordb\/${{ env.HEALTHCHECK_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBExporterImage/falkordb\/${{ env.FALKORDB_EXPORTER_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$FalkorDBSentinelImage/falkordb\/${{ env.FALKORDB_SENTINEL_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
-          sed -i 's/$MeteringBucketName/${{ secrets.METERING_BUCKET_NAME }}/g' ${{ matrix.plans.file }}
-          sed -i 's/${{ matrix.plans.plan-name }}/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
+#       - name: Replace Variables
+#         working-directory: compose
+#         run: |
+#           sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
+#           sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
+#           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
+#           sed -i 's/$AwsAccountId/${{ vars.AWS_ACCOUNT_ID }}/g' ${{ matrix.plans.file }}
+#           sed -i 's|$AwsBootstrapRoleAccountArn|${{ vars.AWS_BOOTSTRAP_ROLE_ACCOUNT_ARN }}|g' ${{ matrix.plans.file }}
+#           sed -i 's/$AzureSubscriptionId/${{ vars.AZURE_SUBSCRIPTION_ID }}/g' ${{ matrix.plans.file }}
+#           sed -i 's/$AzureTenantId/${{ vars.AZURE_TENANT_ID }}/g' ${{ matrix.plans.file }}
+#           sed -i 's/$FalkorDBNodeImage/falkordb\/${{ env.NODE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
+#           sed -i 's/$FalkorDBClusterImage/falkordb\/${{ env.CLUSTER_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
+#           sed -i 's/$FalkorDBClusterRebalanceImage/falkordb\/${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
+#           sed -i 's/$FalkorDBHealthcheckImage/falkordb\/${{ env.HEALTHCHECK_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
+#           sed -i 's/$FalkorDBExporterImage/falkordb\/${{ env.FALKORDB_EXPORTER_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
+#           sed -i 's/$FalkorDBSentinelImage/falkordb\/${{ env.FALKORDB_SENTINEL_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
+#           sed -i 's/$MeteringBucketName/${{ secrets.METERING_BUCKET_NAME }}/g' ${{ matrix.plans.file }}
+#           sed -i 's/${{ matrix.plans.plan-name }}/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
 
-      - name: Upload yaml as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.plans.file }}
-          path: compose/${{ matrix.plans.file }}
+#       - name: Upload yaml as artifact
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: ${{ matrix.plans.file }}
+#           path: compose/${{ matrix.plans.file }}
 
-      - name: Create FALKORDB_PASSWORD/ADMIN_PASSWORD files
-        run: |
-          export sec=$(grep '^secrets' compose/omnistrate.free.yaml)
-          if [[ -n "$sec" ]];then
-            mkdir -p secrets || { echo "Failed to create secrets directory"; exit 1; }
-            echo '{{ $var.falkordbPassword }}' > ./secrets/falkordbpassword || { echo "Failed to write falkordbpassword"; exit 1; }
-            echo '{{ $func.random(string, 16, $sys.deterministicSeedValue) }}' > ./secrets/adminpassword || { echo "Failed to write adminpassword"; exit 1; }
-          else
-            echo "secrets option was not used"
-            exit 0
-          fi
+#       - name: Create FALKORDB_PASSWORD/ADMIN_PASSWORD files
+#         run: |
+#           export sec=$(grep '^secrets' compose/omnistrate.free.yaml)
+#           if [[ -n "$sec" ]];then
+#             mkdir -p secrets || { echo "Failed to create secrets directory"; exit 1; }
+#             echo '{{ $var.falkordbPassword }}' > ./secrets/falkordbpassword || { echo "Failed to write falkordbpassword"; exit 1; }
+#             echo '{{ $func.random(string, 16, $sys.deterministicSeedValue) }}' > ./secrets/adminpassword || { echo "Failed to write adminpassword"; exit 1; }
+#           else
+#             echo "secrets option was not used"
+#             exit 0
+#           fi
 
-      - name: Update Omnistrate plan
-        uses: ./.github/actions/update-omnistrate-plan
-        id: update_omnistrate_plan
-        with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
-          file: compose/${{ matrix.plans.file }}
-          service-name: ${{ matrix.plans.service-name }}
-          environment: testing
-          environment-type: qa
-          release-description: dev-${{ github.event.head_commit.id || github.run_id }}
+#       - name: Update Omnistrate plan
+#         uses: ./.github/actions/update-omnistrate-plan
+#         id: update_omnistrate_plan
+#         with:
+#           username: ${{ secrets.OMNISTRATE_USERNAME }}
+#           password: ${{ secrets.OMNISTRATE_PASSWORD }}
+#           file: compose/${{ matrix.plans.file }}
+#           service-name: ${{ matrix.plans.service-name }}
+#           environment: testing
+#           environment-type: qa
+#           release-description: dev-${{ github.event.head_commit.id || github.run_id }}
 
-  create-custom-networks:
-    needs: omnistrate-update-plans
-    runs-on: ubuntu-latest
-    if: contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+#   create-custom-networks:
+#     needs: omnistrate-update-plans
+#     runs-on: ubuntu-latest
+#     if: contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full'
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#         with:
+#           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Create Omnistrate Custom Network - GCP
-        uses: ./.github/actions/create-omnistrate-custom-network
-        id: create_custom_network_gcp
-        with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
-          cloud_provider: gcp
-          region: us-central1
-          cidr: "73.0.0.0/16"
-          name: ${{ env.GCP_NETWORK_NAME}}
+#       - name: Create Omnistrate Custom Network - GCP
+#         uses: ./.github/actions/create-omnistrate-custom-network
+#         id: create_custom_network_gcp
+#         with:
+#           username: ${{ secrets.OMNISTRATE_USERNAME }}
+#           password: ${{ secrets.OMNISTRATE_PASSWORD }}
+#           cloud_provider: gcp
+#           region: us-central1
+#           cidr: "73.0.0.0/16"
+#           name: ${{ env.GCP_NETWORK_NAME}}
 
-      - name: Create Omnistrate Custom Network - AWS
-        uses: ./.github/actions/create-omnistrate-custom-network
-        id: create_custom_network_aws
-        with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
-          cloud_provider: aws
-          region: us-east-2
-          cidr: "73.0.0.0/16"
-          name: ${{ env.AWS_NETWORK_NAME }}
+#       - name: Create Omnistrate Custom Network - AWS
+#         uses: ./.github/actions/create-omnistrate-custom-network
+#         id: create_custom_network_aws
+#         with:
+#           username: ${{ secrets.OMNISTRATE_USERNAME }}
+#           password: ${{ secrets.OMNISTRATE_PASSWORD }}
+#           cloud_provider: aws
+#           region: us-east-2
+#           cidr: "73.0.0.0/16"
+#           name: ${{ env.AWS_NETWORK_NAME }}
 
-      - name: Create Omnistrate Custom Network - AZURE
-        uses: ./.github/actions/create-omnistrate-custom-network
-        id: create_custom_network_azure
-        with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
-          cloud_provider: azure
-          region: eastus2
-          cidr: "73.0.0.0/16"
-          name: ${{ env.AZURE_NETWORK_NAME }}
+#       - name: Create Omnistrate Custom Network - AZURE
+#         uses: ./.github/actions/create-omnistrate-custom-network
+#         id: create_custom_network_azure
+#         with:
+#           username: ${{ secrets.OMNISTRATE_USERNAME }}
+#           password: ${{ secrets.OMNISTRATE_PASSWORD }}
+#           cloud_provider: azure
+#           region: eastus2
+#           cidr: "73.0.0.0/16"
+#           name: ${{ env.AZURE_NETWORK_NAME }}
 
-  test:
-    needs: [create-custom-networks, create-runners]
-    if: always()
-    runs-on: ${{ (contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full') && matrix.instances.runner_label || 'ubuntu-latest' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        instances:
-          #################### ENTERPRISE • AZURE (non-TLS) ####################
-          - name: "[01] enterprise/Standalone - AZURE/eastus2 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: azure
-            cloudRegion: eastus2
-            resourceKey: standalone
-            instanceType: Standard_B2ms
-            maxmemory: "2GB"
-            customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#   test:
+#     needs: [create-custom-networks, create-runners]
+#     if: always()
+#     runs-on: ${{ (contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full') && matrix.instances.runner_label || 'ubuntu-latest' }}
+#     strategy:
+#       fail-fast: false
+#       matrix:
+#         instances:
+#           #################### ENTERPRISE • AZURE (non-TLS) ####################
+#           - name: "[01] enterprise/Standalone - AZURE/eastus2 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_standalone.py
+#             tests: "failover,stopstart"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: azure
+#             cloudRegion: eastus2
+#             resourceKey: standalone
+#             instanceType: Standard_B2ms
+#             maxmemory: "2GB"
+#             customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          - name: "[02] enterprise/SingleZone - AZURE/eastus2 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: azure
-            cloudRegion: eastus2
-            resourceKey: single-Zone
-            instanceType: Standard_B2ms
-            maxmemory: "2GB"
-            customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - name: "[02] enterprise/SingleZone - AZURE/eastus2 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_replication.py
+#             tests: "failover,stopstart"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: azure
+#             cloudRegion: eastus2
+#             resourceKey: single-Zone
+#             instanceType: Standard_B2ms
+#             maxmemory: "2GB"
+#             customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          - name: "[03] enterprise/MultiZone - AZURE/eastus2 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: azure
-            cloudRegion: eastus2
-            resourceKey: multi-Zone
-            instanceType: Standard_B2ms
-            maxmemory: "2GB"
-            customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - name: "[03] enterprise/MultiZone - AZURE/eastus2 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_replication.py
+#             tests: "failover,stopstart"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: azure
+#             cloudRegion: eastus2
+#             resourceKey: multi-Zone
+#             instanceType: Standard_B2ms
+#             maxmemory: "2GB"
+#             customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          - name: "[04] enterprise/ClusterSingleZone - AZURE/eastus2 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: azure
-            cloudRegion: eastus2
-            resourceKey: cluster-Single-Zone
-            instanceType: Standard_B2ms
-            hostCount: "6"
-            clusterReplicas: "1"
-            maxmemory: "2GB"
-            customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - name: "[04] enterprise/ClusterSingleZone - AZURE/eastus2 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_cluster.py
+#             tests: "failover,stopstart"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: azure
+#             cloudRegion: eastus2
+#             resourceKey: cluster-Single-Zone
+#             instanceType: Standard_B2ms
+#             hostCount: "6"
+#             clusterReplicas: "1"
+#             maxmemory: "2GB"
+#             customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          - name: "[05] enterprise/ClusterMultiZone - AZURE/eastus2 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: azure
-            cloudRegion: eastus2
-            resourceKey: cluster-Multi-Zone
-            instanceType: Standard_B2ms
-            hostCount: "6"
-            clusterReplicas: "1"
-            maxmemory: "2GB"
-            customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - name: "[05] enterprise/ClusterMultiZone - AZURE/eastus2 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_cluster.py
+#             tests: "failover,stopstart"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: azure
+#             cloudRegion: eastus2
+#             resourceKey: cluster-Multi-Zone
+#             instanceType: Standard_B2ms
+#             hostCount: "6"
+#             clusterReplicas: "1"
+#             maxmemory: "2GB"
+#             customNetwork: azure-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          ###################### ENTERPRISE • AWS (non-TLS) #####################
-          - name: "[06] enterprise/Standalone - AWS/us-east-2 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart,oom,resize,network_change"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: standalone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
-            customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           ###################### ENTERPRISE • AWS (non-TLS) #####################
+#           - name: "[06] enterprise/Standalone - AWS/us-east-2 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_standalone.py
+#             tests: "failover,stopstart,oom,resize,network_change"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: standalone
+#             instanceType: t2.medium
+#             newInstanceType: m6i.large
+#             maxmemory: "2GB"
+#             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          - name: "[07] enterprise/SingleZone - AWS/us-east-2 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,oom,resize,network_change"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: single-Zone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
-            customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - name: "[07] enterprise/SingleZone - AWS/us-east-2 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_replication.py
+#             tests: "failover,stopstart,oom,resize,network_change"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: single-Zone
+#             instanceType: t2.medium
+#             newInstanceType: m6i.large
+#             maxmemory: "2GB"
+#             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          - name: "[08] enterprise/MultiZone - AWS/us-east-2 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,oom,resize,network_change"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: multi-Zone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
-            customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - name: "[08] enterprise/MultiZone - AWS/us-east-2 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_replication.py
+#             tests: "failover,stopstart,oom,resize,network_change"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: multi-Zone
+#             instanceType: t2.medium
+#             newInstanceType: m6i.large
+#             maxmemory: "2GB"
+#             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          - name: "[09] enterprise/ClusterSingleZone - AWS/us-east-2 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,oom,resize,network_change"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: cluster-Single-Zone
-            instanceType: t2.medium
-            hostCount: "6"
-            clusterReplicas: "1"
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
-            customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - name: "[09] enterprise/ClusterSingleZone - AWS/us-east-2 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_cluster.py
+#             tests: "failover,stopstart,oom,resize,network_change"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: cluster-Single-Zone
+#             instanceType: t2.medium
+#             hostCount: "6"
+#             clusterReplicas: "1"
+#             newInstanceType: m6i.large
+#             maxmemory: "2GB"
+#             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          - name: "[10] enterprise/ClusterMultiZone - AWS/us-east-2 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,oom,resize,network_change"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: cluster-Multi-Zone
-            instanceType: t2.medium
-            hostCount: "6"
-            clusterReplicas: "1"
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
-            customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - name: "[10] enterprise/ClusterMultiZone - AWS/us-east-2 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_cluster.py
+#             tests: "failover,stopstart,oom,resize,network_change"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: cluster-Multi-Zone
+#             instanceType: t2.medium
+#             hostCount: "6"
+#             clusterReplicas: "1"
+#             newInstanceType: m6i.large
+#             maxmemory: "2GB"
+#             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          ###################### ENTERPRISE • GCP (non-TLS) #####################
-          - name: "[11] enterprise/Standalone - GCP/us-central1 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: gcp
-            cloudRegion: us-central1
-            resourceKey: standalone
-            instanceType: e2-medium
-            maxmemory: "2GB"
-            customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           ###################### ENTERPRISE • GCP (non-TLS) #####################
+#           - name: "[11] enterprise/Standalone - GCP/us-central1 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_standalone.py
+#             tests: "failover,stopstart"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: gcp
+#             cloudRegion: us-central1
+#             resourceKey: standalone
+#             instanceType: e2-medium
+#             maxmemory: "2GB"
+#             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          - name: "[12] enterprise/SingleZone - GCP/us-central1 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: gcp
-            cloudRegion: us-central1
-            resourceKey: single-Zone
-            instanceType: e2-medium
-            maxmemory: "2GB"
-            customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - name: "[12] enterprise/SingleZone - GCP/us-central1 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_replication.py
+#             tests: "failover,stopstart"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: gcp
+#             cloudRegion: us-central1
+#             resourceKey: single-Zone
+#             instanceType: e2-medium
+#             maxmemory: "2GB"
+#             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          - name: "[13] enterprise/MultiZone - GCP/us-central1 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: gcp
-            cloudRegion: us-central1
-            resourceKey: multi-Zone
-            instanceType: e2-medium
-            maxmemory: "2GB"
-            customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - name: "[13] enterprise/MultiZone - GCP/us-central1 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_replication.py
+#             tests: "failover,stopstart"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: gcp
+#             cloudRegion: us-central1
+#             resourceKey: multi-Zone
+#             instanceType: e2-medium
+#             maxmemory: "2GB"
+#             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          - name: "[14] enterprise/ClusterSingleZone - GCP/us-central1 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: gcp
-            cloudRegion: us-central1
-            resourceKey: cluster-Single-Zone
-            instanceType: e2-medium
-            hostCount: "6"
-            clusterReplicas: "1"
-            maxmemory: "2GB"
-            customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - name: "[14] enterprise/ClusterSingleZone - GCP/us-central1 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_cluster.py
+#             tests: "failover,stopstart"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: gcp
+#             cloudRegion: us-central1
+#             resourceKey: cluster-Single-Zone
+#             instanceType: e2-medium
+#             hostCount: "6"
+#             clusterReplicas: "1"
+#             maxmemory: "2GB"
+#             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          - name: "[15] enterprise/ClusterMultiZone - GCP/us-central1 - Grouped"
-            if: "full"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart"
-            tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: gcp
-            cloudRegion: us-central1
-            resourceKey: cluster-Multi-Zone
-            instanceType: e2-medium
-            hostCount: "6"
-            clusterReplicas: "1"
-            maxmemory: "2GB"
-            customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+#           - name: "[15] enterprise/ClusterMultiZone - GCP/us-central1 - Grouped"
+#             if: "full"
+#             testFile: tests/test_grouped_cluster.py
+#             tests: "failover,stopstart"
+#             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: gcp
+#             cloudRegion: us-central1
+#             resourceKey: cluster-Multi-Zone
+#             instanceType: e2-medium
+#             hostCount: "6"
+#             clusterReplicas: "1"
+#             maxmemory: "2GB"
+#             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
-          ######################## NON-ENTERPRISE • AWS ONLY #####################
-          - name: "[16] free/Standalone - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart,oom"
-            tierName: "free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: free
-            maxmemory: "1GB"
+#           ######################## NON-ENTERPRISE • AWS ONLY #####################
+#           - name: "[16] free/Standalone - AWS/us-east-2 - Grouped"
+#             if: "basic"
+#             testFile: tests/test_grouped_standalone.py
+#             tests: "failover,stopstart,oom"
+#             tierName: "free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: free
+#             maxmemory: "1GB"
 
-          - name: "[17] startup/Standalone - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart,oom"
-            tierName: "startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: standalone
-            maxmemory: "1GB"
+#           - name: "[17] startup/Standalone - AWS/us-east-2 - Grouped"
+#             if: "basic"
+#             testFile: tests/test_grouped_standalone.py
+#             tests: "failover,stopstart,oom"
+#             tierName: "startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: standalone
+#             maxmemory: "1GB"
 
-          - name: "[18] pro/Standalone - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart,oom,resize"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: standalone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
+#           - name: "[18] pro/Standalone - AWS/us-east-2 - Grouped"
+#             if: "basic"
+#             testFile: tests/test_grouped_standalone.py
+#             tests: "failover,stopstart,oom,resize"
+#             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: standalone
+#             instanceType: t2.medium
+#             newInstanceType: m6i.large
+#             maxmemory: "2GB"
 
-          - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,oom,resize"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: single-Zone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
+#           - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
+#             if: "basic"
+#             testFile: tests/test_grouped_replication.py
+#             tests: "failover,stopstart,oom,resize"
+#             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: single-Zone
+#             instanceType: t2.medium
+#             newInstanceType: m6i.large
+#             maxmemory: "2GB"
 
-          - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,oom,resize"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: multi-Zone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
+#           - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
+#             if: "basic"
+#             testFile: tests/test_grouped_replication.py
+#             tests: "failover,stopstart,oom,resize"
+#             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: multi-Zone
+#             instanceType: t2.medium
+#             newInstanceType: m6i.large
+#             maxmemory: "2GB"
 
-          - name: "[21] pro/ClusterSingleZone - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,oom,resize"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: cluster-Single-Zone
-            instanceType: t2.medium
-            hostCount: "6"
-            clusterReplicas: "1"
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
+#           - name: "[21] pro/ClusterSingleZone - AWS/us-east-2 - Grouped"
+#             if: "basic"
+#             testFile: tests/test_grouped_cluster.py
+#             tests: "failover,stopstart,oom,resize"
+#             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: cluster-Single-Zone
+#             instanceType: t2.medium
+#             hostCount: "6"
+#             clusterReplicas: "1"
+#             newInstanceType: m6i.large
+#             maxmemory: "2GB"
 
-          - name: "[22] pro/ClusterMultiZone - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,oom,resize"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: cluster-Multi-Zone
-            instanceType: t2.medium
-            hostCount: "6"
-            clusterReplicas: "1"
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
-          ######################## PRIVATE • GCP (INTERNAL) ########################
-          - name: "[23] pro/MultiZone - PRIVATE/GCP/us-central1 - Grouped"
-            if: "full"
-            runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
-            testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,network_change"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: gcp
-            cloudRegion: us-central1
-            resourceKey: multi-Zone
-            instanceType: e2-medium
-            maxmemory: "2GB"
-            networkType: INTERNAL
+#           - name: "[22] pro/ClusterMultiZone - AWS/us-east-2 - Grouped"
+#             if: "basic"
+#             testFile: tests/test_grouped_cluster.py
+#             tests: "failover,stopstart,oom,resize"
+#             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: cluster-Multi-Zone
+#             instanceType: t2.medium
+#             hostCount: "6"
+#             clusterReplicas: "1"
+#             newInstanceType: m6i.large
+#             maxmemory: "2GB"
+#           ######################## PRIVATE • GCP (INTERNAL) ########################
+#           - name: "[23] pro/MultiZone - PRIVATE/GCP/us-central1 - Grouped"
+#             if: "full"
+#             runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
+#             testFile: tests/test_grouped_replication.py
+#             tests: "failover,stopstart,network_change"
+#             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: gcp
+#             cloudRegion: us-central1
+#             resourceKey: multi-Zone
+#             instanceType: e2-medium
+#             maxmemory: "2GB"
+#             networkType: INTERNAL
 
-          - name: "[24] pro/ClusterMultiZone - PRIVATE/GCP/us-central1 - Grouped"
-            if: "full"
-            runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,network_change"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: gcp
-            cloudRegion: us-central1
-            resourceKey: cluster-Multi-Zone
-            instanceType: e2-medium
-            hostCount: "6"
-            clusterReplicas: "1"
-            maxmemory: "2GB"
-            networkType: INTERNAL
-          ######################## PRO • AWS (TLS) ########################
-          - name: "[25] pro/Standalone/TLS - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart,network_change"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: standalone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
-            tls: true
-          - name: "[26] pro/SingleZone/TLS - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,network_change"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: single-Zone
-            instanceType: t2.medium
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
-            tls: true
-          - name: "[27] pro/ClusterSingleZone/TLS - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,network_change"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: cluster-Single-Zone
-            instanceType: t2.medium
-            hostCount: "6"
-            clusterReplicas: "1"
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
-            tls: true
-    steps:
-      - name: Checkout
-        if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+#           - name: "[24] pro/ClusterMultiZone - PRIVATE/GCP/us-central1 - Grouped"
+#             if: "full"
+#             runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
+#             testFile: tests/test_grouped_cluster.py
+#             tests: "failover,stopstart,network_change"
+#             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: gcp
+#             cloudRegion: us-central1
+#             resourceKey: cluster-Multi-Zone
+#             instanceType: e2-medium
+#             hostCount: "6"
+#             clusterReplicas: "1"
+#             maxmemory: "2GB"
+#             networkType: INTERNAL
+#           ######################## PRO • AWS (TLS) ########################
+#           - name: "[25] pro/Standalone/TLS - AWS/us-east-2 - Grouped"
+#             if: "basic"
+#             testFile: tests/test_grouped_standalone.py
+#             tests: "failover,stopstart,network_change"
+#             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: standalone
+#             instanceType: t2.medium
+#             newInstanceType: m6i.large
+#             maxmemory: "2GB"
+#             tls: true
+#           - name: "[26] pro/SingleZone/TLS - AWS/us-east-2 - Grouped"
+#             if: "basic"
+#             testFile: tests/test_grouped_replication.py
+#             tests: "failover,stopstart,network_change"
+#             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: single-Zone
+#             instanceType: t2.medium
+#             newInstanceType: m6i.large
+#             maxmemory: "2GB"
+#             tls: true
+#           - name: "[27] pro/ClusterSingleZone/TLS - AWS/us-east-2 - Grouped"
+#             if: "basic"
+#             testFile: tests/test_grouped_cluster.py
+#             tests: "failover,stopstart,network_change"
+#             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
+#             cloudProvider: aws
+#             cloudRegion: us-east-2
+#             resourceKey: cluster-Single-Zone
+#             instanceType: t2.medium
+#             hostCount: "6"
+#             clusterReplicas: "1"
+#             newInstanceType: m6i.large
+#             maxmemory: "2GB"
+#             tls: true
+#     steps:
+#       - name: Checkout
+#         if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
+#         uses: actions/checkout@v4
+#         with:
+#           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           
-      - name: Setup python
-        if: ((matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')) && matrix.instances.runner_label == ''
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
+#       - name: Setup python
+#         if: ((matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')) && matrix.instances.runner_label == ''
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: "3.x"
 
-      - name: Cache Poetry virtualenv
-        if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
-        id: cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pypoetry/virtualenvs
-          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-
+#       - name: Cache Poetry virtualenv
+#         if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
+#         id: cache
+#         uses: actions/cache@v4
+#         with:
+#           path: ~/.cache/pypoetry/virtualenvs
+#           key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+#           restore-keys: |
+#             ${{ runner.os }}-poetry-
 
-      - name: Install Poetry
-        if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          export PATH="/root/.local/bin:$PATH"
-          poetry install
+#       - name: Install Poetry
+#         if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
+#         run: |
+#           curl -sSL https://install.python-poetry.org | python3 -
+#           export PATH="/root/.local/bin:$PATH"
+#           poetry install
 
-      - name: ${{ matrix.instances.name }}
-        if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
-        env:
-          SERVICE_ID: ${{ env.SERVICE_ID }}
-          ENVIRONMENT_ID: ${{ env.ENVIRONMENT_ID }}
-          SUBSCRIPTION_ID: ${{ env.SUBSCRIPTION_ID }}
-          OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
-          OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
-        run: |
-          set -euo pipefail
+#       - name: ${{ matrix.instances.name }}
+#         if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
+#         env:
+#           SERVICE_ID: ${{ env.SERVICE_ID }}
+#           ENVIRONMENT_ID: ${{ env.ENVIRONMENT_ID }}
+#           SUBSCRIPTION_ID: ${{ env.SUBSCRIPTION_ID }}
+#           OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
+#           OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
+#         run: |
+#           set -euo pipefail
 
-          # Check if poetry is installed. If not, install it.
-          if ! command -v poetry &> /dev/null; then
-            echo "Poetry could not be found, installing..."
-            curl -sSL https://install.python-poetry.org | python3 -
-            export PATH="/root/.local/bin:$PATH"
-            poetry install
-          fi
+#           # Check if poetry is installed. If not, install it.
+#           if ! command -v poetry &> /dev/null; then
+#             echo "Poetry could not be found, installing..."
+#             curl -sSL https://install.python-poetry.org | python3 -
+#             export PATH="/root/.local/bin:$PATH"
+#             poetry install
+#           fi
 
-          EXTRA_ARGS=()
+#           EXTRA_ARGS=()
 
-          [[ -n "${{ matrix.instances.newInstanceType || '' }}" ]] && \
-            EXTRA_ARGS+=(--new-instance-type "${{ matrix.instances.newInstanceType }}")
+#           [[ -n "${{ matrix.instances.newInstanceType || '' }}" ]] && \
+#             EXTRA_ARGS+=(--new-instance-type "${{ matrix.instances.newInstanceType }}")
 
-          [[ -n "${{ matrix.instances.hostCount || '' }}" ]] && \
-            EXTRA_ARGS+=(--host-count "${{ matrix.instances.hostCount }}")
+#           [[ -n "${{ matrix.instances.hostCount || '' }}" ]] && \
+#             EXTRA_ARGS+=(--host-count "${{ matrix.instances.hostCount }}")
 
-          [[ -n "${{ matrix.instances.clusterReplicas || '' }}" ]] && \
-            EXTRA_ARGS+=(--cluster-replicas "${{ matrix.instances.clusterReplicas }}")
+#           [[ -n "${{ matrix.instances.clusterReplicas || '' }}" ]] && \
+#             EXTRA_ARGS+=(--cluster-replicas "${{ matrix.instances.clusterReplicas }}")
 
-          [[ -n "${{ matrix.instances.maxmemory || '' }}" ]] && \
-            EXTRA_ARGS+=(--maxmemory "${{ matrix.instances.maxmemory }}")
+#           [[ -n "${{ matrix.instances.maxmemory || '' }}" ]] && \
+#             EXTRA_ARGS+=(--maxmemory "${{ matrix.instances.maxmemory }}")
 
-          [[ -n "${{ matrix.instances.customNetwork || '' }}" ]] && \
-            EXTRA_ARGS+=(--custom-network "${{ matrix.instances.customNetwork }}")
+#           [[ -n "${{ matrix.instances.customNetwork || '' }}" ]] && \
+#             EXTRA_ARGS+=(--custom-network "${{ matrix.instances.customNetwork }}")
 
-          [[ -n "${{ matrix.instances.tls || '' }}" ]] && \
-            EXTRA_ARGS+=(--tls)
+#           [[ -n "${{ matrix.instances.tls || '' }}" ]] && \
+#             EXTRA_ARGS+=(--tls)
 
-          poetry run pytest -s -v "${{ matrix.instances.testFile }}" \
-            --e2e-steps "${{ matrix.instances.tests }}" \
-            --tier-name "${{ matrix.instances.tierName }}" \
-            --cloud-provider "${{ matrix.instances.cloudProvider }}" \
-            --region "${{ matrix.instances.cloudRegion }}" \
-            --resource-key "${{ matrix.instances.resourceKey }}" \
-            --instance-type "${{ matrix.instances.instanceType }}" \
-            --network-type "${{ matrix.instances.networkType || 'PUBLIC' }}" \
-            "${EXTRA_ARGS[@]}"
+#           poetry run pytest -s -v "${{ matrix.instances.testFile }}" \
+#             --e2e-steps "${{ matrix.instances.tests }}" \
+#             --tier-name "${{ matrix.instances.tierName }}" \
+#             --cloud-provider "${{ matrix.instances.cloudProvider }}" \
+#             --region "${{ matrix.instances.cloudRegion }}" \
+#             --resource-key "${{ matrix.instances.resourceKey }}" \
+#             --instance-type "${{ matrix.instances.instanceType }}" \
+#             --network-type "${{ matrix.instances.networkType || 'PUBLIC' }}" \
+#             "${EXTRA_ARGS[@]}"
 
-  # test-upgrade-version:
-  #   needs: [omnistrate-update-plans]
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       instances:
-  #         - name: PRO/Standalone - AWS/us-east-2 - Upgrade Version
-  #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
-  #           testFile: test_upgrade_version.py
-  #           tierName: pro-main
-  #           cloudProvider: aws
-  #           cloudRegion: us-east-2
-  #           subscriptionId: sub-GJPV3NoNC0
-  #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-  #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-  #           extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-upgrade' --instance-description 'test-standalone-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
-  #         - name: PRO/SingleZone - AWS/us-east-2 - Upgrade Version
-  #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
-  #           testFile: test_upgrade_version.py
-  #           tierName: pro-main
-  #           cloudProvider: aws
-  #           cloudRegion: us-east-2
-  #           subscriptionId: sub-GJPV3NoNC0
-  #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-  #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-  #           extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-upgrade' --instance-description 'test-replication-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
-  #         - name: PRO/ClusterSingleZone - AWS/us-east-2 - Upgrade Version
-  #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
-  #           testFile: test_upgrade_version.py
-  #           tierName: pro-main
-  #           cloudProvider: aws
-  #           cloudRegion: us-east-2
-  #           subscriptionId: sub-GJPV3NoNC0
-  #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-  #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-  #           extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-upgrade' --instance-description 'test-cluster-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
+#   # test-upgrade-version:
+#   #   needs: [omnistrate-update-plans]
+#   #   runs-on: ubuntu-latest
+#   #   strategy:
+#   #     fail-fast: false
+#   #     matrix:
+#   #       instances:
+#   #         - name: PRO/Standalone - AWS/us-east-2 - Upgrade Version
+#   #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
+#   #           testFile: test_upgrade_version.py
+#   #           tierName: pro-main
+#   #           cloudProvider: aws
+#   #           cloudRegion: us-east-2
+#   #           subscriptionId: sub-GJPV3NoNC0
+#   #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+#   #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+#   #           extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-upgrade' --instance-description 'test-standalone-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+#   #         - name: PRO/SingleZone - AWS/us-east-2 - Upgrade Version
+#   #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
+#   #           testFile: test_upgrade_version.py
+#   #           tierName: pro-main
+#   #           cloudProvider: aws
+#   #           cloudRegion: us-east-2
+#   #           subscriptionId: sub-GJPV3NoNC0
+#   #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+#   #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+#   #           extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-upgrade' --instance-description 'test-replication-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+#   #         - name: PRO/ClusterSingleZone - AWS/us-east-2 - Upgrade Version
+#   #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
+#   #           testFile: test_upgrade_version.py
+#   #           tierName: pro-main
+#   #           cloudProvider: aws
+#   #           cloudRegion: us-east-2
+#   #           subscriptionId: sub-GJPV3NoNC0
+#   #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+#   #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
+#   #           extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-upgrade' --instance-description 'test-cluster-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
 
-  #   steps:
-  #     - name: Checkout
-  #       if: matrix.instances.if == 'true' || matrix.instances.if == true
-  #       uses: actions/checkout@v4
-  #       with:
-  #         ref: ${{ github.event.pull_request.head.sha || github.sha }}
+#   #   steps:
+#   #     - name: Checkout
+#   #       if: matrix.instances.if == 'true' || matrix.instances.if == true
+#   #       uses: actions/checkout@v4
+#   #       with:
+#   #         ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-  #     - name: Setup python
-  #       if: ${{ (matrix.instances.if == 'true' || matrix.instances.if == true) && !matrix.instances.runner_label }}
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: "3.x"
+#   #     - name: Setup python
+#   #       if: ${{ (matrix.instances.if == 'true' || matrix.instances.if == true) && !matrix.instances.runner_label }}
+#   #       uses: actions/setup-python@v5
+#   #       with:
+#   #         python-version: "3.x"
 
-  #     - name: Cache Poetry virtualenv
-  #       if: matrix.instances.if == 'true' || matrix.instances.if == true
-  #       id: cache
-  #       uses: actions/cache@v4
-  #       with:
-  #         path: ~/.cache/pypoetry/virtualenvs
-  #         key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-poetry-
+#   #     - name: Cache Poetry virtualenv
+#   #       if: matrix.instances.if == 'true' || matrix.instances.if == true
+#   #       id: cache
+#   #       uses: actions/cache@v4
+#   #       with:
+#   #         path: ~/.cache/pypoetry/virtualenvs
+#   #         key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+#   #         restore-keys: |
+#   #           ${{ runner.os }}-poetry-
 
-  #     - name: Install Poetry
-  #       if: steps.cache.outputs.cache-hit != true && (matrix.instances.if == 'true' || matrix.instances.if == true)
-  #       run: |
-  #         curl -sSL https://install.python-poetry.org | python3 -
-  #         echo "${HOME}/.local/bin" >> $GITHUB_PATH
+#   #     - name: Install Poetry
+#   #       if: steps.cache.outputs.cache-hit != true && (matrix.instances.if == 'true' || matrix.instances.if == true)
+#   #       run: |
+#   #         curl -sSL https://install.python-poetry.org | python3 -
+#   #         echo "${HOME}/.local/bin" >> $GITHUB_PATH
 
-  #     - name: Install dependencies
-  #       if: matrix.instances.if == 'true' || matrix.instances.if == true
-  #       run: |
-  #         export PATH="~/.local/bin:$PATH"
-  #         poetry install
+#   #     - name: Install dependencies
+#   #       if: matrix.instances.if == 'true' || matrix.instances.if == true
+#   #       run: |
+#   #         export PATH="~/.local/bin:$PATH"
+#   #         poetry install
 
-  #     - name: ${{ matrix.instances.name }}
-  #       if: matrix.instances.if == 'true' || matrix.instances.if == true
-  #       env:
-  #         SERVICE_ID: ${{ matrix.instances.serviceId }}
-  #         ENVIRONMENT_ID: ${{ matrix.instances.environmentId }}
-  #         CLOUD_PROVIDER: ${{ matrix.instances.cloudProvider }}
-  #         CLOUD_REGION: ${{ matrix.instances.cloudRegion }}
-  #         extraParams: ${{ matrix.instances.extraParams }}
-  #         SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
-  #         REF_NAME: ${{ matrix.instances.tierName }}
-  #       run: |
-  #         export PATH="~/.local/bin:$PATH"
-  #         poetry run python -u ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
+#   #     - name: ${{ matrix.instances.name }}
+#   #       if: matrix.instances.if == 'true' || matrix.instances.if == true
+#   #       env:
+#   #         SERVICE_ID: ${{ matrix.instances.serviceId }}
+#   #         ENVIRONMENT_ID: ${{ matrix.instances.environmentId }}
+#   #         CLOUD_PROVIDER: ${{ matrix.instances.cloudProvider }}
+#   #         CLOUD_REGION: ${{ matrix.instances.cloudRegion }}
+#   #         extraParams: ${{ matrix.instances.extraParams }}
+#   #         SUBSCRIPTION_ID: ${{ matrix.instances.subscriptionId }}
+#   #         REF_NAME: ${{ matrix.instances.tierName }}
+#   #       run: |
+#   #         export PATH="~/.local/bin:$PATH"
+#   #         poetry run python -u ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
 
-  delete-networks:
-    runs-on: ubuntu-latest
-    needs: test
-    if: ${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full' }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+#   delete-networks:
+#     runs-on: ubuntu-latest
+#     needs: test
+#     if: ${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full' }}
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#         with:
+#           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Delete Omnistrate Custom Network - GCP
-        uses: ./.github/actions/delete-omnistrate-custom-network
-        continue-on-error: true
-        with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
-          custom_network_name: ${{ env.GCP_NETWORK_NAME }}
+#       - name: Delete Omnistrate Custom Network - GCP
+#         uses: ./.github/actions/delete-omnistrate-custom-network
+#         continue-on-error: true
+#         with:
+#           username: ${{ secrets.OMNISTRATE_USERNAME }}
+#           password: ${{ secrets.OMNISTRATE_PASSWORD }}
+#           custom_network_name: ${{ env.GCP_NETWORK_NAME }}
 
-      - name: Delete Omnistrate Custom Network - AWS
-        continue-on-error: true
-        uses: ./.github/actions/delete-omnistrate-custom-network
-        with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
-          custom_network_name: ${{ env.AWS_NETWORK_NAME }}
+#       - name: Delete Omnistrate Custom Network - AWS
+#         continue-on-error: true
+#         uses: ./.github/actions/delete-omnistrate-custom-network
+#         with:
+#           username: ${{ secrets.OMNISTRATE_USERNAME }}
+#           password: ${{ secrets.OMNISTRATE_PASSWORD }}
+#           custom_network_name: ${{ env.AWS_NETWORK_NAME }}
 
-      - name: Delete Omnistrate Custom Network - AZURE
-        continue-on-error: true
-        uses: ./.github/actions/delete-omnistrate-custom-network
-        with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
-          custom_network_name: ${{ env.AZURE_NETWORK_NAME }}
+#       - name: Delete Omnistrate Custom Network - AZURE
+#         continue-on-error: true
+#         uses: ./.github/actions/delete-omnistrate-custom-network
+#         with:
+#           username: ${{ secrets.OMNISTRATE_USERNAME }}
+#           password: ${{ secrets.OMNISTRATE_PASSWORD }}
+#           custom_network_name: ${{ env.AZURE_NETWORK_NAME }}
 
-      - name: Delete secrets directory
-        run: |
-          rm -rf ./secrets || { echo "Failed to delete secrets directory"; exit 1; }
-          echo "Deleted secrets directory"
-          exit 0
+#       - name: Delete secrets directory
+#         run: |
+#           rm -rf ./secrets || { echo "Failed to delete secrets directory"; exit 1; }
+#           echo "Deleted secrets directory"
+#           exit 0
 
-  cleanup-runner:
-    needs: [test, create-runners]
-    if: ${{ always() && needs.create-runners.result == 'success' }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform:
-          - machine_label: cluster-${{ github.run_id }}-${{ github.run_number }}
-          - machine_label: replication-${{ github.run_id }}-${{ github.run_number }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/cleanup-runner
-        with:
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
-          project_id: ${{ vars.GCP_PROJECT_ID }}
-          zone: ${{ vars.GCP_ZONE }}
-          instance_label: ${{ matrix.platform.machine_label }}
+#   cleanup-runner:
+#     needs: [test, create-runners]
+#     if: ${{ always() && needs.create-runners.result == 'success' }}
+#     runs-on: ubuntu-latest
+#     strategy:
+#       matrix:
+#         platform:
+#           - machine_label: cluster-${{ github.run_id }}-${{ github.run_number }}
+#           - machine_label: replication-${{ github.run_id }}-${{ github.run_number }}
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: ./.github/actions/cleanup-runner
+#         with:
+#           service_account_key: ${{ secrets.GCP_SA_KEY }}
+#           project_id: ${{ vars.GCP_PROJECT_ID }}
+#           zone: ${{ vars.GCP_ZONE }}
+#           instance_label: ${{ matrix.platform.machine_label }}

@@ -381,7 +381,7 @@ jobs:
       - name: Checkout gh-pages branch
         uses: actions/checkout@v5
         with:
-          ref: gh-pages
+          ref: FalkorDB/helm-charts
           path: gh-pages
           token: ${{ secrets.GH_HELM_PAT }}
 

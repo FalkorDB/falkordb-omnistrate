@@ -468,7 +468,6 @@ jobs:
     name: Omnistrate E2E Tests
     runs-on: ubuntu-latest
     needs: update-omnistrate-plans
-    if: always()
     env:
       # Test mode: basic runs on schedule/manual full, full runs on tags
       TEST_MODE: ${{ (contains(github.ref, 'refs/tags/v')) && 'full' || 'basic' }}

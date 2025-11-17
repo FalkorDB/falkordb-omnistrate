@@ -464,6 +464,7 @@ jobs:
           environment: dev
           environment-type: dev
           release-description: helm-chart-${{ needs.package-and-push-helm-chart.outputs.chart-version }}
+          spec-type: ServicePlanSpec
 
   omnistrate-e2e-tests:
     name: Omnistrate E2E Tests

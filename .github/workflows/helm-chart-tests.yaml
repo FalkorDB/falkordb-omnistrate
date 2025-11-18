@@ -471,6 +471,7 @@ jobs:
     name: Omnistrate E2E Tests
     runs-on: ubuntu-latest
     needs: update-omnistrate-plans
+    if: always()
     env:
       # Test mode: basic runs on schedule/manual full, full runs on tags
       TEST_MODE: ${{ (contains(github.ref, 'refs/tags/v')) && 'full' || 'basic' }}
@@ -481,109 +482,121 @@ jobs:
           ######################## PRO • AWS (BASIC) #####################
           - name: "[01] pro/Standalone - AWS/us-east-1"
             if: "basic"
-            testFile: tests/test_grouped_standalone.py
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
             tests: "failover,stopstart,oom"
             tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: standalone
+            resourceKey: falkordb-standalone
             instanceType: t2.medium
+            storageSize: "30"
             maxmemory: "2GB"
 
           - name: "[02] pro/SingleZone - AWS/us-east-1"
             if: "basic"
-            testFile: tests/test_grouped_replication.py
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_replication.py
             tests: "failover,stopstart,oom"
             tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: single-Zone
+            resourceKey: falkordb-replication
             instanceType: t2.medium
+            storageSize: "30"
             maxmemory: "2GB"
 
           - name: "[03] pro/MultiZone - AWS/us-east-1"
             if: "basic"
-            testFile: tests/test_grouped_replication.py
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_replication.py
             tests: "failover,stopstart,oom"
             tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: multi-Zone
+            resourceKey: falkordb-replication
             instanceType: t2.medium
+            storageSize: "30"
             maxmemory: "2GB"
+            multiZone: "true"
 
           - name: "[04] pro/ClusterSingleZone - AWS/us-east-1"
             if: "basic"
-            testFile: tests/test_grouped_cluster.py
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_cluster.py
             tests: "failover,stopstart,oom"
             tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: cluster-Single-Zone
+            resourceKey: falkordb-cluster
             instanceType: t2.medium
+            storageSize: "30"
             hostCount: "6"
             clusterReplicas: "1"
             maxmemory: "2GB"
 
           - name: "[05] pro/ClusterMultiZone - AWS/us-east-1"
             if: "basic"
-            testFile: tests/test_grouped_cluster.py
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_cluster.py
             tests: "failover,stopstart,oom"
             tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: cluster-Multi-Zone
+            resourceKey: falkordb-cluster
             instanceType: t2.medium
+            storageSize: "30"
             hostCount: "6"
             clusterReplicas: "1"
             maxmemory: "2GB"
+            multiZone: "true"
 
           ######################## ENTERPRISE • AWS (FULL) ########################
           - name: "[06] enterprise/Standalone - AWS/us-east-1"
             if: "full"
-            testFile: tests/test_grouped_standalone.py
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
             tests: "failover,stopstart,oom,resize"
             tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: standalone
+            resourceKey: falkordb-standalone
             instanceType: t2.medium
+            storageSize: "30"
             newInstanceType: m6i.large
             maxmemory: "2GB"
 
           - name: "[07] enterprise/SingleZone - AWS/us-east-1"
             if: "full"
-            testFile: tests/test_grouped_replication.py
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_replication.py
             tests: "failover,stopstart,oom,resize"
             tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: single-Zone
+            resourceKey: falkordb-replication
             instanceType: t2.medium
+            storageSize: "30"
             newInstanceType: m6i.large
             maxmemory: "2GB"
 
           - name: "[08] enterprise/MultiZone - AWS/us-east-1"
             if: "full"
-            testFile: tests/test_grouped_replication.py
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_replication.py
             tests: "failover,stopstart,oom,resize"
             tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: multi-Zone
+            resourceKey: falkordb-replication
             instanceType: t2.medium
+            storageSize: "30"
             newInstanceType: m6i.large
             maxmemory: "2GB"
+            multiZone: "true"
 
           - name: "[09] enterprise/ClusterSingleZone - AWS/us-east-1"
             if: "full"
-            testFile: tests/test_grouped_cluster.py
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_cluster.py
             tests: "failover,stopstart,oom,resize"
             tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: cluster-Single-Zone
+            resourceKey: falkordb-cluster
             instanceType: t2.medium
+            storageSize: "30"
             hostCount: "6"
             clusterReplicas: "1"
             newInstanceType: m6i.large
@@ -591,17 +604,19 @@ jobs:
 
           - name: "[10] enterprise/ClusterMultiZone - AWS/us-east-1"
             if: "full"
-            testFile: tests/test_grouped_cluster.py
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_cluster.py
             tests: "failover,stopstart,oom,resize"
             tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: cluster-Multi-Zone
+            resourceKey: falkordb-cluster
             instanceType: t2.medium
+            storageSize: "30"
             hostCount: "6"
             clusterReplicas: "1"
             newInstanceType: m6i.large
             maxmemory: "2GB"
+            multiZone: "true"
 
     steps:
       - name: Checkout
@@ -649,6 +664,9 @@ jobs:
           set -euo pipefail
 
           EXTRA_ARGS=()
+
+          [[ -n "${{ matrix.instances.storageSize || '' }}" ]] && \
+            EXTRA_ARGS+=(--storage-size "${{ matrix.instances.storageSize }}")
 
           [[ -n "${{ matrix.instances.newInstanceType || '' }}" ]] && \
             EXTRA_ARGS+=(--new-instance-type "${{ matrix.instances.newInstanceType }}")

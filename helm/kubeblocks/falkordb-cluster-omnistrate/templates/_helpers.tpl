@@ -85,60 +85,65 @@ Create a default fully qualified app name.
 
 {{/*
 Map instance type to CPU and memory resources
+Subtracts overhead for system processes and cluster coordination:
+- Small instances (<8Gi): 20% overhead
+- Medium instances (8-32Gi): 15% overhead  
+- Large instances (>32Gi): 10% overhead
+CPU overhead: ~100-200m for system components
 */}}
 {{- define "falkordb-cluster.instanceTypeResources" -}}
 {{- $instanceType := .Values.instanceType -}}
 {{- if eq $instanceType "low" }}
-cpu: "1"
+cpu: "900m"
 memory: "100Mi"
 {{- else if eq $instanceType "e2-medium" }}
-cpu: "1"
-memory: "4Gi"
+cpu: "900m"
+memory: "3200Mi"
 {{- else if eq $instanceType "e2-standard-2" }}
-cpu: "2"
-memory: "8Gi"
+cpu: "1900m"
+memory: "6800Mi"
 {{- else if eq $instanceType "e2-standard-4" }}
-cpu: "4"
-memory: "16Gi"
+cpu: "3900m"
+memory: "13900Mi"
 {{- else if eq $instanceType "e2-custom-4-8192" }}
-cpu: "4"
-memory: "8Gi"
+cpu: "3900m"
+memory: "6800Mi"
 {{- else if eq $instanceType "e2-custom-8-16384" }}
-cpu: "8"
-memory: "16Gi"
+cpu: "7900m"
+memory: "13900Mi"
 {{- else if eq $instanceType "e2-custom-16-32768" }}
-cpu: "16"
-memory: "32Gi"
+cpu: "15900m"
+memory: "27800Mi"
 {{- else if eq $instanceType "e2-custom-32-65536" }}
-cpu: "32"
-memory: "64Gi"
+cpu: "31900m"
+memory: "59392Mi"
 {{- else if eq $instanceType "t2.medium" }}
-cpu: "2"
-memory: "4Gi"
+cpu: "1900m"
+memory: "3200Mi"
 {{- else if eq $instanceType "m6i.large" }}
-cpu: "2"
-memory: "8Gi"
+cpu: "1900m"
+memory: "6800Mi"
 {{- else if eq $instanceType "m6i.xlarge" }}
-cpu: "4"
-memory: "16Gi"
+cpu: "3900m"
+memory: "13900Mi"
 {{- else if eq $instanceType "c6i.xlarge" }}
-cpu: "4"
-memory: "8Gi"
+cpu: "3900m"
+memory: "6800Mi"
 {{- else if eq $instanceType "c6i.2xlarge" }}
-cpu: "8"
-memory: "16Gi"
+cpu: "7900m"
+memory: "13900Mi"
 {{- else if eq $instanceType "c6i.4xlarge" }}
-cpu: "16"
-memory: "32Gi"
+cpu: "15900m"
+memory: "27800Mi"
 {{- else if eq $instanceType "c6i.8xlarge" }}
-cpu: "32"
-memory: "64Gi"
+cpu: "31900m"
+memory: "59392Mi"
 {{- else if .Values.cpu }}
 cpu: {{ .Values.cpu | quote }}
 memory: {{ print .Values.memory "Gi" | quote }}
 {{- else }}
-cpu: "1"
-memory: "4Gi"
+cpu: "900m"
+memory: "3200Mi"
 {{- end }}
 {{- end }}
 

@@ -394,8 +394,9 @@ jobs:
           mv gh-pages/charts/index.yaml gh-pages/index.yaml
 
       - name: Push to gh-pages
+        working-directory: gh-pages
         run: |
-          git add gh-pages/
+          git add index.yaml charts/
           git commit -m "Add Helm chart version ${{ steps.version.outputs.chart-version }}" || echo "No changes to commit"
           git push origin gh-pages
 

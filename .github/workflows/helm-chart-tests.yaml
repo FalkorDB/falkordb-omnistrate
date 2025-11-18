@@ -720,9 +720,9 @@ jobs:
             EXTRA_ARGS+=(--tls)
 
           poetry run pytest -s -v "${{ matrix.instances.testFile }}" \
-            --service-id "$SERVICE_ID" \
-            --environment-id "$ENVIRONMENT_ID" \
-            --subscription-id "$SUBSCRIPTION_ID" \
+            --service-id "${{ env.SERVICE_ID }}" \
+            --environment-id "${{ env.ENVIRONMENT_ID }}" \
+            --subscription-id "${{ env.SUBSCRIPTION_ID }}" \
             --tier-name "${{ matrix.instances.tierName }}" \
             --cloud-provider "${{ matrix.instances.cloudProvider }}" \
             --region "${{ matrix.instances.cloudRegion }}" \

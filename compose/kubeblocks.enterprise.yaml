@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://api.omnistrate.cloud/2022-09-01-00/schema/service-spec-schema.json
 
-name: Kubeblocks Enterprise
+name: $OmnistrateTierName
 tenancyType: CUSTOM_TENANCY
 deployment:
   hostedDeployment:

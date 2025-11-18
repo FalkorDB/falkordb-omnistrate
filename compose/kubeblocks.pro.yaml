@@ -1,14 +1,14 @@
 # yaml-language-server: $schema=https://api.omnistrate.cloud/2022-09-01-00/schema/service-spec-schema.json
 
-name: Kubeblocks Startup
+name: Kubeblocks Pro
 tenancyType: CUSTOM_TENANCY
 deployment:
   hostedDeployment:
-    GcpProjectId: "app-plane-dev-f7a2434f"
-    GcpProjectNumber: "747498641488"
-    GcpServiceAccountEmail: "omni-btstrp-org-q9h5kjuc0n@app-plane-dev-f7a2434f.iam.gserviceaccount.com"
-    AwsAccountId: "637423310747"
-    AWSBootstrapRoleAccountArn: "arn:aws:iam::637423310747:role/omnistrate-bootstrap-role"
+    GcpProjectId: "$GcpProjectId"
+    GcpProjectNumber: "$GcpProjectNumber"
+    GcpServiceAccountEmail: "$GcpServiceAccountEmail"
+    AwsAccountId: "$AwsAccountId"
+    AWSBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
 metering:
   gcsBucketName: $MeteringBucketName
 pricing:

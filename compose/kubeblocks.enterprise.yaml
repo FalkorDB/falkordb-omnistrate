@@ -27,7 +27,7 @@ validPaymentMethodRequired: true
 billingProductID: "enterprise"
 
 services:
-  - name: FalkorDB Standalone
+  - name: Standalone
     description: A FalkorDB Standalone database service managed by KubeBlocks (Enterprise tier).
     apiParameters:
       - key: name
@@ -284,7 +284,7 @@ services:
         # TLS (future implementation)
         enableTLS: $var.enableTLS
 
-  - name: FalkorDB Replication
+  - name: Replication
     description: A FalkorDB Replication (primary-replica) service managed by KubeBlocks (Enterprise tier).
     apiParameters:
       - key: name
@@ -566,7 +566,7 @@ services:
         # TLS configuration
         enableTLS: $var.enableTLS
 
-  - name: FalkorDB Cluster
+  - name: Cluster
     description: A FalkorDB Cluster Single Zone (sharded cluster) service managed by KubeBlocks (Enterprise tier).
     apiParameters:
       - key: name

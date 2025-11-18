@@ -482,6 +482,7 @@ jobs:
           sed -i 's|$ChartVersion|'"${CHART_VERSION}"'|g' ${{ matrix.plans.file }}
           sed -i 's|$ChartRepoURL|https://falkordb.github.io/helm-charts/|g' ${{ matrix.plans.file }}
           sed -i 's|$FalkorDBVersion|v4.14.2-alpine|g' ${{ matrix.plans.file }}
+          sed -i 's/validPaymentMethodRequired: true/validPaymentMethodRequired: false/g' ${{ matrix.plans.file }}
 
       - name: Upload yaml as artifact
         uses: actions/upload-artifact@v4
@@ -522,7 +523,7 @@ jobs:
             tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: falkordb-standalone
+            resourceKey: falkordbStandalone
             instanceType: t2.medium
             storageSize: "30"
             maxmemory: "2GB"
@@ -534,7 +535,7 @@ jobs:
             tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: falkordb-replication
+            resourceKey: falkordbReplication
             instanceType: t2.medium
             storageSize: "30"
             maxmemory: "2GB"
@@ -546,7 +547,7 @@ jobs:
             tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: falkordb-replication
+            resourceKey: falkordbReplication
             instanceType: t2.medium
             storageSize: "30"
             maxmemory: "2GB"
@@ -559,7 +560,7 @@ jobs:
             tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: falkordb-cluster
+            resourceKey: falkordbCluster
             instanceType: t2.medium
             storageSize: "30"
             hostCount: "6"
@@ -573,7 +574,7 @@ jobs:
             tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: falkordb-cluster
+            resourceKey: falkordbCluster
             instanceType: t2.medium
             storageSize: "30"
             hostCount: "6"
@@ -589,7 +590,7 @@ jobs:
             tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: falkordb-standalone
+            resourceKey: falkordbStandalone
             instanceType: t2.medium
             storageSize: "30"
             newInstanceType: m6i.large
@@ -602,7 +603,7 @@ jobs:
             tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: falkordb-replication
+            resourceKey: falkordbReplication
             instanceType: t2.medium
             storageSize: "30"
             newInstanceType: m6i.large
@@ -615,7 +616,7 @@ jobs:
             tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: falkordb-replication
+            resourceKey: falkordbReplication
             instanceType: t2.medium
             storageSize: "30"
             newInstanceType: m6i.large
@@ -629,7 +630,7 @@ jobs:
             tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: falkordb-cluster
+            resourceKey: falkordbCluster
             instanceType: t2.medium
             storageSize: "30"
             hostCount: "6"
@@ -644,7 +645,7 @@ jobs:
             tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
             cloudProvider: aws
             cloudRegion: us-east-1
-            resourceKey: falkordb-cluster
+            resourceKey: falkordbCluster
             instanceType: t2.medium
             storageSize: "30"
             hostCount: "6"

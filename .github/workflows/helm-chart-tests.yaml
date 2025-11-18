@@ -422,7 +422,7 @@ jobs:
             file: kubeblocks.pro.yaml
             key: pro
             tier-name: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-          - service-name: Kubeblocks KubeBlocks
+          - service-name: KubeBlocks
             plan-name: Enterprise
             file: kubeblocks.enterprise.yaml
             key: enterprise
@@ -690,9 +690,6 @@ jobs:
       - name: ${{ matrix.instances.name }}
         if: (matrix.instances.if == 'basic' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all') || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks'))) || (matrix.instances.if == 'full' && (env.TEST_MODE == 'full' || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks')))
         env:
-          SERVICE_ID: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
-          ENVIRONMENT_ID: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}
-          SUBSCRIPTION_ID: sub-GJPV3NoNC0
           OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
           OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
         run: |
@@ -722,9 +719,9 @@ jobs:
             EXTRA_ARGS+=(--tls)
 
           poetry run pytest -s -v "${{ matrix.instances.testFile }}" \
-            --service-id "${{ env.SERVICE_ID }}" \
-            --environment-id "${{ env.ENVIRONMENT_ID }}" \
-            --subscription-id "${{ env.SUBSCRIPTION_ID }}" \
+            --service-id "${{ vars.KUBEBLOCKS_SERVICE_ID }}" \
+            --environment-id "${{ vars.KUBEBLOCKS_ENVIRONMENT_ID }}" \
+            --subscription-id "${{ vars.KUBEBLOCKS_SUBSCRIPTION_ID }}" \
             --tier-name "${{ matrix.instances.tierName }}" \
             --cloud-provider "${{ matrix.instances.cloudProvider }}" \
             --region "${{ matrix.instances.cloudRegion }}" \

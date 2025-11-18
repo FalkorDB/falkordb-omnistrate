@@ -388,14 +388,14 @@ jobs:
 
       - name: Update Helm repository index
         run: |
-          mkdir -p gh-pages
-          cp /tmp/charts/*.tgz gh-pages/
-          helm repo index gh-pages --url https://falkordb.github.io/helm-charts --merge
+          mkdir -p gh-pages/charts
+          cp /tmp/charts/*.tgz gh-pages/charts/
+          helm repo index gh-pages/charts --url https://falkordb.github.io/helm-charts/charts --merge gh-pages/index.yaml
 
       - name: Push to gh-pages
         working-directory: gh-pages
         run: |
-          git add .
+          git add charts/
           git commit -m "Add Helm chart version ${{ steps.version.outputs.chart-version }}" || echo "No changes to commit"
           git push origin gh-pages
 

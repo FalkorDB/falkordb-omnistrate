@@ -416,11 +416,11 @@ jobs:
       matrix:
         plans:
           - service-name: KubeBlocks
-            plan-name: Pro
+            plan-name: Kubeblocks Pro
             file: kubeblocks.pro.yaml
             key: pro
             tier-name: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-          - service-name: KubeBlocks
+          - service-name: Kubeblocks KubeBlocks
             plan-name: Enterprise
             file: kubeblocks.enterprise.yaml
             key: enterprise
@@ -468,6 +468,7 @@ jobs:
         env:
           CHART_VERSION: ${{ needs.package-and-push-helm-chart.outputs.chart-version }}
         run: |
+          sed -i 's/$OmnistrateTierName/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
@@ -503,7 +504,7 @@ jobs:
     name: Omnistrate E2E Tests
     runs-on: ubuntu-latest
     needs: update-omnistrate-plans
-    if: always()
+    if: ${{ needs.update-omnistrate-plans.result == 'success' }}
     env:
       # Test mode: basic runs on schedule/manual full, full runs on tags
       TEST_MODE: ${{ (contains(github.ref, 'refs/tags/v')) && 'full' || 'basic' }}

@@ -431,6 +431,38 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
+      - name: Wait for Helm chart availability
+        env:
+          CHART_VERSION: ${{ needs.package-and-push-helm-chart.outputs.chart-version }}
+        run: |
+          CHART_REPO_URL="https://falkordb.github.io/helm-charts/"
+          MAX_ATTEMPTS=30
+          SLEEP_SECONDS=10
+          
+          echo "Waiting for helm chart version ${CHART_VERSION} to be available..."
+          
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            echo "Attempt $i/$MAX_ATTEMPTS: Checking helm chart availability..."
+            
+            # Update helm repo
+            helm repo add falkordb-temp ${CHART_REPO_URL} --force-update || true
+            helm repo update falkordb-temp || true
+            
+            # Search for the specific chart version (including development versions)
+            if helm search repo falkordb-temp/falkordb-cluster-omnistrate --version ${CHART_VERSION} --devel | grep -q ${CHART_VERSION}; then
+              echo "✅ Helm chart version ${CHART_VERSION} is available!"
+              helm repo remove falkordb-temp || true
+              exit 0
+            fi
+            
+            echo "Chart not yet available. Waiting ${SLEEP_SECONDS} seconds..."
+            sleep ${SLEEP_SECONDS}
+          done
+          
+          echo "❌ Helm chart version ${CHART_VERSION} not available after $((MAX_ATTEMPTS * SLEEP_SECONDS)) seconds"
+          helm repo remove falkordb-temp || true
+          exit 1
+
       - name: Replace Variables
         working-directory: compose
         env:

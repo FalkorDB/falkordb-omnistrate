@@ -5,12 +5,14 @@ on:
     types: [opened, synchronize, ready_for_review]
     paths:
       - "helm/kubeblocks/**"
+      - "compose/**"
       - ".github/workflows/helm-chart-tests.yaml"
   push:
     tags:
       - "v*"
     paths:
       - "helm/kubeblocks/**"
+      - "compose/**"
       - ".github/workflows/helm-chart-tests.yaml"
   schedule:
     - cron: "0 0 * * *" # Run daily at midnight UTC

@@ -231,7 +231,7 @@ services:
       chartRepoName: falkordb-charts
       chartRepoURL: $ChartRepoURL
       chartValues:
-        version: $FalkorDBVersion
+        version: $FalkorDBServiceVersion
         mode: standalone
         replicas: 1
         instanceType: $var.nodeInstanceType
@@ -506,7 +506,7 @@ services:
       chartRepoName: falkordb-charts
       chartRepoURL: $ChartRepoURL
       chartValues:
-        version: $FalkorDBVersion
+        version: $FalkorDBServiceVersion
         mode: replication
         replicas: $var.numReplicas
         instanceType: $var.nodeInstanceType
@@ -792,7 +792,7 @@ services:
       chartRepoName: falkordb-charts
       chartRepoURL: $ChartRepoURL
       chartValues:
-        version: $FalkorDBVersion
+        version: $FalkorDBServiceVersion
         mode: cluster
         shardCount: $var.shardCount
         replicasPerShard: $var.replicasPerShard

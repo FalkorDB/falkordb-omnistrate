@@ -40,6 +40,7 @@ env:
   KUBECTL_VERSION: "v1.28.0"
   HELM_VERSION: "v3.13.0"
   KUBEBLOCKS_VERSION: "v1.0.1"
+  FALKORDB_SERVICE_VERSION: "4.12.5"
 
 jobs:
   unit-tests:
@@ -440,9 +441,9 @@ jobs:
           CHART_REPO_URL="https://falkordb.github.io/helm-charts/"
           MAX_ATTEMPTS=30
           SLEEP_SECONDS=10
-          
+
           echo "Waiting for helm chart version ${CHART_VERSION} to be available..."
-          
+
           for i in $(seq 1 $MAX_ATTEMPTS); do
             echo "Attempt $i/$MAX_ATTEMPTS: Checking helm chart availability..."
             
@@ -460,7 +461,7 @@ jobs:
             echo "Chart not yet available. Waiting ${SLEEP_SECONDS} seconds..."
             sleep ${SLEEP_SECONDS}
           done
-          
+
           echo "❌ Helm chart version ${CHART_VERSION} not available after $((MAX_ATTEMPTS * SLEEP_SECONDS)) seconds"
           helm repo remove falkordb-temp || true
           exit 1
@@ -481,7 +482,7 @@ jobs:
           sed -i 's/$MeteringBucketName/${{ secrets.METERING_BUCKET_NAME }}/g' ${{ matrix.plans.file }}
           sed -i 's|$ChartVersion|'"${CHART_VERSION}"'|g' ${{ matrix.plans.file }}
           sed -i 's|$ChartRepoURL|https://falkordb.github.io/helm-charts/|g' ${{ matrix.plans.file }}
-          sed -i 's|$FalkorDBVersion|v4.14.2-alpine|g' ${{ matrix.plans.file }}
+          sed -i 's|$FalkorDBServiceVersion|${{ env.FALKORDB_SERVICE_VERSION }}|g' ${{ matrix.plans.file }}
           sed -i 's/validPaymentMethodRequired: true/validPaymentMethodRequired: false/g' ${{ matrix.plans.file }}
 
       - name: Upload yaml as artifact

@@ -94,23 +94,23 @@ CPU overhead: ~100-200m for system components
 {{- define "falkordb-cluster.instanceTypeResources" -}}
 {{- $instanceType := .Values.instanceType -}}
 {{- if eq $instanceType "low" }}
-cpu: "900m"
+cpu: "700m"
 memory: "100Mi"
 {{- else if eq $instanceType "e2-medium" }}
-cpu: "900m"
-memory: "3200Mi"
+cpu: "700m"
+memory: "2800Mi"
 {{- else if eq $instanceType "e2-standard-2" }}
-cpu: "1900m"
-memory: "6800Mi"
+cpu: "1500m"
+memory: "6000Mi"
 {{- else if eq $instanceType "e2-standard-4" }}
-cpu: "3900m"
-memory: "13900Mi"
+cpu: "3500m"
+memory: "13000Mi"
 {{- else if eq $instanceType "e2-custom-4-8192" }}
-cpu: "3900m"
-memory: "6800Mi"
+cpu: "3500m"
+memory: "6000Mi"
 {{- else if eq $instanceType "e2-custom-8-16384" }}
-cpu: "7900m"
-memory: "13900Mi"
+cpu: "7500m"
+memory: "13000Mi"
 {{- else if eq $instanceType "e2-custom-16-32768" }}
 cpu: "15900m"
 memory: "27800Mi"
@@ -118,11 +118,11 @@ memory: "27800Mi"
 cpu: "31900m"
 memory: "59392Mi"
 {{- else if eq $instanceType "t2.medium" }}
-cpu: "1900m"
-memory: "3200Mi"
+cpu: "1500m"
+memory: "2800Mi"
 {{- else if eq $instanceType "m6i.large" }}
-cpu: "1900m"
-memory: "6800Mi"
+cpu: "1500m"
+memory: "6000Mi"
 {{- else if eq $instanceType "m6i.xlarge" }}
 cpu: "3900m"
 memory: "13900Mi"

@@ -269,7 +269,7 @@ fix_namespace_in_config_files() {
     # Check and fix node.conf
     if [[ -f "$NODE_CONF_FILE" ]]; then
       echo "Checking node.conf for namespace mismatches"
-      # Replace instance-X pattern with current namespace, where X can contain alphanumeric, hyphens, and underscores
+      # Replace instance-X pattern with current namespace, where X can contain hyphens, underscores, and alphanumeric characters
       sed -i -E "s/instance-[a-zA-Z0-9_-]+/${ESCAPED_NAMESPACE}/g" "$NODE_CONF_FILE"
     fi
     

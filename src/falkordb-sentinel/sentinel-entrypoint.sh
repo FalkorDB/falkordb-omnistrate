@@ -122,15 +122,11 @@ fix_namespace_in_config_files() {
   if [[ -n "$NAMESPACE" ]]; then
     echo "Current namespace: $NAMESPACE"
     
-    # Escape special characters in NAMESPACE for sed replacement
-    # Note: Namespaces in Omnistrate are alphanumeric with hyphens/underscores only
-    ESCAPED_NAMESPACE=$(printf '%s\n' "$NAMESPACE" | sed 's/[\/&]/\\&/g')
-    
     # Check and fix sentinel.conf only (sentinel entrypoint should only check sentinel.conf)
     if [[ -f "$SENTINEL_CONF_FILE" ]]; then
       echo "Checking sentinel.conf for namespace mismatches"
       # Replace instance-X pattern with current namespace, where X can contain hyphens, underscores, and alphanumeric characters
-      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${ESCAPED_NAMESPACE}/g" "$SENTINEL_CONF_FILE"
+      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${NAMESPACE}/g" "$SENTINEL_CONF_FILE"
     fi
   else
     echo "NAMESPACE not set, skipping namespace fix"

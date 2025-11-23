@@ -454,8 +454,40 @@ if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
   fi
 fi
 
+fix_namespace_in_config_files() {
+  # Extract current namespace from RESOURCE_ALIAS (format: xxx-instance-yyy)
+  if [[ -n "$RESOURCE_ALIAS" ]]; then
+    CURRENT_NAMESPACE=$(echo "$RESOURCE_ALIAS" | cut -d "-" -f 2)
+    echo "Current namespace: $CURRENT_NAMESPACE"
+    
+    # Check and fix node.conf
+    if [[ -f "$NODE_CONF_FILE" ]]; then
+      echo "Checking node.conf for namespace mismatches"
+      # Replace instance-X pattern with current namespace, where X is any sequence of alphanumeric characters
+      sed -i -E "s/instance-[a-zA-Z0-9]+/${CURRENT_NAMESPACE}/g" "$NODE_CONF_FILE"
+    fi
+    
+    # Check and fix sentinel.conf if it exists
+    if [[ -f "$DATA_DIR/sentinel.conf" ]]; then
+      echo "Checking sentinel.conf for namespace mismatches"
+      sed -i -E "s/instance-[a-zA-Z0-9]+/${CURRENT_NAMESPACE}/g" "$DATA_DIR/sentinel.conf"
+    fi
+    
+    # Check and fix nodes.conf if it exists (cluster mode)
+    if [[ -f "$DATA_DIR/nodes.conf" ]]; then
+      echo "Checking nodes.conf for namespace mismatches"
+      sed -i -E "s/instance-[a-zA-Z0-9]+/${CURRENT_NAMESPACE}/g" "$DATA_DIR/nodes.conf"
+    fi
+  else
+    echo "RESOURCE_ALIAS not set, skipping namespace fix"
+  fi
+}
+
 set_persistence_config
 get_self_host_ip
+
+# Fix namespace in config files before starting the server
+fix_namespace_in_config_files
 
 if [ "$RUN_NODE" -eq "1" ]; then
 

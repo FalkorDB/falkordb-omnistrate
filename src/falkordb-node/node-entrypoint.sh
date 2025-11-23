@@ -447,6 +447,22 @@ if [ ! -f $NODE_CONF_FILE ] || [ "$REPLACE_NODE_CONF" -eq "1" ]; then
   cp /falkordb/node.conf $NODE_CONF_FILE
 fi
 
+fix_namespace_in_config_files() {
+  # Use INSTANCE_ID environment variable to get the current namespace
+  if [[ -n "$INSTANCE_ID" ]]; then
+    echo "Current namespace: $INSTANCE_ID"
+    
+    # Check and fix node.conf only (node entrypoint should only check node.conf)
+    if [[ -f "$NODE_CONF_FILE" ]]; then
+      echo "Checking node.conf for namespace mismatches"
+      # Replace instance-X pattern with current namespace, where X can contain hyphens, underscores, and alphanumeric characters
+      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${INSTANCE_ID}/g" "$NODE_CONF_FILE"
+    fi
+  else
+    echo "INSTANCE_ID not set, skipping namespace fix"
+  fi
+}
+
 # Create log files if they don't exist
 if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
   if [ "$RUN_NODE" -eq "1" ]; then
@@ -456,6 +472,10 @@ fi
 
 set_persistence_config
 get_self_host_ip
+
+# Fix namespace in config files before starting the server
+# This must be called after node.conf is created/copied but before server starts
+fix_namespace_in_config_files
 
 if [ "$RUN_NODE" -eq "1" ]; then
 

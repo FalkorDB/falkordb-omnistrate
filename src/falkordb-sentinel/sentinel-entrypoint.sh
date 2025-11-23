@@ -121,8 +121,8 @@ fix_namespace_in_config_files() {
   # Extract current namespace from RESOURCE_ALIAS (format: prefix-NAMESPACE-suffix)
   # RESOURCE_ALIAS is typically like "sentinel-abc123-xyz" where field 2 is the namespace
   if [[ -n "$RESOURCE_ALIAS" ]]; then
-    # Validate RESOURCE_ALIAS format contains at least 2 hyphens (prefix-namespace-suffix)
-    if [[ ! "$RESOURCE_ALIAS" =~ ^[^-]+-[^-]+ ]]; then
+    # Validate RESOURCE_ALIAS format has expected three-part structure (prefix-namespace-suffix)
+    if [[ ! "$RESOURCE_ALIAS" =~ ^[^-]+-[^-]+-  ]]; then
       echo "Warning: RESOURCE_ALIAS format is unexpected: $RESOURCE_ALIAS"
       return
     fi
@@ -164,9 +164,6 @@ fix_namespace_in_config_files() {
   fi
 }
 
-# Fix namespace in config files before starting the server
-fix_namespace_in_config_files
-
 # If sentinel.conf doesn't exist or $REPLACE_SENTINEL_CONF=1, copy it from /falkordb
 if [ ! -f $SENTINEL_CONF_FILE ] || [ "$REPLACE_SENTINEL_CONF" -eq "1" ]; then
   echo "Copying sentinel.conf from /falkordb"
@@ -180,6 +177,9 @@ if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
   fi
 fi
 
+# Fix namespace in config files before starting the server
+# This must be called after sentinel.conf is created/copied but before server starts
+fix_namespace_in_config_files
 
 create_user(){
   local acl_commands='~* +SENTINEL|get-master-addr-by-name +SENTINEL|remove +SENTINEL|flushconfig +SENTINEL|monitor'

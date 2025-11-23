@@ -447,19 +447,12 @@ if [ ! -f $NODE_CONF_FILE ] || [ "$REPLACE_NODE_CONF" -eq "1" ]; then
   cp /falkordb/node.conf $NODE_CONF_FILE
 fi
 
-# Create log files if they don't exist
-if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
-  if [ "$RUN_NODE" -eq "1" ]; then
-    touch $FALKORDB_LOG_FILE_PATH
-  fi
-fi
-
 fix_namespace_in_config_files() {
   # Extract current namespace from RESOURCE_ALIAS (format: prefix-NAMESPACE-suffix)
   # RESOURCE_ALIAS is typically like "node-abc123-xyz" where field 2 is the namespace
   if [[ -n "$RESOURCE_ALIAS" ]]; then
-    # Validate RESOURCE_ALIAS format contains at least 2 hyphens (prefix-namespace-suffix)
-    if [[ ! "$RESOURCE_ALIAS" =~ ^[^-]+-[^-]+ ]]; then
+    # Validate RESOURCE_ALIAS format has expected three-part structure (prefix-namespace-suffix)
+    if [[ ! "$RESOURCE_ALIAS" =~ ^[^-]+-[^-]+-  ]]; then
       echo "Warning: RESOURCE_ALIAS format is unexpected: $RESOURCE_ALIAS"
       return
     fi
@@ -501,10 +494,18 @@ fix_namespace_in_config_files() {
   fi
 }
 
+# Create log files if they don't exist
+if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
+  if [ "$RUN_NODE" -eq "1" ]; then
+    touch $FALKORDB_LOG_FILE_PATH
+  fi
+fi
+
 set_persistence_config
 get_self_host_ip
 
 # Fix namespace in config files before starting the server
+# This must be called after node.conf is created/copied but before server starts
 fix_namespace_in_config_files
 
 if [ "$RUN_NODE" -eq "1" ]; then

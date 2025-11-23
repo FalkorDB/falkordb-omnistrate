@@ -118,7 +118,8 @@ log() {
 }
 
 fix_namespace_in_config_files() {
-  # Extract current namespace from RESOURCE_ALIAS (format: xxx-instance-yyy)
+  # Extract current namespace from RESOURCE_ALIAS (format: prefix-NAMESPACE-suffix)
+  # RESOURCE_ALIAS is typically like "sentinel-abc123-xyz" where field 2 is the namespace
   if [[ -n "$RESOURCE_ALIAS" ]]; then
     CURRENT_NAMESPACE=$(echo "$RESOURCE_ALIAS" | cut -d "-" -f 2)
     echo "Current namespace: $CURRENT_NAMESPACE"
@@ -126,20 +127,20 @@ fix_namespace_in_config_files() {
     # Check and fix sentinel.conf
     if [[ -f "$SENTINEL_CONF_FILE" ]]; then
       echo "Checking sentinel.conf for namespace mismatches"
-      # Replace instance-X pattern with current namespace, where X is any sequence of alphanumeric characters
-      sed -i -E "s/instance-[a-zA-Z0-9]+/${CURRENT_NAMESPACE}/g" "$SENTINEL_CONF_FILE"
+      # Replace instance-X pattern with current namespace, where X can contain alphanumeric, hyphens, and underscores
+      sed -i -E "s/instance-[a-zA-Z0-9_-]+/${CURRENT_NAMESPACE}/g" "$SENTINEL_CONF_FILE"
     fi
     
     # Check and fix node.conf if it exists
     if [[ -f "$DATA_DIR/node.conf" ]]; then
       echo "Checking node.conf for namespace mismatches"
-      sed -i -E "s/instance-[a-zA-Z0-9]+/${CURRENT_NAMESPACE}/g" "$DATA_DIR/node.conf"
+      sed -i -E "s/instance-[a-zA-Z0-9_-]+/${CURRENT_NAMESPACE}/g" "$DATA_DIR/node.conf"
     fi
     
     # Check and fix nodes.conf if it exists
     if [[ -f "$DATA_DIR/nodes.conf" ]]; then
       echo "Checking nodes.conf for namespace mismatches"
-      sed -i -E "s/instance-[a-zA-Z0-9]+/${CURRENT_NAMESPACE}/g" "$DATA_DIR/nodes.conf"
+      sed -i -E "s/instance-[a-zA-Z0-9_-]+/${CURRENT_NAMESPACE}/g" "$DATA_DIR/nodes.conf"
     fi
   else
     echo "RESOURCE_ALIAS not set, skipping namespace fix"

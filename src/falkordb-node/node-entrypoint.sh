@@ -448,18 +448,18 @@ if [ ! -f $NODE_CONF_FILE ] || [ "$REPLACE_NODE_CONF" -eq "1" ]; then
 fi
 
 fix_namespace_in_config_files() {
-  # Use NAMESPACE environment variable to get the current namespace
-  if [[ -n "$NAMESPACE" ]]; then
-    echo "Current namespace: $NAMESPACE"
+  # Use INSTANCE_ID environment variable to get the current namespace
+  if [[ -n "$INSTANCE_ID" ]]; then
+    echo "Current namespace: $INSTANCE_ID"
     
     # Check and fix node.conf only (node entrypoint should only check node.conf)
     if [[ -f "$NODE_CONF_FILE" ]]; then
       echo "Checking node.conf for namespace mismatches"
       # Replace instance-X pattern with current namespace, where X can contain hyphens, underscores, and alphanumeric characters
-      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${NAMESPACE}/g" "$NODE_CONF_FILE"
+      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${INSTANCE_ID}/g" "$NODE_CONF_FILE"
     fi
   else
-    echo "NAMESPACE not set, skipping namespace fix"
+    echo "INSTANCE_ID not set, skipping namespace fix"
   fi
 }
 

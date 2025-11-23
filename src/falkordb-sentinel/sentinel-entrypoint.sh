@@ -118,18 +118,18 @@ log() {
 }
 
 fix_namespace_in_config_files() {
-  # Use NAMESPACE environment variable to get the current namespace
-  if [[ -n "$NAMESPACE" ]]; then
-    echo "Current namespace: $NAMESPACE"
+  # Use INSTANCE_ID environment variable to get the current namespace
+  if [[ -n "$INSTANCE_ID" ]]; then
+    echo "Current namespace: $INSTANCE_ID"
     
     # Check and fix sentinel.conf only (sentinel entrypoint should only check sentinel.conf)
     if [[ -f "$SENTINEL_CONF_FILE" ]]; then
       echo "Checking sentinel.conf for namespace mismatches"
       # Replace instance-X pattern with current namespace, where X can contain hyphens, underscores, and alphanumeric characters
-      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${NAMESPACE}/g" "$SENTINEL_CONF_FILE"
+      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${INSTANCE_ID}/g" "$SENTINEL_CONF_FILE"
     fi
   else
-    echo "NAMESPACE not set, skipping namespace fix"
+    echo "INSTANCE_ID not set, skipping namespace fix"
   fi
 }
 

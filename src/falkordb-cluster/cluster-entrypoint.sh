@@ -243,24 +243,24 @@ update_ips_in_nodes_conf() {
 update_ips_in_nodes_conf
 
 fix_namespace_in_config_files() {
-  # Use NAMESPACE environment variable to get the current namespace
-  if [[ -n "$NAMESPACE" ]]; then
-    echo "Current namespace: $NAMESPACE"
+  # Use INSTANCE_ID environment variable to get the current namespace
+  if [[ -n "$INSTANCE_ID" ]]; then
+    echo "Current namespace: $INSTANCE_ID"
     
     # Check and fix node.conf
     if [[ -f "$NODE_CONF_FILE" ]]; then
       echo "Checking node.conf for namespace mismatches"
       # Replace instance-X pattern with current namespace, where X can contain hyphens, underscores, and alphanumeric characters
-      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${NAMESPACE}/g" "$NODE_CONF_FILE"
+      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${INSTANCE_ID}/g" "$NODE_CONF_FILE"
     fi
     
     # Check and fix nodes.conf (cluster mode)
     if [[ -f "$DATA_DIR/nodes.conf" ]]; then
       echo "Checking nodes.conf for namespace mismatches"
-      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${NAMESPACE}/g" "$DATA_DIR/nodes.conf"
+      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${INSTANCE_ID}/g" "$DATA_DIR/nodes.conf"
     fi
   else
-    echo "NAMESPACE not set, skipping namespace fix"
+    echo "INSTANCE_ID not set, skipping namespace fix"
   fi
 }
 

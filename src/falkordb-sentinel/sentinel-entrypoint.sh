@@ -121,9 +121,15 @@ fix_namespace_in_config_files() {
   # Extract current namespace from RESOURCE_ALIAS (format: prefix-NAMESPACE-suffix)
   # RESOURCE_ALIAS is typically like "sentinel-abc123-xyz" where field 2 is the namespace
   if [[ -n "$RESOURCE_ALIAS" ]]; then
+    # Validate RESOURCE_ALIAS format contains at least 2 hyphens (prefix-namespace-suffix)
+    if [[ ! "$RESOURCE_ALIAS" =~ ^[^-]+-[^-]+ ]]; then
+      echo "Warning: RESOURCE_ALIAS format is unexpected: $RESOURCE_ALIAS"
+      return
+    fi
+    
     CURRENT_NAMESPACE=$(echo "$RESOURCE_ALIAS" | cut -d "-" -f 2)
     
-    # Validate that namespace was extracted successfully
+    # Validate that namespace was extracted successfully and is not empty
     if [[ -z "$CURRENT_NAMESPACE" ]]; then
       echo "Warning: Could not extract namespace from RESOURCE_ALIAS: $RESOURCE_ALIAS"
       return
@@ -132,6 +138,7 @@ fix_namespace_in_config_files() {
     echo "Current namespace: $CURRENT_NAMESPACE"
     
     # Escape special characters in CURRENT_NAMESPACE for sed replacement
+    # Note: Namespaces in Omnistrate are alphanumeric with hyphens/underscores only
     ESCAPED_NAMESPACE=$(printf '%s\n' "$CURRENT_NAMESPACE" | sed 's/[\/&]/\\&/g')
     
     # Check and fix sentinel.conf

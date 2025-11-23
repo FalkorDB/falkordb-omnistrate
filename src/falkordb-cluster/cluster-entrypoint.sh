@@ -243,28 +243,13 @@ update_ips_in_nodes_conf() {
 update_ips_in_nodes_conf
 
 fix_namespace_in_config_files() {
-  # Extract current namespace from RESOURCE_ALIAS (format: prefix-NAMESPACE-suffix)
-  # RESOURCE_ALIAS is typically like "cluster-abc123-xyz" where field 2 is the namespace
-  if [[ -n "$RESOURCE_ALIAS" ]]; then
-    # Validate RESOURCE_ALIAS format has expected three-part structure (prefix-namespace-suffix)
-    if [[ ! "$RESOURCE_ALIAS" =~ ^[^-]+-[^-]+-  ]]; then
-      echo "Warning: RESOURCE_ALIAS format is unexpected: $RESOURCE_ALIAS"
-      return
-    fi
+  # Use NAMESPACE environment variable to get the current namespace
+  if [[ -n "$NAMESPACE" ]]; then
+    echo "Current namespace: $NAMESPACE"
     
-    CURRENT_NAMESPACE=$(echo "$RESOURCE_ALIAS" | cut -d "-" -f 2)
-    
-    # Validate that namespace was extracted successfully and is not empty
-    if [[ -z "$CURRENT_NAMESPACE" ]]; then
-      echo "Warning: Could not extract namespace from RESOURCE_ALIAS: $RESOURCE_ALIAS"
-      return
-    fi
-    
-    echo "Current namespace: $CURRENT_NAMESPACE"
-    
-    # Escape special characters in CURRENT_NAMESPACE for sed replacement
+    # Escape special characters in NAMESPACE for sed replacement
     # Note: Namespaces in Omnistrate are alphanumeric with hyphens/underscores only
-    ESCAPED_NAMESPACE=$(printf '%s\n' "$CURRENT_NAMESPACE" | sed 's/[\/&]/\\&/g')
+    ESCAPED_NAMESPACE=$(printf '%s\n' "$NAMESPACE" | sed 's/[\/&]/\\&/g')
     
     # Check and fix node.conf
     if [[ -f "$NODE_CONF_FILE" ]]; then
@@ -273,13 +258,13 @@ fix_namespace_in_config_files() {
       sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${ESCAPED_NAMESPACE}/g" "$NODE_CONF_FILE"
     fi
     
-    # Check and fix nodes.conf if it exists (cluster mode)
+    # Check and fix nodes.conf (cluster mode)
     if [[ -f "$DATA_DIR/nodes.conf" ]]; then
       echo "Checking nodes.conf for namespace mismatches"
       sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${ESCAPED_NAMESPACE}/g" "$DATA_DIR/nodes.conf"
     fi
   else
-    echo "RESOURCE_ALIAS not set, skipping namespace fix"
+    echo "NAMESPACE not set, skipping namespace fix"
   fi
 }
 

@@ -118,49 +118,22 @@ log() {
 }
 
 fix_namespace_in_config_files() {
-  # Extract current namespace from RESOURCE_ALIAS (format: prefix-NAMESPACE-suffix)
-  # RESOURCE_ALIAS is typically like "sentinel-abc123-xyz" where field 2 is the namespace
-  if [[ -n "$RESOURCE_ALIAS" ]]; then
-    # Validate RESOURCE_ALIAS format has expected three-part structure (prefix-namespace-suffix)
-    if [[ ! "$RESOURCE_ALIAS" =~ ^[^-]+-[^-]+-  ]]; then
-      echo "Warning: RESOURCE_ALIAS format is unexpected: $RESOURCE_ALIAS"
-      return
-    fi
+  # Use NAMESPACE environment variable to get the current namespace
+  if [[ -n "$NAMESPACE" ]]; then
+    echo "Current namespace: $NAMESPACE"
     
-    CURRENT_NAMESPACE=$(echo "$RESOURCE_ALIAS" | cut -d "-" -f 2)
-    
-    # Validate that namespace was extracted successfully and is not empty
-    if [[ -z "$CURRENT_NAMESPACE" ]]; then
-      echo "Warning: Could not extract namespace from RESOURCE_ALIAS: $RESOURCE_ALIAS"
-      return
-    fi
-    
-    echo "Current namespace: $CURRENT_NAMESPACE"
-    
-    # Escape special characters in CURRENT_NAMESPACE for sed replacement
+    # Escape special characters in NAMESPACE for sed replacement
     # Note: Namespaces in Omnistrate are alphanumeric with hyphens/underscores only
-    ESCAPED_NAMESPACE=$(printf '%s\n' "$CURRENT_NAMESPACE" | sed 's/[\/&]/\\&/g')
+    ESCAPED_NAMESPACE=$(printf '%s\n' "$NAMESPACE" | sed 's/[\/&]/\\&/g')
     
-    # Check and fix sentinel.conf
+    # Check and fix sentinel.conf only (sentinel entrypoint should only check sentinel.conf)
     if [[ -f "$SENTINEL_CONF_FILE" ]]; then
       echo "Checking sentinel.conf for namespace mismatches"
       # Replace instance-X pattern with current namespace, where X can contain hyphens, underscores, and alphanumeric characters
       sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${ESCAPED_NAMESPACE}/g" "$SENTINEL_CONF_FILE"
     fi
-    
-    # Check and fix node.conf if it exists
-    if [[ -f "$DATA_DIR/node.conf" ]]; then
-      echo "Checking node.conf for namespace mismatches"
-      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${ESCAPED_NAMESPACE}/g" "$DATA_DIR/node.conf"
-    fi
-    
-    # Check and fix nodes.conf if it exists
-    if [[ -f "$DATA_DIR/nodes.conf" ]]; then
-      echo "Checking nodes.conf for namespace mismatches"
-      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${ESCAPED_NAMESPACE}/g" "$DATA_DIR/nodes.conf"
-    fi
   else
-    echo "RESOURCE_ALIAS not set, skipping namespace fix"
+    echo "NAMESPACE not set, skipping namespace fix"
   fi
 }
 

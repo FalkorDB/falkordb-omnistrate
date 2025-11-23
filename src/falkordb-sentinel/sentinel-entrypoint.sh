@@ -145,19 +145,19 @@ fix_namespace_in_config_files() {
     if [[ -f "$SENTINEL_CONF_FILE" ]]; then
       echo "Checking sentinel.conf for namespace mismatches"
       # Replace instance-X pattern with current namespace, where X can contain hyphens, underscores, and alphanumeric characters
-      sed -i -E "s/instance-[a-zA-Z0-9_-]+/${ESCAPED_NAMESPACE}/g" "$SENTINEL_CONF_FILE"
+      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${ESCAPED_NAMESPACE}/g" "$SENTINEL_CONF_FILE"
     fi
     
     # Check and fix node.conf if it exists
     if [[ -f "$DATA_DIR/node.conf" ]]; then
       echo "Checking node.conf for namespace mismatches"
-      sed -i -E "s/instance-[a-zA-Z0-9_-]+/${ESCAPED_NAMESPACE}/g" "$DATA_DIR/node.conf"
+      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${ESCAPED_NAMESPACE}/g" "$DATA_DIR/node.conf"
     fi
     
     # Check and fix nodes.conf if it exists
     if [[ -f "$DATA_DIR/nodes.conf" ]]; then
       echo "Checking nodes.conf for namespace mismatches"
-      sed -i -E "s/instance-[a-zA-Z0-9_-]+/${ESCAPED_NAMESPACE}/g" "$DATA_DIR/nodes.conf"
+      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${ESCAPED_NAMESPACE}/g" "$DATA_DIR/nodes.conf"
     fi
   else
     echo "RESOURCE_ALIAS not set, skipping namespace fix"

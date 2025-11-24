@@ -1,0 +1,21 @@
+apiVersion: v2
+name: falkordb-cluster-omnistrate
+description: A Helm chart for deploying FalkorDB cluster on KubeBlocks for Omnistrate
+type: application
+version: 1.0.0
+appVersion: "4.12.5"
+keywords:
+  - falkordb
+  - kubeblocks
+  - graph database
+  - redis
+home: https://falkordb.com
+sources:
+  - https://github.com/FalkorDB/FalkorDB
+maintainers:
+  - name: FalkorDB Team
+dependencies:
+  - name: kblib
+    version: 0.1.2
+    repository: file://../kubeblocks-addons/addons-cluster/kblib
+    alias: extra

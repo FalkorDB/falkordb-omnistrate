@@ -98,10 +98,10 @@ x-clusterparam: &clusterparam
       export: true
       defaultValue: "falkordb"
     - key: falkordbPassword
-      description: Choose a default password for your database
+      description: Choose a default password for your database. Updating this value after deployment will restart the instance.
       name: FalkorDB Password
       type: Password
-      modifiable: false
+      modifiable: true
       required: true
       export: false
     - key: RDBPersistenceConfig
@@ -396,10 +396,10 @@ services:
         parameterDependencyMap:
           node-s: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -580,10 +580,10 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
       - key: RDBPersistenceConfig
@@ -886,10 +886,10 @@ services:
         parameterDependencyMap:
           node-sz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -1081,10 +1081,10 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -1643,10 +1643,10 @@ services:
         parameterDependencyMap:
           node-mz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -1838,10 +1838,10 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -2386,10 +2386,10 @@ services:
         parameterDependencyMap:
           cluster-sz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -2748,10 +2748,10 @@ services:
         parameterDependencyMap:
           cluster-mz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:

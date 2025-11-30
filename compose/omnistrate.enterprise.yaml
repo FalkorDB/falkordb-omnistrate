@@ -78,7 +78,7 @@ x-clusterparam: &clusterparam
       export: true
       defaultValue: "falkordb"
     - key: falkordbPassword
-      description: Choose a default password for your database
+      description: Choose a default password for your database ( Updating this value after deployment will restart the instance )
       name: FalkorDB Password
       type: Password
       modifiable: true
@@ -369,7 +369,7 @@ services:
         parameterDependencyMap:
           node-s: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database ( Updating this value after deployment will restart the instance )
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -551,7 +551,7 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database ( Updating this value after deployment will restart the instance )
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -856,7 +856,7 @@ services:
         parameterDependencyMap:
           node-sz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database ( Updating this value after deployment will restart the instance )
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -1050,7 +1050,7 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database ( Updating this value after deployment will restart the instance )
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -1472,7 +1472,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: true
+        modifiable: false
         required: true
         export: false
       - key: numReplicas
@@ -1616,7 +1616,7 @@ services:
         parameterDependencyMap:
           node-mz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database ( Updating this value after deployment will restart the instance )
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -1809,7 +1809,7 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database ( Updating this value after deployment will restart the instance )
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -2230,7 +2230,7 @@ services:
         description: Choose a default password for your database
         name: FalkorDB Password
         type: Password
-        modifiable: true
+        modifiable: false
         required: true
         export: false
       - key: numReplicas
@@ -2359,7 +2359,7 @@ services:
         parameterDependencyMap:
           cluster-sz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database ( Updating this value after deployment will restart the instance )
         name: FalkorDB Password
         type: Password
         modifiable: true
@@ -2725,7 +2725,7 @@ services:
         parameterDependencyMap:
           cluster-mz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database ( Updating this value after deployment will restart the instance )
         name: FalkorDB Password
         type: Password
         modifiable: true

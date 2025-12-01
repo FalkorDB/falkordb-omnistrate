@@ -721,8 +721,10 @@ services:
         commandTemplate: |
           #!/bin/bash
           echo "Running BGREWRITEAOF before upgrade"
-          TLS=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
-          redis-cli -p $NODE_PORT -a $(cat /run/secrets/adminpassword) --no-auth-warning $TLS BGREWRITEAOF
+          readonly REDIS_USER="falkordbUpgradeUser"
+          readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
+          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+          redis-cli -p $NODE_PORT $REDIS_OPTS BGREWRITEAOF
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -1259,8 +1261,10 @@ services:
         commandTemplate: |
           #!/bin/bash
           echo "Running BGREWRITEAOF before upgrade"
-          TLS=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
-          redis-cli -p $NODE_PORT -a $(cat /run/secrets/adminpassword) --no-auth-warning $TLS BGREWRITEAOF
+          readonly REDIS_USER="falkordbUpgradeUser"
+          readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
+          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+          redis-cli -p $NODE_PORT $REDIS_OPTS BGREWRITEAOF
       - scope: CLUSTER
         type: POST_UPGRADE
         <<: *postupgradehook
@@ -2025,8 +2029,10 @@ services:
         commandTemplate: |
           #!/bin/bash
           echo "Running BGREWRITEAOF before upgrade"
-          TLS=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
-          redis-cli -p $NODE_PORT -a $(cat /run/secrets/adminpassword) --no-auth-warning $TLS BGREWRITEAOF
+          readonly REDIS_USER="falkordbUpgradeUser"
+          readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
+          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+          redis-cli -p $NODE_PORT $REDIS_OPTS BGREWRITEAOF
       - scope: CLUSTER
         type: POST_UPGRADE
         <<: *postupgradehook
@@ -2594,8 +2600,10 @@ services:
         commandTemplate: |
           #!/bin/bash
           echo "Running BGREWRITEAOF before upgrade"
-          TLS=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
-          redis-cli -p $NODE_PORT -a $(cat /run/secrets/adminpassword) --no-auth-warning $TLS BGREWRITEAOF
+          readonly REDIS_USER="falkordbUpgradeUser"
+          readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
+          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+          redis-cli -p $NODE_PORT $REDIS_OPTS BGREWRITEAOF
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -2962,8 +2970,10 @@ services:
         commandTemplate: |
           #!/bin/bash
           echo "Running BGREWRITEAOF before upgrade"
-          TLS=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
-          redis-cli -p $NODE_PORT -a $(cat /run/secrets/adminpassword) --no-auth-warning $TLS BGREWRITEAOF
+          readonly REDIS_USER="falkordbUpgradeUser"
+          readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
+          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+          redis-cli -p $NODE_PORT $REDIS_OPTS BGREWRITEAOF
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |

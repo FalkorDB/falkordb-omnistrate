@@ -269,6 +269,9 @@ handle_sigterm() {
   echo "Stopping FalkorDB"
 
   if [[ ! -z $falkordb_pid ]]; then
+    # perform bgrewriteaof before shutting down
+    echo "Running BGREWRITEAOF before shutdown"
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF
     kill -TERM $falkordb_pid
   fi
 

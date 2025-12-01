@@ -193,6 +193,8 @@ handle_sigterm() {
     #DO NOT USE is_replica FUNCTION
     role=$(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication | grep role)
     if [[ "$role" =~ ^role:master ]]; then IS_REPLICA=0; fi
+    echo "Running BGREWRITEAOF before shutdown"
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF
     remove_master_from_group
     redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SHUTDOWN
   fi

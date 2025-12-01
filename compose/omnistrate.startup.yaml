@@ -449,7 +449,7 @@ services:
               'while true; do for d in /proc/[0-9]*; do comm=$(cat "$d/comm" 2>/dev/null); case "$comm" in redis-server*|healthcheck*) pid=${d#/proc/}; cur=$(cat "$d/oom_score_adj" 2>/dev/null || echo); if [ "$cur" != "-1000" ]; then echo -1000 > "$d/oom_score_adj" 2>/dev/null && echo "[$(date +%FT%T%z)] set oom_score_adj=-1000 for $comm (pid $pid)"; fi ;; esac; done; sleep 1; done',
             ]
     x-omnistrate-actionhooks:
-      - scope: NODE
+      - scope: CLUSTER
         type: PRE_UPGRADE
         commandTemplate: |
           #!/bin/bash

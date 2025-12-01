@@ -717,7 +717,7 @@ services:
             cpu: "50m"
             memory: 50Mi
     x-omnistrate-actionhooks:
-      - scope: NODE
+      - scope: CLUSTER
         type: PRE_UPGRADE
         commandTemplate: |
           #!/bin/bash
@@ -1257,7 +1257,7 @@ services:
             cpu: "200m"
             memory: 100Mi
     x-omnistrate-actionhooks:
-      - scope: NODE
+      - scope: CLUSTER
         type: PRE_UPGRADE
         commandTemplate: |
           #!/bin/bash
@@ -2025,7 +2025,7 @@ services:
             cpu: "200m"
             memory: 100Mi
     x-omnistrate-actionhooks:
-      - scope: NODE
+      - scope: CLUSTER
         type: PRE_UPGRADE
         commandTemplate: |
           #!/bin/bash
@@ -2597,7 +2597,7 @@ services:
             - "1"
             - "--is-cluster"
     x-omnistrate-actionhooks:
-      - scope: NODE
+      - scope: CLUSTER
         type: PRE_UPGRADE
         commandTemplate: |
           #!/bin/bash
@@ -2968,7 +2968,7 @@ services:
             - "1"
             - "--is-cluster"
     x-omnistrate-actionhooks:
-      - scope: NODE
+      - scope: CLUSTER
         type: PRE_UPGRADE
         commandTemplate: |
           #!/bin/bash

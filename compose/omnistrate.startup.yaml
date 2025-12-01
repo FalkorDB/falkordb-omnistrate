@@ -399,7 +399,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - RANDOM_NODE_PORT=$sys.network.node.externalPorts["6379"]
       - MEMORY_LIMIT=$var.memoryRequestsAndLimits
@@ -456,7 +456,7 @@ services:
           echo "Running BGREWRITEAOF before upgrade"
           readonly REDIS_USER="falkordbUpgradeUser"
           readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
-          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_UPGRADE_PASSWORD $SSL_FLAG"
           redis-cli -p $NODE_PORT $REDIS_OPTS BGREWRITEAOF
       - scope: NODE
         type: STARTUP_CHECK

@@ -203,7 +203,7 @@ x-post-upgrade-hook: &postupgradehook
     readonly INTERNAL_SUFFIX=$([[ "${NETWORKING_TYPE:-}" == "INTERNAL" ]] && echo "-internal" || echo "")
 
     # Common Redis CLI options
-    readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+    readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_UPGRADE_PASSWORD $SSL_FLAG"
 
     # Function to execute Redis CLI commands with error handling
     redis_exec() {
@@ -684,7 +684,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
@@ -724,7 +724,7 @@ services:
           echo "Running BGREWRITEAOF before upgrade"
           readonly REDIS_USER="falkordbUpgradeUser"
           readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
-          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_UPGRADE_PASSWORD $SSL_FLAG"
           redis-cli -p $NODE_PORT $REDIS_OPTS BGREWRITEAOF
       - scope: NODE
         type: STARTUP_CHECK
@@ -1200,7 +1200,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
@@ -1264,7 +1264,7 @@ services:
           echo "Running BGREWRITEAOF before upgrade"
           readonly REDIS_USER="falkordbUpgradeUser"
           readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
-          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_UPGRADE_PASSWORD $SSL_FLAG"
           redis-cli -p $NODE_PORT $REDIS_OPTS BGREWRITEAOF
       - scope: CLUSTER
         type: POST_UPGRADE
@@ -1412,7 +1412,7 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - SENTINEL_QUORUM=2
       - NODE_PORT=6379
       - DEBUG=0
@@ -1968,7 +1968,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
@@ -2032,7 +2032,7 @@ services:
           echo "Running BGREWRITEAOF before upgrade"
           readonly REDIS_USER="falkordbUpgradeUser"
           readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
-          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_UPGRADE_PASSWORD $SSL_FLAG"
           redis-cli -p $NODE_PORT $REDIS_OPTS BGREWRITEAOF
       - scope: CLUSTER
         type: POST_UPGRADE
@@ -2179,7 +2179,7 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - SENTINEL_QUORUM=2
       - NODE_PORT=6379
       - DEBUG=0
@@ -2557,7 +2557,7 @@ services:
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
@@ -2604,7 +2604,7 @@ services:
           echo "Running BGREWRITEAOF before upgrade"
           readonly REDIS_USER="falkordbUpgradeUser"
           readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
-          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_UPGRADE_PASSWORD $SSL_FLAG"
           redis-cli -p $NODE_PORT $REDIS_OPTS BGREWRITEAOF
       - scope: NODE
         type: STARTUP_CHECK
@@ -2930,7 +2930,7 @@ services:
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
@@ -2975,7 +2975,7 @@ services:
           echo "Running BGREWRITEAOF before upgrade"
           readonly REDIS_USER="falkordbUpgradeUser"
           readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
-          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_UPGRADE_PASSWORD $SSL_FLAG"
           redis-cli -p $NODE_PORT $REDIS_OPTS BGREWRITEAOF
       - scope: NODE
         type: STARTUP_CHECK

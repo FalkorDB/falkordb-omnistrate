@@ -744,6 +744,13 @@ services:
             memory: 50Mi
     x-omnistrate-actionhooks:
       - scope: NODE
+        type: PRE_UPGRADE
+        commandTemplate: |
+          #!/bin/bash
+          echo "Running BGREWRITEAOF before upgrade"
+          TLS=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
+          redis-cli -p $NODE_PORT -a $(cat /run/secrets/adminpassword) --no-auth-warning $TLS BGREWRITEAOF
+      - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
           #!/bin/bash
@@ -1277,6 +1284,13 @@ services:
             cpu: "200m"
             memory: 100Mi
     x-omnistrate-actionhooks:
+      - scope: NODE
+        type: PRE_UPGRADE
+        commandTemplate: |
+          #!/bin/bash
+          echo "Running BGREWRITEAOF before upgrade"
+          TLS=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
+          redis-cli -p $NODE_PORT -a $(cat /run/secrets/adminpassword) --no-auth-warning $TLS BGREWRITEAOF
       - scope: CLUSTER
         type: POST_UPGRADE
         <<: *postupgradehook
@@ -2035,6 +2049,13 @@ services:
             cpu: "200m"
             memory: 100Mi
     x-omnistrate-actionhooks:
+      - scope: NODE
+        type: PRE_UPGRADE
+        commandTemplate: |
+          #!/bin/bash
+          echo "Running BGREWRITEAOF before upgrade"
+          TLS=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
+          redis-cli -p $NODE_PORT -a $(cat /run/secrets/adminpassword) --no-auth-warning $TLS BGREWRITEAOF
       - scope: CLUSTER
         type: POST_UPGRADE
         <<: *postupgradehook
@@ -2596,6 +2617,13 @@ services:
             - "--is-cluster"
     x-omnistrate-actionhooks:
       - scope: NODE
+        type: PRE_UPGRADE
+        commandTemplate: |
+          #!/bin/bash
+          echo "Running BGREWRITEAOF before upgrade"
+          TLS=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
+          redis-cli -p $NODE_PORT -a $(cat /run/secrets/adminpassword) --no-auth-warning $TLS BGREWRITEAOF
+      - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
           #!/bin/bash
@@ -2955,6 +2983,13 @@ services:
             - "1"
             - "--is-cluster"
     x-omnistrate-actionhooks:
+      - scope: NODE
+        type: PRE_UPGRADE
+        commandTemplate: |
+          #!/bin/bash
+          echo "Running BGREWRITEAOF before upgrade"
+          TLS=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
+          redis-cli -p $NODE_PORT -a $(cat /run/secrets/adminpassword) --no-auth-warning $TLS BGREWRITEAOF
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |

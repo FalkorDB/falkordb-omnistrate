@@ -199,6 +199,13 @@ services:
           memory: 100M
     x-omnistrate-actionhooks:
       - scope: NODE
+        type: PRE_UPGRADE
+        commandTemplate: |
+          #!/bin/bash
+          echo "Running BGREWRITEAOF before upgrade"
+          TLS=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
+          redis-cli -p $NODE_PORT -a $(cat /run/secrets/adminpassword) --no-auth-warning $TLS BGREWRITEAOF
+      - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
           #!/bin/bash

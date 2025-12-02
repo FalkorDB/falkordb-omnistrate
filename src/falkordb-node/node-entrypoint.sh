@@ -183,6 +183,21 @@ get_sentinels_list() {
 }
 
 # Handle signals
+wait_for_bgrewrite_to_finish() {
+  tout=${tout:-30}
+  end=$((SECONDS + tout))
+  while true; do
+    if (( SECONDS >= end )); then
+      echo "Timed out waiting for BGREWRITEAOF to complete"
+      exit 1
+    fi
+    if [[ $(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING INFO persistence | grep aof_rewrite_in_progress:0) ]]; then
+      echo "BGREWRITEAOF completed"
+      break
+    fi
+    sleep 1
+  done
+}
 
 handle_sigterm() {
   echo "Caught SIGTERM"
@@ -195,17 +210,7 @@ handle_sigterm() {
     if [[ "$role" =~ ^role:master ]]; then IS_REPLICA=0; fi
     echo "Running BGREWRITEAOF before shutdown"
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF
-    pid="$!"
-    tout=${tout:-30}
-    end=$((SECONDS + tout))
-    while kill -0 "$pid" 2>/dev/null; do
-        if (( SECONDS >= end )); then
-            echo "Process stuck — killing PID $pid"
-            kill -9 "$pid" 2>/dev/null || true
-            exit 124
-        fi
-        sleep 1
-    done
+    wait_for_bgrewrite_to_finish
     remove_master_from_group
     redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SHUTDOWN
   fi

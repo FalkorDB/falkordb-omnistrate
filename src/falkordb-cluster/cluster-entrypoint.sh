@@ -264,6 +264,22 @@ fix_namespace_in_config_files() {
   fi
 }
 
+wait_for_bgrewrite_to_finish() {
+  tout=${tout:-30}
+  end=$((SECONDS + tout))
+  while true; do
+    if (( SECONDS >= end )); then
+      echo "Timed out waiting for BGREWRITEAOF to complete"
+      exit 1
+    fi
+    if [[ $(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING INFO persistence | grep aof_rewrite_in_progress:0) ]]; then
+      echo "BGREWRITEAOF completed"
+      break
+    fi
+    sleep 1
+  done
+}
+
 handle_sigterm() {
   echo "Caught SIGTERM"
   echo "Stopping FalkorDB"
@@ -272,17 +288,7 @@ handle_sigterm() {
     # perform bgrewriteaof before shutting down
     echo "Running BGREWRITEAOF before shutdown"
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF
-    pid="$!"
-    tout=${tout:-30}
-    end=$((SECONDS + tout))
-    while kill -0 "$pid" 2>/dev/null; do
-        if (( SECONDS >= end )); then
-            echo "Process stuck — killing PID $pid"
-            kill -9 "$pid" 2>/dev/null || true
-            exit 124
-        fi
-        sleep 1
-    done
+    wait_for_bgrewrite_to_finish
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SHUTDOWN
     kill -TERM $falkordb_pid
   fi
@@ -345,7 +351,7 @@ create_user() {
   echo "Creating falkordb user"
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER reset
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +CLUSTER +COMMAND +GRAPH.MEMORY +MEMORY +BGREWRITEAOF '+MODULE|LIST'
-  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER falkordbUpgradeUser on ">$FALKORDB_UPGRADE_PASSWORD" ~* +BGREWRITEAOF
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER falkordbUpgradeUser on ">$FALKORDB_UPGRADE_PASSWORD" ~* +INFO +BGREWRITEAOF
 }
 
 get_default_memory_limit() {

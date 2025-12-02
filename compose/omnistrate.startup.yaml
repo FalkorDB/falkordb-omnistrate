@@ -20,7 +20,55 @@ x-omnistrate-service-plan:
       unit: GiB
       timeUnit: hour
       price: 0.1
+x-pre-upgrade-hook: &preupgradehook
+  commandTemplate: |
+    #!/bin/bash
+    echo "Running BGREWRITEAOF before upgrade"
+    readonly REDIS_USER="falkordbUpgradeUser"
+    readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
+    readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_UPGRADE_PASSWORD $SSL_FLAG BGREWRITEAOF"
 
+    execute_bgrewriteaof() {
+      local node_host=$1
+      echo "Executing BGREWRITEAOF on node at $node_host"
+      redis-cli -h $node_host -p $NODE_PORT $REDIS_OPTS
+    }
+
+    case "$RESOURCE_ALIAS" in
+      node-s)
+        execute_bgrewriteaof node-s-0
+        ;;
+      node-mz)
+        for ((i = 0; i < NUM_REPLICAS; i++)); do
+          node="node-mz-$i"
+          execute_bgrewriteaof $node
+        done
+        ;;
+      node-sz)
+        for ((i = 0; i < NUM_REPLICAS; i++)); do
+          node="node-sz-$i"
+          execute_bgrewriteaof $node
+        done
+        ;;
+      cluster-mz)
+        # Assuming a fixed number of 6 nodes for multi-zone cluster
+        # replicaCount is not set as an env
+        for i in {0..5}; do
+          node="node-mz-$i"
+          execute_bgrewriteaof $node
+        done
+        ;;
+      cluster-sz)
+        for i in {0..5}; do
+          node="node-sz-$i"
+          execute_bgrewriteaof $node
+        done
+        ;;
+      *)
+        echo "Unknown RESOURCE_ALIAS: $RESOURCE_ALIAS"
+        exit 1
+        ;;
+    esac
 services:
   # Standalone
 
@@ -451,13 +499,7 @@ services:
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: PRE_UPGRADE
-        commandTemplate: |
-          #!/bin/bash
-          echo "Running BGREWRITEAOF before upgrade"
-          readonly REDIS_USER="falkordbUpgradeUser"
-          readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
-          readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_UPGRADE_PASSWORD $SSL_FLAG"
-          redis-cli -p $NODE_PORT $REDIS_OPTS BGREWRITEAOF
+        <<: *preupgradehook
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |

@@ -230,8 +230,18 @@ x-post-upgrade-hook: &postupgradehook
 
     # Function to check if node is master
     is_master() {
-        local host=$1
-        redis_exec "$host" "$NODE_PORT" info | grep -q "role:master"
+    local host=$1
+    echo "[DEBUG] Checking if $host is master..." >&2
+    local role_info
+    role_info=$(redis-cli $REDIS_OPTS -h "$host" -p "$NODE_PORT" info replication 2>&1 | grep "^role:" | cut -d: -f2 | tr -d '\r')
+    echo "[DEBUG] Role info for $host: '$role_info'" >&2
+    if [[ "$role_info" == "master" ]]; then
+        echo "[DEBUG] $host IS the master" >&2
+        return 0
+    else
+        echo "[DEBUG] $host is NOT the master (role: $role_info)" >&2
+        return 1
+    fi
     }
 
     # Function to resolve split brain for a specific sentinel
@@ -246,21 +256,32 @@ x-post-upgrade-hook: &postupgradehook
 
     # Main execution
     main() {
+        echo "[DEBUG] Starting split-brain detection script" >&2
+        echo "[DEBUG] NUM_REPLICAS=$NUM_REPLICAS" >&2
+        echo "[DEBUG] RESOURCE_KEY=$RESOURCE_KEY" >&2
+        echo "[DEBUG] INTERNAL_SUFFIX=$INTERNAL_SUFFIX" >&2
+        echo "[DEBUG] EXTERNAL_DNS_SUFFIX=$EXTERNAL_DNS_SUFFIX" >&2
+        
         local -a hosts=()
         local true_master=""
         
         # Get sentinel-0 master address
+        echo "[DEBUG] Getting master address from sentinel-${RESOURCE_KEY}-0" >&2
         hosts[0]=$(get_master_addr "sentinel-${RESOURCE_KEY}-0")
+        echo "[DEBUG] Sentinel-0 reports master at: ${hosts[0]}" >&2
         # Process replicas
         for ((i = 0; i < NUM_REPLICAS; i++)); do
             local node_host="node-${RESOURCE_KEY}-$i"
+            echo "[DEBUG] Processing node $i: $node_host" >&2
             
             # Get master address from this sentinel
             hosts[$((i + 1))]=$(get_master_addr "$node_host")
+            echo "[DEBUG] Node $node_host sentinel reports master at: ${hosts[$((i + 1))]}" >&2
             
             # Check if this node is the actual master
             if is_master "$node_host"; then
                 true_master="${node_host}${INTERNAL_SUFFIX}.${EXTERNAL_DNS_SUFFIX}"
+                echo "[DEBUG] Found true master: $true_master" >&2
             fi
         done
         

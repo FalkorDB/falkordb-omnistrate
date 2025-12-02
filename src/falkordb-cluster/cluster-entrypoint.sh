@@ -272,6 +272,17 @@ handle_sigterm() {
     # perform bgrewriteaof before shutting down
     echo "Running BGREWRITEAOF before shutdown"
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF
+    pid="$!"
+    tout=${tout:-30}
+    end=$((SECONDS + tout))
+    while kill -0 "$pid" 2>/dev/null; do
+        if (( SECONDS >= end )); then
+            echo "Process stuck — killing PID $pid"
+            kill -9 "$pid" 2>/dev/null || true
+            exit 124
+        fi
+        sleep 1
+    done
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SHUTDOWN
     kill -TERM $falkordb_pid
   fi

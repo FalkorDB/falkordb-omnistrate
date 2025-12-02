@@ -231,25 +231,47 @@ x-pre-upgrade-hook: &preupgradehook
       done
     }
 
+    wait_for_bgrewrite_to_finish(){
+      local pid=$1
+      tout=${tout:-30}
+      end=$((SECONDS + tout))
+
+      while kill -0 "$pid" 2>/dev/null; do
+          if (( SECONDS >= end )); then
+              echo "Process stuck — killing PID $pid"
+              kill -9 "$pid" 2>/dev/null || true
+              exit 124
+          fi
+          sleep 1
+      done
+
+      echo "BGREWRITEAOF finished successfully"
+    }
+
     case "$RESOURCE_ALIAS" in
       node-s)
         execute_bgrewriteaof "node-s-0"
+        wait_for_bgrewrite_to_finish "$!"
         ;;
 
       node-mz)
         run_for_range "node-mz" "${NUM_REPLICAS}"
+        wait_for_bgrewrite_to_finish "$!"
         ;;
 
       node-sz)
         run_for_range "node-sz" "${NUM_REPLICAS}"
+        wait_for_bgrewrite_to_finish "$!"
         ;;
 
       cluster-mz)
         run_for_range "node-mz" 6
+        wait_for_bgrewrite_to_finish "$!"
         ;;
 
       cluster-sz)
         run_for_range "node-sz" 6
+        wait_for_bgrewrite_to_finish "$!"
         ;;
 
       *)

@@ -246,11 +246,11 @@ x-pre-upgrade-hook: &preupgradehook
         ;;
 
       cluster-mz)
-        run_for_range "node-mz" 6
+        run_for_range "cluster-mz" 6
         ;;
 
       cluster-sz)
-        run_for_range "node-sz" 6
+        run_for_range "cluster-sz" 6
         ;;
 
       *)

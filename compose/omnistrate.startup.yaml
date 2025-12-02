@@ -28,6 +28,7 @@ x-pre-upgrade-hook: &preupgradehook
     echo "Running BGREWRITEAOF before upgrade"
 
     readonly REDIS_USER="falkordbUpgradeUser"
+    readonly NODE_PORT="${NODE_PORT:-6379}"
 
     # Build redis-cli options safely
     REDIS_OPTS=(

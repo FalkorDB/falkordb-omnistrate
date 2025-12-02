@@ -266,6 +266,8 @@ fix_namespace_in_config_files() {
 
 wait_for_bgrewrite_to_finish() {
   tout=${tout:-30}
+  # Give BGREWRITEAOF time to start
+  sleep 3
   end=$((SECONDS + tout))
   while true; do
     if (( SECONDS >= end )); then

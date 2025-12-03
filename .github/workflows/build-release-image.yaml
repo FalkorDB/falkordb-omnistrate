@@ -177,4 +177,4 @@ jobs:
           service-name: ${{ matrix.plans.name }}
           environment: dev
           environment-type: dev
-          release-description: "${{ steps.set_tag.outputs.tag }}"
+          release-description: "${{ steps.set_tag.outputs.tag }}-${{ env.FALKORDB_VERSION}}"

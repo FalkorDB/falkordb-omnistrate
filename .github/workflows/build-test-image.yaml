@@ -229,7 +229,7 @@ jobs:
           service-name: ${{ matrix.plans.service-name }}
           environment: testing
           environment-type: qa
-          release-description: dev-${{ github.event.head_commit.id || github.run_id }}
+          release-description: dev-${{ github.event.head_commit.id || github.run_id }}-${{ env.FALKORDB_VERSION }}
 
   create-custom-networks:
     needs: omnistrate-update-plans

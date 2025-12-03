@@ -20,7 +20,7 @@ else
   export ADMIN_PASSWORD=''
 fi
 
-FALKORDB_POST_UPGRADE_PASSWORD=${FALKORDB_POST_UPGRADE_PASSWORD:-''}
+FALKORDB_UPGRADE_PASSWORD=${FALKORDB_UPGRADE_PASSWORD:-''}
 RUN_SENTINEL=${RUN_SENTINEL:-0}
 RUN_NODE=${RUN_NODE:-1}
 RUN_METRICS=${RUN_METRICS:-1}
@@ -183,6 +183,23 @@ get_sentinels_list() {
 }
 
 # Handle signals
+wait_for_bgrewrite_to_finish() {
+  tout=${tout:-30}
+  # Give BGREWRITEAOF time to start
+  sleep 3
+  end=$((SECONDS + tout))
+  while true; do
+    if (( SECONDS >= end )); then
+      echo "Timed out waiting for BGREWRITEAOF to complete"
+      exit 1
+    fi
+    if [[ $(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING INFO persistence | grep aof_rewrite_in_progress:0) ]]; then
+      echo "BGREWRITEAOF completed"
+      break
+    fi
+    sleep 1
+  done
+}
 
 handle_sigterm() {
   echo "Caught SIGTERM"
@@ -193,6 +210,9 @@ handle_sigterm() {
     #DO NOT USE is_replica FUNCTION
     role=$(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication | grep role)
     if [[ "$role" =~ ^role:master ]]; then IS_REPLICA=0; fi
+    echo "Running BGREWRITEAOF before shutdown"
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF
+    wait_for_bgrewrite_to_finish
     remove_master_from_group
     redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SHUTDOWN
   fi
@@ -391,7 +411,7 @@ create_user() {
   fi
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER reset
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +READONLY +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +GRAPH.MEMORY +MEMORY +BGREWRITEAOF '+MODULE|LIST'
-  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER falkordbUpgradeUser on ">$FALKORDB_POST_UPGRADE_PASSWORD" ~* +INFO
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER falkordbUpgradeUser on ">$FALKORDB_UPGRADE_PASSWORD" ~* +INFO +BGREWRITEAOF
   config_rewrite
 }
 

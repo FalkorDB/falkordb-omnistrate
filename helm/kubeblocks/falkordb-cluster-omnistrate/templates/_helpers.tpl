@@ -478,11 +478,6 @@ metadata:
   labels: {{ include "kblib.clusterLabels" . | nindent 4 }}
   annotations:
     apps.kubeblocks.io/mode: {{ .Values.mode }}
-  {{- if and .Values.hostNetworkEnabled (eq .Values.mode "cluster") }}
-    kubeblocks.io/host-network: "shard"
-  {{- else if .Values.hostNetworkEnabled }}
-    kubeblocks.io/host-network: "falkordb,falkordb-sent"
-  {{- end }}
   {{- if and .Values.podAntiAffinityEnabled (eq .Values.mode "cluster") }}
     apps.kubeblocks.io/shard-pod-anti-affinity: "shard"
   {{- end }}

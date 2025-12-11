@@ -206,7 +206,7 @@ services:
         cpu: 0.1
         memory: $var.memory
         hostNetworkEnabled: true
-        podAntiAffinityEnabled: false
+        podAntiAffinityEnabled: true
         nodePortEnabled: false
         fixedPodIPEnabled: false
         loadBalancerEnabled: false

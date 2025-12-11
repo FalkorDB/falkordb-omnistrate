@@ -207,6 +207,13 @@ services:
     network:
       ports:
         - 6379
+    endpointConfiguration:
+      node:
+        host: "$sys.network.externalClusterEndpoint"
+        ports:
+          - 6379
+        primary: true
+        networkingType: PUBLIC
     helmChartConfiguration:
       runtimeConfiguration:
         disableHooks: false
@@ -230,7 +237,7 @@ services:
         instanceType: $var.nodeInstanceType
         storage: 20
         hostNetworkEnabled: true
-        podAntiAffinityEnabled: false
+        podAntiAffinityEnabled: true
         nodePortEnabled: false
         fixedPodIPEnabled: false
         loadBalancerEnabled: false
@@ -490,6 +497,19 @@ services:
       ports:
         - 6379
         - 26379
+    endpointConfiguration:
+      node:
+        host: "$sys.network.externalClusterEndpoint"
+        ports:
+          - 6379
+        primary: true
+        networkingType: PUBLIC
+      sentinel:
+        host: "$sys.network.externalClusterEndpoint"
+        ports:
+          - 26379
+        primary: false
+        networkingType: PUBLIC
     helmChartConfiguration:
       runtimeConfiguration:
         disableHooks: false
@@ -513,7 +533,7 @@ services:
         instanceType: $var.nodeInstanceType
         storage: 20
         hostNetworkEnabled: true
-        podAntiAffinityEnabled: false
+        podAntiAffinityEnabled: true
         nodePortEnabled: false
         fixedPodIPEnabled: false
         loadBalancerEnabled: false
@@ -790,6 +810,13 @@ services:
     network:
       ports:
         - 6379
+    endpointConfiguration:
+      node:
+        host: "$sys.network.externalClusterEndpoint"
+        ports:
+          - 6379
+        primary: true
+        networkingType: PUBLIC
     helmChartConfiguration:
       runtimeConfiguration:
         disableHooks: false
@@ -814,7 +841,7 @@ services:
         instanceType: $var.nodeInstanceType
         storage: 20
         hostNetworkEnabled: true
-        podAntiAffinityEnabled: false
+        podAntiAffinityEnabled: true
         nodePortEnabled: false
         fixedPodIPEnabled: false
         loadBalancerEnabled: false

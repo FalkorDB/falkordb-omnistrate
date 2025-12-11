@@ -278,7 +278,8 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
 
     # Wait for DNS propagation on main endpoint
     ep = inst.get_cluster_endpoint(network_type=cfg["network_type"])
-    _resolve_hostname(ep["endpoint"])
+    if ep:
+        _resolve_hostname(ep["endpoint"])
 
     # Attach configuration and credentials for test access
     inst._cfg = dict(cfg)

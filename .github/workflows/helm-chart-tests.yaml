@@ -39,7 +39,7 @@ env:
   KIND_VERSION: "v0.20.0"
   KUBECTL_VERSION: "v1.28.0"
   HELM_VERSION: "v3.13.0"
-  KUBEBLOCKS_VERSION: "v1.0.1"
+  KUBEBLOCKS_VERSION: "v1.1.0-alpha.4"
   FALKORDB_SERVICE_VERSION: "4.12.5"
 
 jobs:
@@ -419,6 +419,16 @@ jobs:
       matrix:
         plans:
           - service-name: KubeBlocks
+            plan-name: Kubeblocks Free
+            file: kubeblocks.free.yaml
+            key: free
+            tier-name: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+          - service-name: KubeBlocks
+            plan-name: Kubeblocks Startup
+            file: kubeblocks.startup.yaml
+            key: startup
+            tier-name: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+          - service-name: KubeBlocks
             plan-name: Kubeblocks Pro
             file: kubeblocks.pro.yaml
             key: pro
@@ -516,8 +526,34 @@ jobs:
       fail-fast: false
       matrix:
         instances:
+          ######################## FREE • AWS (BASIC) #####################
+          - name: "[01] free/Standalone - AWS/us-east-2"
+            if: "basic"
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
+            tests: "failover,stopstart,oom"
+            tierName: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: standalone
+            instanceType: t2.medium
+            storageSize: "30"
+            maxmemory: "100MB"
+
+          ######################## STARTUP • AWS (BASIC) #####################
+          - name: "[02] startup/Standalone - AWS/us-east-2"
+            if: "basic"
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
+            tests: "failover,stopstart,oom"
+            tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: standalone
+            instanceType: t2.medium
+            storageSize: "30"
+            maxmemory: "1GB"
+
           ######################## PRO • AWS (BASIC) #####################
-          - name: "[01] pro/Standalone - AWS/us-east-2"
+          - name: "[03] pro/Standalone - AWS/us-east-2"
             if: "basic"
             testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
             tests: "failover,stopstart,oom"
@@ -529,7 +565,7 @@ jobs:
             storageSize: "30"
             maxmemory: "2GB"
 
-          - name: "[02] pro/SingleZone - AWS/us-east-2"
+          - name: "[04] pro/SingleZone - AWS/us-east-2"
             if: "basic"
             testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_replication.py
             tests: "failover,stopstart,oom"
@@ -541,7 +577,7 @@ jobs:
             storageSize: "30"
             maxmemory: "2GB"
 
-          - name: "[03] pro/MultiZone - AWS/us-east-2"
+          - name: "[05] pro/MultiZone - AWS/us-east-2"
             if: "basic"
             testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_replication.py
             tests: "failover,stopstart,oom"
@@ -554,7 +590,7 @@ jobs:
             maxmemory: "2GB"
             multiZone: "true"
 
-          - name: "[04] pro/ClusterSingleZone - AWS/us-east-2"
+          - name: "[06] pro/ClusterSingleZone - AWS/us-east-2"
             if: "basic"
             testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_cluster.py
             tests: "failover,stopstart,oom"
@@ -568,7 +604,7 @@ jobs:
             clusterReplicas: "1"
             maxmemory: "2GB"
 
-          - name: "[05] pro/ClusterMultiZone - AWS/us-east-2"
+          - name: "[07] pro/ClusterMultiZone - AWS/us-east-2"
             if: "basic"
             testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_cluster.py
             tests: "failover,stopstart,oom"
@@ -584,7 +620,7 @@ jobs:
             multiZone: "true"
 
           ######################## ENTERPRISE • AWS (FULL) ########################
-          - name: "[06] enterprise/Standalone - AWS/us-east-2"
+          - name: "[08] enterprise/Standalone - AWS/us-east-2"
             if: "full"
             testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
             tests: "failover,stopstart,oom,resize"
@@ -597,7 +633,7 @@ jobs:
             newInstanceType: m6i.large
             maxmemory: "2GB"
 
-          - name: "[07] enterprise/SingleZone - AWS/us-east-2"
+          - name: "[09] enterprise/SingleZone - AWS/us-east-2"
             if: "full"
             testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_replication.py
             tests: "failover,stopstart,oom,resize"
@@ -610,7 +646,7 @@ jobs:
             newInstanceType: m6i.large
             maxmemory: "2GB"
 
-          - name: "[08] enterprise/MultiZone - AWS/us-east-2"
+          - name: "[10] enterprise/MultiZone - AWS/us-east-2"
             if: "full"
             testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_replication.py
             tests: "failover,stopstart,oom,resize"
@@ -624,7 +660,7 @@ jobs:
             maxmemory: "2GB"
             multiZone: "true"
 
-          - name: "[09] enterprise/ClusterSingleZone - AWS/us-east-2"
+          - name: "[11] enterprise/ClusterSingleZone - AWS/us-east-2"
             if: "full"
             testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_cluster.py
             tests: "failover,stopstart,oom,resize"
@@ -639,7 +675,7 @@ jobs:
             newInstanceType: m6i.large
             maxmemory: "2GB"
 
-          - name: "[10] enterprise/ClusterMultiZone - AWS/us-east-2"
+          - name: "[12] enterprise/ClusterMultiZone - AWS/us-east-2"
             if: "full"
             testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_cluster.py
             tests: "failover,stopstart,oom,resize"

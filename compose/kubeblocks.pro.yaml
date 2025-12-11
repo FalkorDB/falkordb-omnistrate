@@ -122,7 +122,7 @@ services:
         defaultValue: "25"
         limits:
           min: 0
-          max:  256
+          max: 256
       - key: falkorDBNodeCreationBuffer
         description: Choose the buffer size for your database
         name: FalkorDB Node Creation Buffer
@@ -133,7 +133,7 @@ services:
         defaultValue: "16384"
         limits:
           min: 256
-          max:  32768
+          max: 32768
       - key: falkorDBMaxQueuedQueries
         description: Choose the max queued queries for your database
         name: FalkorDB Max Queued Queries
@@ -144,7 +144,7 @@ services:
         defaultValue: "50"
         limits:
           min: 0
-          max:  512
+          max: 512
       - key: falkorDBTimeoutMax
         description: Choose the timeout max for your database
         name: FalkorDB Timeout Max
@@ -155,7 +155,7 @@ services:
         defaultValue: "0"
         limits:
           min: 0
-          max:  45000
+          max: 45000
       - key: falkorDBTimeoutDefault
         description: Choose the timeout default for your database
         name: FalkorDB Timeout Default
@@ -166,7 +166,7 @@ services:
         defaultValue: "0"
         limits:
           min: 0
-          max:  45000
+          max: 45000
       - key: falkorDBResultSetSize
         description: Choose the result set size for your database
         name: FalkorDB Result Set Size
@@ -177,7 +177,7 @@ services:
         defaultValue: "10000"
         limits:
           min: 0
-          max:  1000000
+          max: 1000000
       - key: falkorDBQueryMemCapacity
         description: Choose the query mem capacity for your database
         name: FalkorDB Query Mem Capacity
@@ -188,7 +188,7 @@ services:
         defaultValue: "0"
         limits:
           min: 0
-          max:  2000000000
+          max: 2000000000
     compute:
       instanceTypes:
         - apiParam: nodeInstanceType
@@ -198,14 +198,7 @@ services:
     network:
       ports:
         - 6379
-    endpointConfiguration:
-      node:
-        host: "$sys.network.externalClusterEndpoint"
-        ports:
-          - 6379
-        primary: true
-        networkingType: PUBLIC
-    helmChartConfiguration:
+    helmChartConfiguration: 
       runtimeConfiguration:
         disableHooks: false
         wait: true
@@ -247,16 +240,16 @@ services:
               port: 6379
               protocol: TCP
               targetPort: 6379
-        
+
         # Sentinel not needed for standalone mode
         sentinel:
           enabled: false
-        
+
         # Limited falkordb user credentials - passed to OpsRequest
         falkordbUser:
           username: $var.falkordbUser
           password: $var.falkordbPassword
-        
+
         # FalkorDB module configuration
         falkordbConfig:
           cacheSize: $var.falkorDBCacheSize
@@ -266,14 +259,35 @@ services:
           timeoutDefault: $var.falkorDBTimeoutDefault
           resultSetSize: $var.falkorDBResultSetSize
           queryMemCapacity: $var.falkorDBQueryMemCapacity
-        
+
         # Persistence configuration
         persistence:
           rdbConfig: $var.RDBPersistenceConfig
           aofConfig: $var.AOFPersistenceConfig
-        
+
         # TLS (future implementation)
         enableTLS: $var.enableTLS
+
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: omnistrate.com/managed-by
+                    operator: In
+                    values:
+                      - omnistrate
+                  - key: topology.kubernetes.io/region
+                    operator: In
+                    values:
+                      - $sys.deploymentCell.region
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                      - $sys.compute.node.instanceType
+                  - key: omnistrate.com/resource
+                    operator: In
+                    values:
+                      - $sys.deployment.resourceID
 
   - name: Replication
     description: A FalkorDB Replication (primary-replica) service managed by KubeBlocks (Pro tier).
@@ -461,19 +475,6 @@ services:
       ports:
         - 6379
         - 26379
-    endpointConfiguration:
-      node:
-        host: "$sys.network.externalClusterEndpoint"
-        ports:
-          - 6379
-        primary: true
-        networkingType: PUBLIC
-      sentinel:
-        host: "$sys.network.externalClusterEndpoint"
-        ports:
-          - 26379
-        primary: false
-        networkingType: PUBLIC
     helmChartConfiguration:
       runtimeConfiguration:
         disableHooks: false
@@ -522,17 +523,17 @@ services:
               port: 26379
               protocol: TCP
               targetPort: 26379
-        
+
         # Sentinel configuration for replication
         sentinel:
           enabled: true
           replicas: $var.numReplicas
-        
+
         # Limited falkordb user credentials
         falkordbUser:
           username: $var.falkordbUser
           password: $var.falkordbPassword
-        
+
         # FalkorDB module configuration
         falkordbConfig:
           cacheSize: $var.falkorDBCacheSize
@@ -542,14 +543,35 @@ services:
           timeoutDefault: $var.falkorDBTimeoutDefault
           resultSetSize: $var.falkorDBResultSetSize
           queryMemCapacity: $var.falkorDBQueryMemCapacity
-        
+
         # Persistence configuration
         persistence:
           rdbConfig: $var.RDBPersistenceConfig
           aofConfig: $var.AOFPersistenceConfig
-        
+
         # TLS configuration
         enableTLS: $var.enableTLS
+
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: omnistrate.com/managed-by
+                    operator: In
+                    values:
+                      - omnistrate
+                  - key: topology.kubernetes.io/region
+                    operator: In
+                    values:
+                      - $sys.deploymentCell.region
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                      - $sys.compute.node.instanceType
+                  - key: omnistrate.com/resource
+                    operator: In
+                    values:
+                      - $sys.deployment.resourceID
 
   - name: Cluster
     description: A FalkorDB Cluster Single Zone (sharded cluster) service managed by KubeBlocks (Pro tier).
@@ -747,13 +769,6 @@ services:
     network:
       ports:
         - 6379
-    endpointConfiguration:
-      node:
-        host: "$sys.network.externalClusterEndpoint"
-        ports:
-          - 6379
-        primary: true
-        networkingType: PUBLIC
     helmChartConfiguration:
       runtimeConfiguration:
         disableHooks: false
@@ -797,16 +812,16 @@ services:
               port: 6379
               protocol: TCP
               targetPort: 6379
-        
+
         # Sentinel not needed for cluster mode
         sentinel:
           enabled: false
-        
+
         # Limited falkordb user credentials
         falkordbUser:
           username: $var.falkordbUser
           password: $var.falkordbPassword
-        
+
         # FalkorDB module configuration
         falkordbConfig:
           cacheSize: $var.falkorDBCacheSize
@@ -816,11 +831,32 @@ services:
           timeoutDefault: $var.falkorDBTimeoutDefault
           resultSetSize: $var.falkorDBResultSetSize
           queryMemCapacity: $var.falkorDBQueryMemCapacity
-        
+
         # Persistence configuration
         persistence:
           rdbConfig: $var.RDBPersistenceConfig
           aofConfig: $var.AOFPersistenceConfig
-        
+
         # TLS configuration
         enableTLS: $var.enableTLS
+
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: omnistrate.com/managed-by
+                    operator: In
+                    values:
+                      - omnistrate
+                  - key: topology.kubernetes.io/region
+                    operator: In
+                    values:
+                      - $sys.deploymentCell.region
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                      - $sys.compute.node.instanceType
+                  - key: omnistrate.com/resource
+                    operator: In
+                    values:
+                      - $sys.deployment.resourceID

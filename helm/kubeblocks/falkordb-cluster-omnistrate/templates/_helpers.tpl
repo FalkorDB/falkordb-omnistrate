@@ -151,11 +151,21 @@ memory: "3200Mi"
 Compute resources - use instanceType mapping if available, otherwise use cpu/memory values
 */}}
 {{- define "falkordb-cluster.computedResources" }}
+{{- if .Values.instanceType }}
 resources:
   limits:
     {{- include "falkordb-cluster.instanceTypeResources" . | nindent 4 }}
   requests:
     {{- include "falkordb-cluster.instanceTypeResources" . | nindent 4 }}
+{{- else if .Values.cpu }}
+resources:
+  limits:
+    cpu: {{ .Values.cpu | quote }}
+    memory: {{ .Values.memory | quote }}
+  requests:
+    cpu: {{ .Values.cpu | quote }}
+    memory: {{ .Values.memory | quote }}
+{{- end }}
 {{- end }}
 
 {{/*
@@ -417,6 +427,8 @@ falkordb Cluster sharding schedulingPolicy
 {{- define "falkordb-cluster.shardingSchedulingPolicy" }}
 schedulingPolicy:
   affinity:
+    nodeAffinity:
+    {{ .Values.nodeAffinity | toYaml | indent 6 }}
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
       - podAffinityTerm:
@@ -436,6 +448,8 @@ falkordb schedulingPolicy
 {{- define "falkordb-cluster.schedulingPolicy" }}
 schedulingPolicy:
   affinity:
+    nodeAffinity:
+    {{ .Values.nodeAffinity | toYaml | indent 6 }}
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
       - podAffinityTerm:
@@ -454,6 +468,8 @@ falkordb sentinel schedulingPolicy
 {{- define "falkordb-cluster.sentinelschedulingPolicy" }}
 schedulingPolicy:
   affinity:
+    nodeAffinity:
+    {{ .Values.nodeAffinity | toYaml | indent 6 }}
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
       - podAffinityTerm:

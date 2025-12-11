@@ -28,7 +28,7 @@ instanceType: ""
 ##
 cpu: 0.5
 
-## @param memory, the unit is Gi
+## @param memory
 ##
 memory: 0.5
 
@@ -67,6 +67,8 @@ loadBalancerEnabled: false
 
 ## @param podAntiAffinityEnabled if true, the falkordb will add podAntiAffinity
 podAntiAffinityEnabled: false
+
+nodeAffinity: {}
 
 ## @param sentinel.cpu
 ## @param sentinel.memory
@@ -129,11 +131,11 @@ falkordbConfig:
 ## Redis persistence configuration
 ## These will be merged into KubeBlocks' ConfigMap
 persistence:
-  rdbConfig: "low"  # low, medium, high
-  aofConfig: "everysec"  # everysec, always
+  rdbConfig: "low" # low, medium, high
+  aofConfig: "everysec" # everysec, always
 
 ## Limited user credentials (from Omnistrate API params)
 ## This user will be created via OpsRequest after cluster is ready
 falkordbUser:
   username: "falkordb"
-  password: "123456"  # Will be provided by Omnistrate via $var.falkordbPassword
+  password: "123456" # Will be provided by Omnistrate via $var.falkordbPassword

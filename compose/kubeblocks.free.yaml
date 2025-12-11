@@ -1,0 +1,147 @@
+# yaml-language-server: $schema=https://api.omnistrate.cloud/2022-09-01-00/schema/service-spec-schema.json
+
+name: $OmnistrateTierName
+tenancyType: CUSTOM_TENANCY
+deployment:
+  hostedDeployment:
+    GcpProjectId: "$GcpProjectId"
+    GcpProjectNumber: "$GcpProjectNumber"
+    GcpServiceAccountEmail: "$GcpServiceAccountEmail"
+    AwsAccountId: "$AwsAccountId"
+    AWSBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+metering:
+  gcsBucketName: $MeteringBucketName
+maxNumberOfInstancesAllowed: 1
+validPaymentMethodRequired: false
+billingProductID: "free"
+
+services:
+  - name: Standalone
+    description: A FalkorDB Standalone database service managed by KubeBlocks.
+    apiParameters:
+      - key: name
+        description: Name
+        name: Name
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: My favorite database
+        export: true
+      - key: description
+        description: Description
+        name: Description
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: Description
+        export: true
+      - key: falkordbUser
+        description: Choose a default username for your database
+        name: FalkorDB User
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "falkordb"
+      - key: falkordbPassword
+        description: Choose a default password for your database
+        name: FalkorDB Password
+        type: Password
+        modifiable: false
+        required: true
+        export: false
+    compute:
+      instanceTypes:
+        - cloudProvider: gcp
+          name: e2-standard-4
+        - cloudProvider: aws
+          name: m6i.xlarge
+    network:
+      ports:
+        - 6379
+    helmChartConfiguration: 
+      runtimeConfiguration:
+        disableHooks: false
+        wait: true
+        waitForJobs: true
+        recreate: false
+        resetThenReuseValues: false
+        resetValues: true
+        reuseValues: false
+        skipCRDs: false
+        upgradeCRDs: true
+        timeoutNanos: 180000000000
+      chartName: falkordb-cluster-omnistrate
+      chartVersion: $ChartVersion
+      chartRepoName: falkordb-charts
+      chartRepoURL: $ChartRepoURL
+      chartValues:
+        version: $FalkorDBServiceVersion
+        mode: standalone
+        replicas: 1
+        storage: 20
+        cpu: 0.1
+        memory: 100Mi
+        hostNetworkEnabled: true
+        podAntiAffinityEnabled: false
+        nodePortEnabled: false
+        fixedPodIPEnabled: false
+        loadBalancerEnabled: false
+        hostPorts:
+          - name: falkordb
+            port: 6379
+        extra:
+          disableExporter: false
+          terminationPolicy: Delete
+        externalService:
+          endpointsType: NodeExternalIP
+          hostname: "$sys.network.externalClusterEndpoint"
+          ttl: "60"
+          ports:
+            - name: falkordb
+              port: 6379
+              protocol: TCP
+              targetPort: 6379
+
+        # Sentinel not needed for standalone mode
+        sentinel:
+          enabled: false
+
+        # Limited falkordb user credentials - passed to OpsRequest
+        falkordbUser:
+          username: $var.falkordbUser
+          password: $var.falkordbPassword
+
+        # FalkorDB module configuration
+        falkordbConfig:
+          cacheSize: "25"
+          nodeCreationBuffer: "16384"
+          maxQueuedQueries: "50"
+          timeoutMax: "0"
+          timeoutDefault: "0"
+          resultSetSize: "10000"
+          queryMemCapacity: "0"
+
+        # TLS (future implementation)
+        enableTLS: false
+
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: omnistrate.com/managed-by
+                    operator: In
+                    values:
+                      - omnistrate
+                  - key: topology.kubernetes.io/region
+                    operator: In
+                    values:
+                      - $sys.deploymentCell.region
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                      - $sys.compute.node.instanceType
+                  - key: omnistrate.com/resource
+                    operator: In
+                    values:
+                      - $sys.deployment.resourceID

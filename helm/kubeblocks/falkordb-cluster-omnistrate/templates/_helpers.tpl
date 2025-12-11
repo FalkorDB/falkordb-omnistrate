@@ -428,7 +428,7 @@ falkordb Cluster sharding schedulingPolicy
 schedulingPolicy:
   affinity:
     nodeAffinity:
-    {{ .Values.nodeAffinity | toYaml | indent 6 }}
+      {{ .Values.nodeAffinity | toYaml | nindent 6 }}
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
       - podAffinityTerm:
@@ -449,7 +449,7 @@ falkordb schedulingPolicy
 schedulingPolicy:
   affinity:
     nodeAffinity:
-    {{ .Values.nodeAffinity | toYaml | indent 6 }}
+      {{ .Values.nodeAffinity | toYaml | nindent 6 }}
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
       - podAffinityTerm:
@@ -469,7 +469,7 @@ falkordb sentinel schedulingPolicy
 schedulingPolicy:
   affinity:
     nodeAffinity:
-    {{ .Values.nodeAffinity | toYaml | indent 6 }}
+      {{ .Values.nodeAffinity | toYaml | nindent 6 }}
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
       - podAffinityTerm:

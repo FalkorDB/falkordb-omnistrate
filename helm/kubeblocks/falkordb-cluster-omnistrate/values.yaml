@@ -66,9 +66,28 @@ fixedPodIPEnabled: false
 loadBalancerEnabled: false
 
 ## @param podAntiAffinityEnabled if true, the falkordb will add podAntiAffinity
-podAntiAffinityEnabled: false
+podAntiAffinityEnabled: true
 
-nodeAffinity: {}
+nodeAffinity:
+  requiredDuringSchedulingIgnoredDuringExecution:
+    nodeSelectorTerms:
+      - matchExpressions:
+          - key: omnistrate.com/managed-by
+            operator: In
+            values:
+              - omnistrate
+          - key: topology.kubernetes.io/region
+            operator: In
+            values:
+              - $sys.deploymentCell.region
+          - key: node.kubernetes.io/instance-type
+            operator: In
+            values:
+              - $sys.compute.node.instanceType
+          - key: omnistrate.com/resource
+            operator: In
+            values:
+              - $sys.deployment.resourceID
 
 ## @param sentinel.cpu
 ## @param sentinel.memory

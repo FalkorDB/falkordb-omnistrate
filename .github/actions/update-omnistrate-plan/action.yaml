@@ -23,11 +23,15 @@ inputs:
   release-description:
     description: "The description of the release"
     required: false
+  spec-type:
+    description: "The spec type of the plan: DockerCompose(default), ServicePlanSpec"
+    required: true
+    default: "DockerCompose"
 
 runs:
   using: docker
-  image: ghcr.io/omnistrate/ctl:0.11.3
+  image: ghcr.io/omnistrate/ctl:0.12.0
   entrypoint: /bin/sh
   args:
     - -c
-    - "/usr/local/bin/omnistrate-ctl login --email ${{ inputs.username }} --password ${{ inputs.password }} && /usr/local/bin/omnistrate-ctl build -f /github/workspace/${{ inputs.file }} -n '${{ inputs.service-name }}' --environment '${{ inputs.environment }}' --environment-type '${{ inputs.environment-type }}' --release-as-preferred --release-description '${{ inputs.release-description }}'"
+    - "/usr/local/bin/omnistrate-ctl login --email ${{ inputs.username }} --password ${{ inputs.password }} && /usr/local/bin/omnistrate-ctl build -f /github/workspace/${{ inputs.file }} -n '${{ inputs.service-name }}' --environment '${{ inputs.environment }}' --environment-type '${{ inputs.environment-type }}' --release-as-preferred --release-description '${{ inputs.release-description }}' --spec-type '${{ inputs.spec-type }}'"

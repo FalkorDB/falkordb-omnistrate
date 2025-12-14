@@ -331,7 +331,7 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
         network_type=cfg["network_type"],
         deployment_region=cfg["region"],
         name=instance_name,
-        description=f"E2E test: {test_name}",
+        description=f"E2E test module: {module_name}",
         falkordb_user="falkordb",
         falkordb_password=password,
         nodeInstanceType=cfg["instance_type"],

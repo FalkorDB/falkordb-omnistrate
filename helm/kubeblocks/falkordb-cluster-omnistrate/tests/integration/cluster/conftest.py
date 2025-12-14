@@ -22,7 +22,8 @@ def cluster_integration_values():
         "replicas": 2,  # Start smaller for faster setup
         # The chart's default `nodeAffinity` is Omnistrate-specific and will not match Kind nodes.
         # Integration tests run on Kind, so override it to allow scheduling.
-        "nodeAffinity": {},
+        # NOTE: must be null (not `{}`) so Helm merge replaces the chart default map.
+        "nodeAffinity": None,
         "instanceType": "low",
         "storage": 30,
         "podAntiAffinityEnabled": True,

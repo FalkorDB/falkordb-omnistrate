@@ -22,7 +22,8 @@ def replication_integration_values():
         "replicas": 3,
         # The chart's default `nodeAffinity` is Omnistrate-specific and will not match Kind nodes.
         # Integration tests run on Kind, so override it to allow scheduling.
-        "nodeAffinity": {},
+        # NOTE: must be null (not `{}`) so Helm merge replaces the chart default map.
+        "nodeAffinity": None,
         "sentinel": {
             "enabled": True,
             "replicas": 3

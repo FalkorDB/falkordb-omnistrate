@@ -15,6 +15,7 @@ import socket
 import pytest
 import logging
 import secrets
+from pathlib import Path
 
 # Add the tests directory to the path so we can import test utilities
 tests_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
@@ -209,10 +210,78 @@ def _resolve_hostname(endpoint: str, timeout=300, interval=1):
     raise TimeoutError(f"DNS not resolved for {endpoint} within {timeout}s")
 
 
-@pytest.fixture(scope="function")
+def _reset_instance_data(inst: OmnistrateFleetInstance) -> None:
+    """Best-effort reset of FalkorDB state between tests."""
+    ssl = bool(getattr(inst, "_cfg", {}).get("tls", False))
+    network_type = getattr(inst, "_cfg", {}).get("network_type", "PUBLIC")
+
+    # Ensure instance is running before we try to connect/flush.
+    try:
+        inst.wait_for_instance_status(
+            timeout_seconds=int(getattr(inst, "_cfg", {}).get("ready_timeout", 600))
+        )
+    except Exception as e:
+        logging.warning(f"Instance not ready during reset: {e}")
+
+    # Clear cached topology/connection in case previous test changed topology.
+    inst._network_topology = None
+    inst._connection = None
+
+    # 1) Prefer flushing via cluster endpoint.
+    try:
+        db = inst.create_connection(
+            ssl=ssl,
+            force_reconnect=True,
+            retries=3,
+            network_type=network_type,
+        )
+        db.client.flushall()
+        return
+    except Exception as e:
+        logging.debug(f"Cluster-endpoint flushall failed; falling back: {e}")
+
+    # 2) Fallback: flush each node endpoint (best-effort, handles cluster mode).
+    try:
+        endpoints = inst.get_connection_endpoints()
+    except Exception as e:
+        logging.warning(f"Failed to fetch endpoints for reset: {e}")
+        return
+
+    for ep in endpoints:
+        ep_id = (ep.get("id") or "").lower()
+        if ep_id.startswith("sentinel-") or "sentinel" in ep_id:
+            continue
+
+        host = ep.get("endpoint")
+        ports = ep.get("ports") or []
+        if not host or not ports:
+            continue
+
+        flushed = False
+        for port in ports:
+            try:
+                conn = FalkorDB(
+                    host=host,
+                    port=int(port),
+                    username="falkordb",
+                    password=inst.falkordb_password,
+                    ssl=ssl,
+                )
+                conn.client.ping()
+                conn.client.flushall()
+                flushed = True
+                break
+            except Exception:
+                continue
+
+        if not flushed:
+            logging.debug(f"Reset: could not flush {ep.get('id')} at {host}:{ports}")
+
+
+@pytest.fixture(scope="module")
 def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
     """
-    Provision a FalkorDB instance via Omnistrate for each test function.
+    Provision a FalkorDB instance via Omnistrate once per test module (file).
     
     The instance is created before the test runs and torn down afterward,
     unless --persist-on-fail is set and the test fails, or --skip-teardown is set.
@@ -250,9 +319,9 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
 
     password = secrets.token_hex(16)
     
-    # Generate unique instance name for this test
-    test_name = request.node.name.replace("[", "-").replace("]", "").replace("test_", "")
-    instance_name = f"{cfg['instance_name']}-{test_name}"[:50]  # Limit length
+    # Generate unique instance name for this test module
+    module_name = Path(str(request.fspath)).stem
+    instance_name = f"{cfg['instance_name']}-{module_name}"[:50]  # Limit length
     
     logging.info(f"Creating instance: {instance_name}")
     
@@ -282,7 +351,8 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
         _resolve_hostname(ep["endpoint"])
 
     # Attach configuration and credentials for test access
-    inst._cfg = dict(cfg)
+    # Keep Omnistrate API config keys while also exposing test config keys.
+    inst._cfg = {**inst_cfg, **dict(cfg)}
     inst.falkordb_password = password
     inst._product_tier_id = tier.product_tier_id
 
@@ -292,7 +362,7 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
         yield inst
     finally:
         # Determine if we should skip teardown
-        failed = hasattr(request.node, "rep_call") and request.node.rep_call.failed
+        failed = bool(getattr(request.module, "_had_failure", False))
         skip_teardown = cfg["skip_teardown"] or (failed and cfg["persist_on_fail"])
         
         if not skip_teardown:
@@ -317,3 +387,17 @@ def pytest_runtest_makereport(item, call):
     outcome = yield
     rep = outcome.get_result()
     setattr(item, f"rep_{rep.when}", rep)
+
+    if rep.when == "call" and rep.failed:
+        try:
+            setattr(item.module, "_had_failure", True)
+        except Exception:
+            pass
+
+
+@pytest.fixture(autouse=True)
+def reset_instance_between_tests(instance, request):
+    """Reset FalkorDB data between test functions while reusing the same instance."""
+    # Only reset for actual test calls (not collection) and only for this E2E suite.
+    _reset_instance_data(instance)
+    yield

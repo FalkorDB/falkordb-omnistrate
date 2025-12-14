@@ -11,8 +11,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
 python = "^3.11.4"
-falkordb = {git = "https://github.com/FalkorDB/falkordb-py", rev = "main"}
-redis = {git = "https://github.com/dudizimber/redis-py", rev = "master"}
+falkordb = "^1.2.2"
 requests = "^2.32.3"
 setuptools = "^80.9.0"
 curlify = "^3.0.0"

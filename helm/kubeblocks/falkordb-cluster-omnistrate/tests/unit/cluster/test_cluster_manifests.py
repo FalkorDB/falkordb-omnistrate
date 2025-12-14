@@ -164,9 +164,9 @@ class TestClusterManifests:
         template = shardings[0]["template"]
         resources = template.get("resources", {})
         limits = resources.get("limits", {})
-        # e2-standard-4 should have 4 CPU and 16Gi memory based on our instance mapping
-        assert limits.get("cpu") == "4"
-        assert limits.get("memory") == "16Gi"
+        # e2-standard-4 should match the chart's instance mapping
+        assert limits.get("cpu") == "3500m"
+        assert limits.get("memory") == "13000Mi"
 
     @pytest.mark.skip(reason="FalkorDB configuration is not supported in cluster mode - shardingSpec template doesn't include FALKORDB_ARGS")
     def test_cluster_falkordb_config(self, helm_render):

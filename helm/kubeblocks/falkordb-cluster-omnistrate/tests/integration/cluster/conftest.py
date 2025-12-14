@@ -20,6 +20,9 @@ def cluster_integration_values():
     return {
         "mode": "cluster",
         "replicas": 2,  # Start smaller for faster setup
+        # The chart's default `nodeAffinity` is Omnistrate-specific and will not match Kind nodes.
+        # Integration tests run on Kind, so override it to allow scheduling.
+        "nodeAffinity": {},
         "instanceType": "low",
         "storage": 30,
         "podAntiAffinityEnabled": True,

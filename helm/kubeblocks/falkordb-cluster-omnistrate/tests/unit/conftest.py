@@ -86,20 +86,20 @@ def cluster_values(base_values):
 def instance_type_mappings():
     """Return instance type to resource mappings."""
     return {
-        "e2-medium": {"cpu": "1", "memory": "4Gi"},
-        "e2-standard-2": {"cpu": "2", "memory": "8Gi"},
-        "e2-standard-4": {"cpu": "4", "memory": "16Gi"},
-        "e2-custom-4-8192": {"cpu": "4", "memory": "8Gi"},
-        "e2-custom-8-16384": {"cpu": "8", "memory": "16Gi"},
-        "e2-custom-16-32768": {"cpu": "16", "memory": "32Gi"},
-        "e2-custom-32-65536": {"cpu": "32", "memory": "64Gi"},
-        "t2.medium": {"cpu": "2", "memory": "4Gi"},
-        "m6i.large": {"cpu": "2", "memory": "8Gi"},
-        "m6i.xlarge": {"cpu": "4", "memory": "16Gi"},
-        "c6i.xlarge": {"cpu": "4", "memory": "8Gi"},
-        "c6i.2xlarge": {"cpu": "8", "memory": "16Gi"},
-        "c6i.4xlarge": {"cpu": "16", "memory": "32Gi"},
-        "c6i.8xlarge": {"cpu": "32", "memory": "64Gi"}
+        "e2-medium": {"cpu": "700m", "memory": "2800Mi"},
+        "e2-standard-2": {"cpu": "1500m", "memory": "6000Mi"},
+        "e2-standard-4": {"cpu": "3500m", "memory": "13000Mi"},
+        "e2-custom-4-8192": {"cpu": "3500m", "memory": "6000Mi"},
+        "e2-custom-8-16384": {"cpu": "7500m", "memory": "13000Mi"},
+        "e2-custom-16-32768": {"cpu": "15900m", "memory": "27800Mi"},
+        "e2-custom-32-65536": {"cpu": "31900m", "memory": "59392Mi"},
+        "t2.medium": {"cpu": "1500m", "memory": "2800Mi"},
+        "m6i.large": {"cpu": "1500m", "memory": "6000Mi"},
+        "m6i.xlarge": {"cpu": "3900m", "memory": "13900Mi"},
+        "c6i.xlarge": {"cpu": "3900m", "memory": "6800Mi"},
+        "c6i.2xlarge": {"cpu": "7900m", "memory": "13900Mi"},
+        "c6i.4xlarge": {"cpu": "15900m", "memory": "27800Mi"},
+        "c6i.8xlarge": {"cpu": "31900m", "memory": "59392Mi"}
     }
 
 

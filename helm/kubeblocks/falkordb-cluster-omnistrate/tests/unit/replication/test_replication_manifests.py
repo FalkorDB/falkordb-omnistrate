@@ -211,9 +211,9 @@ class TestReplicationManifests:
         
         resources = falkordb_component.get("resources", {})
         limits = resources.get("limits", {})
-        # e2-standard-4 should have 4 CPU and 16Gi memory based on our instance mapping
-        assert limits.get("cpu") == "4"
-        assert limits.get("memory") == "16Gi"
+        # e2-standard-4 should match the chart's instance mapping
+        assert limits.get("cpu") == "3500m"
+        assert limits.get("memory") == "13000Mi"
         # Check resource configuration
         # Already defined above as falkordb_component
         assert resources is not None

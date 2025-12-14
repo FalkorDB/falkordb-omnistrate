@@ -20,6 +20,9 @@ def replication_integration_values():
     return {
         "mode": "replication",
         "replicas": 3,
+        # The chart's default `nodeAffinity` is Omnistrate-specific and will not match Kind nodes.
+        # Integration tests run on Kind, so override it to allow scheduling.
+        "nodeAffinity": {},
         "sentinel": {
             "enabled": True,
             "replicas": 3

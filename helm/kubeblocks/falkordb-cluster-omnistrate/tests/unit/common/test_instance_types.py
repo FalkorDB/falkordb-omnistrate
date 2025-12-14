@@ -48,7 +48,7 @@ class TestInstanceTypes:
         cluster = find_manifest_by_kind(manifests, "Cluster")
         component = get_cluster_component_spec(cluster)
         
-        errors = validate_resource_mapping(component, "2", "8Gi")
+        errors = validate_resource_mapping(component, "2", "8")
         assert not errors, f"Fallback resource mapping failed: {errors}"
 
     def test_resource_requests_match_limits(self, helm_render, standalone_values):
@@ -89,9 +89,9 @@ class TestInstanceTypes:
         requests = resources.get("requests", {})
         
         # Both limits and requests should be from instance type (no custom requests supported)
-        assert limits.get("cpu") == "4"
-        assert limits.get("memory") == "16Gi"
+        assert limits.get("cpu") == "3900m"
+        assert limits.get("memory") == "13900Mi"
         
         # Requests should match limits (custom requests are not supported)
-        assert requests.get("cpu") == "4"
-        assert requests.get("memory") == "16Gi"
+        assert requests.get("cpu") == "3900m"
+        assert requests.get("memory") == "13900Mi"

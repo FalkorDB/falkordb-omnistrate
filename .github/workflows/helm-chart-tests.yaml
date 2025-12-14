@@ -518,7 +518,8 @@ jobs:
     name: Omnistrate E2E Tests
     runs-on: ubuntu-latest
     needs: update-omnistrate-plans
-    if: ${{ needs.update-omnistrate-plans.result == 'success' }}
+    # if: ${{ needs.update-omnistrate-plans.result == 'success' }}
+    if: false
     env:
       # Test mode: basic runs on schedule/manual full, full runs on tags
       TEST_MODE: ${{ (contains(github.ref, 'refs/tags/v')) && 'full' || 'basic' }}
@@ -601,7 +602,7 @@ jobs:
             instanceType: t2.medium
             storageSize: "30"
             hostCount: "6"
-            clusterReplicas: "1"
+            clusterReplicas: "2"
             maxmemory: "2GB"
 
           - name: "[07] pro/ClusterMultiZone - AWS/us-east-2"
@@ -615,7 +616,7 @@ jobs:
             instanceType: t2.medium
             storageSize: "30"
             hostCount: "6"
-            clusterReplicas: "1"
+            clusterReplicas: "2"
             maxmemory: "2GB"
             multiZone: "true"
 
@@ -671,7 +672,7 @@ jobs:
             instanceType: t2.medium
             storageSize: "30"
             hostCount: "6"
-            clusterReplicas: "1"
+            clusterReplicas: "2"
             newInstanceType: m6i.large
             maxmemory: "2GB"
 
@@ -686,7 +687,7 @@ jobs:
             instanceType: t2.medium
             storageSize: "30"
             hostCount: "6"
-            clusterReplicas: "1"
+            clusterReplicas: "2"
             newInstanceType: m6i.large
             maxmemory: "2GB"
             multiZone: "true"

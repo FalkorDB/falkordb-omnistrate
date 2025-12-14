@@ -59,6 +59,17 @@ fi
 echo -e "${GREEN}Waiting for cluster to be ready...${NC}"
 kubectl wait --for=condition=Ready nodes --all --timeout=300s
 
+# Install VolumeSnapshot CRDs (required by KubeBlocks dataprotection)
+echo -e "${GREEN}Ensuring VolumeSnapshot CRDs are installed...${NC}"
+if kubectl get crd volumesnapshots.snapshot.storage.k8s.io >/dev/null 2>&1; then
+    echo -e "${GREEN}VolumeSnapshot CRDs already present${NC}"
+else
+    SNAPSHOTTER_VERSION="v6.3.3"
+    kubectl apply -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml"
+    kubectl apply -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml"
+    kubectl apply -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml"
+fi
+
 # Install KubeBlocks
 echo -e "${GREEN}Installing KubeBlocks...${NC}"
 

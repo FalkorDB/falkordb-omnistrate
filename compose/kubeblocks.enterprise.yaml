@@ -837,7 +837,7 @@ services:
         version: $FalkorDBServiceVersion
         mode: cluster
         shardCount: $var.shardCount
-        replicasPerShard: $var.replicasPerShard
+        replicas: $var.replicasPerShard
         instanceType: $var.nodeInstanceType
         storage: 20
         hostNetworkEnabled: true

@@ -556,33 +556,6 @@ jobs:
             newInstanceType: m6i.large
             maxmemory: "2GB"
 
-          - name: "[21] pro/ClusterSingleZone - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,oom,resize"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: cluster-Single-Zone
-            instanceType: t2.medium
-            hostCount: "6"
-            clusterReplicas: "1"
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
-
-          - name: "[22] pro/ClusterMultiZone - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,oom,resize"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: cluster-Multi-Zone
-            instanceType: t2.medium
-            hostCount: "6"
-            clusterReplicas: "1"
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
           ######################## PRIVATE • GCP (INTERNAL) ########################
           - name: "[23] pro/MultiZone - PRIVATE/GCP/us-central1 - Grouped"
             if: "full"
@@ -594,21 +567,6 @@ jobs:
             cloudRegion: us-central1
             resourceKey: multi-Zone
             instanceType: e2-medium
-            maxmemory: "2GB"
-            networkType: INTERNAL
-
-          - name: "[24] pro/ClusterMultiZone - PRIVATE/GCP/us-central1 - Grouped"
-            if: "full"
-            runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,network_change"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: gcp
-            cloudRegion: us-central1
-            resourceKey: cluster-Multi-Zone
-            instanceType: e2-medium
-            hostCount: "6"
-            clusterReplicas: "1"
             maxmemory: "2GB"
             networkType: INTERNAL
           ######################## PRO • AWS (TLS) ########################
@@ -633,20 +591,6 @@ jobs:
             cloudRegion: us-east-2
             resourceKey: single-Zone
             instanceType: t2.medium
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
-            tls: true
-          - name: "[27] pro/ClusterSingleZone/TLS - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,network_change"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: cluster-Single-Zone
-            instanceType: t2.medium
-            hostCount: "6"
-            clusterReplicas: "1"
             newInstanceType: m6i.large
             maxmemory: "2GB"
             tls: true

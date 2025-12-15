@@ -38,28 +38,31 @@ class TestNetworking:
         nodeport_services = [s for s in services if s.get("spec", {}).get("type") == "NodePort"]
         assert len(nodeport_services) > 0, "NodePort service not found"
 
-    def test_external_service_with_dns_annotations(self, helm_render, standalone_values, external_service_config):
+    def test_external_service_with_dns_annotations(self, helm_render, standalone_values):
         """Test external service with DNS annotations."""
         values = {
             **standalone_values,
-            "externalService": external_service_config
+            "hostname": "test-falkordb.example.com",
+            "port": 6379
         }
         manifests = helm_render(values)
         
         services = find_manifests_by_kind(manifests, "Service")
         
-        # Find external service
-        external_service = None
+        # Find the generic external service (not per-pod services)
+        # Generic service name should contain "falkordb-cluster-omnistrate-external"
+        generic_service = None
         for svc in services:
-            if "external" in svc.get("metadata", {}).get("name", ""):
-                external_service = svc
+            name = svc.get("metadata", {}).get("name", "")
+            if "external" in name and "falkordb-cluster-omnistrate-external" in name:
+                generic_service = svc
                 break
         
-        assert external_service is not None, "External service not found"
+        assert generic_service is not None, "Generic external service not found"
         
         errors = validate_external_service_annotations(
-            external_service, 
-            external_service_config["hostname"]
+            generic_service, 
+            "test-falkordb.example.com"
         )
         assert not errors, f"External service validation failed: {errors}"
 
@@ -122,20 +125,10 @@ class TestNetworking:
 
     def test_external_service_port_configuration(self, helm_render, standalone_values):
         """Test external service port configuration."""
-        external_config = {
-            "enabled": True,
-            "endpointsType": "NodeExternalIP",
-            "hostname": "test.example.com",
-            "ttl": "120",
-            "ports": [
-                {"name": "falkordb", "port": 6379, "protocol": "TCP", "targetPort": 6379},
-                {"name": "custom", "port": 8080, "protocol": "TCP", "targetPort": 8080}
-            ]
-        }
-        
         values = {
             **standalone_values,
-            "externalService": external_config
+            "hostname": "test.example.com",
+            "port": 6379
         }
         manifests = helm_render(values)
         

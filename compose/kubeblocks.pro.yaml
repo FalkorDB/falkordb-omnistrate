@@ -200,7 +200,7 @@ services:
         - 6379
     endpointConfiguration:
       node:
-        host: "$sys.network.externalClusterEndpoint"
+        host: "node.{{ $sys.network.externalClusterEndpoint }}"
         ports:
           - 6379
         primary: true
@@ -238,15 +238,8 @@ services:
         extra:
           disableExporter: false
           terminationPolicy: Delete
-        externalService:
-          endpointsType: NodeExternalIP
-          hostname: "$sys.network.externalClusterEndpoint"
-          ttl: "60"
-          ports:
-            - name: falkordb
-              port: 6379
-              protocol: TCP
-              targetPort: 6379
+        hostname: "{{ $sys.network.externalClusterEndpoint }}"
+        port: 6379
 
         # Sentinel not needed for standalone mode
         sentinel:
@@ -484,13 +477,13 @@ services:
         - 26379
     endpointConfiguration:
       node:
-        host: "$sys.network.externalClusterEndpoint"
+        host: "node.{{ $sys.network.externalClusterEndpoint }}"
         ports:
           - 6379
         primary: true
         networkingType: PUBLIC
       sentinel:
-        host: "$sys.network.externalClusterEndpoint"
+        host: "sentinel.{{ $sys.network.externalClusterEndpoint }}"
         ports:
           - 26379
         primary: false
@@ -530,19 +523,8 @@ services:
         extra:
           disableExporter: false
           terminationPolicy: Delete
-        externalService:
-          endpointsType: NodeExternalIP
-          hostname: "$sys.network.externalClusterEndpoint"
-          ttl: "60"
-          ports:
-            - name: falkordb
-              port: 6379
-              protocol: TCP
-              targetPort: 6379
-            - name: sentinel
-              port: 26379
-              protocol: TCP
-              targetPort: 26379
+        hostname: "{{ $sys.network.externalClusterEndpoint }}"
+        port: 6379
 
         # Sentinel configuration for replication
         sentinel:
@@ -791,7 +773,7 @@ services:
         - 6379
     endpointConfiguration:
       node:
-        host: "$sys.network.externalClusterEndpoint"
+        host: "node.{{ $sys.network.externalClusterEndpoint }}"
         ports:
           - 6379
         primary: true
@@ -830,15 +812,8 @@ services:
         extra:
           disableExporter: false
           terminationPolicy: Delete
-        externalService:
-          endpointsType: NodeExternalIP
-          hostname: "$sys.network.externalClusterEndpoint"
-          ttl: "60"
-          ports:
-            - name: falkordb
-              port: 6379
-              protocol: TCP
-              targetPort: 6379
+        hostname: "{{ $sys.network.externalClusterEndpoint }}"
+        port: 6379
 
         # Sentinel not needed for cluster mode
         sentinel:

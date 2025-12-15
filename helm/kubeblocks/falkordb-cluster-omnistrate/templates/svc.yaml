@@ -2,9 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   annotations:
-    external-dns.alpha.kubernetes.io/endpoints-type: {{ .Values.externalService.endpointsType | default "NodeExternalIP" }}
-    external-dns.alpha.kubernetes.io/hostname: {{ .Values.externalService.hostname | quote }}
-    external-dns.alpha.kubernetes.io/ttl: {{ .Values.externalService.ttl | quote }}
+    external-dns.alpha.kubernetes.io/hostname: {{ .Values.hostname | quote }}
   name: {{ include "falkordb-cluster.fullname" . }}-external
   namespace: {{ .Release.Namespace }}
 spec:
@@ -19,8 +17,41 @@ spec:
   type: ClusterIP
   {{- end }}
   ports:
-    {{- toYaml .Values.externalService.ports | nindent 4 }} 
+    - name: falkordb
+      port: {{ .Values.port }}
+      protocol: TCP
+      targetPort: {{ .Values.port }}
   selector:
     app.kubernetes.io/managed-by: kubeblocks
     apps.kubeblocks.io/component-name: falkordb
   sessionAffinity: None
+---
+{{- if eq .Values.mode "replication" }}
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: {{ printf "sentinels.%s" .Values.hostname | quote }}
+  name: {{ include "falkordb-cluster.fullname" . }}-sentinels-external
+  namespace: {{ .Release.Namespace }}
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  {{- if .Values.nodePortEnabled }}
+  type: NodePort
+  {{- else }}
+  clusterIP: None
+  type: ClusterIP
+  {{- end }}
+  ports:
+    - name: sentinel
+      port: 26379
+      protocol: TCP
+      targetPort: 26379
+  selector:
+    app.kubernetes.io/managed-by: kubeblocks
+    apps.kubeblocks.io/component-name: falkordb-sent
+  sessionAffinity: None
+{{- end }}

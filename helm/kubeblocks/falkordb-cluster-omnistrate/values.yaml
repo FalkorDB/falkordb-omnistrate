@@ -126,15 +126,11 @@ hostPorts:
   - name: falkordb
     port: 6379
 
-externalService:
-  endpointsType: NodeExternalIP
-  hostname: "6379"
-  ttl: "60"
-  ports:
-    - name: falkordb
-      port: 6379
-      protocol: TCP
-      targetPort: 6379
+# External access configuration
+# Hostname for external-dns entries and clients
+hostname: "node.cluster.local"
+# Base service port for FalkorDB nodes (default 6379)
+port: 6379
 
 ## FalkorDB-specific configuration parameters
 ## These will be passed via FALKORDB_ARGS environment variable

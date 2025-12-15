@@ -15,6 +15,8 @@ def replication_values():
         },
         "instanceType": "e2-medium",
         "storage": 20,
+        "hostname": "node.cluster.local",
+        "port": 6379,
         "falkordbUser": {
             "username": "testuser",
             "password": "testpass123"

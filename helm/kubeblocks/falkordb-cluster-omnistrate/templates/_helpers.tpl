@@ -477,7 +477,7 @@ schedulingPolicy:
       {{ .Values.nodeAffinity | toYaml | nindent 6 }}
     {{- end }}
     podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
+      requiredDuringSchedulingIgnoredDuringExecution:
       - podAffinityTerm:
           labelSelector:
             matchLabels:

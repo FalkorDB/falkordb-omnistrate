@@ -93,15 +93,8 @@ services:
         extra:
           disableExporter: false
           terminationPolicy: Delete
-        externalService:
-          endpointsType: NodeExternalIP
-          hostname: "$sys.network.externalClusterEndpoint"
-          ttl: "60"
-          ports:
-            - name: falkordb
-              port: 6379
-              protocol: TCP
-              targetPort: 6379
+        hostname: "$sys.network.externalClusterEndpoint"
+        port: 6379
 
         # Sentinel not needed for standalone mode
         sentinel:

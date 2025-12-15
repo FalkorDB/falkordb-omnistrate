@@ -390,19 +390,12 @@ def validate_external_service_annotations(
 
     annotations = service_manifest.get("metadata", {}).get("annotations", {})
 
-    # Check required external-dns annotations
-    expected_annotations = {
-        "external-dns.alpha.kubernetes.io/hostname": expected_hostname,
-        "external-dns.alpha.kubernetes.io/endpoints-type": "NodeExternalIP",
-        "external-dns.alpha.kubernetes.io/ttl": "60",
-    }
-
-    for key, expected_value in expected_annotations.items():
-        actual_value = annotations.get(key)
-        if actual_value != expected_value:
-            errors.append(
-                f"Expected annotation '{key}' = '{expected_value}', got '{actual_value}'"
-            )
+    # Check required external-dns hostname annotation (simplified configuration)
+    hostname_annotation = annotations.get("external-dns.alpha.kubernetes.io/hostname")
+    if hostname_annotation != expected_hostname:
+        errors.append(
+            f"Expected annotation 'external-dns.alpha.kubernetes.io/hostname' = '{expected_hostname}', got '{hostname_annotation}'"
+        )
 
     return errors
 

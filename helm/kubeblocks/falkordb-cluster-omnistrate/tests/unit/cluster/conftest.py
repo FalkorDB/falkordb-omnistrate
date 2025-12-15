@@ -11,6 +11,8 @@ def cluster_values():
         "replicas": 6,
         "instanceType": "e2-standard-2",
         "storage": 30,
+        "hostname": "node.cluster.local",
+        "port": 6379,
         "podAntiAffinityEnabled": True,
         "falkordbUser": {
             "username": "testuser",

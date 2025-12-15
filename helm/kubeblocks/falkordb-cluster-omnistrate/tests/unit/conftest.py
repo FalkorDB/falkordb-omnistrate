@@ -28,6 +28,8 @@ def base_values():
         "version": "4.12.5",
         "instanceType": "e2-medium",
         "storage": 20,
+        "hostname": "node.cluster.local",
+        "port": 6379,
         "hostNetworkEnabled": False,
         "nodePortEnabled": False,
         "fixedPodIPEnabled": False,
@@ -123,18 +125,4 @@ def user_config_sample():
     return {
         "username": "testuser",
         "password": "testpass123"
-    }
-
-
-@pytest.fixture
-def external_service_config():
-    """Return sample external service configuration."""
-    return {
-        "enabled": True,
-        "endpointsType": "NodeExternalIP",
-        "hostname": "test-falkordb.omnistrate.com",
-        "ttl": "60",
-        "ports": [
-            {"name": "falkordb", "port": 6379, "protocol": "TCP", "targetPort": 6379}
-        ]
     }

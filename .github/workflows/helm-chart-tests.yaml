@@ -117,7 +117,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.test_type != 'unit') ||
       github.ref == 'refs/heads/kubeblocks' ||
       (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks')) &&
-      matrix.test-suite.if == true
+      matrix.test-suite.if == 'true'
 
     strategy:
       fail-fast: false
@@ -125,14 +125,14 @@ jobs:
         test-suite:
           - name: "Standalone Mode Integration Tests"
             path: "integration/standalone"
-            if: true
+            if: 'true'
           - name: "Replication Mode Integration Tests"
             path: "integration/replication"
-            if: true
+            if: 'true'
           - name: "Cluster Mode Integration Tests"
             path: "integration/cluster"
             # waiting for fix on env vars KB_CLUSTER
-            if: false 
+            if: 'false' 
     steps:
       - name: Checkout
         uses: actions/checkout@v5

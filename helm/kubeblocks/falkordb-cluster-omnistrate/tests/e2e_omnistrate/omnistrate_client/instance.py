@@ -449,15 +449,24 @@ class OmnistrateFleetInstance:
 
         endpoints = []
         for key in resources.keys():
-            if "nodes" in resources[key] and len(resources[key]["nodes"]) > 0:
-                for node in resources[key]["nodes"]:
-                    endpoints.append(
-                        {
-                            "id": node["id"],
-                            "endpoint": node["endpoint"],
-                            "ports": node["ports"],
-                        }
-                    )
+            resource = resources[key]
+            additionalEndpoints = resource.get("additionalEndpoints", {})
+            is_sentinel = "sentinel" in additionalEndpoints
+            if is_sentinel:
+                endpoints.append(
+                    {
+                        "id": "sentinel",
+                        "endpoint": additionalEndpoints["sentinel"]["endpoint"],
+                        "ports": additionalEndpoints["sentinel"]["openPorts"],
+                    }
+                )
+            endpoints.append(
+                {
+                    "id": "node",
+                    "endpoint": additionalEndpoints["node"]["endpoint"],
+                    "ports": additionalEndpoints["node"]["openPorts"],
+                }
+            )
 
         if len(endpoints) == 0:
             raise Exception("No endpoints found")
@@ -478,16 +487,16 @@ class OmnistrateFleetInstance:
 
         for key in resources.keys():
             resource = resources[key]
+            additionalEndpoints = resource.get("additionalEndpoints", {})
+            is_sentinel = "sentinel" in additionalEndpoints
+            endpoint = additionalEndpoints.get("sentinel" if is_sentinel else "node", None)
             if (
-                "clusterEndpoint" in resource
-                and len(resource["clusterEndpoint"]) > 0
-                and "streamer." not in resource["clusterEndpoint"]
-                and "clusterPorts" in resource
+                endpoint is not None
                 and resource["networkingType"] == network_type
             ):
                 return {
-                    "endpoint": resource["clusterEndpoint"],
-                    "ports": resource["clusterPorts"],
+                    "endpoint": endpoint["endpoint"],
+                    "ports": endpoint["openPorts"],
                 }
 
         return None

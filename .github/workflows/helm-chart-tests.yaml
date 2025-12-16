@@ -133,8 +133,7 @@ jobs:
             if: 'true'
           - name: "Cluster Mode Integration Tests"
             path: "integration/cluster"
-            # waiting for fix on env vars KB_CLUSTER
-            if: 'false' 
+            if: 'true' 
     steps:
       - name: Checkout
         if: matrix.test-suite.if == 'true'

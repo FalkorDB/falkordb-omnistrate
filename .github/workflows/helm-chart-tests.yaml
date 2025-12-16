@@ -41,6 +41,8 @@ env:
   HELM_VERSION: "v3.13.0"
   KUBEBLOCKS_VERSION: "v1.1.0-alpha.4"
   FALKORDB_SERVICE_VERSION: "4.12.5"
+  KUBEBLOCKS_ADDONS_REPOSITORY: falkordb/kubeblocks-addons
+  KUBEBLOCKS_ADDONS_REPOSITORY_REF: 'main'
 
 jobs:
   unit-tests:
@@ -48,13 +50,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
-          repository: apecloud/kubeblocks-addons
+          repository: ${{ env.KUBEBLOCKS_ADDONS_REPOSITORY }}
+          ref: ${{ env.KUBEBLOCKS_ADDONS_REPOSITORY_REF }}
           path: helm/kubeblocks/kubeblocks-addons
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -135,15 +138,16 @@ jobs:
     steps:
       - name: Checkout
         if: matrix.test-suite.if == 'true'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Checkout
         if: matrix.test-suite.if == 'true'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
-          repository: apecloud/kubeblocks-addons
+          repository: ${{ env.KUBEBLOCKS_ADDONS_REPOSITORY }}
+          ref: ${{ env.KUBEBLOCKS_ADDONS_REPOSITORY_REF }}
           path: helm/kubeblocks/kubeblocks-addons
 
       - name: Verify submodules
@@ -374,7 +378,7 @@ jobs:
       chart-version: ${{ steps.package.outputs.chart-version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           submodules: true
@@ -420,7 +424,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
 
       - name: Checkout gh-pages branch
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: FalkorDB/helm-charts
           ref: gh-pages
@@ -478,7 +482,7 @@ jobs:
             tier-name: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
@@ -733,7 +737,7 @@ jobs:
     steps:
       - name: Checkout
         if: (matrix.instances.if == 'basic' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all') || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks'))) || (matrix.instances.if == 'full' && (env.TEST_MODE == 'full' || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks')))
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 

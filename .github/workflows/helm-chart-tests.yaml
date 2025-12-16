@@ -559,8 +559,7 @@ jobs:
     name: Omnistrate E2E Tests
     runs-on: ubuntu-latest
     needs: update-omnistrate-plans
-    # if: ${{ needs.update-omnistrate-plans.result == 'success' }}
-    if: false
+    if: ${{ needs.update-omnistrate-plans.result == 'success' }}
     env:
       # Test mode: basic runs on schedule/manual full, full runs on tags
       TEST_MODE: ${{ (contains(github.ref, 'refs/tags/v')) && 'full' || 'basic' }}
@@ -594,18 +593,18 @@ jobs:
           #   storageSize: "30"
           #   maxmemory: "1GB"
 
-          # ######################## PRO • AWS (BASIC) #####################
-          # - name: "[03] pro/Standalone - AWS/us-east-2"
-          #   if: "basic"
-          #   testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
-          #   tests: "failover,stopstart,oom"
-          #   tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-          #   cloudProvider: aws
-          #   cloudRegion: us-east-2
-          #   resourceKey: standalone
-          #   instanceType: t2.medium
-          #   storageSize: "30"
-          #   maxmemory: "2GB"
+          ######################## PRO • AWS (BASIC) #####################
+          - name: "[03] pro/Standalone - AWS/us-east-2"
+            if: "basic"
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
+            tests: "failover,stopstart,oom"
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: standalone
+            instanceType: t2.medium
+            storageSize: "30"
+            maxmemory: "2GB"
 
           - name: "[04] pro/SingleZone - AWS/us-east-2"
             if: "basic"

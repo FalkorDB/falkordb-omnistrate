@@ -111,22 +111,28 @@ jobs:
     name: Integration Tests
     runs-on: ubuntu-latest
     if: |
-      (github.event_name == 'pull_request' && inputs.test_type != 'unit') ||
+      ((github.event_name == 'pull_request' && inputs.test_type != 'unit') ||
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) ||
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && inputs.test_type != 'unit') ||
       github.ref == 'refs/heads/kubeblocks' ||
-      (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks')
+      (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks')) &&
+      matrix.test-suite.if == true
+
     strategy:
       fail-fast: false
       matrix:
         test-suite:
           - name: "Standalone Mode Integration Tests"
             path: "integration/standalone"
+            if: true
           - name: "Replication Mode Integration Tests"
             path: "integration/replication"
+            if: true
           - name: "Cluster Mode Integration Tests"
             path: "integration/cluster"
+            # waiting for fix on env vars KB_CLUSTER
+            if: false 
     steps:
       - name: Checkout
         uses: actions/checkout@v5

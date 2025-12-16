@@ -478,14 +478,12 @@ schedulingPolicy:
     {{- end }}
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
-      - podAffinityTerm:
-          labelSelector:
+        - labelSelector:
             matchLabels:
               app.kubernetes.io/instance: {{ include "kblib.clusterName" . | quote }}
               app.kubernetes.io/managed-by: "kubeblocks"
               apps.kubeblocks.io/component-name: "falkordb-sent"
           topologyKey: kubernetes.io/hostname
-        weight: 100
 {{- end -}}
 
 {{/*

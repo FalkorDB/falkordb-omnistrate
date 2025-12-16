@@ -88,15 +88,14 @@ if helm list -n kb-system 2>/dev/null | grep -q "kubeblocks"; then
         --timeout 10m
 else
     echo -e "${GREEN}Installing KubeBlocks...${NC}"
-    kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/v1.0.1/kubeblocks_crds.yaml
+    kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/v1.1.0-alpha.4/kubeblocks_crds.yaml
 
     helm install kubeblocks kubeblocks/kubeblocks \
         --namespace kb-system \
-        --version v1.0.1 \
+        --version v1.1.0-alpha.4 \
         --create-namespace \
         --set autoInstalledAddons={} \
-        --wait \
-        --timeout 10m
+        --wait 
 fi
 
 # Wait for KubeBlocks to be ready

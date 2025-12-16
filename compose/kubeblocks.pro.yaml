@@ -200,7 +200,7 @@ services:
         - 6379
     endpointConfiguration:
       node:
-        host: "node.{{ $sys.network.externalClusterEndpoint }}"
+        host: "{{ $sys.network.externalClusterEndpoint }}"
         ports:
           - 6379
         primary: true
@@ -477,7 +477,7 @@ services:
         - 26379
     endpointConfiguration:
       node:
-        host: "node.{{ $sys.network.externalClusterEndpoint }}"
+        host: "{{ $sys.network.externalClusterEndpoint }}"
         ports:
           - 6379
         primary: true
@@ -773,7 +773,7 @@ services:
         - 6379
     endpointConfiguration:
       node:
-        host: "node.{{ $sys.network.externalClusterEndpoint }}"
+        host: "{{ $sys.network.externalClusterEndpoint }}"
         ports:
           - 6379
         primary: true

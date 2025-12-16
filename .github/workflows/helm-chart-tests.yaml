@@ -116,8 +116,7 @@ jobs:
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && inputs.test_type != 'unit') ||
       github.ref == 'refs/heads/kubeblocks' ||
-      (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks')) &&
-      matrix.test-suite.if == 'true'
+      (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks'))
 
     strategy:
       fail-fast: false
@@ -135,17 +134,20 @@ jobs:
             if: 'false' 
     steps:
       - name: Checkout
+        if: matrix.test-suite.if == 'true'
         uses: actions/checkout@v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Checkout
+        if: matrix.test-suite.if == 'true'
         uses: actions/checkout@v5
         with:
           repository: apecloud/kubeblocks-addons
           path: helm/kubeblocks/kubeblocks-addons
 
       - name: Verify submodules
+        if: matrix.test-suite.if == 'true'
         run: |
           echo "Checking submodule status..."
           git submodule status
@@ -159,21 +161,25 @@ jobs:
           ls -la helm/kubeblocks/kubeblocks-addons/addons/ || echo "Addons directory still not found"
 
       - name: Set up Python
+        if: matrix.test-suite.if == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Set up Helm
+        if: matrix.test-suite.if == 'true'
         uses: azure/setup-helm@v4
         with:
           version: ${{ env.HELM_VERSION }}
 
       - name: Set up kubectl
+        if: matrix.test-suite.if == 'true'
         uses: azure/setup-kubectl@v4
         with:
           version: ${{ env.KUBECTL_VERSION }}
 
       - name: Set up Kind
+        if: matrix.test-suite.if == 'true'
         uses: helm/kind-action@v1
         with:
           version: ${{ env.KIND_VERSION }}
@@ -182,12 +188,14 @@ jobs:
           wait: 300s
 
       - name: Verify cluster
+        if: matrix.test-suite.if == 'true'
         run: |
           kubectl cluster-info
           kubectl get nodes
           kubectl wait --for=condition=Ready nodes --all --timeout=300s
 
       - name: Install VolumeSnapshot CRDs
+        if: matrix.test-suite.if == 'true'
         run: |
           if kubectl get crd volumesnapshots.snapshot.storage.k8s.io >/dev/null 2>&1; then
             echo "VolumeSnapshot CRDs already present"
@@ -199,6 +207,7 @@ jobs:
           kubectl apply -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml"
 
       - name: Cache Poetry virtualenv
+        if: matrix.test-suite.if == 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/pypoetry/virtualenvs
@@ -208,24 +217,29 @@ jobs:
             ${{ runner.os }}-poetry-
 
       - name: Install Poetry
+        if: matrix.test-suite.if == 'true'
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install Python dependencies
+        if: matrix.test-suite.if == 'true'
         run: |
           poetry install
 
       - name: Install KubeBlocks CRDs
+        if: matrix.test-suite.if == 'true'
         run: |
           kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/${{ env.KUBEBLOCKS_VERSION }}/kubeblocks_crds.yaml
 
       - name: Add KubeBlocks Helm repo
+        if: matrix.test-suite.if == 'true'
         run: |
           helm repo add kubeblocks https://apecloud.github.io/helm-charts
           helm repo update
 
       - name: Install KubeBlocks
+        if: matrix.test-suite.if == 'true'
         run: |
           helm install kubeblocks kubeblocks/kubeblocks \
             --namespace kb-system \
@@ -236,11 +250,13 @@ jobs:
             --timeout 10m
 
       - name: Wait for KubeBlocks pods
+        if: matrix.test-suite.if == 'true'
         run: |
           kubectl wait --for=condition=Ready pods --all -n kb-system --timeout=300s
           kubectl get pods -n kb-system
 
       - name: Install FalkorDB addon
+        if: matrix.test-suite.if == 'true'
         run: |
           ADDON_PATH="helm/kubeblocks/kubeblocks-addons/addons/falkordb"
           if [ -d "$ADDON_PATH" ]; then
@@ -257,6 +273,7 @@ jobs:
           fi
 
       - name: Verify FalkorDB addon
+        if: matrix.test-suite.if == 'true'
         run: |
           timeout=60
           elapsed=0
@@ -273,15 +290,18 @@ jobs:
           kubectl -n kb-system get clusterdefinitions falkordb -o yaml
 
       - name: Create test namespace
+        if: matrix.test-suite.if == 'true'
         run: |
           kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Build Helm chart dependencies
+        if: matrix.test-suite.if == 'true'
         working-directory: helm/kubeblocks/falkordb-cluster-omnistrate
         run: |
           helm dependency build
 
       - name: Cleanup existing test resources
+        if: matrix.test-suite.if == 'true'
         working-directory: helm/kubeblocks/falkordb-cluster-omnistrate/tests
         run: |
           # Cleanup any existing helm releases
@@ -294,6 +314,7 @@ jobs:
           kubectl delete pvc -n ${{ env.NAMESPACE }} -l app.kubernetes.io/instance=test-cluster --ignore-not-found=true || true
 
       - name: Run ${{ matrix.test-suite.name }}
+        if: matrix.test-suite.if == 'true'
         working-directory: helm/kubeblocks/falkordb-cluster-omnistrate/tests
         run: |
           poetry run pytest -v -s --tb=short \
@@ -302,7 +323,7 @@ jobs:
             ${{ matrix.test-suite.path }}
 
       - name: Collect logs on failure
-        if: failure()
+        if: failure() && matrix.test-suite.if == 'true'
         run: |
           echo "=== Cluster Definitions ==="
           kubectl get clusterdefinitions -n kb-system
@@ -332,7 +353,7 @@ jobs:
           done
 
       - name: Upload test results
-        if: always()
+        if: always() && matrix.test-suite.if == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: integration-test-results-${{ matrix.test-suite.name }}

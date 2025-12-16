@@ -16,6 +16,8 @@ kind: Service
 metadata:
   annotations:
     external-dns.alpha.kubernetes.io/hostname: {{ printf "%s.%s" $podName $.Values.hostname | quote }}
+    external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+    external-dns.alpha.kubernetes.io/ttl: "60"
   name: {{ printf "%s-external" $podName }}
   namespace: {{ $.Release.Namespace }}
 spec:
@@ -50,6 +52,8 @@ kind: Service
 metadata:
   annotations:
     external-dns.alpha.kubernetes.io/hostname: {{ printf "%s.%s" $spod $.Values.hostname | quote }}
+    external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+    external-dns.alpha.kubernetes.io/ttl: "60"
   name: {{ printf "%s-external" $spod }}
   namespace: {{ $.Release.Namespace }}
 spec:

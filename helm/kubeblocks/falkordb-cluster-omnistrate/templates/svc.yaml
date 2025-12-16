@@ -3,6 +3,8 @@ kind: Service
 metadata:
   annotations:
     external-dns.alpha.kubernetes.io/hostname: {{ .Values.hostname | quote }}
+    external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+    external-dns.alpha.kubernetes.io/ttl: "60"
   name: {{ include "falkordb-cluster.fullname" . }}-external
   namespace: {{ .Release.Namespace }}
 spec:

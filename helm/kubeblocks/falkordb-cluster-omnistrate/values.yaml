@@ -68,6 +68,9 @@ loadBalancerEnabled: false
 ## @param podAntiAffinityEnabled if true, the falkordb will add podAntiAffinity
 podAntiAffinityEnabled: true
 
+## @param multiZoneEnabled if true, the falkordb will spread pods across multiple zones
+multiZoneEnabled: false
+
 nodeAffinity:
   requiredDuringSchedulingIgnoredDuringExecution:
     nodeSelectorTerms:

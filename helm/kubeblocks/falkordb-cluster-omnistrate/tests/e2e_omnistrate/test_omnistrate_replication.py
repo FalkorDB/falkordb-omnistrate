@@ -1,15 +1,18 @@
 """
 E2E tests for FalkorDB replication deployments via Omnistrate.
 
-Tests both single-zone and multi-zone replication topologies including:
-- Data persistence across failover
-- Master failover via Omnistrate API
-- Sentinel-based failover
-- Stop/start operations
+Tests replication topology deployments including:
+- Basic replication connectivity
+
+Note: The following operations are not yet supported by Omnistrate API:
+- Failover operations (Omnistrate API, Sentinel-initiated)
+- Start, stop, restart operations
 - Replica scaling
 - Vertical scaling (instance type resize)
-- Zero-downtime availability during operations
-- OOM resilience
+- OOM resilience testing
+- Multi-zone distribution testing
+
+These will be added once Omnistrate API support is available.
 """
 
 import time
@@ -120,18 +123,10 @@ class TestOmnistrateReplication:
         """
         Test 2: Verify data persistence across failover.
         
-        - Write data before failover
-        - Trigger failover via Omnistrate API
-        - Verify data persists after failover
-        - Ensure zero downtime during operation
+        SKIPPED: Omnistrate API does not yet support failover operations.
+        This test will be added once API support is available.
         """
-        logging.info("Testing replication failover and data persistence")
-        cfg = instance._cfg
-        ssl = cfg["tls"]
-        network_type = cfg["network_type"]
-        
-        if not _run_step(cfg, "failover"):
-            pytest.skip("Failover step not selected")
+        pytest.skip("Failover not supported by Omnistrate API yet")
         
         # Add initial data
         add_data(instance, ssl, key="test_failover", n=500, network_type=network_type)
@@ -169,18 +164,10 @@ class TestOmnistrateReplication:
         """
         Test 3: Verify instance can be stopped and started.
         
-        - Write data
-        - Stop instance
-        - Start instance
-        - Verify data persists
+        SKIPPED: Omnistrate API does not yet support stop/start operations.
+        This test will be added once API support is available.
         """
-        logging.info("Testing replication stop/start operations")
-        cfg = instance._cfg
-        ssl = cfg["tls"]
-        network_type = cfg["network_type"]
-        
-        if not _run_step(cfg, "stopstart"):
-            pytest.skip("Stop/start step not selected")
+        pytest.skip("Stop/start not supported by Omnistrate API yet")
         
         # Add data before stop
         add_data(instance, ssl, key="test_stopstart", n=200, network_type=network_type)

@@ -478,6 +478,14 @@ services:
         limits:
           min: 0
           max: 2000000000
+      - key: multiZoneEnabled
+        description: Enable multi-zone deployment to spread pods across availability zones
+        name: Multi-Zone Enabled
+        type: Boolean
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "false"
     compute:
       instanceTypes:
         - apiParam: nodeInstanceType
@@ -568,6 +576,9 @@ services:
 
         # TLS configuration
         enableTLS: $var.enableTLS
+
+        # Multi-zone configuration
+        multiZoneEnabled: $var.multiZoneEnabled
 
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -781,6 +792,14 @@ services:
         limits:
           min: 0
           max: 2000000000
+      - key: multiZoneEnabled
+        description: Enable multi-zone deployment to spread pods across availability zones
+        name: Multi-Zone Enabled
+        type: Boolean
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "false"
     compute:
       instanceTypes:
         - apiParam: nodeInstanceType
@@ -862,6 +881,9 @@ services:
 
         # TLS configuration
         enableTLS: $var.enableTLS
+
+        # Multi-zone configuration
+        multiZoneEnabled: $var.multiZoneEnabled
 
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

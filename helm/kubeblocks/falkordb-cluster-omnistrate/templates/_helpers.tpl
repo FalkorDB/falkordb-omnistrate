@@ -441,6 +441,16 @@ schedulingPolicy:
               kubeblocks.io/role: primary
           topologyKey: kubernetes.io/hostname
         weight: 100
+  {{- if .Values.multiZoneEnabled }}
+  topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/instance: {{ include "kblib.clusterName" . | quote }}
+        app.kubernetes.io/managed-by: "kubeblocks"
+  {{- end }}
 {{- end -}}
 
 
@@ -464,6 +474,16 @@ schedulingPolicy:
               apps.kubeblocks.io/component-name: "falkordb"
           topologyKey: kubernetes.io/hostname
         weight: 100
+  {{- if .Values.multiZoneEnabled }}
+  topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/instance: {{ include "kblib.clusterName" . | quote }}
+        app.kubernetes.io/managed-by: "kubeblocks"
+  {{- end }}
 {{- end -}}
 
 {{/*
@@ -484,6 +504,17 @@ schedulingPolicy:
               app.kubernetes.io/managed-by: "kubeblocks"
               apps.kubeblocks.io/component-name: "falkordb-sent"
           topologyKey: kubernetes.io/hostname
+  {{- if .Values.multiZoneEnabled }}
+  topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/instance: {{ include "kblib.clusterName" . | quote }}
+        app.kubernetes.io/managed-by: "kubeblocks"
+        apps.kubeblocks.io/component-name: "falkordb-sent"
+  {{- end }}
 {{- end -}}
 
 {{/*

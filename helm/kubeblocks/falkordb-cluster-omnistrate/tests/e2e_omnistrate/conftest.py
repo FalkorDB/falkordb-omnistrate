@@ -61,6 +61,11 @@ def pytest_addoption(parser):
     add("--cluster-replicas", default=os.getenv("CLUSTER_REPLICAS", "1"))
     add("--network-type", default=os.getenv("NETWORK_TYPE", "PUBLIC"))
     add("--custom-network", default=os.getenv("CUSTOM_NETWORK"))
+    add(
+        "--multi-zone",
+        action="store_true",
+        default=os.getenv("MULTI_ZONE", "false").lower() in ("1", "true", "yes"),
+    )
 
     # Timeouts
     add("--create-timeout", type=int, default=int(os.getenv("CREATE_TIMEOUT", "2600")))
@@ -121,6 +126,7 @@ def cfg(pytestconfig):
         "cluster_replicas": opt("--cluster-replicas"),
         "network_type": opt("--network-type"),
         "custom_network": opt("--custom-network"),
+        "multi_zone": opt("--multi-zone"),
         # Timeouts
         "create_timeout": opt("--create-timeout"),
         "delete_timeout": opt("--delete-timeout"),
@@ -342,6 +348,7 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
         maxMemory=cfg["maxmemory"],
         hostCount=cfg["host_count"],
         clusterReplicas=cfg["cluster_replicas"],
+        multiZoneEnabled=cfg["multi_zone"],
         custom_network_id=network.network_id if network else None,
     )
 

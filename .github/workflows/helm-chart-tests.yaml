@@ -803,6 +803,9 @@ jobs:
           [[ -n "${{ matrix.instances.tls || '' }}" ]] && \
             EXTRA_ARGS+=(--tls)
 
+          [[ "${{ matrix.instances.multiZone || 'false' }}" == "true" ]] && \
+            EXTRA_ARGS+=(--multi-zone)
+
           poetry run pytest -s -v "${{ matrix.instances.testFile }}" \
             --service-id "${{ vars.KUBEBLOCKS_SERVICE_ID }}" \
             --environment-id "${{ vars.KUBEBLOCKS_ENVIRONMENT_ID }}" \

@@ -13,6 +13,7 @@ from datetime import datetime
 from ...utils.validation import (
     validate_falkordb_connection_in_cluster,
     validate_cluster_status,
+    get_falkordb_container_name,
 )
 
 logger = logging.getLogger(__name__)
@@ -151,6 +152,24 @@ redis-cli -c -u "redis://{self.username}:{self.password}@localhost:6379/" \\
 @pytest.mark.integration
 class TestClusterIntegration:
     """Integration tests for cluster mode FalkorDB deployment."""
+
+    def test_pods_expose_hostport(self, shared_cluster, k8s_helper):
+        """Verify cluster pods expose the expected hostPort (6379)."""
+        namespace = shared_cluster["namespace"]
+        pods = shared_cluster["pods"]
+
+        assert pods, "No pods found for shared cluster"
+
+        for pod_name in pods:
+            pod = k8s_helper.core_v1.read_namespaced_pod(pod_name, namespace)
+            container_name = get_falkordb_container_name(pod_name, namespace) or "falkordb"
+            container = next((c for c in pod.spec.containers if c.name == container_name), None)
+            assert container is not None, f"Pod {pod_name} missing falkordb container"
+
+            ports = container.ports or []
+            host_ports = [p.host_port for p in ports if p.host_port is not None]
+
+            assert 6379 in host_ports, f"Pod {pod_name} missing hostPort 6379 (found {host_ports})"
 
     def _write_test_data_in_cluster(
         self, pod_name, namespace, username, password, node_id, data_value, timeout=60

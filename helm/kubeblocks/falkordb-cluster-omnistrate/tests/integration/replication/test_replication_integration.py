@@ -193,6 +193,37 @@ redis-cli -u "redis://{username}:{password}@localhost:6379/" INFO replication | 
 class TestReplicationIntegration:
     """Integration tests for replication mode FalkorDB deployment."""
 
+    def test_pods_expose_hostports(self, shared_replication_cluster, k8s_helper):
+        """Verify replication pods (data + sentinel) expose hostPort 6379."""
+        namespace = shared_replication_cluster["namespace"]
+        falkordb_pods = shared_replication_cluster["falkordb_pods"]
+        sentinel_pods = shared_replication_cluster["sentinel_pods"]
+
+        assert falkordb_pods, "No falkordb pods found in replication cluster"
+        assert sentinel_pods, "No sentinel pods found in replication cluster"
+
+        for pod_name in falkordb_pods:
+            pod = k8s_helper.core_v1.read_namespaced_pod(pod_name, namespace)
+            container_name = get_falkordb_container_name(pod_name, namespace) or "falkordb"
+            container = next((c for c in pod.spec.containers if c.name == container_name), None)
+            assert container is not None, f"Pod {pod_name} missing falkordb container"
+
+            ports = container.ports or []
+            host_ports = [p.host_port for p in ports if p.host_port is not None]
+            assert 6379 in host_ports, f"Pod {pod_name} missing hostPort 6379 (found {host_ports})"
+
+        for pod_name in sentinel_pods:
+            pod = k8s_helper.core_v1.read_namespaced_pod(pod_name, namespace)
+            container = next((c for c in pod.spec.containers if "sent" in c.name or "sentinel" in c.name), None)
+            if container is None and pod.spec.containers:
+                container = pod.spec.containers[0]
+
+            assert container is not None, f"Pod {pod_name} missing sentinel container"
+
+            ports = container.ports or []
+            host_ports = [p.host_port for p in ports if p.host_port is not None]
+            assert 6379 in host_ports, f"Sentinel pod {pod_name} missing hostPort 6379 (found {host_ports})"
+
     def test_replication_deployment_basic(self, shared_replication_cluster):
         """Test basic replication deployment with sentinel."""
         cluster_info = shared_replication_cluster

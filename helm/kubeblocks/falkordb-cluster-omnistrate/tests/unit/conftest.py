@@ -35,6 +35,7 @@ def base_values():
         "fixedPodIPEnabled": False,
         "loadBalancerEnabled": False,
         "podAntiAffinityEnabled": False,
+        "multiZoneEnabled": False,
         "extra": {
             "disableExporter": False,
             "terminationPolicy": "Delete"

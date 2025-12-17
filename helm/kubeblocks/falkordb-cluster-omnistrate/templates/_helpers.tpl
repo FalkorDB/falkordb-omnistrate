@@ -11,8 +11,8 @@ Define falkordb cluster shardingSpec with ComponentDefinition.
     replicas: {{ .Values.replicas }}
     {{- if .Values.hostNetworkEnabled }}
     network:
-      hostPorts: 
-        {{- toYaml .Values.hostPorts | nindent 4 }} 
+      hostPorts:
+        {{ toYaml .Values.hostPorts | nindent 8 }}
     {{- end }}
     {{- if .Values.podAntiAffinityEnabled }}
     {{- include "falkordb-cluster.shardingSchedulingPolicy" . | indent 4 }}
@@ -275,8 +275,8 @@ Define falkordb ComponentSpec with ComponentDefinition.
   {{- end }}
   {{- if .Values.hostNetworkEnabled }}
   network:
-    hostPorts: 
-      {{- toYaml .Values.hostPorts | nindent 4 }} 
+    hostPorts:
+      {{ toYaml .Values.hostPorts | nindent 8 }}
   {{- end }}
   {{- if and .Values.nodePortEnabled (not .Values.hostNetworkEnabled) (not .Values.fixedPodIPEnabled) (not .Values.loadBalancerEnabled)}}
   services:
@@ -331,8 +331,8 @@ Define falkordb sentinel ComponentSpec with ComponentDefinition.
   {{- end }}
   {{- if .Values.hostNetworkEnabled }}
   network:
-    hostPorts: 
-      {{- toYaml .Values.hostPorts | nindent 4 }} 
+    hostPorts:
+      {{ toYaml .Values.hostPorts | nindent 8 }}
   {{- end }}
   {{- if and .Values.nodePortEnabled (not .Values.hostNetworkEnabled) (not .Values.fixedPodIPEnabled) (not .Values.loadBalancerEnabled)  }}
   services:

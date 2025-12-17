@@ -332,7 +332,7 @@ Define falkordb sentinel ComponentSpec with ComponentDefinition.
   {{- if .Values.hostNetworkEnabled }}
   network:
     hostPorts:
-      - name: sentinel
+      - name: falkordb-sent
         port: 26379
   {{- end }}
   {{- if and .Values.nodePortEnabled (not .Values.hostNetworkEnabled) (not .Values.fixedPodIPEnabled) (not .Values.loadBalancerEnabled)  }}

@@ -27,6 +27,9 @@ def cluster_integration_values():
         "instanceType": "low",
         "storage": 30,
         "podAntiAffinityEnabled": True,
+        "hostPorts": [
+            {"name": "cluster", "port": 6379}
+        ],
         "falkordbUser": {
             "username": "testuser",
             "password": "testpass123"

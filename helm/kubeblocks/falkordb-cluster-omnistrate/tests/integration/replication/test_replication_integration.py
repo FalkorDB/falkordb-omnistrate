@@ -222,7 +222,7 @@ class TestReplicationIntegration:
 
             ports = container.ports or []
             host_ports = [p.host_port for p in ports if p.host_port is not None]
-            assert 6379 in host_ports, f"Sentinel pod {pod_name} missing hostPort 6379 (found {host_ports})"
+            assert 26379 in host_ports, f"Sentinel pod {pod_name} missing hostPort 26379 (found {host_ports})"
 
     def test_replication_deployment_basic(self, shared_replication_cluster):
         """Test basic replication deployment with sentinel."""

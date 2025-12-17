@@ -244,7 +244,7 @@ ACL SETUSER {{ $username }} on >{{ $password }} ~* +INFO +CLIENT +DBSIZE +PING +
 {{- $username := .Values.falkordbUser.username -}}
 {{- $password := .Values.falkordbUser.password -}}
 {{- if and $username $password }}
-ACL SETUSER {{ $username }} on >{{ $password }} ~* +INFO +SENTINEL|get-master-addr-by-name +SENTINEL|remove +SENTINEL|flushconfig +SENTINEL|monitor
+ACL SETUSER {{ $username }} on >{{ $password }} ~* +INFO +SENTINEL|get-master-addr-by-name +SENTINEL|remove +SENTINEL|flushconfig +SENTINEL|monitor +SENTINEL|masters
 {{- else }}
 {{- fail "falkordbUser.username and falkordbUser.password are required for user creation" }}
 {{- end }}
@@ -332,7 +332,8 @@ Define falkordb sentinel ComponentSpec with ComponentDefinition.
   {{- if .Values.hostNetworkEnabled }}
   network:
     hostPorts:
-      {{ toYaml .Values.hostPorts | nindent 8 }}
+      - name: sentinel
+        port: 26379
   {{- end }}
   {{- if and .Values.nodePortEnabled (not .Values.hostNetworkEnabled) (not .Values.fixedPodIPEnabled) (not .Values.loadBalancerEnabled)  }}
   services:

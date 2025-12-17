@@ -80,6 +80,9 @@ def integration_values():
             "resultSetSize": "10000",
             "queryMemCapacity": "0",
         },
+        "hostPorts": [
+            {"name": "falkordb", "port": 6379}
+        ],
         "persistence": {"rdbConfig": "low", "aofConfig": "everysec"},
         "falkordbUser": {"username": "testuser", "password": "testpass123"},
     }

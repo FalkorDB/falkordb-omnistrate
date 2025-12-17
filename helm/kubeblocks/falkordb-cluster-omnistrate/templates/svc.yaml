@@ -25,7 +25,11 @@ spec:
       targetPort: {{ .Values.port }}
   selector:
     app.kubernetes.io/managed-by: kubeblocks
+    {{- if eq .Values.mode "cluster" }}
+    apps.kubeblocks.io/sharding-name: shard
+    {{- else }}
     apps.kubeblocks.io/component-name: falkordb
+    {{- end }}
   sessionAffinity: None
 ---
 {{- if eq .Values.mode "replication" }}

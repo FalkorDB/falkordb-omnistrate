@@ -541,7 +541,7 @@ services:
         hostPorts:
           - name: falkordb
             port: 6379
-          - name: sentinel
+          - name: falkordb-sent
             port: 26379
         extra:
           disableExporter: false
@@ -847,7 +847,7 @@ services:
         fixedPodIPEnabled: false
         loadBalancerEnabled: false
         hostPorts:
-          - name: falkordb
+          - name: cluster
             port: 6379
         extra:
           disableExporter: false

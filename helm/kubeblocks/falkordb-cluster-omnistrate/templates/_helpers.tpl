@@ -9,6 +9,11 @@ Define falkordb cluster shardingSpec with ComponentDefinition.
     name: falkordb
     componentDef: falkordb-cluster
     replicas: {{ .Values.replicas }}
+    {{- if .Values.hostNetworkEnabled }}
+    network:
+      hostPorts: 
+        {{- toYaml .Values.hostPorts | nindent 4 }} 
+    {{- end }}
     {{- if .Values.podAntiAffinityEnabled }}
     {{- include "falkordb-cluster.shardingSchedulingPolicy" . | indent 4 }}
     {{- end }}

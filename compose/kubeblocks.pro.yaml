@@ -338,7 +338,7 @@ services:
         modifiable: true
         required: false
         export: true
-        defaultValue: "3"
+        defaultValue: "2"
         limits:
           min: 2
           max: 5

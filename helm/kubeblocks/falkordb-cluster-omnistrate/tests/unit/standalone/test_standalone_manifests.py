@@ -179,3 +179,23 @@ class TestStandaloneManifests:
         main_component = component_specs[0]
         assert main_component.get("name") == "falkordb", \
             f"Expected component name 'falkordb', got '{main_component.get('name')}'"
+
+    def test_standalone_announce_hostname_override_env(self, helm_render, standalone_values):
+        """Ensure ANNOUNCE_HOSTNAME_OVERRIDE is rendered with pod name for standalone."""
+        values = {
+            **standalone_values,
+            "hostname": "node.cluster.local",
+        }
+
+        manifests = helm_render(values)
+        cluster = find_manifest_by_kind(manifests, "Cluster")
+        component = get_cluster_component_spec(cluster)
+        env_vars = component.get("env", [])
+
+        pod_env = next((e for e in env_vars if e.get("name") == "POD_NAME"), None)
+        assert pod_env is not None
+        assert pod_env.get("valueFrom", {}).get("fieldRef", {}).get("fieldPath") == "metadata.name"
+
+        announce_env = next((e for e in env_vars if e.get("name") == "ANNOUNCE_HOSTNAME_OVERRIDE"), None)
+        assert announce_env is not None
+        assert announce_env.get("value") == "$(POD_NAME).node.cluster.local"

@@ -218,6 +218,29 @@ class TestClusterManifests:
             # It's acceptable for this to fail with too few replicas
             pass
 
+    def test_cluster_announce_hostname_override_env(self, helm_render):
+        """Ensure cluster mode sets ANNOUNCE_HOSTNAME_OVERRIDE per pod."""
+        values = {
+            "mode": "cluster",
+            "hostname": "example.cluster.local",
+            "replicas": 3,
+        }
+
+        manifests = helm_render(values)
+        cluster_manifest = next((m for m in manifests if m["kind"] == "Cluster"), None)
+        assert cluster_manifest is not None
+
+        shardings = cluster_manifest["spec"].get("shardings", [])
+        assert shardings, "Shardings should be present in cluster mode"
+
+        env = shardings[0]["template"].get("env", [])
+        pod_name_env = next((e for e in env if e.get("name") == "POD_NAME"), None)
+        assert pod_name_env is not None and pod_name_env.get("valueFrom", {}).get("fieldRef", {}).get("fieldPath") == "metadata.name"
+
+        announce_env = next((e for e in env if e.get("name") == "ANNOUNCE_HOSTNAME_OVERRIDE"), None)
+        assert announce_env is not None
+        assert announce_env.get("value") == "$(POD_NAME).example.cluster.local"
+
     def test_cluster_fixed_pod_ip(self, helm_render):
         """Test cluster mode renders correctly with fixed pod IP configuration."""
         values = {

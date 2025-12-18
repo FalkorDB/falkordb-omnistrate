@@ -30,14 +30,21 @@ Define falkordb cluster shardingSpec with ComponentDefinition.
       serviceType: LoadBalancer
       podService: true
       {{- include "kblib.loadBalancerAnnotations" . | indent 4 }}
+    {{- end }}
+    {{- $shardHasEnv := or (and .Values.loadBalancerEnabled (not .Values.fixedPodIPEnabled) (not .Values.hostNetworkEnabled) (not .Values.nodePortEnabled)) (and .Values.fixedPodIPEnabled (not .Values.nodePortEnabled) (not .Values.hostNetworkEnabled) (not .Values.loadBalancerEnabled)) .Values.hostname }}
+    {{- if $shardHasEnv }}
     env:
-    - name: LOAD_BALANCER_ENABLED
-      value: "true"
+    {{- if .Values.hostname }}
+      {{- include "falkordb-cluster.announceHostnameEnv" . | indent 6 }}
+    {{- end }}
+    {{- if and .Values.loadBalancerEnabled (not .Values.fixedPodIPEnabled) (not .Values.hostNetworkEnabled) (not .Values.nodePortEnabled) }}
+      - name: LOAD_BALANCER_ENABLED
+        value: "true"
     {{- end }}
     {{- if and .Values.fixedPodIPEnabled (not .Values.nodePortEnabled) (not .Values.hostNetworkEnabled) (not .Values.loadBalancerEnabled) }}
-    env:
       - name: FIXED_POD_IP_ENABLED
         value: "true"
+    {{- end }}
     {{- end }}
     serviceVersion: {{ .Values.version }}
     systemAccounts:
@@ -174,6 +181,21 @@ resources:
 {{- end }}
 
 {{/*
+Generate announce hostname override env entries when hostname is provided.
+Uses pod name from the downward API to produce <pod>.<hostname>.
+*/}}
+{{- define "falkordb-cluster.announceHostnameEnv" -}}
+{{- if .Values.hostname }}
+- name: POD_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+- name: ANNOUNCE_HOSTNAME_OVERRIDE
+  value: "$(POD_NAME).{{ .Values.hostname }}"
+{{- end }}
+{{- end }}
+
+{{/*
 Generate FALKORDB_ARGS environment variable value
 */}}
 {{- define "falkordb-cluster.falkordbArgs" -}}
@@ -292,6 +314,7 @@ Define falkordb ComponentSpec with ComponentDefinition.
     {{- include "kblib.loadBalancerAnnotations" . | indent 4 }}
   {{- end }}
   env:
+  {{- include "falkordb-cluster.announceHostnameEnv" . | indent 2 }}
   {{- if include "falkordb-cluster.falkordbArgs" . }}
   - name: FALKORDB_ARGS
     value: {{ include "falkordb-cluster.falkordbArgs" . | quote }}
@@ -341,20 +364,25 @@ Define falkordb sentinel ComponentSpec with ComponentDefinition.
     serviceType: NodePort
     podService: true
   {{- end }}
-  {{- if and .Values.fixedPodIPEnabled (not .Values.nodePortEnabled) (not .Values.hostNetworkEnabled) (not .Values.loadBalancerEnabled)  }}
-  env:
-  - name: FIXED_POD_IP_ENABLED
-    value: "true"
-  {{- end }}
   {{- if and .Values.loadBalancerEnabled (not .Values.fixedPodIPEnabled) (not .Values.hostNetworkEnabled) (not .Values.nodePortEnabled) (hasPrefix "5." .Values.version) }}
   services:
   - name: sentinel-lb-advertised
     serviceType: LoadBalancer
     podService: true
     {{- include "kblib.loadBalancerAnnotations" . | indent 4 }}
+  {{- end }}
+  {{- $sentHasEnv := or (and .Values.fixedPodIPEnabled (not .Values.nodePortEnabled) (not .Values.hostNetworkEnabled) (not .Values.loadBalancerEnabled)) (and .Values.loadBalancerEnabled (not .Values.fixedPodIPEnabled) (not .Values.hostNetworkEnabled) (not .Values.nodePortEnabled) (hasPrefix "5." .Values.version)) .Values.hostname }}
+  {{- if $sentHasEnv }}
   env:
+  {{- include "falkordb-cluster.announceHostnameEnv" . | indent 2 }}
+  {{- if and .Values.fixedPodIPEnabled (not .Values.nodePortEnabled) (not .Values.hostNetworkEnabled) (not .Values.loadBalancerEnabled) }}
+  - name: FIXED_POD_IP_ENABLED
+    value: "true"
+  {{- end }}
+  {{- if and .Values.loadBalancerEnabled (not .Values.fixedPodIPEnabled) (not .Values.hostNetworkEnabled) (not .Values.nodePortEnabled) (hasPrefix "5." .Values.version) }}
   - name: LOAD_BALANCER_ENABLED
     value: "true"
+  {{- end }}
   {{- end }}
   serviceVersion: {{ .Values.version }}
   {{- if and .Values.sentinel.customSecretName .Values.sentinel.customSecretNamespace }}

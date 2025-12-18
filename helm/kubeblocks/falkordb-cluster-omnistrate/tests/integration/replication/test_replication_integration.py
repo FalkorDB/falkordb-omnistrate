@@ -36,6 +36,8 @@ class ReplicationAvailabilityMonitor:
         
         self.running = False
         self.thread = None
+        # Track pods that are temporarily unavailable (deleted/restarting)
+        self._skip_until = {}  # pod_name -> unix_timestamp
         self.results = {
             'total_queries': 0,
             'successful_queries': 0,
@@ -83,9 +85,23 @@ redis-cli -u "redis://{self.username}:{self.password}@localhost:6379/" \\
     def _monitor_loop(self):
         """Background thread that continuously queries replicas for read availability."""
         while self.running:
-            # Try to query one of the pods (round-robin)
-            pod_index = self.results['total_queries'] % len(self.pod_list)
-            pod_name = self.pod_list[pod_index]
+            # Choose a pod that is not currently skipped
+            now = time.time()
+            chosen = None
+            # Iterate at most once over all pods to find an available one
+            start_index = self.results['total_queries'] % len(self.pod_list) if self.pod_list else 0
+            for i in range(len(self.pod_list)):
+                pod_name = self.pod_list[(start_index + i) % len(self.pod_list)]
+                skip_until = self._skip_until.get(pod_name, 0)
+                if now >= skip_until:
+                    chosen = pod_name
+                    break
+
+            if chosen is None:
+                # All pods are temporarily unavailable; wait a bit and try again
+                time.sleep(self.query_interval)
+                continue
+            pod_name = chosen
             
             success, latency, error = self._query_pod(pod_name)
             
@@ -97,6 +113,20 @@ redis-cli -u "redis://{self.username}:{self.password}@localhost:6379/" \\
                 self.results['failed_queries'] += 1
                 if error:
                     self.results['errors'][error[:100]] += 1
+                    # If pod is being deleted/recreated, avoid counting it repeatedly for a short window
+                    err_lc = error.lower()
+                    transient_signals = [
+                        'notfound',
+                        'not found',
+                        'unable to upgrade connection',
+                        'container not found',
+                        'no such container',
+                        'error from server',
+                        'context deadline exceeded',
+                    ]
+                    if any(sig in err_lc for sig in transient_signals):
+                        # Skip this pod for 30 seconds to allow it to recreate
+                        self._skip_until[pod_name] = time.time() + 30
             
             time.sleep(self.query_interval)
     

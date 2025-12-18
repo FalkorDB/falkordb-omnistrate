@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: {{ .Values.hostname | quote }}
+    external-dns.alpha.kubernetes.io/hostname: {{ printf "node.%s" .Values.hostname | quote }}
     external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
     external-dns.alpha.kubernetes.io/ttl: "60"
   name: {{ include "falkordb-cluster.fullname" . }}-external

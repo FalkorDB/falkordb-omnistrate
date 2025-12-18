@@ -2,6 +2,7 @@
 
 import pytest
 import logging
+import copy
 from ...utils.kubernetes import (
     cleanup_test_resources,
     wait_for_deployment_ready,
@@ -63,9 +64,13 @@ def shared_replication_cluster(helm_render, namespace, skip_cleanup, replication
     
     logger.info(f"Setting up shared replication cluster: {cluster_name}")
     
+    # Use a resolvable headless service suffix for ANNOUNCE_HOSTNAME_OVERRIDE
+    values = copy.deepcopy(replication_integration_values)
+    values["hostname"] = f"{cluster_name}-falkordb-headless.{namespace}.svc.cluster.local"
+
     # Render manifests
     manifests = helm_render(
-        values=replication_integration_values, 
+        values=values, 
         release_name=cluster_name, 
         namespace=namespace
     )

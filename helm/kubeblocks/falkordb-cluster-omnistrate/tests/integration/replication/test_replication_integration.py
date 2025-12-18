@@ -24,6 +24,27 @@ from ...utils.validation import (
 logger = logging.getLogger(__name__)
 
 
+def _safe_container_name(pod_name: str, namespace: str) -> str:
+    """Return FalkorDB container name, falling back to the first container if detection fails."""
+    name = get_falkordb_container_name(pod_name, namespace)
+    if name:
+        return name
+    try:
+        cmd = [
+            'kubectl', 'get', 'pod', pod_name,
+            '-n', namespace,
+            '-o', 'jsonpath={.spec.containers[0].name}'
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        fallback = result.stdout.strip()
+        if fallback:
+            return fallback
+    except Exception:
+        pass
+    # Last resort to avoid TypeError in subprocess args; caller will fail fast if empty
+    return ""
+
+
 class ReplicationAvailabilityMonitor:
     """Monitor read availability during replication operations."""
     
@@ -535,7 +556,8 @@ echo "Failover test data created"
 '''
         
         # Get the correct container name for the master pod
-        master_container_name = get_falkordb_container_name(master_pod, namespace)
+        master_container_name = _safe_container_name(master_pod, namespace)
+        assert master_container_name, f"Could not find container for pod {master_pod}"
         assert master_container_name is not None, f"Could not find FalkorDB container in pod {master_pod}"
         
         exec_cmd = [
@@ -1137,7 +1159,8 @@ echo "Initial data created"
         current_falkordb_pods = [pod for pod in current_pods if 'falkordb-sent' not in pod]
         
         verify_pod = current_falkordb_pods[0]
-        verify_container = get_falkordb_container_name(verify_pod, namespace)
+        verify_container = _safe_container_name(verify_pod, namespace)
+        assert verify_container, f"Could not find container for pod {verify_pod}"
         
         verify_data_script = f'''#!/bin/bash
 set -e

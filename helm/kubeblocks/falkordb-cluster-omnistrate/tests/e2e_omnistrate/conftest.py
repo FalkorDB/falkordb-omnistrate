@@ -241,7 +241,7 @@ def _reset_instance_data(inst: OmnistrateFleetInstance) -> None:
             retries=3,
             network_type=network_type,
         )
-        db.client.flushall()
+        db.connection.flushall()
         return
     except Exception as e:
         logging.debug(f"Cluster-endpoint flushall failed; falling back: {e}")

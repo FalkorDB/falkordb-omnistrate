@@ -331,6 +331,8 @@ Define falkordb ComponentSpec with ComponentDefinition.
   - name: LOAD_BALANCER_ENABLED
     value: "true"
   {{- end }}
+  - name: CUSTOM_SENTINEL_MASTER_NAME
+    value: master
   serviceVersion: {{ .Values.version }}
   {{- if and .Values.customSecretName .Values.customSecretNamespace }}
   systemAccounts:
@@ -384,6 +386,8 @@ Define falkordb sentinel ComponentSpec with ComponentDefinition.
     value: "true"
   {{- end }}
   {{- end }}
+  - name: CUSTOM_SENTINEL_MASTER_NAME
+    value: master
   serviceVersion: {{ .Values.version }}
   {{- if and .Values.sentinel.customSecretName .Values.sentinel.customSecretNamespace }}
   systemAccounts:

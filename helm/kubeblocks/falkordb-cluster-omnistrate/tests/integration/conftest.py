@@ -69,6 +69,7 @@ def integration_values():
         "fixedPodIPEnabled": False,
         "loadBalancerEnabled": False,
         "podAntiAffinityEnabled": False,
+        "hostname": "svc.cluster.local",
         "sentinel": {"enabled": False},
         "extra": {"disableExporter": False, "terminationPolicy": "Delete"},
         "falkordbConfig": {

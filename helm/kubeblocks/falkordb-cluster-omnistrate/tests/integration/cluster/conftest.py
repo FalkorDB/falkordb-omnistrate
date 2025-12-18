@@ -27,6 +27,7 @@ def cluster_integration_values():
         "instanceType": "low",
         "storage": 30,
         "podAntiAffinityEnabled": True,
+        "hostname": "svc.cluster.local",
         "hostPorts": [
             {"name": "cluster", "port": 6379}
         ],

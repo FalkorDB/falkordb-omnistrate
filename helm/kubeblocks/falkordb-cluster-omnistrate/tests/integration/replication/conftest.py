@@ -30,6 +30,7 @@ def replication_integration_values():
         },
         "instanceType": "low",
         "storage": 20,
+        "hostname": "svc.cluster.local",
         "hostPorts": [
             {"name": "falkordb", "port": 6379},
             {"name": "falkordb-sent", "port": 26379}

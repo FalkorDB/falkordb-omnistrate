@@ -277,10 +277,10 @@ class TestOmnistrateStandalone:
         
         # Check persistence config
         db = instance.create_connection(ssl=ssl, network_type=network_type)
-        config = db.client.config_get("save")
+        config = db.connection.config_get("save")
         logging.info(f"RDB persistence config: {config}")
         
-        aof_config = db.client.config_get("appendonly")
+        aof_config = db.connection.config_get("appendonly")
         logging.info(f"AOF persistence config: {aof_config}")
         
         # Stop and start to test persistence

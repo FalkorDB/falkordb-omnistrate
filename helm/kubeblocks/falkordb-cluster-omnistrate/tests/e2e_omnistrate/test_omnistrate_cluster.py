@@ -74,7 +74,7 @@ class TestOmnistrateCluster:
         
         # Verify cluster topology
         db = instance.create_connection(ssl=ssl, network_type=network_type)
-        cluster_info = db.client.execute_command("CLUSTER", "INFO")
+        cluster_info = db.connection.execute_command("CLUSTER", "INFO")
         logging.info(f"Cluster info: {cluster_info}")
         assert b"cluster_state:ok" in cluster_info, "Cluster state is not OK"
 
@@ -106,7 +106,7 @@ class TestOmnistrateCluster:
         
         # Verify cluster slots are assigned
         db = instance.create_connection(ssl=ssl, network_type=network_type)
-        slots = db.client.execute_command("CLUSTER", "SLOTS")
+        slots = db.connection.execute_command("CLUSTER", "SLOTS")
         logging.info(f"Cluster slots: {slots}")
         assert len(slots) > 0, "No cluster slots assigned"
         logging.info(f"Data successfully distributed across {len(slots)} shard ranges")

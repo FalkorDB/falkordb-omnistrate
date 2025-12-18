@@ -552,7 +552,7 @@ services:
         # Sentinel configuration for replication
         sentinel:
           enabled: true
-          replicas: $var.numReplicas
+          replicas: 3
 
         # Limited falkordb user credentials
         falkordbUser:

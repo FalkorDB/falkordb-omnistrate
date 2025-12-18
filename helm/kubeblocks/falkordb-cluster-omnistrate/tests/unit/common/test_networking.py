@@ -62,7 +62,7 @@ class TestNetworking:
         
         errors = validate_external_service_annotations(
             generic_service, 
-            "test-falkordb.example.com"
+            "node.test-falkordb.example.com"
         )
         assert not errors, f"External service validation failed: {errors}"
 

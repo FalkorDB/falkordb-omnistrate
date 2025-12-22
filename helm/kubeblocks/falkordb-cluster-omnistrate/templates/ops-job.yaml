@@ -211,7 +211,7 @@ spec:
       volumes:
         - name: credentials
           secret:
-            secretName: {{ include "kblib.clusterName" . }}-conn-credential
+            secretName: {{ include "kblib.clusterName" . }}-falkordb-account-default
 ---
 apiVersion: v1
 kind: ServiceAccount

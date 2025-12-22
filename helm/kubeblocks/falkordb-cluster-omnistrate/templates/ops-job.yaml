@@ -19,114 +19,199 @@ spec:
       serviceAccountName: {{ include "kblib.clusterName" . }}-create-user-sa
       containers:
       - name: create-user
-        image: alpine/k8s:1.28.3
+        image: redis:7.4.1-alpine
         command:
-        - /bin/bash
+        - /bin/sh
         - -c
         - |
           set -e
           
-          # Set namespace variable
+          # Get default credentials from secret
           NAMESPACE="{{ .Release.Namespace }}"
-          if [ -z "$NAMESPACE" ]; then
-            NAMESPACE="default"
-          fi
+          SECRET_NAME="{{ include "kblib.clusterName" . }}-conn-credential"
           
-          echo "Using namespace: $NAMESPACE"
-          echo "Waiting for cluster to be ready..."
-          # Wait for cluster to reach Running phase
-          while true; do
-            PHASE=$(kubectl get cluster {{ include "kblib.clusterName" . }} -n "$NAMESPACE" -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
-            if [ "$PHASE" = "Running" ]; then
-              echo "Cluster is running"
+          echo "Fetching default credentials..."
+          DEFAULT_USER=$(cat /mnt/secrets/username)
+          DEFAULT_PASSWORD=$(cat /mnt/secrets/password)
+          
+          {{- if eq .Values.mode "cluster" }}
+          echo "Cluster mode: Creating user on all cluster nodes..."
+          
+          # Get all cluster nodes from any pod
+          CLUSTER_NAME="{{ include "kblib.clusterName" . }}"
+          FIRST_POD="${CLUSTER_NAME}-shard-0-0"
+          SERVICE_NAME="${CLUSTER_NAME}-shard-0-headless"
+          
+          echo "Waiting for first pod to be ready: ${FIRST_POD}"
+          max_attempts=60
+          attempt=0
+          while [ $attempt -lt $max_attempts ]; do
+            if redis-cli -h "${FIRST_POD}.${SERVICE_NAME}.${NAMESPACE}.svc" -p 6379 \
+               --user "$DEFAULT_USER" -a "$DEFAULT_PASSWORD" PING > /dev/null 2>&1; then
+              echo "First pod is ready"
               break
             fi
-            echo "Cluster phase: $PHASE, waiting..."
+            echo "Waiting for pod to be ready... (attempt $((attempt+1))/${max_attempts})"
             sleep 5
+            attempt=$((attempt+1))
           done
           
-          echo "Waiting for pods to be ready..."
-          # Wait for at least one pod to be ready
-          kubectl wait --for=condition=ready pod \
-            -l app.kubernetes.io/instance={{ include "kblib.clusterName" . }} \
-            -n "$NAMESPACE" \
-            --timeout=300s
+          if [ $attempt -eq $max_attempts ]; then
+            echo "ERROR: Timeout waiting for first pod"
+            exit 1
+          fi
           
-          echo "Creating OpsRequest for user creation..."
-          {{- if eq .Values.mode "cluster" }}
-          # Create OpsRequest for cluster mode (shards)
-          cat <<EOF | kubectl apply -f -
-          apiVersion: operations.kubeblocks.io/v1alpha1
-          kind: OpsRequest
-          metadata:
-            name: {{ include "kblib.clusterName" . }}-create-falkordb-user
-            namespace: {{ .Release.Namespace }}
-            labels: {{ include "kblib.clusterLabels" . | nindent 14 }}
-          spec:
-            clusterName: {{ include "kblib.clusterName" . }}
-            type: Custom
-            custom:
-              opsDefinitionName: falkordb-shard-account-ops
-              components:
-                - componentName: shard
-                  parameters:
-                  - name: ACL_COMMAND
-                    value: {{ include "falkordb-cluster.aclCreateCommand" . | quote }}
-                  - name: SHARD_MODE
-                    value: "TRUE"
-                  - name: REPLICAS
-                    value: {{ include "falkordb-cluster.aclCreateCommandReplicas" . | quote }}
-          EOF
+          # Get all cluster node addresses
+          echo "Fetching cluster topology..."
+          CLUSTER_NODES=$(redis-cli -c -h "${FIRST_POD}.${SERVICE_NAME}.${NAMESPACE}.svc" -p 6379 \
+            --user "$DEFAULT_USER" -a "$DEFAULT_PASSWORD" CLUSTER NODES | \
+            grep -v "fail" | grep -v "noaddr" | awk '{print $2}' | cut -d':' -f1 | cut -d'@' -f1)
+          
+          if [ -z "$CLUSTER_NODES" ]; then
+            echo "ERROR: Failed to get cluster nodes"
+            exit 1
+          fi
+          
+          echo "Found cluster nodes:"
+          echo "$CLUSTER_NODES"
+          
+          # Create user on each node
+          success_count=0
+          total_nodes=$(echo "$CLUSTER_NODES" | wc -l | tr -d ' ')
+          
+          for node in $CLUSTER_NODES; do
+            echo "Creating user on node: $node"
+            if redis-cli -h "$node" -p 6379 --user "$DEFAULT_USER" -a "$DEFAULT_PASSWORD" \
+               {{ include "falkordb-cluster.aclCreateCommand" . }} > /dev/null 2>&1; then
+              echo "✓ User created on $node"
+              # Save ACL to disk
+              redis-cli -h "$node" -p 6379 --user "$DEFAULT_USER" -a "$DEFAULT_PASSWORD" ACL SAVE
+              success_count=$((success_count+1))
+            else
+              echo "✗ Failed to create user on $node"
+            fi
+          done
+          
+          echo "Successfully created user on ${success_count}/${total_nodes} nodes"
+          
+          if [ $success_count -lt $total_nodes ]; then
+            echo "WARNING: User creation failed on some nodes"
+            exit 1
+          fi
+          
           {{- else }}
-          # Create OpsRequest for standalone/replication mode
-          cat <<EOF | kubectl apply -f -
-          apiVersion: operations.kubeblocks.io/v1alpha1
-          kind: OpsRequest
-          metadata:
-            name: {{ include "kblib.clusterName" . }}-create-falkordb-user
-            namespace: {{ .Release.Namespace }}
-            labels: {{ include "kblib.clusterLabels" . | nindent 14 }}
-          spec:
-            clusterName: {{ include "kblib.clusterName" . }}
-            type: Custom
-            custom:
-              opsDefinitionName: falkordb-master-account-ops
-              components:
-                - componentName: falkordb
-                  parameters:
-                  - name: ACL_COMMAND
-                    value: {{ include "falkordb-cluster.aclCreateCommand" . | quote }}
-                  - name: REPLICAS
-                    value: {{ .Values.replicas | quote }}
-          EOF
+          echo "Standalone/Replication mode: Creating user on all pods..."
+          
+          CLUSTER_NAME="{{ include "kblib.clusterName" . }}"
+          COMPONENT_NAME="falkordb"
+          SERVICE_NAME="${CLUSTER_NAME}-${COMPONENT_NAME}-headless"
+          
+          {{- if eq .Values.mode "standalone" }}
+          REPLICAS=1
+          {{- else }}
+          REPLICAS={{ .Values.replicas }}
+          {{- end }}
+          
+          # Create user on each replica
+          success_count=0
+          for i in $(seq 0 $((REPLICAS-1))); do
+            POD_NAME="${CLUSTER_NAME}-${COMPONENT_NAME}-${i}"
+            POD_FQDN="${POD_NAME}.${SERVICE_NAME}.${NAMESPACE}.svc"
+            
+            echo "Waiting for pod: ${POD_NAME}"
+            max_attempts=60
+            attempt=0
+            while [ $attempt -lt $max_attempts ]; do
+              if redis-cli -h "$POD_FQDN" -p 6379 --user "$DEFAULT_USER" -a "$DEFAULT_PASSWORD" \
+                 PING > /dev/null 2>&1; then
+                echo "Pod ${POD_NAME} is ready"
+                break
+              fi
+              sleep 5
+              attempt=$((attempt+1))
+            done
+            
+            if [ $attempt -eq $max_attempts ]; then
+              echo "ERROR: Timeout waiting for pod ${POD_NAME}"
+              continue
+            fi
+            
+            echo "Creating user on pod: ${POD_NAME}"
+            if redis-cli -h "$POD_FQDN" -p 6379 --user "$DEFAULT_USER" -a "$DEFAULT_PASSWORD" \
+               {{ include "falkordb-cluster.aclCreateCommand" . }} > /dev/null 2>&1; then
+              echo "✓ User created on ${POD_NAME}"
+              # Save ACL to disk
+              redis-cli -h "$POD_FQDN" -p 6379 --user "$DEFAULT_USER" -a "$DEFAULT_PASSWORD" ACL SAVE
+              success_count=$((success_count+1))
+            else
+              echo "✗ Failed to create user on ${POD_NAME}"
+            fi
+          done
+          
+          echo "Successfully created user on ${success_count}/${REPLICAS} pods"
+          
+          if [ $success_count -lt $REPLICAS ]; then
+            echo "WARNING: User creation failed on some pods"
+            exit 1
+          fi
           
           {{- if .Values.sentinel.enabled }}
-          echo "Creating OpsRequest for sentinel user creation..."
-          # Create separate OpsRequest for sentinel
-          cat <<EOF | kubectl apply -f -
-          apiVersion: operations.kubeblocks.io/v1alpha1
-          kind: OpsRequest
-          metadata:
-            name: {{ include "kblib.clusterName" . }}-create-sentinel-user
-            namespace: {{ .Release.Namespace }}
-            labels: {{ include "kblib.clusterLabels" . | nindent 14 }}
-          spec:
-            clusterName: {{ include "kblib.clusterName" . }}
-            type: Custom
-            custom:
-              opsDefinitionName: falkordb-sent-account-ops
-              components:
-                - componentName: falkordb-sent
-                  parameters:
-                  - name: ACL_COMMAND
-                    value: {{ include "falkordb-cluster.aclSentinelCreateCommand" . | quote }}
-                  - name: REPLICAS
-                    value: {{ .Values.sentinel.replicas | quote }}
-          EOF
+          echo "Creating user on sentinel pods..."
+          SENTINEL_REPLICAS={{ .Values.sentinel.replicas }}
+          SENTINEL_SERVICE="${CLUSTER_NAME}-falkordb-sent-headless"
+          sentinel_success=0
+          
+          for i in $(seq 0 $((SENTINEL_REPLICAS-1))); do
+            SENTINEL_POD="${CLUSTER_NAME}-falkordb-sent-${i}"
+            SENTINEL_FQDN="${SENTINEL_POD}.${SENTINEL_SERVICE}.${NAMESPACE}.svc"
+            
+            echo "Waiting for sentinel pod: ${SENTINEL_POD}"
+            max_attempts=60
+            attempt=0
+            while [ $attempt -lt $max_attempts ]; do
+              if redis-cli -h "$SENTINEL_FQDN" -p 26379 --user "$DEFAULT_USER" -a "$DEFAULT_PASSWORD" \
+                 PING > /dev/null 2>&1; then
+                echo "Sentinel pod ${SENTINEL_POD} is ready"
+                break
+              fi
+              sleep 5
+              attempt=$((attempt+1))
+            done
+            
+            if [ $attempt -eq $max_attempts ]; then
+              echo "ERROR: Timeout waiting for sentinel pod ${SENTINEL_POD}"
+              continue
+            fi
+            
+            echo "Creating user on sentinel: ${SENTINEL_POD}"
+            if redis-cli -h "$SENTINEL_FQDN" -p 26379 --user "$DEFAULT_USER" -a "$DEFAULT_PASSWORD" \
+               {{ include "falkordb-cluster.aclSentinelCreateCommand" . }} > /dev/null 2>&1; then
+              echo "✓ User created on sentinel ${SENTINEL_POD}"
+              redis-cli -h "$SENTINEL_FQDN" -p 26379 --user "$DEFAULT_USER" -a "$DEFAULT_PASSWORD" ACL SAVE
+              sentinel_success=$((sentinel_success+1))
+            else
+              echo "✗ Failed to create user on sentinel ${SENTINEL_POD}"
+            fi
+          done
+          
+          echo "Successfully created user on ${sentinel_success}/${SENTINEL_REPLICAS} sentinel pods"
+          
+          if [ $sentinel_success -lt $SENTINEL_REPLICAS ]; then
+            echo "WARNING: User creation failed on some sentinel pods"
+            exit 1
+          fi
           {{- end }}
           {{- end }}
           
-          echo "OpsRequest created successfully"
+          echo "✓ User creation completed successfully"
+        volumeMounts:
+        - name: credentials
+          mountPath: /mnt/secrets
+          readOnly: true
+      volumes:
+      - name: credentials
+        secret:
+          secretName: {{ include "kblib.clusterName" . }}-conn-credential
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -138,44 +223,4 @@ metadata:
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-weight": "5"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: {{ include "kblib.clusterName" . }}-create-user-role
-  namespace: {{ .Release.Namespace }}
-  labels: {{ include "kblib.clusterLabels" . | nindent 4 }}
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-weight": "5"
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-rules:
-- apiGroups: ["apps.kubeblocks.io"]
-  resources: ["clusters"]
-  verbs: ["get", "watch"]
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["operations.kubeblocks.io"]
-  resources: ["opsrequests"]
-  verbs: ["create", "get"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: {{ include "kblib.clusterName" . }}-create-user-binding
-  namespace: {{ .Release.Namespace }}
-  labels: {{ include "kblib.clusterLabels" . | nindent 4 }}
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-weight": "5"
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: {{ include "kblib.clusterName" . }}-create-user-role
-subjects:
-- kind: ServiceAccount
-  name: {{ include "kblib.clusterName" . }}-create-user-sa
-  namespace: {{ .Release.Namespace }}
 {{- end }}

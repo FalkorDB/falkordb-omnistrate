@@ -1131,6 +1131,10 @@ echo "Initial data created"
             timeout=300
         ), "Pods not ready after vertical scaling"
         
+        # Wait additional time for data replication to settle
+        logger.info("Waiting for data replication to settle after pod restarts...")
+        time.sleep(30)
+        
         # Stop monitoring and check availability
         availability_results = monitor.stop()
         
@@ -1194,17 +1198,27 @@ fi
             'sh', '-c', verify_data_script
         ]
         
-        result = subprocess.run(exec_cmd, capture_output=True, text=True, timeout=60)
         
-        # Parse count
+        # Retry verification if graph is not yet available (race condition during pod restart)
         node_count = 0
-        for line in result.stdout.split("\n"):
-            if line.startswith("COUNT:"):
-                try:
-                    node_count = int(line.split(":")[1])
-                    break
-                except (ValueError, IndexError):
-                    pass
+        for attempt in range(3):
+            result = subprocess.run(exec_cmd, capture_output=True, text=True, timeout=60)
+            
+            # Parse count
+            for line in result.stdout.split("\n"):
+                if line.startswith("COUNT:"):
+                    try:
+                        node_count = int(line.split(":")[1])
+                        break
+                    except (ValueError, IndexError):
+                        pass
+            
+            if node_count == 1:
+                logger.info(f"Data verified on attempt {attempt + 1}")
+                break
+            elif attempt < 2:
+                logger.warning(f"Attempt {attempt + 1}: found {node_count} nodes, retrying...")
+                time.sleep(10)
         
         assert node_count == 1, f"Data loss after vertical scaling: expected 1 node, found {node_count}"
         logger.info("Data preserved after vertical scaling")

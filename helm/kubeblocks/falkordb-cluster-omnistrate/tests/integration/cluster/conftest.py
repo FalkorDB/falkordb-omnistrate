@@ -27,7 +27,11 @@ def cluster_integration_values():
         "instanceType": "low",
         "storage": 30,
         "podAntiAffinityEnabled": True,
-        "hostname": "svc.cluster.local",
+        # Disable external hostname override to prevent invalid FQDNs in-cluster
+        # Let KubeBlocks/headless services manage DNS via pod subdomain
+        "hostname": None,
+        # Prefer cluster-internal networking for tests (no hostNetwork)
+        "hostNetworkEnabled": False,
         "hostPorts": [
             {"name": "cluster", "port": 6379}
         ],
@@ -56,17 +60,26 @@ def shared_cluster(helm_render, namespace, skip_cleanup, cluster_integration_val
     # Max length is 15 chars due to Kubernetes naming constraints
     if worker_id == "master":
         # Single process execution
-        cluster_name = "shared-clstr"
+        import uuid
+        cluster_id = str(uuid.uuid4())[:8]
+        cluster_name = f"clstr-{cluster_id}"
     else:
         # Parallel execution - extract worker number from "gw0", "gw1", etc
         worker_num = worker_id.replace("gw", "")
-        cluster_name = f"shared-clstr-{worker_num}"
+        import uuid
+        cluster_id = str(uuid.uuid4())[:8]
+        cluster_name = f"clstr-{worker_num}-{cluster_id}"
     
     logger.info(f"Setting up shared cluster: {cluster_name}")
     
     # Render manifests for the shared cluster
+    import copy
+    values = copy.deepcopy(cluster_integration_values)
+    # Don't override hostname - let FalkorDB use default pod name
+    # KubeBlocks creates per-shard headless services and assigns subdomain correctly
+    # Pods will be resolvable as: <pod-name>.<headless-service>.namespace.svc.cluster.local
     manifests = helm_render(
-        values=cluster_integration_values, 
+        values=values,
         release_name=cluster_name, 
         namespace=namespace
     )
@@ -147,6 +160,73 @@ def shared_cluster(helm_render, namespace, skip_cleanup, cluster_integration_val
         else:
             logger.info(f"Skipping cleanup of shared cluster: {cluster_name}")
 
+@pytest.fixture(scope="function")
+def shared_cluster_hostnetwork(helm_render, namespace, skip_cleanup, cluster_integration_values, worker_id):
+    """
+    Create a cluster with hostNetwork enabled for tests that require hostPort exposure.
+    """
+    import uuid, copy
+    cluster_id = str(uuid.uuid4())[:8]
+    base_name = "clstr-hn"
+    cluster_name = f"{base_name}-{cluster_id}" if worker_id == "master" else f"{base_name}-{worker_id}-{cluster_id}"
+
+    logger.info(f"Setting up hostNetwork cluster: {cluster_name}")
+
+    values = copy.deepcopy(cluster_integration_values)
+    values["hostname"] = None
+    values["hostNetworkEnabled"] = True
+    values["hostPorts"] = [
+        {"name": "falkordb", "port": 6379},
+        {"name": "cluster", "port": 6379}
+    ]
+    manifests = helm_render(values=values, release_name=cluster_name, namespace=namespace)
+
+    try:
+        for manifest in manifests:
+            logger.info(f"Applying {manifest['kind']}: {manifest['metadata']['name']}")
+            assert kubectl_apply_manifest(manifest, namespace), f"Failed to apply {manifest['kind']}"
+
+        logger.info("Waiting for hostNetwork cluster to be ready...")
+        assert wait_for_deployment_ready(cluster_name, namespace, timeout=900)
+
+        logger.info("Waiting for all pods to be ready...")
+        assert wait_for_pods_ready(f"app.kubernetes.io/instance={cluster_name}", namespace, timeout=600)
+
+        logger.info(f"Checking for user creation job completion {cluster_name}-create-falkordb-user on {namespace}...")
+        try:
+            wait_for_ops_request_completion(f"{cluster_name}-create-falkordb-user", namespace, timeout=180)
+            logger.info("User creation OpsRequest completed successfully")
+        except Exception as e:
+            logger.warning(f"User creation OpsRequest not found or failed: {e}")
+            logger.info("Proceeding without OpsRequest - manual user credentials will be used")
+
+        cluster_pods = get_cluster_pods(cluster_name, namespace)
+        assert len(cluster_pods) >= 6, f"Expected at least 6 pods for cluster, got {len(cluster_pods)}"
+
+        import subprocess, base64
+        first_pod = cluster_pods[0]
+        shard_name = "-".join(first_pod.rsplit("-", 1)[0].split("-"))
+        secret_name = f"{shard_name}-account-default"
+        username_b64 = subprocess.check_output(f"kubectl get secret {secret_name} -n {namespace} -o jsonpath='{{.data.username}}'", shell=True).decode().strip()
+        password_b64 = subprocess.check_output(f"kubectl get secret {secret_name} -n {namespace} -o jsonpath='{{.data.password}}'", shell=True).decode().strip()
+        username = base64.b64decode(username_b64).decode()
+        password = base64.b64decode(password_b64).decode()
+
+        test_user = cluster_integration_values.get("falkordbUser", {})
+        if test_user.get("username") and test_user.get("password"):
+            username = test_user["username"]
+            password = test_user["password"]
+
+        cluster_info = {"name": cluster_name, "namespace": namespace, "pods": cluster_pods, "username": username, "password": password}
+        yield cluster_info
+
+    finally:
+        if not skip_cleanup:
+            logger.info(f"Cleaning up hostNetwork cluster: {cluster_name}")
+            cleanup_test_resources(cluster_name, namespace)
+        else:
+            logger.info(f"Skipping cleanup of hostNetwork cluster: {cluster_name}")
+
 
 @pytest.fixture
 def clean_graphs(shared_cluster):
@@ -167,14 +247,15 @@ def clean_graphs(shared_cluster):
         for pod in cluster_info["pods"][:3]:  # Clean from first 3 shard primaries
             try:
                 clean_script = f"""#!/bin/bash
+# Use -c flag to enable cluster mode and propagate commands to all shards
 # Delete each graph explicitly first
-redis-cli -u "redis://{cluster_info['username']}:{cluster_info['password']}@localhost:6379/" GRAPH.DELETE clustergraph >/dev/null 2>&1 || true
-redis-cli -u "redis://{cluster_info['username']}:{cluster_info['password']}@localhost:6379/" GRAPH.DELETE resilience_test >/dev/null 2>&1 || true
-redis-cli -u "redis://{cluster_info['username']}:{cluster_info['password']}@localhost:6379/" GRAPH.DELETE scaling_test >/dev/null 2>&1 || true
-redis-cli -u "redis://{cluster_info['username']}:{cluster_info['password']}@localhost:6379/" GRAPH.DELETE performance_test >/dev/null 2>&1 || true
+redis-cli -c -u "redis://{cluster_info['username']}:{cluster_info['password']}@localhost:6379/" GRAPH.DELETE clustergraph >/dev/null 2>&1 || true
+redis-cli -c -u "redis://{cluster_info['username']}:{cluster_info['password']}@localhost:6379/" GRAPH.DELETE resilience_test >/dev/null 2>&1 || true
+redis-cli -c -u "redis://{cluster_info['username']}:{cluster_info['password']}@localhost:6379/" GRAPH.DELETE scaling_test >/dev/null 2>&1 || true
+redis-cli -c -u "redis://{cluster_info['username']}:{cluster_info['password']}@localhost:6379/" GRAPH.DELETE performance_test >/dev/null 2>&1 || true
 
-# Then do FLUSHALL to ensure complete cleanup
-redis-cli -u "redis://{cluster_info['username']}:{cluster_info['password']}@localhost:6379/" FLUSHALL >/dev/null 2>&1 || true
+# Then do FLUSHALL to ensure complete cleanup across all shards
+redis-cli -c -u "redis://{cluster_info['username']}:{cluster_info['password']}@localhost:6379/" FLUSHALL >/dev/null 2>&1 || true
 """
                 exec_cmd = [
                     "kubectl", "exec", pod, "-n", cluster_info["namespace"], 

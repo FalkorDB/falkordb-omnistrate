@@ -295,6 +295,7 @@ class TestStandaloneIntegration:
                     break
             time.sleep(5)
 
+    @pytest.mark.skip(reason="User creation now handled via environment variables in startup scripts, not OpsRequest")
     def test_standalone_user_creation_opsrequest(self, k8s_custom_client, deployed_standalone_cluster, namespace):
         """Test that user creation OpsRequest was executed."""
         cluster_name = deployed_standalone_cluster["metadata"]["name"]
@@ -538,3 +539,69 @@ class TestStandaloneIntegration:
             logger.info("=" * 60)
         
         logger.info("Standalone OOM behavior test completed successfully")
+
+    def test_standalone_extra_user_creation(self, k8s_client, deployed_standalone_cluster, namespace):
+        """Test that extra user can be created via environment variables during deployment."""
+        cluster_name = deployed_standalone_cluster["metadata"]["name"]
+        
+        # Get pod name
+        pods = k8s_client.list_namespaced_pod(
+            namespace=namespace,
+            label_selector=f"app.kubernetes.io/instance={cluster_name}"
+        )
+        
+        assert len(pods.items) > 0, "No pods found for cluster"
+        pod_name = pods.items[0].metadata.name
+        
+        # Check if /data/users.acl file exists and contains users
+        try:
+            exec_command = [
+                "sh", "-c",
+                "cat /data/users.acl | grep -c 'user '"
+            ]
+            
+            result = subprocess.run(
+                ["kubectl", "exec", pod_name, "-n", namespace, "--"] + exec_command,
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=10
+            )
+            
+            user_count = int(result.stdout.strip())
+            logger.info(f"✓ Found {user_count} users in ACL file")
+            
+            # Should have at least default user
+            assert user_count > 0, "No users found in ACL file"
+            
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to check ACL file: {e.stderr}")
+            pytest.fail(f"Could not verify ACL file content: {e}")
+        
+        # Verify ACL file content has expected format
+        try:
+            exec_command = [
+                "sh", "-c",
+                "cat /data/users.acl"
+            ]
+            
+            result = subprocess.run(
+                ["kubectl", "exec", pod_name, "-n", namespace, "--"] + exec_command,
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=10
+            )
+            
+            acl_content = result.stdout
+            logger.info(f"ACL file content:\n{acl_content}")
+            
+            # Verify basic ACL format (user <name> on ...)
+            assert "user " in acl_content, "ACL file missing 'user' entries"
+            assert " on " in acl_content, "ACL file missing 'on' keyword in user entries"
+            
+            logger.info("✓ ACL file format is valid")
+            
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to read ACL file: {e.stderr}")
+            pytest.fail(f"Could not read ACL file: {e}")

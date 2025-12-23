@@ -70,21 +70,24 @@ class TestStandaloneManifests:
         assert not errors, f"FALKORDB_ARGS validation failed: {errors}"
 
     def test_standalone_user_creation_job(self, helm_render, standalone_values, user_config_sample):
-        """Test user creation Job for standalone mode."""
+        """Test that user creation happens at startup via environment variables, not via Job."""
         values = {
             **standalone_values,
             "falkordbUser": user_config_sample
         }
         manifests = helm_render(values)
         
+        # User creation now happens at startup via environment variables
+        # Verify no Job is created for user creation anymore
         job = find_manifest_by_kind(manifests, "Job")
-        assert job is not None, "User creation Job not found"
+        assert job is None, "User creation Job should not be created (moved to startup scripts)"
         
-        errors = validate_job_configuration(job, user_config_sample["username"])
-        assert not errors, f"Job validation failed: {errors}"
+        # Verify cluster manifest exists (user creation is handled by startup scripts)
+        cluster = find_manifest_by_kind(manifests, "Cluster")
+        assert cluster is not None, "Cluster manifest not found"
 
     def test_standalone_no_job_when_no_user_config(self, helm_render, standalone_values):
-        """Test that no Job is created when user config is empty."""
+        """Test that no Job is created (user creation now happens at startup)."""
         values = {
             **standalone_values,
             "falkordbUser": {
@@ -94,8 +97,9 @@ class TestStandaloneManifests:
         }
         manifests = helm_render(values)
         
+        # User creation jobs are no longer created - this functionality moved to startup scripts
         job = find_manifest_by_kind(manifests, "Job")
-        assert job is None, "Job should not be created when user config is empty"
+        assert job is None, "Job should not be created (user creation moved to startup scripts)"
 
     def test_standalone_custom_secret_configuration(self, helm_render, standalone_values):
         """Test standalone with custom secret configuration."""

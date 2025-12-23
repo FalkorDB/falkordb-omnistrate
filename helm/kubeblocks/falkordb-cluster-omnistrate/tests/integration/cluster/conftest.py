@@ -8,7 +8,6 @@ from ...utils.kubernetes import (
     wait_for_pods_ready,
     kubectl_apply_manifest,
     get_cluster_pods,
-    wait_for_ops_request_completion,
 )
 
 logger = logging.getLogger(__name__)
@@ -100,17 +99,6 @@ def shared_cluster(helm_render, namespace, skip_cleanup, cluster_integration_val
             f"app.kubernetes.io/instance={cluster_name}", namespace, timeout=600
         )
         
-        # Wait for user creation job (optional - might not be needed if manual user creation works)
-        logger.info(f"Checking for user creation job completion {cluster_name}-create-falkordb-user on {namespace}...")
-        try:
-            wait_for_ops_request_completion(
-                f"{cluster_name}-create-falkordb-user", namespace, timeout=180
-            )
-            logger.info("User creation OpsRequest completed successfully")
-        except Exception as e:
-            logger.warning(f"User creation OpsRequest not found or failed: {e}")
-            logger.info("Proceeding without OpsRequest - manual user credentials will be used")
-        
         # Get cluster pods for tests to use
         cluster_pods = get_cluster_pods(cluster_name, namespace)
         assert len(cluster_pods) >= 6, f"Expected at least 6 pods for cluster, got {len(cluster_pods)}"
@@ -191,14 +179,6 @@ def shared_cluster_hostnetwork(helm_render, namespace, skip_cleanup, cluster_int
 
         logger.info("Waiting for all pods to be ready...")
         assert wait_for_pods_ready(f"app.kubernetes.io/instance={cluster_name}", namespace, timeout=600)
-
-        logger.info(f"Checking for user creation job completion {cluster_name}-create-falkordb-user on {namespace}...")
-        try:
-            wait_for_ops_request_completion(f"{cluster_name}-create-falkordb-user", namespace, timeout=180)
-            logger.info("User creation OpsRequest completed successfully")
-        except Exception as e:
-            logger.warning(f"User creation OpsRequest not found or failed: {e}")
-            logger.info("Proceeding without OpsRequest - manual user credentials will be used")
 
         cluster_pods = get_cluster_pods(cluster_name, namespace)
         assert len(cluster_pods) >= 6, f"Expected at least 6 pods for cluster, got {len(cluster_pods)}"

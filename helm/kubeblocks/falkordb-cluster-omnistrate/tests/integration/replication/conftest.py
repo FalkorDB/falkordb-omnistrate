@@ -9,7 +9,6 @@ from ...utils.kubernetes import (
     wait_for_pods_ready,
     kubectl_apply_manifest,
     get_cluster_pods,
-    wait_for_ops_request_completion,
 )
 
 logger = logging.getLogger(__name__)
@@ -122,6 +121,10 @@ def shared_replication_cluster(helm_render, namespace, skip_cleanup, replication
         
         logger.info(f"Using credentials - username: {username}")
         
+        # Best-effort primary/replica selection for tests that expect explicit entries
+        primary_pod = falkordb_pods[0] if falkordb_pods else None
+        replica_pod = falkordb_pods[1] if len(falkordb_pods) > 1 else None
+
         cluster_info = {
             "name": cluster_name,
             "namespace": namespace,
@@ -129,7 +132,9 @@ def shared_replication_cluster(helm_render, namespace, skip_cleanup, replication
             "falkordb_pods": falkordb_pods,
             "sentinel_pods": sentinel_pods,
             "username": username,
-            "password": password
+            "password": password,
+            "primary_pod": primary_pod,
+            "replica_pod": replica_pod,
         }
         
         yield cluster_info

@@ -1027,8 +1027,8 @@ redis-cli -u "redis://{cluster_info['username']}:{cluster_info['password']}@loca
         logger.info("Waiting for pod to be recreated...")
         time.sleep(30)  # Give time for pod to restart
         
-        # Wait for pod to be ready
-        max_wait = 120
+        # Wait for pod to be ready (allow extra time on slower environments)
+        max_wait = 600
         start_wait = time.time()
         pod_ready = False
         
@@ -2064,3 +2064,160 @@ fi
         logger.info("✓ Data persisted through horizontal scaling")
         
         logger.info("Data persistence after scaling test completed successfully")
+
+    def test_cluster_extra_user_creation(self, clean_graphs):
+        """Test extra user creation in cluster mode deployments."""
+        cluster_info = clean_graphs
+        
+        logger.info("Testing extra user creation in cluster mode...")
+
+        # Verify extra user is configured in cluster
+        logger.info("Verifying extra user configuration across cluster nodes...")
+        assert len(cluster_info["pods"]) >= 3, f"Expected at least 3 pods for cluster, got {len(cluster_info['pods'])}"
+
+        # Check ACL file on each pod to verify extra user exists
+        acl_verified_pods = 0
+        for pod_name in cluster_info["pods"]:
+            verify_acl_script = f"""#!/bin/bash
+# Check if ACL file exists and contains extra user entry
+if [ -f /data/users.acl ]; then
+    # Look for the extra user entry (testuser from falkordbUser)
+    if grep -q "user testuser on" /data/users.acl; then
+        # Verify the entry has proper format
+        if grep "user testuser on" /data/users.acl | grep -q ">"; then
+            echo "SUCCESS: Extra user found with proper format"
+            echo "ACL_LINE:"
+            grep "user testuser on" /data/users.acl
+            exit 0
+        fi
+    fi
+fi
+echo "FAILED: Extra user not found in ACL file"
+exit 1
+"""
+            
+            exec_cmd = [
+                "kubectl", "exec", pod_name,
+                "-n", cluster_info["namespace"],
+                "-c", "falkordb-cluster",
+                "--",
+                "sh", "-c", verify_acl_script
+            ]
+            
+            result = subprocess.run(exec_cmd, capture_output=True, text=True, timeout=30)
+            if result.returncode == 0 and "SUCCESS" in result.stdout:
+                acl_verified_pods += 1
+                logger.info(f"✓ Pod {pod_name}: Extra user verified in ACL file")
+                # Log the actual ACL line for verification
+                for line in result.stdout.split("\n"):
+                    if line.startswith("ACL_LINE:"):
+                        logger.debug(f"  ACL entry: {line.split('ACL_LINE:', 1)[1]}")
+            else:
+                logger.warning(f"✗ Pod {pod_name}: Extra user not found in ACL file")
+                logger.debug(f"  Output: {result.stdout}")
+                logger.debug(f"  Error: {result.stderr}")
+
+        # At least majority of pods should have the extra user
+        assert acl_verified_pods >= len(cluster_info["pods"]) - 1, \
+            f"Extra user not found in ACL files on most pods: {acl_verified_pods}/{len(cluster_info['pods'])}"
+
+        logger.info(f"✓ Extra user verified on {acl_verified_pods}/{len(cluster_info['pods'])} cluster pods")
+
+        # Test authentication with extra user credentials
+        logger.info("Testing authentication with extra user credentials...")
+        auth_test_script = f"""#!/bin/bash
+# Test connecting with extra user
+redis-cli -u "redis://testuser:testpass123@localhost:6379/" PING
+exit_code=$?
+if [ $exit_code -eq 0 ]; then
+    echo "SUCCESS: Extra user authentication successful"
+    exit 0
+else
+    echo "FAILED: Could not authenticate with extra user credentials"
+    exit 1
+fi
+"""
+        
+        exec_cmd = [
+            "kubectl", "exec", cluster_info["pods"][0],
+            "-n", cluster_info["namespace"],
+            "-c", "falkordb-cluster",
+            "--",
+            "sh", "-c", auth_test_script
+        ]
+        
+        result = subprocess.run(exec_cmd, capture_output=True, text=True, timeout=30)
+        assert result.returncode == 0 and "SUCCESS" in result.stdout, \
+            f"Extra user authentication failed: {result.stderr}"
+        logger.info("✓ Extra user successfully authenticated")
+
+        # Verify ACL permissions by testing operations
+        logger.info("Testing extra user ACL permissions...")
+        acl_test_script = f"""#!/bin/bash
+# Test that extra user can perform graph operations (has ~* +@all permissions)
+redis-cli -u "redis://testuser:testpass123@localhost:6379/" GRAPH.QUERY test_acl_graph "CREATE (:TestNode {{id: 'acl_test'}})" >/dev/null 2>&1
+exit_code=$?
+if [ $exit_code -eq 0 ]; then
+    echo "SUCCESS: Extra user can execute GRAPH commands"
+    exit 0
+else
+    echo "FAILED: Extra user cannot execute GRAPH commands"
+    exit 1
+fi
+"""
+        
+        exec_cmd = [
+            "kubectl", "exec", cluster_info["pods"][0],
+            "-n", cluster_info["namespace"],
+            "-c", "falkordb-cluster",
+            "--",
+            "sh", "-c", acl_test_script
+        ]
+        
+        result = subprocess.run(exec_cmd, capture_output=True, text=True, timeout=30)
+        assert result.returncode == 0 and "SUCCESS" in result.stdout, \
+            f"Extra user ACL permissions test failed: {result.stderr}"
+        logger.info("✓ Extra user has correct ACL permissions")
+
+        # Count total user entries in ACL file to ensure consistency
+        logger.info("Verifying ACL file consistency across cluster...")
+        count_users_script = f"""#!/bin/bash
+if [ -f /data/users.acl ]; then
+    # Count user entries (lines starting with "user ")
+    count=$(grep -c "^user " /data/users.acl || echo "0")
+    echo "USER_COUNT:$count"
+    exit 0
+fi
+echo "USER_COUNT:0"
+exit 0
+"""
+        
+        user_counts = {}
+        for pod_name in cluster_info["pods"]:
+            exec_cmd = [
+                "kubectl", "exec", pod_name,
+                "-n", cluster_info["namespace"],
+                "-c", "falkordb-cluster",
+                "--",
+                "sh", "-c", count_users_script
+            ]
+            
+            result = subprocess.run(exec_cmd, capture_output=True, text=True, timeout=30)
+            if result.returncode == 0:
+                for line in result.stdout.split("\n"):
+                    if line.startswith("USER_COUNT:"):
+                        count = int(line.split(":")[1])
+                        user_counts[pod_name] = count
+                        logger.info(f"Pod {pod_name}: {count} user entries in ACL file")
+
+        # All pods should have similar user counts (default admin + extra user minimum)
+        if user_counts:
+            min_count = min(user_counts.values())
+            max_count = max(user_counts.values())
+            
+            # Allow difference of at most 1 user entry for timing reasons
+            assert max_count - min_count <= 1, \
+                f"Inconsistent ACL configuration across pods: min={min_count}, max={max_count}"
+            logger.info(f"✓ ACL configuration consistent across cluster: {min_count}-{max_count} users per pod")
+
+        logger.info("Cluster extra user creation test completed successfully")

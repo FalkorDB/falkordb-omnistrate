@@ -496,9 +496,7 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
         instance_name = f"{cfg['instance_name']}-{module_name}"[:50]  # Limit length
 
         logging.info(f"Creating instance: {instance_name}")
-    inst = OmnistrateFleetInstance(omnistrate, inst_cfg)
-
-
+        inst = OmnistrateFleetInstance(omnistrate, inst_cfg)
         inst.create(
             wait_for_ready=True,
             deployment_cloud_provider=cfg["cloud_provider"],

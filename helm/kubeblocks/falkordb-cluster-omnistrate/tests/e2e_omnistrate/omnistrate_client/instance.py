@@ -44,6 +44,51 @@ class OmnistrateFleetInstance:
         self._network_type = cfg.get("network_type", "PUBLIC")
         self.falkordb_password = None
 
+    @classmethod
+    def from_existing_instance(
+        cls,
+        fleet_api,
+        cfg: dict,
+        instance_id: str,
+        falkordb_password: str,
+    ):
+        """
+        Create instance manager from an existing Omnistrate instance.
+        
+        Args:
+            fleet_api: OmnistrateFleetAPI instance
+            cfg: Configuration dictionary with instance parameters
+            instance_id: ID of existing instance
+            falkordb_password: FalkorDB password for the instance
+            
+        Returns:
+            OmnistrateFleetInstance initialized with existing instance details
+            
+        Raises:
+            Exception: If instance details cannot be fetched or is not in valid state
+        """
+        inst = cls(fleet_api, cfg)
+        inst.instance_id = instance_id
+        inst.falkordb_password = falkordb_password
+        
+        logging.info(f"Loading existing instance: {instance_id}")
+        
+        # Fetch instance details to validate it exists and is accessible
+        details = inst.get_instance_details()
+        status = details.get("status")
+        
+        if status not in ("RUNNING", "STOPPED"):
+            raise Exception(
+                f"Instance {instance_id} has invalid status: {status}. "
+                f"Expected RUNNING or STOPPED."
+            )
+        
+        if status == "STOPPED":
+            logging.warning(f"Instance {instance_id} is in STOPPED state; will wait for RUNNING")
+        
+        logging.info(f"Successfully loaded existing instance: {instance_id} (status={status})")
+        return inst
+
     def create(
         self,
         wait_for_ready: bool,

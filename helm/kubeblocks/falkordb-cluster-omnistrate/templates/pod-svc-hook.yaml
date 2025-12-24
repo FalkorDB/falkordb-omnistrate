@@ -22,34 +22,42 @@ data:
     CLUSTER='{{ include "kblib.clusterName" . }}'
     HOSTNAME='{{ .Values.hostname }}'
     PORT='{{ .Values.port }}'
-    NODE_PORT_ENABLED='{{ .Values.nodePortEnabled }}'
-    echo "Waiting for cluster $CLUSTER to be Running..."
-    while true; do
-      PHASE=$(kubectl get cluster "$CLUSTER" -n "$NAMESPACE" -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
-      [ "$PHASE" = "Running" ] && break
-      echo "Cluster phase: $PHASE, waiting..."; sleep 5
-    done
-    echo "Waiting for pods to be Ready..."
-    kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance="$CLUSTER" -n "$NAMESPACE" --timeout=300s || true
-    create_svc_for_pods() {
-      local selector="$1"
-      echo "Listing pods with selector: $selector"
-      pods=$(kubectl get pods -n "$NAMESPACE" -l "$selector" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')
-      echo "$pods" | while read -r POD; do
-        [ -z "$POD" ] && continue
-        SVC_NAME="${POD}-external"
-        FQDN="${POD}.${HOSTNAME}"
+    REPLICAS='{{ .Values.replicas }}'
+    
+    # Get all shards (InstanceSets) in the cluster
+    echo "Getting shard information from InstanceSets..."
+    shards=$(kubectl get instancesets -n "$NAMESPACE" -l app.kubernetes.io/instance="$CLUSTER",apps.kubeblocks.io/sharding-name=shard -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')
+    
+    if [ -z "$shards" ]; then
+      echo "No InstanceSets found, nothing to do"
+      exit 0
+    fi
+    
+    # Create services for each shard and replica combination
+    echo "$shards" | while read -r SHARD; do
+      [ -z "$SHARD" ] && continue
+      
+      # Create services for each replica in this shard
+      replica_idx=0
+      while [ $replica_idx -lt $REPLICAS ]; do
+        POD_NAME="${SHARD}-${replica_idx}"
+        SVC_NAME="${POD_NAME}-external"
+        FQDN="${POD_NAME}.${HOSTNAME}"
+        
         if kubectl get svc "$SVC_NAME" -n "$NAMESPACE" >/dev/null 2>&1; then
           echo "Service $SVC_NAME already exists"
-          continue
+        else
+          echo "Creating service $SVC_NAME"
+          kubectl create service clusterip "$SVC_NAME" --tcp="$PORT:$PORT" -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+          kubectl patch svc "$SVC_NAME" -n "$NAMESPACE" --type merge -p '{"metadata":{"annotations":{"external-dns.alpha.kubernetes.io/hostname":"'"$FQDN"'"}}}'  || true
+          kubectl patch svc "$SVC_NAME" -n "$NAMESPACE" --type merge -p '{"spec":{"selector":{"apps.kubeblocks.io/pod-name":"'"$POD_NAME"'"}}}'  || true
         fi
-        echo "Creating service $SVC_NAME"
-        kubectl create service clusterip "$SVC_NAME" --tcp="$PORT:$PORT" -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-        kubectl patch svc "$SVC_NAME" -n "$NAMESPACE" --type merge -p '{"metadata":{"annotations":{"external-dns.alpha.kubernetes.io/hostname":"'"$FQDN"'"}}}'  || true
-        kubectl patch svc "$SVC_NAME" -n "$NAMESPACE" --type merge -p '{"spec":{"selector":{"apps.kubeblocks.io/pod-name":"'"$POD"'"}}}'  || true
+        
+        replica_idx=$((replica_idx + 1))
       done
-    }
-    create_svc_for_pods "app.kubernetes.io/instance=${CLUSTER},apps.kubeblocks.io/component-name=falkordb"
+    done
+    
+    echo "Service creation complete"
 ---
 apiVersion: batch/v1
 kind: Job

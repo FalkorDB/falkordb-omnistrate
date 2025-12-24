@@ -24,21 +24,60 @@ log = logging.getLogger(__name__)
 
 def add_data(instance, ssl=False, key="test", n=1, network_type="PUBLIC"):
     """
-    Add data entries to a graph.
+    Add data entries to a graph using parallel workers scaled by n.
     
     Args:
         instance: OmnistrateFleetInstance
         ssl: Use SSL connection
         key: Graph name
-        n: Number of entries to add
+        n: Number of entries to add (also scales number of workers)
         network_type: PUBLIC or INTERNAL
     """
     logging.info(f"Adding {n} data entries to graph '{key}'")
     db = instance.create_connection(ssl=ssl, network_type=network_type)
     g = db.select_graph(key)
-    for _ in range(n):
-        g.query("CREATE (n:Person {name: 'Alice'})")
-    logging.debug(f"Successfully added {n} entries to graph '{key}'")
+    
+    # Scale workers based on n: larger n uses more parallelism
+    if n <= 10:
+        num_workers = 1
+    elif n <= 100:
+        num_workers = 2
+    elif n <= 1000:
+        num_workers = 4
+    else:
+        num_workers = max(4, min(n // 100, 16))  # Scale up to max 16 workers
+    
+    entries_per_worker = n // num_workers
+    remainder = n % num_workers
+    
+    def worker(count):
+        """Worker that adds entries to the graph."""
+        try:
+            for _ in range(count):
+                g.query("CREATE (n:Person {name: 'Alice'})")
+        except Exception as e:
+            logging.exception(f"Error in add_data worker: {e}")
+            raise
+    
+    logging.debug(f"Using {num_workers} workers to add {n} entries (base: {entries_per_worker} per worker)")
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+        futures = []
+        for i in range(num_workers):
+            count = entries_per_worker + (1 if i < remainder else 0)
+            futures.append(executor.submit(worker, count))
+        
+        # Wait for all workers to complete
+        concurrent.futures.wait(futures)
+        
+        # Check for errors
+        for f in futures:
+            exc = f.exception()
+            if exc is not None:
+                raise AssertionError(f"Failed to add data: {exc}") from exc
+    
+    logging.debug(f"Successfully added {n} entries to graph '{key}' using {num_workers} workers")
+
 
 
 def has_data(instance, ssl=False, key="test", min_rows=1, network_type="PUBLIC"):
@@ -203,7 +242,7 @@ def stress_oom(
         ssl: Use SSL connection
         query_size: Size of queries (small, medium, big)
         network_type: PUBLIC or INTERNAL
-        stress_oomers: Number of parallel stress workers
+        stress_oomers: Base number of parallel stress workers (adjusted by query size)
         is_cluster: Whether instance is a cluster topology
         
     Raises:
@@ -216,6 +255,10 @@ def stress_oom(
     big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
     medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
+
+    # Determine number of workers based on query size
+    size_multiplier = {"small": 5, "medium": 20, "big": 50}
+    num_clients = int(os.environ.get("STRESS_OOM_CLIENTS", stress_oomers * size_multiplier.get(query_size, 1)))
 
     if query_size in ("medium", "big"):
         try:
@@ -248,8 +291,7 @@ def stress_oom(
                 logging.exception("Unexpected error during stress test in worker")
                 raise
 
-    num_clients = int(os.environ.get("STRESS_OOM_CLIENTS", stress_oomers))
-    logging.info(f"Running stress test with {num_clients} parallel clients")
+    logging.info(f"Running stress test with {num_clients} parallel clients (query_size={query_size})")
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_clients) as executor:
         futures = [executor.submit(stress_worker) for _ in range(num_clients)]

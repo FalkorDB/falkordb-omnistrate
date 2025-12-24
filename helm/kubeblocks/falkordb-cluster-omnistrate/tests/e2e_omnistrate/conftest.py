@@ -47,6 +47,11 @@ def pytest_addoption(parser):
     add("--tier-name", default=os.getenv("TIER_NAME", "Free"))
     add("--resource-key", default=os.getenv("RESOURCE_KEY", "standalone"))
     add("--instance-name", default=os.getenv("INSTANCE_NAME", "e2e-test"))
+    add("--existing-instance-id", default=os.getenv("EXISTING_INSTANCE_ID"))
+    add(
+        "--existing-instance-password",
+        default=os.getenv("EXISTING_INSTANCE_PASSWORD"),
+    )
     add("--instance-type", default=os.getenv("INSTANCE_TYPE", "t3.medium"))
     add("--storage-size", default=os.getenv("STORAGE_SIZE", "30"))
     add(
@@ -116,6 +121,8 @@ def cfg(pytestconfig):
         "tier_name": opt("--tier-name"),
         "resource_key": opt("--resource-key"),
         "instance_name": opt("--instance-name"),
+        "existing_instance_id": opt("--existing-instance-id"),
+        "existing_instance_password": opt("--existing-instance-password"),
         "instance_type": opt("--instance-type"),
         "storage_size": opt("--storage-size"),
         "tls": opt("--tls"),
@@ -214,6 +221,147 @@ def _resolve_hostname(endpoint: str, timeout=300, interval=1):
             time.sleep(interval)
     logging.error(f"DNS not resolved for {endpoint} within {timeout}s")
     raise TimeoutError(f"DNS not resolved for {endpoint} within {timeout}s")
+
+
+def _resolve_endpoints(inst: OmnistrateFleetInstance, cfg: dict, timeout=300, interval=5):
+    """Resolve node and sentinel DNS names to their A records (multiple IPs per DNS).
+
+    Each topology should have:
+    - One node DNS name resolving to X IPs (pods)
+    - One sentinel DNS name resolving to Y IPs (pods) - if applicable
+    
+    Minimum pod counts per topology:
+    - standalone: at least 1 IP behind node DNS
+    - replication: at least 2 IPs behind node DNS, at least 3 IPs behind sentinel DNS
+    - cluster: at least 6 IPs behind node DNS
+    """
+
+    def _resolve_dns_to_ips(dns_name: str) -> set:
+        """Resolve a DNS name to its A record IP addresses."""
+        infos = socket.getaddrinfo(dns_name, None, socket.AF_INET)
+        ips = {info[4][0] for info in infos}
+        if not ips:
+            raise RuntimeError(f"No A records resolved for {dns_name}")
+        logging.debug(f"Resolved {dns_name} → {len(ips)} A record(s): {ips}")
+        return ips
+
+    topology = (cfg.get("resource_key") or "").lower()
+    logging.info(f"Starting A record resolution for {topology} topology (timeout={timeout}s)")
+    
+    start = time.time()
+    last_err = None
+    attempt = 0
+
+    while time.time() - start < timeout:
+        attempt += 1
+        elapsed = time.time() - start
+        try:
+            logging.debug(f"[Attempt {attempt}] Fetching connection endpoints (elapsed={elapsed:.1f}s)")
+            endpoints = inst.get_connection_endpoints()
+        except Exception as e:
+            last_err = e
+            logging.debug(f"[Attempt {attempt}] Failed to fetch endpoints: {e}")
+            time.sleep(interval)
+            continue
+
+        # Extract unique DNS names for nodes and sentinels
+        node_dns_names = set()
+        sentinel_dns_names = set()
+        
+        for ep in endpoints:
+            ep_id = (ep.get("id") or "").lower()
+            dns_name = ep.get("endpoint")
+            
+            if ep_id.startswith("node"):
+                node_dns_names.add(dns_name)
+            elif ep_id.startswith("sentinel"):
+                sentinel_dns_names.add(dns_name)
+        
+        logging.debug(f"[Attempt {attempt}] Found node DNS: {node_dns_names}, sentinel DNS: {sentinel_dns_names}")
+
+        if not node_dns_names:
+            last_err = RuntimeError(f"No node DNS endpoints found")
+            logging.debug(f"[Attempt {attempt}] {last_err}")
+            time.sleep(interval)
+            continue
+
+        # Validate minimum DNS counts per topology
+        if topology == "replication":
+            if not sentinel_dns_names:
+                last_err = RuntimeError(f"Replication requires sentinel DNS but none found")
+                logging.debug(f"[Attempt {attempt}] {last_err}")
+                time.sleep(interval)
+                continue
+        
+        # Resolve all DNS names to their A records this iteration
+        try:
+            logging.info(f"[Attempt {attempt}] Resolving {len(node_dns_names)} node DNS name(s) to A records")
+            resolved_nodes = {}
+            for dns_name in node_dns_names:
+                ips = _resolve_dns_to_ips(dns_name)
+                resolved_nodes[dns_name] = ips
+            
+            resolved_sentinels = {}
+            if sentinel_dns_names:
+                logging.info(f"[Attempt {attempt}] Resolving {len(sentinel_dns_names)} sentinel DNS name(s) to A records")
+                for dns_name in sentinel_dns_names:
+                    ips = _resolve_dns_to_ips(dns_name)
+                    resolved_sentinels[dns_name] = ips
+
+            # Validate minimum IP counts per topology
+            node_ips_count = sum(len(ips) for ips in resolved_nodes.values())
+            sentinel_ips_count = sum(len(ips) for ips in resolved_sentinels.values())
+            
+            if topology == "replication":
+                if node_ips_count < 2:
+                    last_err = RuntimeError(
+                        f"Replication expects ≥2 node IPs but got {node_ips_count}"
+                    )
+                    logging.debug(f"[Attempt {attempt}] {last_err}")
+                    time.sleep(interval)
+                    continue
+                if sentinel_ips_count < 3:
+                    last_err = RuntimeError(
+                        f"Replication expects ≥3 sentinel IPs but got {sentinel_ips_count}"
+                    )
+                    logging.debug(f"[Attempt {attempt}] {last_err}")
+                    time.sleep(interval)
+                    continue
+            elif topology == "cluster":
+                if node_ips_count < 6:
+                    last_err = RuntimeError(
+                        f"Cluster expects ≥6 node IPs but got {node_ips_count}"
+                    )
+                    logging.debug(f"[Attempt {attempt}] {last_err}")
+                    time.sleep(interval)
+                    continue
+            else:  # standalone or others
+                if node_ips_count < 1:
+                    last_err = RuntimeError(
+                        f"Standalone expects ≥1 node IP but got {node_ips_count}"
+                    )
+                    logging.debug(f"[Attempt {attempt}] {last_err}")
+                    time.sleep(interval)
+                    continue
+            
+            logging.info(
+                f"All DNS names resolved successfully: "
+                f"node DNS={list(resolved_nodes.keys())} with {node_ips_count} IPs, "
+                f"sentinel DNS={list(resolved_sentinels.keys())} with {sentinel_ips_count} IPs "
+                f"(elapsed={time.time() - start:.1f}s)"
+            )
+            return {
+                "node_endpoints": resolved_nodes,
+                "sentinel_endpoints": resolved_sentinels,
+            }
+        except Exception as e:
+            last_err = e
+            logging.debug(f"[Attempt {attempt}] A record resolution failed: {e}")
+            time.sleep(interval)
+            continue
+
+    raise TimeoutError(f"A record resolution not achieved within {timeout}s: {last_err}")
+
 
 
 def _reset_instance_data(inst: OmnistrateFleetInstance) -> None:
@@ -321,49 +469,64 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
         "storage_size": cfg["storage_size"],
     }
     
-    inst = OmnistrateFleetInstance(omnistrate, inst_cfg)
+    existing_instance_id = cfg.get("existing_instance_id")
+    created_new_instance = False
 
-    password = secrets.token_hex(16)
-    
-    # Generate unique instance name for this test module
-    module_name = Path(str(request.fspath)).stem
-    instance_name = f"{cfg['instance_name']}-{module_name}"[:50]  # Limit length
-    
-    logging.info(f"Creating instance: {instance_name}")
-    
-    inst.create(
-        wait_for_ready=True,
-        deployment_cloud_provider=cfg["cloud_provider"],
-        network_type=cfg["network_type"],
-        deployment_region=cfg["region"],
-        name=instance_name,
-        description=f"E2E test module: {module_name}",
-        falkordb_user="falkordb",
-        falkordb_password=password,
-        nodeInstanceType=cfg["instance_type"],
-        storageSize=cfg["storage_size"],
-        enableTLS=cfg["tls"],
-        RDBPersistenceConfig=cfg["rdb_config"],
-        AOFPersistenceConfig=cfg["aof_config"],
-        maxMemory=cfg["maxmemory"],
-        hostCount=cfg["host_count"],
-        clusterReplicas=cfg["cluster_replicas"],
-        multiZoneEnabled=cfg["multi_zone"],
-        custom_network_id=network.network_id if network else None,
-    )
+    if existing_instance_id:
+        if not cfg.get("existing_instance_password"):
+            raise RuntimeError(
+                "EXISTING_INSTANCE_PASSWORD/--existing-instance-password is required when reusing an instance"
+            )
 
-    # Wait for DNS propagation on main endpoint
-    ep = inst.get_cluster_endpoint(network_type=cfg["network_type"])
-    if ep:
-        _resolve_hostname(ep["endpoint"])
+        logging.info(f"Reusing existing instance: {existing_instance_id}")
+        inst = OmnistrateFleetInstance.from_existing_instance(
+            omnistrate,
+            inst_cfg,
+            instance_id=existing_instance_id,
+            falkordb_password=cfg["existing_instance_password"],
+        )
+        inst.wait_for_instance_status(timeout_seconds=inst_cfg["ready_timeout"])
+        _resolve_endpoints(inst, cfg)
+    else:
+        password = secrets.token_hex(16)
+        created_new_instance = True
+
+        # Generate unique instance name for this test module
+        module_name = Path(str(request.fspath)).stem
+        instance_name = f"{cfg['instance_name']}-{module_name}"[:50]  # Limit length
+
+        logging.info(f"Creating instance: {instance_name}")
+
+        inst.create(
+            wait_for_ready=True,
+            deployment_cloud_provider=cfg["cloud_provider"],
+            network_type=cfg["network_type"],
+            deployment_region=cfg["region"],
+            name=instance_name,
+            description=f"E2E test module: {module_name}",
+            falkordb_user="falkordb",
+            falkordb_password=password,
+            nodeInstanceType=cfg["instance_type"],
+            storageSize=cfg["storage_size"],
+            enableTLS=cfg["tls"],
+            RDBPersistenceConfig=cfg["rdb_config"],
+            AOFPersistenceConfig=cfg["aof_config"],
+            maxMemory=cfg["maxmemory"],
+            hostCount=cfg["host_count"],
+            clusterReplicas=cfg["cluster_replicas"],
+            multiZoneEnabled=cfg["multi_zone"],
+            custom_network_id=network.network_id if network else None,
+        )
+
+        # Wait for DNS propagation on all advertised endpoints per topology
+        _resolve_endpoints(inst, cfg)
+        inst.falkordb_password = password
+
+        logging.info(f"Instance {instance_name} ready for testing")
 
     # Attach configuration and credentials for test access
-    # Keep Omnistrate API config keys while also exposing test config keys.
     inst._cfg = {**inst_cfg, **dict(cfg)}
-    inst.falkordb_password = password
     inst._product_tier_id = tier.product_tier_id
-
-    logging.info(f"Instance {instance_name} ready for testing")
     
     try:
         yield inst
@@ -373,16 +536,20 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
         skip_teardown = cfg["skip_teardown"] or (failed and cfg["persist_on_fail"])
         
         if not skip_teardown:
-            logging.info(f"Deleting instance {instance_name}")
-            try:
-                inst.delete(network is not None)
-            except Exception as e:
-                logging.error(f"Failed to delete instance: {e}")
+            if created_new_instance:
+                logging.info("Deleting instance created for this test run")
+                try:
+                    inst.delete(network is not None)
+                except Exception as e:
+                    logging.error(f"Failed to delete instance: {e}")
+            else:
+                logging.info(
+                    "Skipping deletion because an existing instance was reused"
+                )
         else:
             logging.warning(
-                f"Instance {instance_name} retained "
-                f"(failed={failed}, persist_on_fail={cfg['persist_on_fail']}, "
-                f"skip_teardown={cfg['skip_teardown']})"
+                f"Instance retained (existing={not created_new_instance}, failed={failed}, "
+                f"persist_on_fail={cfg['persist_on_fail']}, skip_teardown={cfg['skip_teardown']})"
             )
 
 

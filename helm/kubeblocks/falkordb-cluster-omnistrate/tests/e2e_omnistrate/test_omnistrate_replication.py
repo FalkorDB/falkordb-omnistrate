@@ -47,10 +47,7 @@ def _run_step(cfg, name):
 def _sentinel_client(instance, ssl):
     """Create a Sentinel client for the replication instance."""
     eps = instance.get_connection_endpoints()
-    nodes = sorted(
-        [e for e in eps if e["id"].startswith("node-")], key=lambda x: x["id"]
-    )
-    sent = next(e for e in eps if e["id"].startswith("sentinel-"))
+    sent = next(e for e in eps if e["id"].startswith("sentinel"))
     retry = Retry(
         ExponentialBackoff(base=1, cap=10),
         retries=40,
@@ -59,8 +56,6 @@ def _sentinel_client(instance, ssl):
     return Sentinel(
         sentinels=[
             (sent["endpoint"], sent["ports"][0]),
-            (nodes[0]["endpoint"], nodes[0]["ports"][1]),
-            (nodes[1]["endpoint"], nodes[1]["ports"][1]),
         ],
         sentinel_kwargs={
             "username": "falkordb",
@@ -115,7 +110,7 @@ class TestOmnistrateReplication:
         
         # Verify sentinel connectivity
         sent = _sentinel_client(instance, ssl)
-        master_info = sent.discover_master("mymaster")
+        master_info = sent.discover_master("master")
         assert master_info is not None, "Failed to discover master via Sentinel"
         logging.info(f"Master discovered at: {master_info}")
 
@@ -213,7 +208,7 @@ class TestOmnistrateReplication:
         
         # Get sentinel client
         sent = _sentinel_client(instance, ssl)
-        old_master = sent.discover_master("mymaster")
+        old_master = sent.discover_master("master")
         logging.info(f"Current master: {old_master}")
         
         # Trigger sentinel failover
@@ -223,7 +218,7 @@ class TestOmnistrateReplication:
         time.sleep(10)  # Wait for sentinel to detect and failover
         
         # Verify new master
-        new_master = sent.discover_master("mymaster")
+        new_master = sent.discover_master("master")
         logging.info(f"New master: {new_master}")
         assert new_master != old_master, "Failover did not result in new master"
         
@@ -406,7 +401,7 @@ class TestOmnistrateReplication:
         stress_oom(
             instance,
             ssl=ssl,
-            query_size="small",
+            query_size="medium",
             network_type=network_type,
             stress_oomers=3,
             is_cluster=False,

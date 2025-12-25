@@ -60,9 +60,16 @@ data:
           echo "Service $SVC_NAME already exists"
         else
           echo "Creating service $SVC_NAME"
-          kubectl create service clusterip "$SVC_NAME" --tcp="$PORT:$PORT" -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-          kubectl patch svc "$SVC_NAME" -n "$NAMESPACE" --type merge -p '{"metadata":{"annotations":{"external-dns.alpha.kubernetes.io/hostname":"'"$FQDN"'"}}}'  || true
-          kubectl patch svc "$SVC_NAME" -n "$NAMESPACE" --type merge -p '{"spec":{"selector":{"apps.kubeblocks.io/pod-name":"'"$POD_NAME"'"}}}'  || true
+          # Create Service with correct selector and external-dns annotation
+          kubectl create service clusterip "$SVC_NAME" \
+            --tcp="$PORT:$PORT" \
+            -n "$NAMESPACE" \
+            --dry-run=client -o yaml | \
+          kubectl apply -f - && \
+          kubectl patch svc "$SVC_NAME" -n "$NAMESPACE" --type merge \
+            -p "{\"metadata\":{\"annotations\":{\"external-dns.alpha.kubernetes.io/hostname\":\"$FQDN\"}}}" && \
+          kubectl patch svc "$SVC_NAME" -n "$NAMESPACE" --type='json' \
+            -p="[{\"op\": \"replace\", \"path\": \"/spec/selector\", \"value\":{\"apps.kubeblocks.io/pod-name\":\"$POD_NAME\"}}]"
         fi
         
         replica_idx=$((replica_idx + 1))

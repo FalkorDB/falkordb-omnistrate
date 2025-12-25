@@ -60,16 +60,28 @@ data:
           echo "Service $SVC_NAME already exists"
         else
           echo "Creating service $SVC_NAME"
-          # Create Service with correct selector and external-dns annotation
-          kubectl create service clusterip "$SVC_NAME" \
-            --tcp="$PORT:$PORT" \
-            -n "$NAMESPACE" \
-            --dry-run=client -o yaml | \
-          kubectl apply -f - && \
-          kubectl patch svc "$SVC_NAME" -n "$NAMESPACE" --type merge \
-            -p "{\"metadata\":{\"annotations\":{\"external-dns.alpha.kubernetes.io/hostname\":\"$FQDN\",\"external-dns.alpha.kubernetes.io/endpoints-type\":\"NodeExternalIP\",\"external-dns.alpha.kubernetes.io/ttl\":\"60\"}},\"spec\":{\"clusterIP\":\"None\"}}" && \
-          kubectl patch svc "$SVC_NAME" -n "$NAMESPACE" --type='json' \
-            -p="[{\"op\": \"replace\", \"path\": \"/spec/selector\", \"value\":{\"apps.kubeblocks.io/pod-name\":\"$POD_NAME\"}}]"
+          # Create headless Service with correct selector and external-dns annotations
+          kubectl apply -f - <<EOF
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: $SVC_NAME
+      namespace: $NAMESPACE
+      annotations:
+        external-dns.alpha.kubernetes.io/hostname: "$FQDN"
+        external-dns.alpha.kubernetes.io/endpoints-type: "NodeExternalIP"
+        external-dns.alpha.kubernetes.io/ttl: "60"
+    spec:
+      type: ClusterIP
+      clusterIP: None
+      ports:
+      - port: $PORT
+        targetPort: $PORT
+        protocol: TCP
+        name: falkordb
+      selector:
+        apps.kubeblocks.io/pod-name: "$POD_NAME"
+    EOF
         fi
         
         replica_idx=$((replica_idx + 1))

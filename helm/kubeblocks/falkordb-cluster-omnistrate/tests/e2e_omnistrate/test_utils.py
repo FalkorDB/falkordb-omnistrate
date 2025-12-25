@@ -260,8 +260,8 @@ def stress_oom(
     medium = "UNWIND RANGE(1, 40000) AS id CREATE (n:Person {{random: '{}', data: '{}'}})"
     small = "UNWIND RANGE(1, 20000) AS id CREATE (n:Person {{random: '{}'}})"
 
-    # Moderate multipliers - reasonable increase over original
-    size_multiplier = {"small": 2, "medium": 3, "big": 4}
+    # Higher multipliers for more parallel clients to trigger OOM faster
+    size_multiplier = {"small": 6, "medium": 8, "big": 10}
     num_clients = int(os.environ.get("STRESS_OOM_CLIENTS", stress_oomers * size_multiplier.get(query_size, 1)))
 
     if query_size in ("medium", "big"):

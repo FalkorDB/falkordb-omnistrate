@@ -254,7 +254,7 @@ class TestOmnistrateStandalone:
         stress_oom(
             instance,
             ssl=ssl,
-            query_size="small",
+            query_size="medium",
             network_type=network_type,
             stress_oomers=2,
             is_cluster=False,

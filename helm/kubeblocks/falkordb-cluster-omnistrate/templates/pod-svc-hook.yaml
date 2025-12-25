@@ -28,7 +28,7 @@ data:
     elapsed=0
     
     while [ $elapsed -lt $max_wait ]; do
-      shards=$(kubectl get instancesets -n "$NAMESPACE" -l app.kubernetes.io/instance="$CLUSTER",apps.kubeblocks.io/sharding-name=shard -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || echo "")
+      shards=$(kubectl get instancesets -n "$NAMESPACE" -l app.kubernetes.io/instance="$CLUSTER" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || echo "")
       
       if [ -n "$shards" ]; then
         echo "InstanceSets found"

@@ -20,29 +20,31 @@ data:
     HOSTNAME='{{ .Values.hostname }}'
     PORT='{{ .Values.port }}'
     REPLICAS='{{ .Values.replicas }}'
+    EXPECTED_SHARDS='{{ .Values.falkordbCluster.shardCount }}'
     
     # Wait for InstanceSets to be created
-    echo "Waiting for InstanceSets to be created..."
+    echo "Waiting for $EXPECTED_SHARDS InstanceSets to be created..."
     max_wait=300
     wait_interval=5
     elapsed=0
     
     while [ $elapsed -lt $max_wait ]; do
       shards=$(kubectl get instancesets -n "$NAMESPACE" -l app.kubernetes.io/instance="$CLUSTER" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || echo "")
+      shard_count=$(echo "$shards" | grep -v '^$' | wc -l | tr -d ' ')
       
-      if [ -n "$shards" ]; then
-        echo "InstanceSets found"
+      if [ "$shard_count" -eq "$EXPECTED_SHARDS" ]; then
+        echo "Found $shard_count InstanceSets (expected $EXPECTED_SHARDS)"
         break
       fi
       
-      echo "No InstanceSets found yet, waiting ${wait_interval}s... (${elapsed}/${max_wait}s elapsed)"
+      echo "Found $shard_count InstanceSets, waiting for $EXPECTED_SHARDS... (${elapsed}/${max_wait}s elapsed)"
       sleep $wait_interval
       elapsed=$((elapsed + wait_interval))
     done
     
-    if [ -z "$shards" ]; then
-      echo "No InstanceSets found after ${max_wait}s, nothing to do"
-      exit 0
+    if [ "$shard_count" -ne "$EXPECTED_SHARDS" ]; then
+      echo "Expected $EXPECTED_SHARDS InstanceSets but found $shard_count after ${max_wait}s"
+      exit 1
     fi
     
     # Create services for each shard and replica combination

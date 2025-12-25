@@ -255,13 +255,13 @@ def stress_oom(
     db = instance.create_connection(ssl=ssl, network_type=network_type)
     g = db.select_graph("test")
     
-    # Balanced query templates - moderate increase for faster OOM without being too harsh
-    big = "UNWIND RANGE(1, 250000) AS id CREATE (n:Person {{random: '{}', id: id, data: '{}'}})"
-    medium = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {{random: '{}', id: id, data: '{}'}})"
-    small = "UNWIND RANGE(1, 50000) AS id CREATE (n:Person {{random: '{}', id: id}})"
+    # Moderate query templates - gradual increase for steady OOM without being harsh
+    big = "UNWIND RANGE(1, 75000) AS id CREATE (n:Person {{random: '{}', data: '{}'}})"
+    medium = "UNWIND RANGE(1, 40000) AS id CREATE (n:Person {{random: '{}', data: '{}'}})"
+    small = "UNWIND RANGE(1, 20000) AS id CREATE (n:Person {{random: '{}'}})"
 
-    # Balanced multipliers - moderate increase for better performance without overload
-    size_multiplier = {"small": 4, "medium": 6, "big": 8}
+    # Moderate multipliers - reasonable increase over original
+    size_multiplier = {"small": 2, "medium": 3, "big": 4}
     num_clients = int(os.environ.get("STRESS_OOM_CLIENTS", stress_oomers * size_multiplier.get(query_size, 1)))
 
     if query_size in ("medium", "big"):

@@ -255,13 +255,13 @@ def stress_oom(
     db = instance.create_connection(ssl=ssl, network_type=network_type)
     g = db.select_graph("test")
     
-    # Query templates (random token will be generated per-query in worker)
-    big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {{random: '{}'}})"
-    medium = "UNWIND RANGE(1, 50000) AS id CREATE (n:Person {{random: '{}'}})"
-    small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {{random: '{}'}})"
+    # Aggressive query templates - much larger ranges for faster OOM
+    big = "UNWIND RANGE(1, 500000) AS id CREATE (n:Person {{random: '{}', id: id, data: '{}'}})"
+    medium = "UNWIND RANGE(1, 200000) AS id CREATE (n:Person {{random: '{}', id: id, data: '{}'}})"
+    small = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {{random: '{}', id: id}})"
 
-    # Determine number of workers based on query size - reduced multipliers for faster execution
-    size_multiplier = {"small": 2, "medium": 3, "big": 5}
+    # Aggressive multipliers for faster OOM - more workers means faster memory consumption
+    size_multiplier = {"small": 8, "medium": 12, "big": 16}
     num_clients = int(os.environ.get("STRESS_OOM_CLIENTS", stress_oomers * size_multiplier.get(query_size, 1)))
 
     if query_size in ("medium", "big"):
@@ -298,11 +298,13 @@ def stress_oom(
                 return "OOM_DETECTED"
             
             try:
-                # Generate unique random token on every query to prevent caching
-                q = q_template.format(secrets.token_hex(8))
-                logging.debug("Executing query: %s", q)
+                # Generate unique random tokens to prevent caching and maximize memory usage
+                token1 = secrets.token_hex(16)
+                token2 = secrets.token_hex(32)  # Extra data for medium/big queries
+                q = q_template.format(token1, token2) if query_size in ("medium", "big") else q_template.format(token1)
+                logging.debug("Executing query with tokens")
                 g.query(q)
-                # Removed sleep(1) - no need to throttle when trying to trigger OOM
+                # No sleep - execute as fast as possible to trigger OOM quickly
             except Exception as e:
                 if (
                     isinstance(e, OutOfMemoryError)

@@ -196,34 +196,38 @@ class TestOmnistrateCluster:
         """
         Test 5: Verify horizontal scaling of shards.
         
-        SKIPPED: Omnistrate API does not yet support shard scaling operations.
-        This test will be added once API support is available.
+        - Scale shards from current to +1
+        - Verify cluster rebalances
+        - Scale back to original
         """
-        pytest.skip("Shard scaling not supported by Omnistrate API yet")
+        logging.info("Testing cluster shard scaling")
+        cfg = instance._cfg
+        ssl = cfg["tls"]
+        network_type = cfg["network_type"]
+        
+        if not _run_step(cfg, "scale-shards"):
+            pytest.skip("Scale-shards step not selected")
         
         # Add data
         add_data(instance, ssl, key="test_shard_scale", n=200, network_type=network_type)
         
-        orig_count = cfg["orig_host_count"]
-        orig_replicas = cfg["orig_cluster_replicas"]
-        
-        # Calculate new total nodes (more shards with same replicas)
-        new_shards = int(orig_count) // (int(orig_replicas) + 1) + 1
-        new_count = new_shards * (int(orig_replicas) + 1)
+        # Get current shard count from config
+        original_shards = int(cfg.get("orig_host_count", 3))
+        new_shards = original_shards + 1
         
         def scale_up():
-            logging.info(f"Scaling shards: increasing nodes from {orig_count} to {new_count}")
+            logging.info(f"Scaling shards from {original_shards} to {new_shards}")
             instance.update_params(
                 wait_until_ready=True,
-                hostCount=str(new_count),
+                **{"falkordbCluster.shardCount": str(new_shards)},
             )
             time.sleep(60)  # Wait for cluster rebalancing
         
         def scale_down():
-            logging.info(f"Scaling shards back: decreasing nodes from {new_count} to {orig_count}")
+            logging.info(f"Scaling shards back to {original_shards}")
             instance.update_params(
                 wait_until_ready=True,
-                hostCount=str(orig_count),
+                **{"falkordbCluster.shardCount": str(original_shards)},
             )
             time.sleep(60)  # Wait for cluster rebalancing
         
@@ -245,10 +249,17 @@ class TestOmnistrateCluster:
         """
         Test 6: Verify replica scaling within shards.
         
-        SKIPPED: Omnistrate API does not yet support replica scaling operations.
-        This test will be added once API support is available.
+        - Increase replicas per shard
+        - Verify replication working
+        - Scale back to original
         """
-        pytest.skip("Replica scaling not supported by Omnistrate API yet")
+        logging.info("Testing cluster replica scaling")
+        cfg = instance._cfg
+        ssl = cfg["tls"]
+        network_type = cfg["network_type"]
+        
+        if not _run_step(cfg, "scale-replicas"):
+            pytest.skip("Scale-replicas step not selected")
         
         # Add data
         add_data(instance, ssl, key="test_replica_scale", n=200, network_type=network_type)
@@ -260,14 +271,14 @@ class TestOmnistrateCluster:
             logging.info(f"Scaling replicas from {orig_replicas} to {new_replicas}")
             instance.update_params(
                 wait_until_ready=True,
-                clusterReplicas=str(new_replicas),
+                replicas=str(new_replicas),
             )
         
         def scale_down():
             logging.info(f"Scaling replicas back from {new_replicas} to {orig_replicas}")
             instance.update_params(
                 wait_until_ready=True,
-                clusterReplicas=str(orig_replicas),
+                replicas=str(orig_replicas),
             )
         
         # Scale with zero downtime
@@ -288,10 +299,17 @@ class TestOmnistrateCluster:
         """
         Test 7: Verify vertical scaling (instance type change).
         
-        SKIPPED: Omnistrate API does not yet support vertical scaling (resize) operations.
-        This test will be added once API support is available.
+        - Change to larger instance type
+        - Verify cluster recovers
+        - Revert to original
         """
-        pytest.skip("Vertical scaling not supported by Omnistrate API yet")
+        logging.info("Testing cluster vertical scaling")
+        cfg = instance._cfg
+        ssl = cfg["tls"]
+        network_type = cfg["network_type"]
+        
+        if not _run_step(cfg, "resize"):
+            pytest.skip("Resize step not selected")
         
         new_type = cfg.get("new_instance_type")
         if not new_type:
@@ -328,15 +346,6 @@ class TestOmnistrateCluster:
         """
         Test 8: Verify OOM (Out of Memory) handling and resilience.
         
-        SKIPPED: Requires advanced testing infrastructure not available in Omnistrate E2E environment.
-        This test will be added once environment support is available.
-        """
-        pytest.skip("OOM testing not supported in Omnistrate E2E environment yet")
-        
-    def _test_cluster_oom_resilience_impl(self, instance):
-        """
-        Test 8: Verify OOM (Out of Memory) handling and resilience.
-        
         - Fill memory until OOM
         - Verify cluster recovers
         - Verify writes work after recovery
@@ -354,10 +363,11 @@ class TestOmnistrateCluster:
         stress_oom(
             instance,
             ssl=ssl,
-            query_size="medium",
+            query_size="small",
             network_type=network_type,
-            stress_oomers=3,
+            stress_oomers=2,
             is_cluster=True,
+            timeout_seconds=180,
         )
         
         # Verify recovery - should be able to write again

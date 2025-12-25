@@ -232,8 +232,9 @@ def stress_oom(
     ssl=False,
     query_size="small",
     network_type="PUBLIC",
-    stress_oomers=5,
+    stress_oomers=3,
     is_cluster=False,
+    timeout_seconds=300,
 ):
     """
     Stress test by writing data until OOM is triggered.
@@ -245,6 +246,7 @@ def stress_oom(
         network_type: PUBLIC or INTERNAL
         stress_oomers: Base number of parallel stress workers (adjusted by query size)
         is_cluster: Whether instance is a cluster topology
+        timeout_seconds: Maximum time to wait for OOM (default 300s = 5 minutes)
         
     Raises:
         AssertionError if OOM is not triggered or unexpected error occurs
@@ -258,8 +260,8 @@ def stress_oom(
     medium = "UNWIND RANGE(1, 50000) AS id CREATE (n:Person {{random: '{}'}})"
     small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {{random: '{}'}})"
 
-    # Determine number of workers based on query size
-    size_multiplier = {"small": 5, "medium": 20, "big": 50}
+    # Determine number of workers based on query size - reduced multipliers for faster execution
+    size_multiplier = {"small": 2, "medium": 3, "big": 5}
     num_clients = int(os.environ.get("STRESS_OOM_CLIENTS", stress_oomers * size_multiplier.get(query_size, 1)))
 
     if query_size in ("medium", "big"):
@@ -279,15 +281,28 @@ def stress_oom(
 
     q_template = small if query_size == "small" else medium if query_size == "medium" else big
 
+    start_time = time.time()
+    oom_triggered = False
+
     def stress_worker():
         """Worker that executes queries until OOM."""
+        nonlocal oom_triggered
         while True:
+            # Check timeout
+            if time.time() - start_time > timeout_seconds:
+                logging.warning("Stress worker timed out after %d seconds", timeout_seconds)
+                return "TIMEOUT"
+            
+            # Check if OOM already triggered by another worker
+            if oom_triggered:
+                return "OOM_DETECTED"
+            
             try:
                 # Generate unique random token on every query to prevent caching
                 q = q_template.format(secrets.token_hex(8))
                 logging.debug("Executing query: %s", q)
                 g.query(q)
-                time.sleep(1)
+                # Removed sleep(1) - no need to throttle when trying to trigger OOM
             except Exception as e:
                 if (
                     isinstance(e, OutOfMemoryError)
@@ -295,28 +310,42 @@ def stress_oom(
                     or "OUT OF MEMORY" in str(e).upper()
                 ):
                     logging.warning("Out of memory condition triggered in worker")
+                    oom_triggered = True
                     return "OOM"
                 logging.exception("Unexpected error during stress test in worker")
                 raise
 
-    logging.info(f"Running stress test with {num_clients} parallel clients (query_size={query_size})")
+    logging.info(f"Running stress test with {num_clients} parallel clients (query_size={query_size}, timeout={timeout_seconds}s)")
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_clients) as executor:
         futures = [executor.submit(stress_worker) for _ in range(num_clients)]
         # Wait for any worker to hit OOM or error
         done, _ = concurrent.futures.wait(
-            futures, return_when=concurrent.futures.FIRST_EXCEPTION
+            futures, timeout=timeout_seconds + 10, return_when=concurrent.futures.FIRST_EXCEPTION
         )
         # Cancel remaining workers
         for f in futures:
             f.cancel()
-        # Check if any worker raised an unexpected error (not OOM)
+        
+        # Check results
+        oom_detected = False
         for f in done:
+            result = f.result() if not f.cancelled() else None
+            if result == "OOM":
+                oom_detected = True
+                break
             exc = f.exception()
             if exc is not None:
+                # Check if the exception is OOM-related
+                if isinstance(exc, OutOfMemoryError) or "OOM" in str(exc).upper() or "OUT OF MEMORY" in str(exc).upper():
+                    oom_detected = True
+                    break
                 raise AssertionError(
                     "Stress worker raised an unexpected error, OOM did not occur"
                 ) from exc
+        
+        if not oom_detected:
+            raise AssertionError(f"OOM was not triggered within {timeout_seconds} seconds")
 
     # Clean up after OOM
     if is_cluster:

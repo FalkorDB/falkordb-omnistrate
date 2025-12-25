@@ -387,10 +387,11 @@ class TestOmnistrateReplication:
         stress_oom(
             instance,
             ssl=ssl,
-            query_size="medium",
+            query_size="small",
             network_type=network_type,
-            stress_oomers=3,
+            stress_oomers=2,
             is_cluster=False,
+            timeout_seconds=180,
         )
         
         # Verify recovery - should be able to write again

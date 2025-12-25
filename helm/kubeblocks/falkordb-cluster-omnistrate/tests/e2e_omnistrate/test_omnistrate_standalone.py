@@ -135,10 +135,17 @@ class TestOmnistrateStandalone:
         """
         Test 4: Verify vertical scaling (instance type change).
         
-        SKIPPED: Omnistrate API does not yet support vertical scaling (resize) operations.
-        This test will be added once API support is available.
+        - Change to larger instance type
+        - Verify instance recovers
+        - Revert to original
         """
-        pytest.skip("Vertical scaling not supported by Omnistrate API yet")
+        logging.info("Testing standalone vertical scaling")
+        cfg = instance._cfg
+        ssl = cfg["tls"]
+        network_type = cfg["network_type"]
+        
+        if not _run_step(cfg, "resize"):
+            pytest.skip("Resize step not selected")
         
         new_type = cfg.get("new_instance_type")
         if not new_type:
@@ -233,10 +240,14 @@ class TestOmnistrateStandalone:
         """
         Test 6: Verify OOM (Out of Memory) handling and resilience.
         
-        SKIPPED: Requires advanced testing infrastructure not available in Omnistrate E2E environment.
-        This test will be added once environment support is available.
+        - Fill memory until OOM
+        - Verify instance recovers
+        - Verify writes work after recovery
         """
-        pytest.skip("OOM testing not supported in Omnistrate E2E environment yet")
+        logging.info("Testing standalone OOM resilience")
+        cfg = instance._cfg
+        ssl = cfg["tls"]
+        network_type = cfg["network_type"]
         
         # Stress until OOM
         logging.info("Stressing instance until OOM")
@@ -247,6 +258,7 @@ class TestOmnistrateStandalone:
             network_type=network_type,
             stress_oomers=2,
             is_cluster=False,
+            timeout_seconds=180,
         )
         
         # Verify recovery - should be able to write again
@@ -304,12 +316,54 @@ class TestOmnistrateStandalone:
 
     def test_standalone_concurrent_operations(self, instance):
         """
-        Test 8: Verify concurrent read/write operations.
+        Test 9: Concurrent read/write operations.
         
-        SKIPPED: Requires advanced testing infrastructure not available in Omnistrate E2E environment.
-        This test will be added once environment support is available.
+        - Run multiple concurrent writes
+        - Run multiple concurrent reads
+        - Verify data consistency
         """
-        pytest.skip("Concurrent operations testing not supported in Omnistrate E2E environment yet")
+        logging.info("Testing concurrent operations")
+        cfg = instance._cfg
+        ssl = cfg["tls"]
+        network_type = cfg["network_type"]
+        
+        if not _run_step(cfg, "concurrent"):
+            pytest.skip("Concurrent step not selected")
+        
+        import threading
+        import concurrent.futures
+        
+        db = instance.create_connection(ssl=ssl, network_type=network_type)
+        g = db.select_graph("concurrent_test")
+        
+        # Concurrent writes
+        def write_worker(worker_id):
+            for i in range(50):
+                g.query(f"CREATE (:Node {{worker: {worker_id}, seq: {i}}})")
+        
+        logging.info("Running concurrent writes")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(write_worker, i) for i in range(5)]
+            concurrent.futures.wait(futures)
+        
+        # Verify all writes succeeded
+        result = g.query("MATCH (n:Node) RETURN count(n) as count")
+        assert result.result_set[0][0] == 250, f"Expected 250 nodes, got {result.result_set[0][0]}"
+        
+        # Concurrent reads
+        def read_worker(worker_id):
+            return g.query(f"MATCH (n:Node {{worker: {worker_id}}}) RETURN count(n) as count")
+        
+        logging.info("Running concurrent reads")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(read_worker, i) for i in range(5)]
+            results = [f.result() for f in futures]
+        
+        # Verify reads
+        for result in results:
+            assert result.result_set[0][0] == 50, "Read inconsistency detected"
+        
+        logging.info("Concurrent operations test completed successfully")
         
         import threading
         import queue

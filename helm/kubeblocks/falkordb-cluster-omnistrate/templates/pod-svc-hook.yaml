@@ -67,7 +67,7 @@ data:
             --dry-run=client -o yaml | \
           kubectl apply -f - && \
           kubectl patch svc "$SVC_NAME" -n "$NAMESPACE" --type merge \
-            -p "{\"metadata\":{\"annotations\":{\"external-dns.alpha.kubernetes.io/hostname\":\"$FQDN\"}}}" && \
+            -p "{\"metadata\":{\"annotations\":{\"external-dns.alpha.kubernetes.io/hostname\":\"$FQDN\",\"external-dns.alpha.kubernetes.io/endpoints-type\":\"NodeExternalIP\",\"external-dns.alpha.kubernetes.io/ttl\":\"60\"}}}" && \
           kubectl patch svc "$SVC_NAME" -n "$NAMESPACE" --type='json' \
             -p="[{\"op\": \"replace\", \"path\": \"/spec/selector\", \"value\":{\"apps.kubeblocks.io/pod-name\":\"$POD_NAME\"}}]"
         fi

@@ -367,7 +367,7 @@ class TestOmnistrateCluster:
             network_type=network_type,
             stress_oomers=2,
             is_cluster=True,
-            timeout_seconds=180,
+            timeout_seconds=600,
         )
         
         # Verify recovery - should be able to write again

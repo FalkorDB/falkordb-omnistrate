@@ -14,6 +14,7 @@ import logging
 import os
 import concurrent.futures
 from redis.exceptions import OutOfMemoryError, ReadOnlyError
+import secrets
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -252,9 +253,10 @@ def stress_oom(
     db = instance.create_connection(ssl=ssl, network_type=network_type)
     g = db.select_graph("test")
     
-    big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
-    medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"
-    small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {name: 'Alice'})"
+    # Query templates (random token will be generated per-query in worker)
+    big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {{random: '{}'}})"
+    medium = "UNWIND RANGE(1, 50000) AS id CREATE (n:Person {{random: '{}'}})"
+    small = "UNWIND RANGE(1, 10000) AS id CREATE (n:Person {{random: '{}'}})"
 
     # Determine number of workers based on query size
     size_multiplier = {"small": 5, "medium": 20, "big": 50}
@@ -268,15 +270,21 @@ def stress_oom(
             g.query(cypher_query)
             logging.info("Preloaded OOM dataset successfully")
         except Exception as e:
-            logging.error("Failed to preload OOM dataset: %s", str(e))
-            raise AssertionError("Failed to preload OOM dataset") from e
+            # If we hit maxmemory during preload, that's OK - we're already at OOM
+            if "maxmemory" in str(e).lower() or "out of memory" in str(e).lower():
+                logging.info("Hit maxmemory during preload, skipping dataset load and proceeding with stress test")
+            else:
+                logging.error("Failed to preload OOM dataset: %s", str(e))
+                raise AssertionError("Failed to preload OOM dataset") from e
 
-    q = small if query_size == "small" else medium if query_size == "medium" else big
+    q_template = small if query_size == "small" else medium if query_size == "medium" else big
 
     def stress_worker():
         """Worker that executes queries until OOM."""
         while True:
             try:
+                # Generate unique random token on every query to prevent caching
+                q = q_template.format(secrets.token_hex(8))
                 logging.debug("Executing query: %s", q)
                 g.query(q)
                 time.sleep(1)

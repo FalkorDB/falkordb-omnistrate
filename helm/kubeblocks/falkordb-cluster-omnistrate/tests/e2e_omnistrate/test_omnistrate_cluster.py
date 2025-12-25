@@ -75,8 +75,11 @@ class TestOmnistrateCluster:
         # Verify cluster topology
         db = instance.create_connection(ssl=ssl, network_type=network_type)
         cluster_info = db.connection.execute_command("CLUSTER", "INFO")
-        logging.info(f"Cluster info: {cluster_info}")
-        assert b"cluster_state:ok" in cluster_info, "Cluster state is not OK"
+        cluster_info_str = (
+            cluster_info.decode() if isinstance(cluster_info, (bytes, bytearray)) else str(cluster_info)
+        )
+        logging.info(f"Cluster info: {cluster_info_str}")
+        assert "cluster_state:ok" in cluster_info_str, "Cluster state is not OK"
 
     def test_cluster_data_distribution(self, instance):
         """

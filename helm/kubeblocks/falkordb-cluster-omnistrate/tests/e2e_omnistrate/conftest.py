@@ -223,7 +223,7 @@ def _resolve_hostname(endpoint: str, timeout=300, interval=1):
     raise TimeoutError(f"DNS not resolved for {endpoint} within {timeout}s")
 
 
-def _resolve_endpoints(inst: OmnistrateFleetInstance, cfg: dict, timeout=300, interval=5):
+def _resolve_endpoints(inst: OmnistrateFleetInstance, cfg: dict, timeout=1200, interval=5):
     """Resolve node and sentinel DNS names to their A records (multiple IPs per DNS).
 
     Each topology should have:

@@ -19,8 +19,6 @@ import time
 import pytest
 import logging
 from redis import Sentinel
-from redis.retry import Retry
-from redis.backoff import ExponentialBackoff
 from redis.exceptions import TimeoutError, ConnectionError, ReadOnlyError, ResponseError
 
 # Import local test utilities
@@ -48,11 +46,6 @@ def _sentinel_client(instance, ssl):
     """Create a Sentinel client for the replication instance."""
     eps = instance.get_connection_endpoints()
     sent = next(e for e in eps if e["id"].startswith("sentinel"))
-    retry = Retry(
-        ExponentialBackoff(base=1, cap=10),
-        retries=40,
-        supported_errors=(TimeoutError, ConnectionError, ReadOnlyError, ResponseError),
-    )
     return Sentinel(
         sentinels=[
             (sent["endpoint"], sent["ports"][0]),
@@ -66,13 +59,6 @@ def _sentinel_client(instance, ssl):
             "username": "falkordb",
             "password": instance.falkordb_password,
             "ssl": ssl,
-            "retry": retry,
-            "retry_on_error": [
-                TimeoutError,
-                ConnectionError,
-                ReadOnlyError,
-                ResponseError,
-            ],
         },
     )
 
@@ -213,7 +199,7 @@ class TestOmnistrateReplication:
         
         # Trigger sentinel failover
         logging.info("Triggering sentinel failover")
-        master = sent.master_for("mymaster")
+        master = sent.master_for("master")
         master.execute_command("CLIENT", "PAUSE", "5000")
         time.sleep(10)  # Wait for sentinel to detect and failover
         

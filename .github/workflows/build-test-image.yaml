@@ -41,7 +41,7 @@ env:
   HEALTHCHECK_IMAGE_NAME: falkordb-cloud-healthcheck
   FALKORDB_EXPORTER_IMAGE_NAME: falkordb-cloud-exporter
   FALKORDB_SENTINEL_IMAGE_NAME: falkordb-cloud-sentinel
-  FALKORDB_VERSION: v4.14.2-alpine
+  FALKORDB_VERSION: v4.14.10-alpine
   FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
   PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
   ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
@@ -181,6 +181,10 @@ jobs:
       - name: Replace Variables
         working-directory: compose
         run: |
+          # Sanitize tier name by replacing / with -
+          TIER_NAME="${{ matrix.plans.tier-name }}"
+          SANITIZED_TIER_NAME="${TIER_NAME//\//-}"
+          
           sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
           sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
@@ -195,7 +199,7 @@ jobs:
           sed -i 's/$FalkorDBExporterImage/falkordb\/${{ env.FALKORDB_EXPORTER_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
           sed -i 's/$FalkorDBSentinelImage/falkordb\/${{ env.FALKORDB_SENTINEL_IMAGE_NAME }}:dev-${{ github.event.head_commit.id || github.run_id }}/g' ${{ matrix.plans.file }}
           sed -i 's/$MeteringBucketName/${{ secrets.METERING_BUCKET_NAME }}/g' ${{ matrix.plans.file }}
-          sed -i 's/${{ matrix.plans.plan-name }}/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
+          sed -i "s/\${{ matrix.plans.plan-name }}/$SANITIZED_TIER_NAME/g" ${{ matrix.plans.file }}
 
       - name: Upload yaml as artifact
         uses: actions/upload-artifact@v4
@@ -225,7 +229,7 @@ jobs:
           service-name: ${{ matrix.plans.service-name }}
           environment: testing
           environment-type: qa
-          release-description: dev-${{ github.event.head_commit.id || github.run_id }}
+          release-description: dev-${{ github.event.head_commit.id || github.run_id }}-${{ env.FALKORDB_VERSION }}
 
   create-custom-networks:
     needs: omnistrate-update-plans
@@ -236,6 +240,23 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Compute sanitized network names
+        id: sanitize
+        run: |
+          # Compute branch suffix for network names
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          elif [[ "${{ github.event_name }}" == "schedule" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            BRANCH_NAME="schedule"
+          else
+            BRANCH_NAME="${{ github.ref_name }}"
+          fi
+          # Replace / with -
+          SANITIZED_NAME="${BRANCH_NAME//\//-}"
+          echo "GCP_NETWORK_NAME=gcp-network-$SANITIZED_NAME" >> $GITHUB_ENV
+          echo "AWS_NETWORK_NAME=aws-network-$SANITIZED_NAME" >> $GITHUB_ENV
+          echo "AZURE_NETWORK_NAME=azure-network-$SANITIZED_NAME" >> $GITHUB_ENV
 
       - name: Create Omnistrate Custom Network - GCP
         uses: ./.github/actions/create-omnistrate-custom-network
@@ -535,33 +556,6 @@ jobs:
             newInstanceType: m6i.large
             maxmemory: "2GB"
 
-          - name: "[21] pro/ClusterSingleZone - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,oom,resize"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: cluster-Single-Zone
-            instanceType: t2.medium
-            hostCount: "6"
-            clusterReplicas: "1"
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
-
-          - name: "[22] pro/ClusterMultiZone - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,oom,resize"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: cluster-Multi-Zone
-            instanceType: t2.medium
-            hostCount: "6"
-            clusterReplicas: "1"
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
           ######################## PRIVATE • GCP (INTERNAL) ########################
           - name: "[23] pro/MultiZone - PRIVATE/GCP/us-central1 - Grouped"
             if: "full"
@@ -573,21 +567,6 @@ jobs:
             cloudRegion: us-central1
             resourceKey: multi-Zone
             instanceType: e2-medium
-            maxmemory: "2GB"
-            networkType: INTERNAL
-
-          - name: "[24] pro/ClusterMultiZone - PRIVATE/GCP/us-central1 - Grouped"
-            if: "full"
-            runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,network_change"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: gcp
-            cloudRegion: us-central1
-            resourceKey: cluster-Multi-Zone
-            instanceType: e2-medium
-            hostCount: "6"
-            clusterReplicas: "1"
             maxmemory: "2GB"
             networkType: INTERNAL
           ######################## PRO • AWS (TLS) ########################
@@ -615,26 +594,26 @@ jobs:
             newInstanceType: m6i.large
             maxmemory: "2GB"
             tls: true
-          - name: "[27] pro/ClusterSingleZone/TLS - AWS/us-east-2 - Grouped"
-            if: "basic"
-            testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,network_change"
-            tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
-            cloudProvider: aws
-            cloudRegion: us-east-2
-            resourceKey: cluster-Single-Zone
-            instanceType: t2.medium
-            hostCount: "6"
-            clusterReplicas: "1"
-            newInstanceType: m6i.large
-            maxmemory: "2GB"
-            tls: true
     steps:
       - name: Checkout
         if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Sanitize tier and network names
+        if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
+        id: sanitize
+        run: |
+          # Sanitize tierName by replacing / with -
+          TIER_NAME="${{ matrix.instances.tierName }}"
+          SANITIZED_TIER_NAME="${TIER_NAME//\//-}"
+          echo "TIER_NAME=$SANITIZED_TIER_NAME" >> $GITHUB_ENV
+          
+          # Sanitize customNetwork by replacing / with -
+          CUSTOM_NETWORK="${{ matrix.instances.customNetwork }}"
+          SANITIZED_CUSTOM_NETWORK="${CUSTOM_NETWORK//\//-}"
+          echo "CUSTOM_NETWORK=$SANITIZED_CUSTOM_NETWORK" >> $GITHUB_ENV
           
       - name: Setup python
         if: ((matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')) && matrix.instances.runner_label == ''
@@ -693,14 +672,14 @@ jobs:
             EXTRA_ARGS+=(--maxmemory "${{ matrix.instances.maxmemory }}")
 
           [[ -n "${{ matrix.instances.customNetwork || '' }}" ]] && \
-            EXTRA_ARGS+=(--custom-network "${{ matrix.instances.customNetwork }}")
+            EXTRA_ARGS+=(--custom-network "$CUSTOM_NETWORK")
 
           [[ -n "${{ matrix.instances.tls || '' }}" ]] && \
             EXTRA_ARGS+=(--tls)
 
           poetry run pytest -s -v "${{ matrix.instances.testFile }}" \
             --e2e-steps "${{ matrix.instances.tests }}" \
-            --tier-name "${{ matrix.instances.tierName }}" \
+            --tier-name "$TIER_NAME" \
             --cloud-provider "${{ matrix.instances.cloudProvider }}" \
             --region "${{ matrix.instances.cloudRegion }}" \
             --resource-key "${{ matrix.instances.resourceKey }}" \

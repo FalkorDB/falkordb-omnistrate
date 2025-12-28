@@ -70,10 +70,10 @@ x-clusterparam: &clusterparam
       export: true
       defaultValue: "falkordb"
     - key: falkordbPassword
-      description: Choose a default password for your database
+      description: Choose a default password for your database. Updating this value after deployment will restart the instance.
       name: FalkorDB Password
       type: Password
-      modifiable: false
+      modifiable: true
       required: true
       export: false
     - key: RDBPersistenceConfig
@@ -185,6 +185,71 @@ x-clusterparam: &clusterparam
       required: false
       export: true
       defaultValue: "6GB"
+x-pre-upgrade-hook: &preupgradehook
+  commandTemplate: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "Running BGREWRITEAOF before upgrade"
+
+    readonly REDIS_USER="falkordbUpgradeUser"
+    readonly NODE_PORT="${NODE_PORT:-6379}"
+
+    # Build redis-cli options safely
+    REDIS_OPTS=(
+      --no-auth-warning
+      --user "$REDIS_USER"
+      -a "$FALKORDB_UPGRADE_PASSWORD"
+    )
+
+    # Add TLS flag if enabled
+    [[ "${TLS:-false}" == "true" ]] && REDIS_OPTS+=(--tls)
+
+    # Add the actual command at the end
+    REDIS_OPTS+=(BGREWRITEAOF)
+
+    execute_bgrewriteaof() {
+      local node_host=$1
+
+      echo "Executing BGREWRITEAOF on $node_host"
+      redis-cli -h "$node_host" -p "$NODE_PORT" "${REDIS_OPTS[@]}"
+    }
+
+    run_for_range() {
+      local prefix=$1
+      local count=$2
+
+      for ((i = 0; i < count; i++)); do
+        execute_bgrewriteaof "${prefix}-${i}"
+      done
+    }
+
+    case "$RESOURCE_ALIAS" in
+      node-s)
+        execute_bgrewriteaof "node-s-0"
+        ;;
+
+      node-mz)
+        run_for_range "node-mz" "${NUM_REPLICAS}"
+        ;;
+
+      node-sz)
+        run_for_range "node-sz" "${NUM_REPLICAS}"
+        ;;
+
+      cluster-mz)
+        run_for_range "cluster-mz" 6
+        ;;
+
+      cluster-sz)
+        run_for_range "cluster-sz" 6
+        ;;
+
+      *)
+        echo "Unknown RESOURCE_ALIAS: $RESOURCE_ALIAS"
+        exit 1
+        ;;
+    esac
 
 x-post-upgrade-hook: &postupgradehook
   commandTemplate: |
@@ -203,7 +268,7 @@ x-post-upgrade-hook: &postupgradehook
     readonly INTERNAL_SUFFIX=$([[ "${NETWORKING_TYPE:-}" == "INTERNAL" ]] && echo "-internal" || echo "")
 
     # Common Redis CLI options
-    readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_POST_UPGRADE_PASSWORD $SSL_FLAG"
+    readonly REDIS_OPTS="--no-auth-warning --user $REDIS_USER -a $FALKORDB_UPGRADE_PASSWORD $SSL_FLAG"
 
     # Function to execute Redis CLI commands with error handling
     redis_exec() {
@@ -360,10 +425,10 @@ services:
         parameterDependencyMap:
           node-s: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -540,10 +605,10 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
       - key: RDBPersistenceConfig
@@ -684,6 +749,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
@@ -716,6 +782,9 @@ services:
             cpu: "50m"
             memory: 50Mi
     x-omnistrate-actionhooks:
+      - scope: CLUSTER
+        type: PRE_UPGRADE
+        <<: *preupgradehook
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -844,10 +913,10 @@ services:
         parameterDependencyMap:
           node-sz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -1038,10 +1107,10 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -1190,7 +1259,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
@@ -1247,6 +1316,9 @@ services:
             cpu: "200m"
             memory: 100Mi
     x-omnistrate-actionhooks:
+      - scope: CLUSTER
+        type: PRE_UPGRADE
+        <<: *preupgradehook
       - scope: CLUSTER
         type: POST_UPGRADE
         <<: *postupgradehook
@@ -1393,7 +1465,7 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - SENTINEL_QUORUM=2
       - NODE_PORT=6379
       - DEBUG=0
@@ -1604,10 +1676,10 @@ services:
         parameterDependencyMap:
           node-mz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -1797,10 +1869,10 @@ services:
         export: true
         defaultValue: "falkordb"
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -1949,7 +2021,7 @@ services:
       - NODE_PORT=6379
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
@@ -2006,6 +2078,9 @@ services:
             cpu: "200m"
             memory: 100Mi
     x-omnistrate-actionhooks:
+      - scope: CLUSTER
+        type: PRE_UPGRADE
+        <<: *preupgradehook
       - scope: CLUSTER
         type: POST_UPGRADE
         <<: *postupgradehook
@@ -2151,7 +2226,7 @@ services:
       - RUN_SENTINEL=1
       - RUN_METRICS=1
       - RUN_HEALTH_CHECK_SENTINEL=1
-      - FALKORDB_POST_UPGRADE_PASSWORD=$func.random(string, 16, 20)
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - SENTINEL_QUORUM=2
       - NODE_PORT=6379
       - DEBUG=0
@@ -2347,10 +2422,10 @@ services:
         parameterDependencyMap:
           cluster-sz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -2529,6 +2604,7 @@ services:
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
@@ -2568,6 +2644,9 @@ services:
             - "1"
             - "--is-cluster"
     x-omnistrate-actionhooks:
+      - scope: CLUSTER
+        type: PRE_UPGRADE
+        <<: *preupgradehook
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -2710,10 +2789,10 @@ services:
         parameterDependencyMap:
           cluster-mz: falkordbUser
       - key: falkordbPassword
-        description: Choose a default password for your database
+        description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
         type: Password
-        modifiable: false
+        modifiable: true
         required: true
         export: false
         parameterDependencyMap:
@@ -2892,6 +2971,7 @@ services:
       - NODE_HOST=$sys.network.node.externalEndpoint
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
+      - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=$var.nodeInstanceType
       - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
@@ -2929,6 +3009,9 @@ services:
             - "1"
             - "--is-cluster"
     x-omnistrate-actionhooks:
+      - scope: CLUSTER
+        type: PRE_UPGRADE
+        <<: *preupgradehook
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |

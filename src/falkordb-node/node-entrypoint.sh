@@ -20,7 +20,7 @@ else
   export ADMIN_PASSWORD=''
 fi
 
-FALKORDB_POST_UPGRADE_PASSWORD=${FALKORDB_POST_UPGRADE_PASSWORD:-''}
+FALKORDB_UPGRADE_PASSWORD=${FALKORDB_UPGRADE_PASSWORD:-''}
 RUN_SENTINEL=${RUN_SENTINEL:-0}
 RUN_NODE=${RUN_NODE:-1}
 RUN_METRICS=${RUN_METRICS:-1}
@@ -55,8 +55,8 @@ if [[ "$FALKORDB_TIMEOUT_DEFAULT" == "<nil>" ]]; then
 fi
 
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
-SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
-SENTINEL_FAILOVER=${SENTINEL_FAILOVER:-1000}
+SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-30000}
+SENTINEL_FAILOVER=${SENTINEL_FAILOVER:-180000}
 
 # SENTINEL_HOST=${SENTINEL_HOST:-localhost}
 SENTINEL_HOST=sentinel-$(echo $RESOURCE_ALIAS | cut -d "-" -f 2)-0.$LOCAL_DNS_SUFFIX
@@ -183,6 +183,23 @@ get_sentinels_list() {
 }
 
 # Handle signals
+wait_for_bgrewrite_to_finish() {
+  tout=${tout:-30}
+  # Give BGREWRITEAOF time to start
+  sleep 3
+  end=$((SECONDS + tout))
+  while true; do
+    if (( SECONDS >= end )); then
+      echo "Timed out waiting for BGREWRITEAOF to complete"
+      exit 1
+    fi
+    if [[ $(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING INFO persistence | grep aof_rewrite_in_progress:0) ]]; then
+      echo "BGREWRITEAOF completed"
+      break
+    fi
+    sleep 1
+  done
+}
 
 handle_sigterm() {
   echo "Caught SIGTERM"
@@ -193,6 +210,9 @@ handle_sigterm() {
     #DO NOT USE is_replica FUNCTION
     role=$(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication | grep role)
     if [[ "$role" =~ ^role:master ]]; then IS_REPLICA=0; fi
+    echo "Running BGREWRITEAOF before shutdown"
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF
+    wait_for_bgrewrite_to_finish
     remove_master_from_group
     redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SHUTDOWN
   fi
@@ -389,9 +409,9 @@ create_user() {
     redis-cli -p $NODE_PORT -a $CURRENT_ADMIN_PASSWORD --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET requirepass $ADMIN_PASSWORD
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET masterauth $ADMIN_PASSWORD
   fi
-
-  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +GRAPH.MEMORY +MEMORY +BGREWRITEAOF
-  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER falkordbUpgradeUser on ">$FALKORDB_POST_UPGRADE_PASSWORD" ~* +INFO
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER reset
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +READONLY +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +GRAPH.MEMORY +MEMORY +BGREWRITEAOF '+MODULE|LIST'
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER falkordbUpgradeUser on ">$FALKORDB_UPGRADE_PASSWORD" ~* +INFO +BGREWRITEAOF
   config_rewrite
 }
 
@@ -447,6 +467,22 @@ if [ ! -f $NODE_CONF_FILE ] || [ "$REPLACE_NODE_CONF" -eq "1" ]; then
   cp /falkordb/node.conf $NODE_CONF_FILE
 fi
 
+fix_namespace_in_config_files() {
+  # Use INSTANCE_ID environment variable to get the current namespace
+  if [[ -n "$INSTANCE_ID" ]]; then
+    echo "Current namespace: $INSTANCE_ID"
+    
+    # Check and fix node.conf only (node entrypoint should only check node.conf)
+    if [[ -f "$NODE_CONF_FILE" ]]; then
+      echo "Checking node.conf for namespace mismatches"
+      # Replace instance-X pattern with current namespace, where X can contain hyphens, underscores, and alphanumeric characters
+      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${INSTANCE_ID}/g" "$NODE_CONF_FILE"
+    fi
+  else
+    echo "INSTANCE_ID not set, skipping namespace fix"
+  fi
+}
+
 # Create log files if they don't exist
 if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
   if [ "$RUN_NODE" -eq "1" ]; then
@@ -456,6 +492,10 @@ fi
 
 set_persistence_config
 get_self_host_ip
+
+# Fix namespace in config files before starting the server
+# This must be called after node.conf is created/copied but before server starts
+fix_namespace_in_config_files
 
 if [ "$RUN_NODE" -eq "1" ]; then
 
@@ -487,6 +527,7 @@ if [ "$RUN_NODE" -eq "1" ]; then
   fi
 
   if [[ $TLS == "true" ]]; then
+    sed -i "s|/etc/ssl/certs/GlobalSign_Root_CA.pem|${ROOT_CA_PATH}|g" "$NODE_CONF_FILE"
     if ! grep -q "^tls-port $NODE_PORT" "$NODE_CONF_FILE"; then
       echo "port 0" >>$NODE_CONF_FILE
       echo "tls-port $NODE_PORT" >>$NODE_CONF_FILE

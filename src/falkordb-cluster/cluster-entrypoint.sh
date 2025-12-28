@@ -242,11 +242,56 @@ update_ips_in_nodes_conf() {
 
 update_ips_in_nodes_conf
 
+fix_namespace_in_config_files() {
+  # Use INSTANCE_ID environment variable to get the current namespace
+  if [[ -n "$INSTANCE_ID" ]]; then
+    echo "Current namespace: $INSTANCE_ID"
+    
+    # Check and fix node.conf
+    if [[ -f "$NODE_CONF_FILE" ]]; then
+      echo "Checking node.conf for namespace mismatches"
+      # Replace instance-X pattern with current namespace, where X can contain hyphens, underscores, and alphanumeric characters
+      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${INSTANCE_ID}/g" "$NODE_CONF_FILE"
+    fi
+    
+    # Check and fix nodes.conf (cluster mode)
+    if [[ -f "$DATA_DIR/nodes.conf" ]]; then
+      echo "Checking nodes.conf for namespace mismatches"
+      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${INSTANCE_ID}/g" "$DATA_DIR/nodes.conf"
+    fi
+  else
+    echo "INSTANCE_ID not set, skipping namespace fix"
+  fi
+}
+
+wait_for_bgrewrite_to_finish() {
+  tout=${tout:-30}
+  # Give BGREWRITEAOF time to start
+  sleep 3
+  end=$((SECONDS + tout))
+  while true; do
+    if (( SECONDS >= end )); then
+      echo "Timed out waiting for BGREWRITEAOF to complete"
+      exit 1
+    fi
+    if [[ $(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING INFO persistence | grep aof_rewrite_in_progress:0) ]]; then
+      echo "BGREWRITEAOF completed"
+      break
+    fi
+    sleep 1
+  done
+}
+
 handle_sigterm() {
   echo "Caught SIGTERM"
   echo "Stopping FalkorDB"
 
   if [[ ! -z $falkordb_pid ]]; then
+    # perform bgrewriteaof before shutting down
+    echo "Running BGREWRITEAOF before shutdown"
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF
+    wait_for_bgrewrite_to_finish
+    redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SHUTDOWN
     kill -TERM $falkordb_pid
   fi
 
@@ -306,7 +351,9 @@ wait_for_hosts() {
 
 create_user() {
   echo "Creating falkordb user"
-  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +CLUSTER +COMMAND +GRAPH.MEMORY +MEMORY +BGREWRITEAOF
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER reset
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +READONLY +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +CLUSTER +COMMAND +GRAPH.MEMORY +MEMORY +BGREWRITEAOF '+MODULE|LIST'
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER falkordbUpgradeUser on ">$FALKORDB_UPGRADE_PASSWORD" ~* +INFO +BGREWRITEAOF
 }
 
 get_default_memory_limit() {
@@ -445,14 +492,17 @@ run_node() {
   echo "dir $DATA_DIR/$i" >>$NODE_CONF_FILE
 
   if [[ $TLS == "true" ]]; then
-    echo "port 0" >>$NODE_CONF_FILE
-    echo "tls-port $NODE_PORT" >>$NODE_CONF_FILE
-    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$NODE_CONF_FILE
-    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$NODE_CONF_FILE
-    echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
-    echo "tls-cluster yes" >>$NODE_CONF_FILE
-    echo "tls-auth-clients no" >>$NODE_CONF_FILE
-    echo "tls-replication yes" >>$NODE_CONF_FILE
+    sed -i "s|/etc/ssl/certs/GlobalSign_Root_CA.pem|${ROOT_CA_PATH}|g" "$NODE_CONF_FILE"
+    if ! grep -q "^tls-port $NODE_PORT" "$NODE_CONF_FILE"; then
+      echo "port 0" >>$NODE_CONF_FILE
+      echo "tls-port $NODE_PORT" >>$NODE_CONF_FILE
+      echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$NODE_CONF_FILE
+      echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$NODE_CONF_FILE
+      echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
+      echo "tls-cluster yes" >>$NODE_CONF_FILE
+      echo "tls-auth-clients no" >>$NODE_CONF_FILE
+      echo "tls-replication yes" >>$NODE_CONF_FILE
+    fi
   else
     echo "port $NODE_PORT" >>$NODE_CONF_FILE
   fi
@@ -474,6 +524,10 @@ if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
     touch $FALKORDB_LOG_FILE_PATH
   fi
 fi
+
+# Fix namespace in config files before starting the server
+# This must be called after node.conf is created/copied but before server starts
+fix_namespace_in_config_files
 
 run_node
 

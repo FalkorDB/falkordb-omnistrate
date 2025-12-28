@@ -42,8 +42,8 @@ AUTH_CONNECTION_STRING="-a $ADMIN_PASSWORD --no-auth-warning"
 
 MASTER_NAME=${MASTER_NAME:-master}
 SENTINEL_QUORUM=${SENTINEL_QUORUM:-2}
-SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-1000}
-SENTINEL_FAILOVER=${SENTINEL_FAILOVER:-1000}
+SENTINEL_DOWN_AFTER=${SENTINEL_DOWN_AFTER:-30000}
+SENTINEL_FAILOVER=${SENTINEL_FAILOVER:-180000}
 
 # Add backward compatibility for /data folder
 if [[ "$DATA_DIR" != '/data' ]]; then
@@ -117,6 +117,22 @@ log() {
   fi
 }
 
+fix_namespace_in_config_files() {
+  # Use INSTANCE_ID environment variable to get the current namespace
+  if [[ -n "$INSTANCE_ID" ]]; then
+    echo "Current namespace: $INSTANCE_ID"
+    
+    # Check and fix sentinel.conf only (sentinel entrypoint should only check sentinel.conf)
+    if [[ -f "$SENTINEL_CONF_FILE" ]]; then
+      echo "Checking sentinel.conf for namespace mismatches"
+      # Replace instance-X pattern with current namespace, where X can contain hyphens, underscores, and alphanumeric characters
+      sed -i -E "s/instance-[a-zA-Z0-9_\-]+/${INSTANCE_ID}/g" "$SENTINEL_CONF_FILE"
+    fi
+  else
+    echo "INSTANCE_ID not set, skipping namespace fix"
+  fi
+}
+
 # If sentinel.conf doesn't exist or $REPLACE_SENTINEL_CONF=1, copy it from /falkordb
 if [ ! -f $SENTINEL_CONF_FILE ] || [ "$REPLACE_SENTINEL_CONF" -eq "1" ]; then
   echo "Copying sentinel.conf from /falkordb"
@@ -130,10 +146,13 @@ if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then
   fi
 fi
 
+# Fix namespace in config files before starting the server
+# This must be called after sentinel.conf is created/copied but before server starts
+fix_namespace_in_config_files
 
 create_user(){
   local acl_commands='~* +SENTINEL|get-master-addr-by-name +SENTINEL|remove +SENTINEL|flushconfig +SENTINEL|monitor'
-  redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER falkordbUpgradeUser on ">$FALKORDB_POST_UPGRADE_PASSWORD" $acl_commands
+  redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER falkordbUpgradeUser on ">$FALKORDB_UPGRADE_PASSWORD" $acl_commands
   redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
 }
 
@@ -149,13 +168,16 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   echo "Starting Sentinel"
 
   if [[ $TLS == "true" ]]; then
-    echo "port 0" >>$SENTINEL_CONF_FILE
-    echo "tls-port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
-    echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$SENTINEL_CONF_FILE
-    echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$SENTINEL_CONF_FILE
-    echo "tls-ca-cert-file $ROOT_CA_PATH" >>$SENTINEL_CONF_FILE
-    echo "tls-replication yes" >>$SENTINEL_CONF_FILE
-    echo "tls-auth-clients no" >>$SENTINEL_CONF_FILE
+    sed -i "s|/etc/ssl/certs/GlobalSign_Root_CA.pem|${ROOT_CA_PATH}|g" "$SENTINEL_CONF_FILE"
+    if ! grep -q "^tls-port $SENTINEL_PORT" "$SENTINEL_CONF_FILE"; then
+      echo "port 0" >>$SENTINEL_CONF_FILE
+      echo "tls-port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
+      echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$SENTINEL_CONF_FILE
+      echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$SENTINEL_CONF_FILE
+      echo "tls-ca-cert-file $ROOT_CA_PATH" >>$SENTINEL_CONF_FILE
+      echo "tls-replication yes" >>$SENTINEL_CONF_FILE
+      echo "tls-auth-clients no" >>$SENTINEL_CONF_FILE
+    fi
   else
     echo "port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
   fi

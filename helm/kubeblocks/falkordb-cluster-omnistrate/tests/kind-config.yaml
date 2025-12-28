@@ -23,11 +23,32 @@ nodes:
         hostPort: 443
         protocol: TCP
   - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone0
   - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone1
   - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone2
   - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone0
   - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone1
   - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone2
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone0
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone1
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone2
 networking:
   apiServerAddress: "127.0.0.1"
   apiServerPort: 6443

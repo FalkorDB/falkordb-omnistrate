@@ -426,7 +426,8 @@ class TestOmnistrateCluster:
         logging.info("Testing multi-zone distribution")
         cfg = instance._cfg
         
-        if "multi-zone" not in cfg["resource_key"].lower():
+        # Skip unless multi-zone flag is explicitly enabled
+        if not cfg.get("multi_zone", False):
             pytest.skip("Not a multi-zone deployment")
         
         # Verify multi-zone distribution

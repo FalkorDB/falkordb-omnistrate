@@ -482,7 +482,7 @@ services:
         description: Enable multi-zone deployment to spread pods across availability zones
         name: Multi-Zone Enabled
         type: Boolean
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "false"
@@ -796,7 +796,7 @@ services:
         description: Enable multi-zone deployment to spread pods across availability zones
         name: Multi-Zone Enabled
         type: Boolean
-        modifiable: false
+        modifiable: true
         required: false
         export: true
         defaultValue: "false"

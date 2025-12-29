@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falkordb-config-extra
+  labels:
+    app.kubernetes.io/name: falkordb-config-extra
+    app.kubernetes.io/instance: {{ include "kblib.clusterName" . }}
+data:
+  {{- if .Values.enableTLS }}
+  falkordb.conf.extra: |
+    port 0
+    tls-port {{ .Values.port | default 6379 }}
+    tls-cert-file /etc/pki/tls/tls.crt
+    tls-key-file /etc/pki/tls/tls.key
+    tls-ca-cert-file /etc/ssl/certs/ca-certificates.crt
+    tls-replication yes
+    tls-auth-clients no
+  {{- end }}

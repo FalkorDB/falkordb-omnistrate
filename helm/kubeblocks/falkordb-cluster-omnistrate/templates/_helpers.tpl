@@ -9,6 +9,21 @@ Define falkordb cluster shardingSpec with ComponentDefinition.
     name: falkordb
     componentDef: falkordb-cluster
     replicas: {{ .Values.replicas }}
+    {{- if .Values.enableTLS }}
+    tls: true
+    issuer:
+      name: UserProvided
+      secretRef:
+        name: google-public-ca-tls
+        namespace: {{ .Release.Namespace }}
+        ca: tls.crt
+        cert: tls.crt
+        key: tls.key
+    {{- end }}
+    volumes:
+      - name: falkordb-config-extra
+        configMap:
+          name: falkordb-config-extra
     {{- if .Values.hostNetworkEnabled }}
     network:
       hostPorts:
@@ -310,6 +325,21 @@ Define falkordb ComponentSpec with ComponentDefinition.
 */}}
 {{- define "falkordb-cluster.componentSpec" }}
 - name: falkordb
+{{- if .Values.enableTLS }}
+  tls: true
+  issuer:
+    name: UserProvided
+    secretRef:
+      name: google-public-ca-tls
+      namespace: {{ .Release.Namespace }}
+      ca: tls.crt
+      cert: tls.crt
+      key: tls.key
+{{- end }}
+  volumes:
+    - name: falkordb-config-extra
+      configMap:
+        name: falkordb-config-extra
   {{- include "falkordb-cluster.replicaCount" . | indent 2 }}
   {{- include "falkordb-cluster.exporter" . | indent 2 }}
   {{- if .Values.podAntiAffinityEnabled }}

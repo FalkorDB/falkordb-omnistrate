@@ -1,6 +1,22 @@
 {{- include "falkordb-cluster.clusterCommon" . }}
   clusterDef: falkordb
   topology: {{ .Values.mode }}
+{{- if .Values.enableTLS }}
+  tls:
+    enabled: true
+    issuer:
+      name: UserProvided
+      secretRef:
+        name: google-public-ca-tls
+        namespace: {{ .Release.Namespace }}
+        ca: tls.crt
+        cert: tls.crt
+        key: tls.key
+  volumes:
+    - name: falkordb-config-extra
+      configMap:
+        name: falkordb-config-extra
+{{- end }}
 {{- if eq .Values.mode "cluster" }}
   shardings:
 {{- include "falkordb-cluster.shardingSpec" . | indent 4 }}

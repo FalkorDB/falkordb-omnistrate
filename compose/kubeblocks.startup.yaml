@@ -24,6 +24,14 @@ services:
   - name: Standalone
     description: A FalkorDB Standalone database service managed by KubeBlocks.
     apiParameters:
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "false"
       - key: name
         description: Name
         name: Name

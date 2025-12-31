@@ -75,6 +75,9 @@ multiZoneEnabled: false
 # Enable TLS for FalkorDB cluster
 enableTLS: false
 
+# TLS issuer configuration
+tlsIssuer: UserProvided
+
 nodeAffinity:
   requiredDuringSchedulingIgnoredDuringExecution:
     nodeSelectorTerms:

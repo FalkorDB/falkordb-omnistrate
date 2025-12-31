@@ -12,13 +12,15 @@ Define falkordb cluster shardingSpec with ComponentDefinition.
     {{- if .Values.enableTLS }}
     tls: true
     issuer:
-      name: UserProvided
+      name: {{ .Values.tlsIssuer | default "UserProvided" }}
+      {{- if eq .Values.tlsIssuer "UserProvided" }}
       secretRef:
         name: google-public-ca-tls
         namespace: {{ .Release.Namespace }}
         ca: tls.crt
         cert: tls.crt
         key: tls.key
+      {{- end }}
     {{- end }}
     volumes:
       - name: falkordb-config-extra
@@ -328,13 +330,15 @@ Define falkordb ComponentSpec with ComponentDefinition.
 {{- if .Values.enableTLS }}
   tls: true
   issuer:
-    name: UserProvided
+    name: {{ .Values.tlsIssuer | default "UserProvided" }}
+    {{- if eq .Values.tlsIssuer "UserProvided" }}
     secretRef:
       name: google-public-ca-tls
       namespace: {{ .Release.Namespace }}
       ca: tls.crt
       cert: tls.crt
       key: tls.key
+    {{- end }}
 {{- end }}
   volumes:
     - name: falkordb-config-extra

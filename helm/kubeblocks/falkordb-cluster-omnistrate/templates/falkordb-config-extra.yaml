@@ -6,8 +6,8 @@ metadata:
     app.kubernetes.io/name: falkordb-config-extra
     app.kubernetes.io/instance: {{ include "kblib.clusterName" . }}
 data:
-  {{- if .Values.enableTLS }}
   redis.conf: |
+{{- if .Values.enableTLS }}
     port 0
     tls-port {{ .Values.port | default 6379 }}
     tls-cert-file /etc/pki/tls/tls.crt
@@ -15,4 +15,4 @@ data:
     tls-ca-cert-file /etc/ssl/certs/ca-certificates.crt
     tls-replication yes
     tls-auth-clients no
-  {{- end }}
+{{- end }}

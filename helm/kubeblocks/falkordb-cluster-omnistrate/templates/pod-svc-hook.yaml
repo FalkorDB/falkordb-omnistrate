@@ -1,0 +1,167 @@
+{{- /*
+Creates per-pod Services with external-dns hostnames:
+ - For all falkordb pods: <pod-name>.<hostname>
+ - For replication mode, also for sentinel pods: <pod-name>.<hostname>
+Runs post-install/upgrade to allow sharded components with dynamic names.
+*/ -}}
+{{- if and .Values.hostname (eq .Values.mode "cluster") }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kblib.clusterName" . }}-per-pod-svc-script
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "kblib.clusterLabels" . | nindent 4 }}
+data:
+  create-services.sh: |
+    #!/bin/sh
+    set -euo pipefail
+    NAMESPACE='{{ .Release.Namespace }}'
+    CLUSTER='{{ include "kblib.clusterName" . }}'
+    HOSTNAME='{{ .Values.hostname }}'
+    PORT='{{ .Values.port }}'
+    REPLICAS='{{ .Values.replicas }}'
+    EXPECTED_SHARDS='{{ .Values.falkordbCluster.shardCount }}'
+    
+    # Wait for InstanceSets to be created
+    echo "Waiting for $EXPECTED_SHARDS InstanceSets to be created..."
+    max_wait=300
+    wait_interval=5
+    elapsed=0
+    
+    while [ $elapsed -lt $max_wait ]; do
+      shards=$(kubectl get instancesets -n "$NAMESPACE" -l app.kubernetes.io/instance="$CLUSTER" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || echo "")
+      shard_count=$(echo "$shards" | grep -v '^$' | wc -l | tr -d ' ')
+      
+      if [ "$shard_count" -eq "$EXPECTED_SHARDS" ]; then
+        echo "Found $shard_count InstanceSets (expected $EXPECTED_SHARDS)"
+        break
+      fi
+      
+      echo "Found $shard_count InstanceSets, waiting for $EXPECTED_SHARDS... (${elapsed}/${max_wait}s elapsed)"
+      sleep $wait_interval
+      elapsed=$((elapsed + wait_interval))
+    done
+    
+    if [ "$shard_count" -ne "$EXPECTED_SHARDS" ]; then
+      echo "Expected $EXPECTED_SHARDS InstanceSets but found $shard_count after ${max_wait}s"
+      exit 1
+    fi
+    
+    # Create services for each shard and replica combination
+    echo "$shards" | while read -r SHARD; do
+      [ -z "$SHARD" ] && continue
+      
+      # Create services for each replica in this shard
+      replica_idx=0
+      while [ $replica_idx -lt $REPLICAS ]; do
+        POD_NAME="${SHARD}-${replica_idx}"
+        SVC_NAME="${POD_NAME}-external"
+        FQDN="${POD_NAME}.${HOSTNAME}"
+        
+        if kubectl get svc "$SVC_NAME" -n "$NAMESPACE" >/dev/null 2>&1; then
+          echo "Service $SVC_NAME already exists"
+        else
+          echo "Creating service $SVC_NAME"
+          # Create headless Service with correct selector and external-dns annotations
+          kubectl apply -f - <<EOF
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: $SVC_NAME
+      namespace: $NAMESPACE
+      annotations:
+        external-dns.alpha.kubernetes.io/hostname: "$FQDN"
+        external-dns.alpha.kubernetes.io/endpoints-type: "NodeExternalIP"
+        external-dns.alpha.kubernetes.io/ttl: "60"
+    spec:
+      type: ClusterIP
+      clusterIP: None
+      ports:
+      - port: $PORT
+        targetPort: $PORT
+        protocol: TCP
+        name: falkordb
+      selector:
+        apps.kubeblocks.io/pod-name: "$POD_NAME"
+    EOF
+        fi
+        
+        replica_idx=$((replica_idx + 1))
+      done
+    done
+    
+    echo "Service creation complete"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "kblib.clusterName" . }}-per-pod-svc
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "kblib.clusterLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 6
+  template:
+    metadata:
+      name: {{ include "kblib.clusterName" . }}-per-pod-svc
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "kblib.clusterName" . }}-per-pod-svc-sa
+      containers:
+      - name: create-per-pod-services
+        image: alpine/k8s:1.28.3
+        volumeMounts:
+        - name: script
+          mountPath: /scripts
+          readOnly: true
+        command:
+        - /bin/sh
+        - /scripts/create-services.sh
+      volumes:
+      - name: script
+        configMap:
+          name: {{ include "kblib.clusterName" . }}-per-pod-svc-script
+          defaultMode: 0755
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "kblib.clusterName" . }}-per-pod-svc-sa
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "kblib.clusterLabels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "kblib.clusterName" . }}-per-pod-svc-role
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "kblib.clusterLabels" . | nindent 4 }}
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: ["apps.kubeblocks.io"]
+  resources: ["clusters"]
+  verbs: ["get", "watch"]
+- apiGroups: ["workloads.kubeblocks.io"]
+  resources: ["instancesets"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "kblib.clusterName" . }}-per-pod-svc-binding
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "kblib.clusterLabels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "kblib.clusterName" . }}-per-pod-svc-role
+subjects:
+- kind: ServiceAccount
+  name: {{ include "kblib.clusterName" . }}-per-pod-svc-sa
+  namespace: {{ .Release.Namespace }}
+{{- end }}

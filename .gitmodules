@@ -1,0 +1,9 @@
+[submodule "helm/kubeblocks/kubeblocks-addons"]
+	path = helm/kubeblocks/kubeblocks-addons
+	url = https://github.com/apecloud/kubeblocks-addons
+[submodule "helm/kubeblocks/kubeblocks"]
+	path = helm/kubeblocks/kubeblocks
+	url = https://github.com/falkordb/kubeblocks
+[submodule "helm/kubeblocks/kubeblocks-docs"]
+	path = helm/kubeblocks/kubeblocks-docs
+	url = https://github.com/apecloud/kubeblocks-docs

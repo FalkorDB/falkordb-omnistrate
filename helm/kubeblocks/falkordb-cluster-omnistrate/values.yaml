@@ -5,7 +5,7 @@
 
 ## @param version falkordb cluster version
 ##
-version: 4.12.5
+version: 4.14.10
 
 ## @param mode falkordb cluster topology mode, standalone, replication and cluster
 ## standalone: single falkordb instance

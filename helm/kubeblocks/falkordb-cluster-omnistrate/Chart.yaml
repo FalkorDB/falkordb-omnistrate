@@ -3,7 +3,7 @@ name: falkordb-cluster-omnistrate
 description: A Helm chart for deploying FalkorDB cluster on KubeBlocks for Omnistrate
 type: application
 version: 1.0.0
-appVersion: "4.12.5"
+appVersion: "4.14.10"
 keywords:
   - falkordb
   - kubeblocks

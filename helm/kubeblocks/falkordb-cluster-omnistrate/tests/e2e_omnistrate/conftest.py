@@ -497,26 +497,39 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
 
         logging.info(f"Creating instance: {instance_name}")
         inst = OmnistrateFleetInstance(omnistrate, inst_cfg)
-        inst.create(
-            wait_for_ready=True,
-            deployment_cloud_provider=cfg["cloud_provider"],
-            network_type=cfg["network_type"],
-            deployment_region=cfg["region"],
-            name=instance_name,
-            description=f"E2E test module: {module_name}",
-            falkordb_user="falkordb",
-            falkordb_password=password,
-            nodeInstanceType=cfg["instance_type"],
-            storageSize=cfg["storage_size"],
-            enableTLS=cfg["tls"],
-            RDBPersistenceConfig=cfg["rdb_config"],
-            AOFPersistenceConfig=cfg["aof_config"],
-            maxMemory=cfg["maxmemory"],
-            hostCount=cfg["host_count"],
-            clusterReplicas=cfg["cluster_replicas"],
-            multiZoneEnabled=cfg["multi_zone"],
-            custom_network_id=network.network_id if network else None,
-        )
+        
+        # Build instance parameters based on tier
+        create_params = {
+            "wait_for_ready": True,
+            "deployment_cloud_provider": cfg["cloud_provider"],
+            "network_type": cfg["network_type"],
+            "deployment_region": cfg["region"],
+            "name": instance_name,
+            "description": f"E2E test module: {module_name}",
+            "falkordb_user": "falkordb",
+            "falkordb_password": password,
+            "enableTLS": cfg["tls"],
+            "custom_network_id": network.network_id if network else None,
+        }
+        
+        # Startup tier uses Kubernetes-based sizing (memoryRequestsAndLimits)
+        # Other tiers (Pro, Enterprise, Free) use cloud instance types (nodeInstanceType)
+        tier_name_lower = cfg["tier_name"].lower()
+        if tier_name_lower == "startup":
+            # For Startup tier, use memoryRequestsAndLimits instead of nodeInstanceType
+            create_params["memoryRequestsAndLimits"] = cfg.get("maxmemory", "1GB")
+        else:
+            # For Pro, Enterprise, and Free tiers
+            create_params["nodeInstanceType"] = cfg["instance_type"]
+            create_params["storageSize"] = cfg["storage_size"]
+            create_params["RDBPersistenceConfig"] = cfg["rdb_config"]
+            create_params["AOFPersistenceConfig"] = cfg["aof_config"]
+            create_params["maxMemory"] = cfg["maxmemory"]
+            create_params["hostCount"] = cfg["host_count"]
+            create_params["clusterReplicas"] = cfg["cluster_replicas"]
+            create_params["multiZoneEnabled"] = cfg["multi_zone"]
+        
+        inst.create(**create_params)
 
         # Wait for DNS propagation on all advertised endpoints per topology
         _resolve_endpoints(inst, cfg)

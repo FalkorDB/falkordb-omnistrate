@@ -406,6 +406,10 @@ Define falkordb ComponentSpec with ComponentDefinition.
   {{- end }}
   - name: SERVICE_PORT
     value: {{ .Values.port | default 6379 | toString | quote }}
+  - name: KB_SERVICE_PORT
+    value: {{ .Values.port | default 6379 | toString | quote }}
+  - name: DBCTL_REDIS_SERVICE_PORT
+    value: {{ .Values.port | default 6379 | toString | quote }}
   serviceVersion: {{ .Values.version }}
   {{- if and .Values.customSecretName .Values.customSecretNamespace }}
   systemAccounts:

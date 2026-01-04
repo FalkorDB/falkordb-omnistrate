@@ -516,8 +516,10 @@ def instance(omnistrate: OmnistrateFleetAPI, service_model_parts, cfg, request):
         # Other tiers (Pro, Enterprise, Free) use cloud instance types (nodeInstanceType)
         tier_name_lower = cfg["tier_name"].lower()
         if tier_name_lower == "startup":
-            # For Startup tier, use memoryRequestsAndLimits instead of nodeInstanceType
-            create_params["memoryRequestsAndLimits"] = cfg.get("maxmemory", "1GB")
+            # For Startup tier, pass both memory (for billing) and memoryRequestsAndLimits (for K8s resources)
+            memory_value = cfg.get("maxmemory", "1GB")
+            create_params["memory"] = memory_value.replace("GB", "Gi")  # Convert format if needed
+            create_params["memoryRequestsAndLimits"] = memory_value
         else:
             # For Pro, Enterprise, and Free tiers
             create_params["nodeInstanceType"] = cfg["instance_type"]

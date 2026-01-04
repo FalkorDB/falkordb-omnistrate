@@ -404,6 +404,8 @@ Define falkordb ComponentSpec with ComponentDefinition.
         name: {{ include "kblib.clusterName" . }}-falkordb-extra-user
         key: acl
   {{- end }}
+  - name: SERVICE_PORT
+    value: {{ .Values.port | default 6379 | toString | quote }}
   serviceVersion: {{ .Values.version }}
   {{- if and .Values.customSecretName .Values.customSecretNamespace }}
   systemAccounts:

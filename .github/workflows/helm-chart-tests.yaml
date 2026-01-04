@@ -575,27 +575,27 @@ jobs:
       fail-fast: false
       matrix:
         instances:
-          # ######################## FREE • AWS (BASIC) #####################
-          # - name: "[01] free/Standalone - AWS/us-east-2"
-          #   if: "basic"
-          #   testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
-          #   tests: "failover,stopstart,oom"
-          #   tierName: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-          #   cloudProvider: aws
-          #   cloudRegion: us-east-2
-          #   resourceKey: standalone
-          #   instanceType: t2.medium
+          ######################## FREE • AWS (BASIC) #####################
+          - name: "[01] free/Standalone - AWS/us-east-2"
+            if: "basic"
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
+            tests: "all"
+            tierName: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: standalone
+            instanceType: t2.medium
 
-          # ######################## STARTUP • AWS (BASIC) #####################
-          # - name: "[02] startup/Standalone - AWS/us-east-2"
-          #   if: "basic"
-          #   testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
-          #   tests: "failover,stopstart,oom"
-          #   tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
-          #   cloudProvider: aws
-          #   cloudRegion: us-east-2
-          #   resourceKey: standalone
-          #   instanceType: t2.medium
+          ######################## STARTUP • AWS (BASIC) #####################
+          - name: "[02] startup/Standalone - AWS/us-east-2"
+            if: "basic"
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
+            tests: "all"
+            tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: standalone
+            instanceType: t2.medium
 
           ######################## PRO • AWS (BASIC) #####################
           - name: "[03] pro/Standalone - AWS/us-east-2"

@@ -203,9 +203,6 @@ services:
           cloudProvider: gcp
         - apiParam: nodeInstanceType
           cloudProvider: aws
-    network:
-      ports:
-        - 6379
     endpointConfiguration:
       node:
         host: "node.{{ $sys.network.externalClusterEndpoint }}"
@@ -495,10 +492,6 @@ services:
           cloudProvider: gcp
         - apiParam: nodeInstanceType
           cloudProvider: aws
-    network:
-      ports:
-        - 6379
-        - 26379
     endpointConfiguration:
       node:
         host: "node.{{ $sys.network.externalClusterEndpoint }}"
@@ -811,9 +804,6 @@ services:
           cloudProvider: gcp
         - apiParam: nodeInstanceType
           cloudProvider: aws
-    network:
-      ports:
-        - 6379
     endpointConfiguration:
       node:
         host: "node.{{ $sys.network.externalClusterEndpoint }}"

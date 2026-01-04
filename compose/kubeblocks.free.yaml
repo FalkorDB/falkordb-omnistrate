@@ -56,9 +56,13 @@ services:
           name: e2-standard-4
         - cloudProvider: aws
           name: m6i.xlarge
-    network:
-      ports:
-        - 6379
+    endpointConfiguration:
+      node:
+        host: "node.{{ $sys.network.externalClusterEndpoint }}"
+        portExpressions:
+          - "{{ $func.randomminmax(10000, 65000, $sys.deterministicSeedValue) }}"
+        primary: true
+        networkingType: PUBLIC
     helmChartConfiguration: 
       runtimeConfiguration:
         disableHooks: false
@@ -89,12 +93,12 @@ services:
         loadBalancerEnabled: false
         hostPorts:
           - name: falkordb
-            port: 6379
+            port: "{{ $func.randomminmax(10000, 65000, $sys.deterministicSeedValue) }}"
         extra:
           disableExporter: false
           terminationPolicy: Delete
         hostname: "$sys.network.externalClusterEndpoint"
-        port: 6379
+        port: "{{ $func.randomminmax(10000, 65000, $sys.deterministicSeedValue) }}"
 
         # Sentinel not needed for standalone mode
         sentinel:

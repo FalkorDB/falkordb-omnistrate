@@ -212,9 +212,6 @@ services:
           cloudProvider: aws
         - apiParam: nodeInstanceType
           cloudProvider: azure
-    network:
-      ports:
-        - 6379
     endpointConfiguration:
       node:
         host: "node.{{ $sys.network.externalClusterEndpoint }}"
@@ -510,10 +507,6 @@ services:
           cloudProvider: aws
         - apiParam: nodeInstanceType
           cloudProvider: azure
-    network:
-      ports:
-        - 6379
-        - 26379
     endpointConfiguration:
       node:
         host: "node.{{ $sys.network.externalClusterEndpoint }}"
@@ -832,9 +825,6 @@ services:
           cloudProvider: aws
         - apiParam: nodeInstanceType
           cloudProvider: azure
-    network:
-      ports:
-        - 6379
     endpointConfiguration:
       node:
         host: "node.{{ $sys.network.externalClusterEndpoint }}"

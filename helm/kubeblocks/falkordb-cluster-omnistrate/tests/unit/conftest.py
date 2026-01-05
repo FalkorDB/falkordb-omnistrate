@@ -25,7 +25,7 @@ def helm_render(chart_path):
 def base_values():
     """Return base values for testing."""
     return {
-        "version": "4.12.5",
+        "version": "4.14.10",
         "instanceType": "e2-medium",
         "storage": 20,
         "hostname": "node.cluster.local",

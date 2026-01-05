@@ -59,7 +59,7 @@ def skip_cleanup(request):
 def integration_values():
     """Return default integration test values."""
     return {
-        "version": "4.12.5",
+        "version": "4.14.10",
         "mode": "standalone",
         "replicas": 1,
         "instanceType": "low",

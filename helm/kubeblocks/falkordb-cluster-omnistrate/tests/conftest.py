@@ -46,7 +46,7 @@ def chart_path():
 def test_values():
     """Return default test values for the chart."""
     return {
-        "version": "4.12.5",
+        "version": "4.14.10",
         "mode": "standalone",
         "replicas": 1,
         "instanceType": "low",

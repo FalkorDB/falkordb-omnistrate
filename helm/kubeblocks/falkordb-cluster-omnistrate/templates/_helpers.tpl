@@ -405,11 +405,11 @@ Define falkordb ComponentSpec with ComponentDefinition.
         key: acl
   {{- end }}
   - name: SERVICE_PORT
-    value: 6379
+    value: "6379"
   - name: KB_SERVICE_PORT
-    value: 6379
+    value: "6379"
   - name: DBCTL_REDIS_SERVICE_PORT
-    value: 6379
+    value: "6379"
   serviceVersion: {{ .Values.version }}
   {{- if and .Values.customSecretName .Values.customSecretNamespace }}
   systemAccounts:

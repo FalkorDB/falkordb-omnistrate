@@ -1,0 +1,1 @@
+"""Integration tests specific to standalone deployment mode."""

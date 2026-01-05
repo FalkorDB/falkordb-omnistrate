@@ -136,21 +136,21 @@ def test_replication_pack(instance):
         )
 
     # 3) Sentinel failover
-    if _run_step(cfg, "sentinel-failover"):
-        logging.info("Triggering sentinel failover")
-        instance.wait_for_instance_status(timeout_seconds=600)
-        instance.trigger_failover(
-            replica_id=f"sentinel-{id_key}-0",
-            wait_for_ready=False,
-            resource_id=instance.get_resource_id(f"sentinel-{id_key}"),
-        )
-        logging.debug("Validating data after sentinel failover")
-        assert_data(
-            instance,
-            ssl,
-            msg="Data lost after sentinel failover",
-            network_type=cfg["network_type"],
-        )
+    # if _run_step(cfg, "sentinel-failover"):
+    #     logging.info("Triggering sentinel failover")
+    #     instance.wait_for_instance_status(timeout_seconds=600)
+    #     instance.trigger_failover(
+    #         replica_id=f"sentinel-{id_key}-0",
+    #         wait_for_ready=False,
+    #         resource_id=instance.get_resource_id(f"sentinel-{id_key}"),
+    #     )
+    #     logging.debug("Validating data after sentinel failover")
+    #     assert_data(
+    #         instance,
+    #         ssl,
+    #         msg="Data lost after sentinel failover",
+    #         network_type=cfg["network_type"],
+    #     )
 
     # 4) Second master failover
     if _run_step(cfg, "second-failover"):

@@ -1,0 +1,457 @@
+"""
+E2E tests for FalkorDB standalone deployments via Omnistrate.
+
+Tests standalone (single-node) topology including:
+- Basic connectivity and data operations
+- Data persistence with multiple graphs
+
+Note: The following operations are not yet supported by Omnistrate API:
+- Stop/start/restart operations
+- Vertical scaling (instance type resize)
+- Storage expansion
+- OOM resilience testing
+- Persistence configuration testing
+- Concurrent operations testing
+
+These will be added once Omnistrate API support is available.
+"""
+
+import time
+import pytest
+import logging
+
+# Import local test utilities
+from .test_utils import (
+    add_data,
+    assert_data,
+    stress_oom,
+)
+
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+
+def _run_step(cfg, name):
+    """Check if a specific test step should be executed."""
+    steps = cfg["e2e_steps"]
+    return "all" in steps or name in steps
+
+
+@pytest.mark.omnistrate
+@pytest.mark.standalone
+class TestOmnistrateStandalone:
+    """
+    E2E tests for standalone topology deployments via Omnistrate.
+    """
+
+    def test_standalone_basic_connectivity(self, instance):
+        """
+        Test 1: Verify basic connectivity and data operations.
+        
+        - Connect to the standalone instance
+        - Write data
+        - Read data
+        - Verify persistence
+        """
+        logging.info("Testing basic standalone connectivity")
+        ssl = instance._cfg["tls"]
+        network_type = instance._cfg["network_type"]
+        
+        # Add and verify data
+        add_data(instance, ssl, key="test_connectivity", n=100, network_type=network_type)
+        assert_data(
+            instance,
+            ssl,
+            key="test_connectivity",
+            min_rows=100,
+            msg="Failed to verify connectivity data",
+            network_type=network_type,
+        )
+        logging.info("Basic connectivity test completed successfully")
+
+    def test_standalone_data_persistence(self, instance):
+        """
+        Test 2: Verify data persistence with multiple graphs.
+        
+        - Create multiple graphs
+        - Write data to each
+        - Verify all data persists
+        """
+        logging.info("Testing standalone data persistence")
+        ssl = instance._cfg["tls"]
+        network_type = instance._cfg["network_type"]
+        
+        # Create and verify multiple graphs
+        for i in range(5):
+            graph_key = f"test_graph_{i}"
+            add_data(instance, ssl, key=graph_key, n=100, network_type=network_type)
+            assert_data(
+                instance,
+                ssl,
+                key=graph_key,
+                min_rows=100,
+                msg=f"Failed to verify data in {graph_key}",
+                network_type=network_type,
+            )
+        
+        logging.info("Data persistence test completed successfully")
+
+    def test_standalone_stop_start(self, instance):
+        """
+        Test 3: Verify instance can be stopped and started.
+        
+        SKIPPED: Omnistrate API does not yet support stop/start operations.
+        This test will be added once API support is available.
+        """
+        pytest.skip("Stop/start not supported by Omnistrate API yet")
+        
+        # Add data before stop
+        add_data(instance, ssl, key="test_stopstart", n=200, network_type=network_type)
+        
+        # Stop instance
+        logging.info("Stopping instance")
+        instance.stop(wait_for_ready=True)
+        
+        # Start instance
+        logging.info("Starting instance")
+        instance.start(wait_for_ready=True)
+        
+        # Wait for instance to be fully ready
+        time.sleep(15)
+        
+        # Verify data persists
+        assert_data(
+            instance,
+            ssl,
+            key="test_stopstart",
+            min_rows=200,
+            msg="Data lost after stop/start",
+            network_type=network_type,
+        )
+        logging.info("Stop/start completed successfully")
+
+    def test_standalone_vertical_scaling(self, instance):
+        """
+        Test 4: Verify vertical scaling (instance type change).
+        
+        - Change to larger instance type
+        - Verify instance recovers
+        - Revert to original
+        """
+        logging.info("Testing standalone vertical scaling")
+        cfg = instance._cfg
+        ssl = cfg["tls"]
+        network_type = cfg["network_type"]
+        
+        if not _run_step(cfg, "resize"):
+            pytest.skip("Resize step not selected")
+        
+        new_type = cfg.get("new_instance_type")
+        if not new_type:
+            pytest.skip("No new instance type specified for resize test")
+        
+        # Add data before resize
+        add_data(instance, ssl, key="test_resize", n=200, network_type=network_type)
+        
+        orig_type = cfg["orig_instance_type"]
+        
+        # Resize up
+        logging.info(f"Resizing from {orig_type} to {new_type}")
+        instance.update_instance_type(new_type, wait_until_ready=True)
+        
+        # Verify data persists
+        assert_data(
+            instance,
+            ssl,
+            key="test_resize",
+            min_rows=200,
+            msg="Data lost after resize up",
+            network_type=network_type,
+        )
+        
+        # Resize back down
+        logging.info(f"Resizing back from {new_type} to {orig_type}")
+        instance.update_instance_type(orig_type, wait_until_ready=True)
+        
+        # Verify data still persists
+        assert_data(
+            instance,
+            ssl,
+            key="test_resize",
+            min_rows=200,
+            msg="Data lost after resize down",
+            network_type=network_type,
+        )
+        
+        logging.info("Vertical scaling completed successfully")
+
+    def test_standalone_storage_expansion(self, instance):
+        """
+        Test 5: Verify storage can be expanded (if supported).
+        
+        SKIPPED: Omnistrate API does not yet support storage expansion operations.
+        This test will be added once API support is available.
+        """
+        pytest.skip("Storage expansion not supported by Omnistrate API yet")
+        
+        # Add initial data
+        add_data(instance, ssl, key="test_storage", n=500, network_type=network_type)
+        
+        # Get current storage size
+        orig_storage = cfg["storage_size"]
+        new_storage = str(int(orig_storage) + 10)
+        
+        # Expand storage
+        logging.info(f"Expanding storage from {orig_storage}GB to {new_storage}GB")
+        try:
+            instance.update_params(
+                wait_until_ready=True,
+                storageSize=new_storage,
+            )
+            
+            # Add more data after expansion
+            add_data(instance, ssl, key="test_storage_post", n=200, network_type=network_type)
+            
+            # Verify all data persists
+            assert_data(
+                instance,
+                ssl,
+                key="test_storage",
+                min_rows=500,
+                msg="Original data lost after storage expansion",
+                network_type=network_type,
+            )
+            assert_data(
+                instance,
+                ssl,
+                key="test_storage_post",
+                min_rows=200,
+                msg="New data not written after storage expansion",
+                network_type=network_type,
+            )
+            
+            logging.info("Storage expansion completed successfully")
+        except Exception as e:
+            logging.warning(f"Storage expansion may not be supported: {e}")
+            pytest.skip(f"Storage expansion not supported: {e}")
+
+    def test_standalone_oom_resilience(self, instance):
+        """
+        Test 6: Verify OOM (Out of Memory) handling and resilience.
+        
+        - Fill memory until OOM
+        - Verify instance recovers
+        - Verify writes work after recovery
+        """
+        logging.info("Testing standalone OOM resilience")
+        cfg = instance._cfg
+        ssl = cfg["tls"]
+        network_type = cfg["network_type"]
+        
+        # Stress until OOM
+        logging.info("Stressing instance until OOM")
+        stress_oom(
+            instance,
+            ssl=ssl,
+            query_size="small" if "free" in cfg["tier_name"].lower() else "medium",
+            network_type=network_type,
+            stress_oomers=1 if "free" in cfg["tier_name"].lower() else 2,
+            is_cluster=False,
+            timeout_seconds=600,
+        )
+        
+        # Verify recovery - should be able to write again
+        logging.info("Verifying recovery after OOM")
+        time.sleep(30)  # Wait for recovery
+        add_data(instance, ssl, key="test_oom_recovery", n=100, network_type=network_type)
+        assert_data(
+            instance,
+            ssl,
+            key="test_oom_recovery",
+            min_rows=100,
+            msg="Failed to write after OOM",
+            network_type=network_type,
+        )
+        logging.info("OOM resilience test completed successfully")
+
+    def test_standalone_persistence_config(self, instance):
+        """
+        Test 7: Verify persistence configuration (RDB/AOF).
+        
+        SKIPPED: Omnistrate API does not yet support stop/start operations needed for this test.
+        This test will be added once API support is available.
+        """
+        pytest.skip("Persistence testing not supported by Omnistrate API yet (requires stop/start)")
+        
+        # Add data
+        add_data(instance, ssl, key="test_persistence", n=300, network_type=network_type)
+        
+        # Check persistence config
+        db = instance.create_connection(ssl=ssl, network_type=network_type)
+        config = db.connection.config_get("save")
+        logging.info(f"RDB persistence config: {config}")
+        
+        aof_config = db.connection.config_get("appendonly")
+        logging.info(f"AOF persistence config: {aof_config}")
+        
+        # Stop and start to test persistence
+        logging.info("Stopping instance to test persistence")
+        instance.stop(wait_for_ready=True)
+        
+        logging.info("Starting instance to verify data loaded from disk")
+        instance.start(wait_for_ready=True)
+        time.sleep(15)
+        
+        # Verify data persists (loaded from RDB/AOF)
+        assert_data(
+            instance,
+            ssl,
+            key="test_persistence",
+            min_rows=300,
+            msg="Data not loaded from persistence after restart",
+            network_type=network_type,
+        )
+        logging.info("Persistence configuration test completed successfully")
+
+    def test_standalone_concurrent_operations(self, instance):
+        """
+        Test 9: Concurrent read/write operations.
+        
+        - Run multiple concurrent writes
+        - Run multiple concurrent reads
+        - Verify data consistency
+        """
+        logging.info("Testing concurrent operations")
+        cfg = instance._cfg
+        ssl = cfg["tls"]
+        network_type = cfg["network_type"]
+        
+        if not _run_step(cfg, "concurrent"):
+            pytest.skip("Concurrent step not selected")
+        
+        import threading
+        import concurrent.futures
+        
+        db = instance.create_connection(ssl=ssl, network_type=network_type)
+        g = db.select_graph("concurrent_test")
+        
+        # Concurrent writes
+        def write_worker(worker_id):
+            for i in range(50):
+                g.query(f"CREATE (:Node {{worker: {worker_id}, seq: {i}}})")
+        
+        logging.info("Running concurrent writes")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(write_worker, i) for i in range(5)]
+            concurrent.futures.wait(futures)
+        
+        # Verify all writes succeeded
+        result = g.query("MATCH (n:Node) RETURN count(n) as count")
+        assert result.result_set[0][0] == 250, f"Expected 250 nodes, got {result.result_set[0][0]}"
+        
+        # Concurrent reads
+        def read_worker(worker_id):
+            return g.query(f"MATCH (n:Node {{worker: {worker_id}}}) RETURN count(n) as count")
+        
+        logging.info("Running concurrent reads")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(read_worker, i) for i in range(5)]
+            results = [f.result() for f in futures]
+        
+        # Verify reads
+        for result in results:
+            assert result.result_set[0][0] == 50, "Read inconsistency detected"
+        
+        logging.info("Concurrent operations test completed successfully")
+        
+        import threading
+        import queue
+        
+        errors = queue.Queue()
+        
+        def write_worker(thread_id):
+            try:
+                key = f"test_concurrent_{thread_id}"
+                add_data(instance, ssl, key=key, n=50, network_type=network_type)
+            except Exception as e:
+                errors.put(e)
+        
+        # Launch concurrent writes
+        threads = []
+        for i in range(5):
+            t = threading.Thread(target=write_worker, args=(i,))
+            threads.append(t)
+            t.start()
+        
+        # Wait for all threads
+        for t in threads:
+            t.join()
+        
+        # Check for errors
+        if not errors.empty():
+            raise errors.get()
+        
+        # Verify all data
+        for i in range(5):
+            key = f"test_concurrent_{i}"
+            assert_data(
+                instance,
+                ssl,
+                key=key,
+                min_rows=50,
+                msg=f"Data lost for concurrent write {i}",
+                network_type=network_type,
+            )
+        
+        logging.info("Concurrent operations test completed successfully")
+
+
+@pytest.mark.omnistrate
+@pytest.mark.standalone
+@pytest.mark.slow
+def test_standalone_full_suite(instance):
+    """
+    Comprehensive test running all standalone scenarios in sequence.
+    
+    This test executes a full E2E suite including:
+    - Basic connectivity
+    - Data persistence
+    - Stop/start
+    - Vertical scaling
+    - Storage expansion
+    - OOM resilience
+    - Persistence configuration
+    - Concurrent operations
+    
+    Use --e2e-steps to control which steps to run.
+    """
+    logging.info("Starting comprehensive standalone test suite")
+    
+    test_class = TestOmnistrateStandalone()
+    
+    # Run all tests in sequence
+    tests = [
+        ("connectivity", test_class.test_standalone_basic_connectivity),
+        ("persistence", test_class.test_standalone_data_persistence),
+        ("stopstart", test_class.test_standalone_stop_start),
+        ("resize", test_class.test_standalone_vertical_scaling),
+        ("storage-expand", test_class.test_standalone_storage_expansion),
+        ("oom", test_class.test_standalone_oom_resilience),
+        ("persistence", test_class.test_standalone_persistence_config),
+        ("concurrent", test_class.test_standalone_concurrent_operations),
+    ]
+    
+    cfg = instance._cfg
+    for step_name, test_func in tests:
+        if _run_step(cfg, step_name) or step_name in ("connectivity", "concurrent"):
+            logging.info(f"Running step: {step_name}")
+            try:
+                test_func(instance)
+            except pytest.skip.Exception as e:
+                logging.info(f"Step {step_name} skipped: {e}")
+            except Exception as e:
+                logging.error(f"Step {step_name} failed: {e}")
+                raise
+    
+    logging.info("Comprehensive standalone test suite completed successfully")

@@ -1,0 +1,921 @@
+# yaml-language-server: $schema=https://api.omnistrate.cloud/2022-09-01-00/schema/service-spec-schema.json
+
+name: $OmnistrateTierName
+tenancyType: CUSTOM_TENANCY
+deployment:
+  hostedDeployment:
+    GcpProjectId: "$GcpProjectId"
+    GcpProjectNumber: "$GcpProjectNumber"
+    GcpServiceAccountEmail: "$GcpServiceAccountEmail"
+    AwsAccountId: "$AwsAccountId"
+    AWSBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+    AzureSubscriptionId: "$AzureSubscriptionId"
+    AzureTenantId: "$AzureTenantId"
+metering:
+  gcsBucketName: $MeteringBucketName
+pricing:
+  - dimension: cpu
+    unit: cores
+    timeUnit: hour
+    price: 0.3
+  - dimension: memory
+    unit: GiB
+    timeUnit: hour
+    price: 0.015
+maxNumberOfInstancesAllowed: 100
+validPaymentMethodRequired: true
+billingProductID: "enterprise"
+
+services:
+  - name: Standalone
+    description: A FalkorDB Standalone database service managed by KubeBlocks (Enterprise tier).
+    apiParameters:
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "false"
+      - key: name
+        description: Name
+        name: Name
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: My favorite database
+        export: true
+      - key: description
+        description: Description
+        name: Description
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: Description
+        export: true
+      - key: nodeInstanceType
+        description: The size of the node instance. Check the documentation for more information.
+        name: Node Instance Type
+        type: String
+        modifiable: true
+        required: true
+        export: true
+        options:
+          - e2-medium
+          - e2-standard-2
+          - e2-standard-4
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
+          - t2.medium
+          - m6i.large
+          - m6i.xlarge
+          - m6i.2xlarge
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
+          - Standard_B2ms
+          - Standard_D2s_v3
+          - Standard_D4s_v3
+          - Standard_D8s_v3
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "false"
+      - key: falkordbUser
+        description: Choose a default username for your database
+        name: FalkorDB User
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "falkordb"
+      - key: falkordbPassword
+        description: Choose a default password for your database
+        name: FalkorDB Password
+        type: Password
+        modifiable: false
+        required: true
+        export: false
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "everysec"
+        options:
+          - "everysec"
+          - "always"
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        limits:
+          min: 0
+          max: 256
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        limits:
+          min: 256
+          max: 32768
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        limits:
+          min: 0
+          max: 512
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        limits:
+          min: 0
+          max: 45000
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        limits:
+          min: 0
+          max: 45000
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        limits:
+          min: 0
+          max: 1000000
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        limits:
+          min: 0
+          max: 2000000000
+    compute:
+      instanceTypes:
+        - apiParam: nodeInstanceType
+          cloudProvider: gcp
+        - apiParam: nodeInstanceType
+          cloudProvider: aws
+        - apiParam: nodeInstanceType
+          cloudProvider: azure
+    endpointConfiguration:
+      node:
+        host: "node.{{ $sys.network.externalClusterEndpoint }}"
+        ports:
+          - 6379
+        primary: true
+        networkingType: PUBLIC
+    helmChartConfiguration:
+      runtimeConfiguration:
+        disableHooks: false
+        wait: true
+        waitForJobs: true
+        recreate: false
+        resetThenReuseValues: false
+        resetValues: true
+        reuseValues: false
+        skipCRDs: false
+        upgradeCRDs: true
+        timeoutNanos: 180000000000
+      chartName: falkordb-cluster-omnistrate
+      chartVersion: $ChartVersion
+      chartRepoName: falkordb-charts
+      chartRepoURL: $ChartRepoURL
+      chartValues:
+        version: $FalkorDBServiceVersion
+        mode: standalone
+        replicas: 1
+        instanceType: $var.nodeInstanceType
+        storage: 20
+        hostNetworkEnabled: true
+        podAntiAffinityEnabled: true
+        nodePortEnabled: false
+        fixedPodIPEnabled: false
+        loadBalancerEnabled: false
+        hostPorts:
+          - name: falkordb
+            port: 6379
+        extra:
+          disableExporter: false
+          terminationPolicy: Delete
+        hostname: "$sys.network.externalClusterEndpoint"
+        port: 6379
+
+        # Sentinel not needed for standalone mode
+        sentinel:
+          enabled: false
+
+        # Limited falkordb user credentials - passed to OpsRequest
+        falkordbUser:
+          username: $var.falkordbUser
+          password: $var.falkordbPassword
+
+        # FalkorDB module configuration
+        falkordbConfig:
+          cacheSize: $var.falkorDBCacheSize
+          nodeCreationBuffer: $var.falkorDBNodeCreationBuffer
+          maxQueuedQueries: $var.falkorDBMaxQueuedQueries
+          timeoutMax: $var.falkorDBTimeoutMax
+          timeoutDefault: $var.falkorDBTimeoutDefault
+          resultSetSize: $var.falkorDBResultSetSize
+          queryMemCapacity: $var.falkorDBQueryMemCapacity
+
+        # Persistence configuration
+        persistence:
+          rdbConfig: $var.RDBPersistenceConfig
+          aofConfig: $var.AOFPersistenceConfig
+
+        # TLS (future implementation)
+        enableTLS: $var.enableTLS
+
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: omnistrate.com/managed-by
+                    operator: In
+                    values:
+                      - omnistrate
+                  - key: topology.kubernetes.io/region
+                    operator: In
+                    values:
+                      - $sys.deploymentCell.region
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                      - $sys.compute.node.instanceType
+                  - key: omnistrate.com/resource
+                    operator: In
+                    values:
+                      - $sys.deployment.resourceID
+
+  - name: Replication
+    description: A FalkorDB Replication (primary-replica) service managed by KubeBlocks (Enterprise tier).
+    apiParameters:
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "false"
+      - key: name
+        description: Name
+        name: Name
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: My favorite database
+        export: true
+      - key: description
+        description: Description
+        name: Description
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: Description
+        export: true
+      - key: nodeInstanceType
+        description: The size of the node instance. Check the documentation for more information.
+        name: Node Instance Type
+        type: String
+        modifiable: true
+        required: true
+        export: true
+        options:
+          - e2-medium
+          - e2-standard-2
+          - e2-standard-4
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
+          - t2.medium
+          - m6i.large
+          - m6i.xlarge
+          - m6i.2xlarge
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
+          - Standard_B2ms
+          - Standard_D2s_v3
+          - Standard_D4s_v3
+          - Standard_D8s_v3
+      - key: numReplicas
+        description: Number of Replicas (includes 1 primary + replicas)
+        name: Number of Replicas
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "2"
+        limits:
+          min: 2
+          max: 5
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "false"
+      - key: falkordbUser
+        description: Choose a default username for your database
+        name: FalkorDB User
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "falkordb"
+      - key: falkordbPassword
+        description: Choose a default password for your database
+        name: FalkorDB Password
+        type: Password
+        modifiable: false
+        required: true
+        export: false
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "everysec"
+        options:
+          - "everysec"
+          - "always"
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        limits:
+          min: 0
+          max: 256
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        limits:
+          min: 256
+          max: 32768
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        limits:
+          min: 0
+          max: 512
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        limits:
+          min: 0
+          max: 45000
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        limits:
+          min: 0
+          max: 45000
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        limits:
+          min: 0
+          max: 1000000
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        limits:
+          min: 0
+          max: 2000000000
+      - key: multiZoneEnabled
+        description: Enable multi-zone deployment to spread pods across availability zones
+        name: Multi-Zone Enabled
+        type: Boolean
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "false"
+    compute:
+      instanceTypes:
+        - apiParam: nodeInstanceType
+          cloudProvider: gcp
+        - apiParam: nodeInstanceType
+          cloudProvider: aws
+        - apiParam: nodeInstanceType
+          cloudProvider: azure
+    endpointConfiguration:
+      node:
+        host: "node.{{ $sys.network.externalClusterEndpoint }}"
+        ports:
+          - 6379
+        primary: true
+        networkingType: PUBLIC
+      sentinel:
+        host: "sentinel.{{ $sys.network.externalClusterEndpoint }}"
+        ports:
+          - 26379
+        primary: false
+        networkingType: PUBLIC
+    helmChartConfiguration:
+      runtimeConfiguration:
+        disableHooks: false
+        wait: true
+        waitForJobs: true
+        recreate: false
+        resetThenReuseValues: false
+        resetValues: true
+        reuseValues: false
+        skipCRDs: false
+        upgradeCRDs: true
+        timeoutNanos: 180000000000
+      chartName: falkordb-cluster-omnistrate
+      chartVersion: $ChartVersion
+      chartRepoName: falkordb-charts
+      chartRepoURL: $ChartRepoURL
+      chartValues:
+        version: $FalkorDBServiceVersion
+        mode: replication
+        replicas: $var.numReplicas
+        instanceType: $var.nodeInstanceType
+        storage: 20
+        hostNetworkEnabled: true
+        podAntiAffinityEnabled: true
+        nodePortEnabled: false
+        fixedPodIPEnabled: false
+        loadBalancerEnabled: false
+        hostPorts:
+          - name: falkordb
+            port: 6379
+          - name: falkordb-sent
+            port: 26379
+        extra:
+          disableExporter: false
+          terminationPolicy: Delete
+        hostname: "$sys.network.externalClusterEndpoint"
+        port: 6379
+
+        # Sentinel configuration for replication
+        sentinel:
+          enabled: true
+          replicas: 3
+
+        # Limited falkordb user credentials
+        falkordbUser:
+          username: $var.falkordbUser
+          password: $var.falkordbPassword
+
+        # FalkorDB module configuration
+        falkordbConfig:
+          cacheSize: $var.falkorDBCacheSize
+          nodeCreationBuffer: $var.falkorDBNodeCreationBuffer
+          maxQueuedQueries: $var.falkorDBMaxQueuedQueries
+          timeoutMax: $var.falkorDBTimeoutMax
+          timeoutDefault: $var.falkorDBTimeoutDefault
+          resultSetSize: $var.falkorDBResultSetSize
+          queryMemCapacity: $var.falkorDBQueryMemCapacity
+
+        # Persistence configuration
+        persistence:
+          rdbConfig: $var.RDBPersistenceConfig
+          aofConfig: $var.AOFPersistenceConfig
+
+        # TLS configuration
+        enableTLS: $var.enableTLS
+
+        # Multi-zone configuration
+        multiZoneEnabled: $var.multiZoneEnabled
+
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: omnistrate.com/managed-by
+                    operator: In
+                    values:
+                      - omnistrate
+                  - key: topology.kubernetes.io/region
+                    operator: In
+                    values:
+                      - $sys.deploymentCell.region
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                      - $sys.compute.node.instanceType
+                  - key: omnistrate.com/resource
+                    operator: In
+                    values:
+                      - $sys.deployment.resourceID
+
+  - name: Cluster
+    description: A FalkorDB Cluster Single Zone (sharded cluster) service managed by KubeBlocks (Enterprise tier).
+    apiParameters:
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "false"
+      - key: name
+        description: Name
+        name: Name
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: My favorite database
+        export: true
+      - key: description
+        description: Description
+        name: Description
+        type: String
+        modifiable: true
+        required: false
+        defaultValue: Description
+        export: true
+      - key: nodeInstanceType
+        description: The size of the node instance. Check the documentation for more information.
+        name: Node Instance Type
+        type: String
+        modifiable: true
+        required: true
+        export: true
+        options:
+          - e2-medium
+          - e2-standard-2
+          - e2-standard-4
+          - e2-custom-4-8192
+          - e2-custom-8-16384
+          - e2-custom-16-32768
+          - e2-custom-32-65536
+          - t2.medium
+          - m6i.large
+          - m6i.xlarge
+          - m6i.2xlarge
+          - c6i.xlarge
+          - c6i.2xlarge
+          - c6i.4xlarge
+          - c6i.8xlarge
+          - Standard_B2ms
+          - Standard_D2s_v3
+          - Standard_D4s_v3
+          - Standard_D8s_v3
+      - key: shardCount
+        description: Number of shards in the cluster
+        name: Shard Count
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "3"
+        limits:
+          min: 3
+          max: 15
+      - key: replicasPerShard
+        description: Number of replicas per shard (including primary)
+        name: Replicas Per Shard
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "2"
+        limits:
+          min: 1
+          max: 3
+      - key: enableTLS
+        description: Whether to enable TLS for the database
+        name: Enable TLS
+        type: Boolean
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "false"
+      - key: falkordbUser
+        description: Choose a default username for your database
+        name: FalkorDB User
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "falkordb"
+      - key: falkordbPassword
+        description: Choose a default password for your database
+        name: FalkorDB Password
+        type: Password
+        modifiable: false
+        required: true
+        export: false
+      - key: RDBPersistenceConfig
+        description: How often to save the RDB file to disk. Check the documentation for more information.
+        name: RDB Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "low"
+        options:
+          - "low"
+          - "medium"
+          - "high"
+      - key: AOFPersistenceConfig
+        description: Whether to enable AOF persistence. Check the documentation for more information.
+        name: AOF Persistence Config
+        type: String
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "everysec"
+        options:
+          - "everysec"
+          - "always"
+      - key: falkorDBCacheSize
+        description: Choose the cache size for your database
+        name: FalkorDB Cache Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "25"
+        limits:
+          min: 0
+          max: 256
+      - key: falkorDBNodeCreationBuffer
+        description: Choose the buffer size for your database
+        name: FalkorDB Node Creation Buffer
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "16384"
+        limits:
+          min: 256
+          max: 32768
+      - key: falkorDBMaxQueuedQueries
+        description: Choose the max queued queries for your database
+        name: FalkorDB Max Queued Queries
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "50"
+        limits:
+          min: 0
+          max: 512
+      - key: falkorDBTimeoutMax
+        description: Choose the timeout max for your database
+        name: FalkorDB Timeout Max
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        limits:
+          min: 0
+          max: 45000
+      - key: falkorDBTimeoutDefault
+        description: Choose the timeout default for your database
+        name: FalkorDB Timeout Default
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        limits:
+          min: 0
+          max: 45000
+      - key: falkorDBResultSetSize
+        description: Choose the result set size for your database
+        name: FalkorDB Result Set Size
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "10000"
+        limits:
+          min: 0
+          max: 1000000
+      - key: falkorDBQueryMemCapacity
+        description: Choose the query mem capacity for your database
+        name: FalkorDB Query Mem Capacity
+        type: Float64
+        modifiable: false
+        required: false
+        export: true
+        defaultValue: "0"
+        limits:
+          min: 0
+          max: 2000000000
+      - key: multiZoneEnabled
+        description: Enable multi-zone deployment to spread pods across availability zones
+        name: Multi-Zone Enabled
+        type: Boolean
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "false"
+    compute:
+      instanceTypes:
+        - apiParam: nodeInstanceType
+          cloudProvider: gcp
+        - apiParam: nodeInstanceType
+          cloudProvider: aws
+        - apiParam: nodeInstanceType
+          cloudProvider: azure
+    endpointConfiguration:
+      node:
+        host: "node.{{ $sys.network.externalClusterEndpoint }}"
+        ports:
+          - 6379
+        primary: true
+        networkingType: PUBLIC
+    helmChartConfiguration:
+      runtimeConfiguration:
+        disableHooks: false
+        wait: true
+        waitForJobs: true
+        recreate: false
+        resetThenReuseValues: false
+        resetValues: true
+        reuseValues: false
+        skipCRDs: false
+        upgradeCRDs: true
+        timeoutNanos: 180000000000
+      chartName: falkordb-cluster-omnistrate
+      chartVersion: $ChartVersion
+      chartRepoName: falkordb-charts
+      chartRepoURL: $ChartRepoURL
+      chartValues:
+        version: $FalkorDBServiceVersion
+        mode: cluster
+        shardCount: $var.shardCount
+        replicas: $var.replicasPerShard
+        instanceType: $var.nodeInstanceType
+        storage: 20
+        hostNetworkEnabled: true
+        podAntiAffinityEnabled: true
+        nodePortEnabled: false
+        fixedPodIPEnabled: false
+        loadBalancerEnabled: false
+        hostPorts:
+          - name: cluster
+            port: 6379
+        extra:
+          disableExporter: false
+          terminationPolicy: Delete
+        hostname: "$sys.network.externalClusterEndpoint"
+        port: 6379
+
+        # Sentinel not needed for cluster mode
+        sentinel:
+          enabled: false
+
+        # Limited falkordb user credentials
+        falkordbUser:
+          username: $var.falkordbUser
+          password: $var.falkordbPassword
+
+        # FalkorDB module configuration
+        falkordbConfig:
+          cacheSize: $var.falkorDBCacheSize
+          nodeCreationBuffer: $var.falkorDBNodeCreationBuffer
+          maxQueuedQueries: $var.falkorDBMaxQueuedQueries
+          timeoutMax: $var.falkorDBTimeoutMax
+          timeoutDefault: $var.falkorDBTimeoutDefault
+          resultSetSize: $var.falkorDBResultSetSize
+          queryMemCapacity: $var.falkorDBQueryMemCapacity
+
+        # Persistence configuration
+        persistence:
+          rdbConfig: $var.RDBPersistenceConfig
+          aofConfig: $var.AOFPersistenceConfig
+
+        # TLS configuration
+        enableTLS: $var.enableTLS
+
+        # Multi-zone configuration
+        multiZoneEnabled: $var.multiZoneEnabled
+
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: omnistrate.com/managed-by
+                    operator: In
+                    values:
+                      - omnistrate
+                  - key: topology.kubernetes.io/region
+                    operator: In
+                    values:
+                      - $sys.deploymentCell.region
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                      - $sys.compute.node.instanceType
+                  - key: omnistrate.com/resource
+                    operator: In
+                    values:
+                      - $sys.deployment.resourceID

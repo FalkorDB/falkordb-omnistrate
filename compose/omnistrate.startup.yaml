@@ -261,7 +261,7 @@ services:
         name: Memory
         type: String
         modifiable: false
-        required: false
+        required: true
         export: true
         defaultValue: "1GB"
         labeledOptions:
@@ -415,7 +415,7 @@ services:
         name: Memory
         type: String
         modifiable: false
-        required: false
+        required: true
         export: true
         defaultValue: "1GB"
         labeledOptions:

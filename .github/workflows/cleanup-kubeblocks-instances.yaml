@@ -1,0 +1,29 @@
+name: Clean up kubeblocks instances running in the DEV environment
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 22 * * *'
+
+env:
+  OMNISTRATE_INTERNAL_SERVICE_ID: "s-0YTXHd84J0"
+  OMNISTRATE_INTERNAL_DEV_ENVIRONMENT: "se-TPxzwZrcff"
+  OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
+  OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
+
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+  
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v4
+      
+      - name: Install requests module and run cleanup.py script to delete all kubeblocks instances (Omnistrate deployments) in DEV environment
+        run: |
+          pip3 install --no-cache-dir requests
+          python3 ./scripts/cleanup-qa-instances-script.py

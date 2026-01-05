@@ -1,0 +1,82 @@
+{{- /*
+Static per-pod Services for standalone and replication modes.
+For cluster (sharded) mode, per-pod Services are created by the post-install/upgrade Job.
+*/ -}}
+{{- if and .Values.hostname (ne .Values.mode "cluster") }}
+{{- $cluster := include "kblib.clusterName" . -}}
+{{- /* compute node replicas */ -}}
+{{- $nodeReplicas := 1 -}}
+{{- if eq .Values.mode "replication" -}}
+  {{- $nodeReplicas = (max (int .Values.replicas) 2) -}}
+{{- end -}}
+{{- range $i, $_ := until (int $nodeReplicas) }}
+{{- $podName := printf "%s-falkordb-%d" $cluster $i -}}
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: {{ printf "%s.%s" $podName $.Values.hostname | quote }}
+    external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+    external-dns.alpha.kubernetes.io/ttl: "60"
+  name: {{ printf "%s-external" $podName }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  {{- if $.Values.nodePortEnabled }}
+  type: NodePort
+  {{- else }}
+  clusterIP: None
+  type: ClusterIP
+  {{- end }}
+  ports:
+    - name: falkordb
+      port: {{ $.Values.port }}
+      protocol: TCP
+      targetPort: {{ $.Values.port }}
+  selector:
+    app.kubernetes.io/managed-by: kubeblocks
+    apps.kubeblocks.io/pod-name: {{ $podName | quote }}
+  sessionAffinity: None
+---
+{{- end }}
+
+{{- if eq .Values.mode "replication" }}
+{{- $srep := .Values.sentinel.replicas | default 3 -}}
+{{- range $i, $_ := until (int $srep) }}
+{{- $spod := printf "%s-falkordb-sent-%d" $cluster $i -}}
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: {{ printf "%s.%s" $spod $.Values.hostname | quote }}
+    external-dns.alpha.kubernetes.io/endpoints-type: NodeExternalIP
+    external-dns.alpha.kubernetes.io/ttl: "60"
+  name: {{ printf "%s-external" $spod }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  {{- if $.Values.nodePortEnabled }}
+  type: NodePort
+  {{- else }}
+  clusterIP: None
+  type: ClusterIP
+  {{- end }}
+  ports:
+    - name: sentinel
+      port: 26379
+      protocol: TCP
+      targetPort: 26379
+  selector:
+    app.kubernetes.io/managed-by: kubeblocks
+    apps.kubeblocks.io/pod-name: {{ $spod | quote }}
+  sessionAffinity: None
+---
+{{- end }}
+{{- end }}
+{{- end }}

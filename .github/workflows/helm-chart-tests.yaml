@@ -1,0 +1,832 @@
+name: Helm Chart Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+    paths:
+      - "helm/kubeblocks/**"
+      - "compose/**"
+      - ".github/workflows/helm-chart-tests.yaml"
+  push:
+    tags:
+      - "v*"
+    paths:
+      - "helm/kubeblocks/**"
+      - "compose/**"
+      - ".github/workflows/helm-chart-tests.yaml"
+  schedule:
+    - cron: "0 0 * * *" # Run daily at midnight UTC
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: "Type of tests to run"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - unit
+          - integration
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NAMESPACE: falkordb-test
+  CLUSTER_NAME: test-cluster
+  PYTHON_VERSION: "3.11"
+  KIND_VERSION: "v0.20.0"
+  KUBECTL_VERSION: "v1.28.0"
+  HELM_VERSION: "v3.13.0"
+  KUBEBLOCKS_VERSION: "v1.1.0-alpha.4"
+  FALKORDB_SERVICE_VERSION: "4.14.10"
+  KUBEBLOCKS_ADDONS_REPOSITORY: falkordb/kubeblocks-addons
+  KUBEBLOCKS_ADDONS_REPOSITORY_REF: 'main'
+
+jobs:
+  unit-tests:
+    name: Unit Tests (Manifest Rendering)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ env.KUBEBLOCKS_ADDONS_REPOSITORY }}
+          ref: ${{ env.KUBEBLOCKS_ADDONS_REPOSITORY_REF }}
+          path: helm/kubeblocks/kubeblocks-addons
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: ${{ runner.os }}-poetry-helm-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-helm-
+            ${{ runner.os }}-poetry-
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        working-directory: .
+        run: |
+          poetry install
+
+      - name: Build Helm chart dependencies
+        working-directory: helm/kubeblocks/falkordb-cluster-omnistrate
+        run: |
+          helm dependency build
+
+      - name: Run unit tests
+        working-directory: helm/kubeblocks/falkordb-cluster-omnistrate/tests
+        run: |
+          poetry run pytest -v -n 3 --dist=loadfile --tb=short \
+            --cluster-name=${{ env.CLUSTER_NAME }} \
+            --namespace=${{ env.NAMESPACE }} \
+            unit/
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: |
+            helm/kubeblocks/falkordb-cluster-omnistrate/tests/.pytest_cache/
+            helm/kubeblocks/falkordb-cluster-omnistrate/tests/test-results/
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: |
+      ((github.event_name == 'pull_request' && inputs.test_type != 'unit') ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) ||
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.test_type != 'unit') ||
+      github.ref == 'refs/heads/kubeblocks' ||
+      (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks'))
+
+    strategy:
+      fail-fast: false
+      matrix:
+        test-suite:
+          - name: "Standalone Mode Integration Tests"
+            path: "integration/standalone"
+            if: 'true'
+          - name: "Replication Mode Integration Tests"
+            path: "integration/replication"
+            if: 'true'
+          - name: "Cluster Mode Integration Tests"
+            path: "integration/cluster"
+            if: 'true' 
+    steps:
+      - name: Checkout
+        if: matrix.test-suite.if == 'true'
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Checkout
+        if: matrix.test-suite.if == 'true'
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ env.KUBEBLOCKS_ADDONS_REPOSITORY }}
+          ref: ${{ env.KUBEBLOCKS_ADDONS_REPOSITORY_REF }}
+          path: helm/kubeblocks/kubeblocks-addons
+
+      - name: Verify submodules
+        if: matrix.test-suite.if == 'true'
+        run: |
+          echo "Checking submodule status..."
+          git submodule status
+          echo "Listing kubeblocks-addons directory..."
+          ls -la helm/kubeblocks/kubeblocks-addons/ || echo "Directory not found"
+          if [ ! -d "helm/kubeblocks/kubeblocks-addons/addons" ]; then
+            echo "Submodule content not found, initializing manually..."
+            git submodule update --init --recursive
+          fi
+          echo "Final check:"
+          ls -la helm/kubeblocks/kubeblocks-addons/addons/ || echo "Addons directory still not found"
+
+      - name: Set up Python
+        if: matrix.test-suite.if == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up Helm
+        if: matrix.test-suite.if == 'true'
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Set up kubectl
+        if: matrix.test-suite.if == 'true'
+        uses: azure/setup-kubectl@v4
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Set up Kind
+        if: matrix.test-suite.if == 'true'
+        uses: helm/kind-action@v1
+        with:
+          version: ${{ env.KIND_VERSION }}
+          cluster_name: falkordb-test
+          config: helm/kubeblocks/falkordb-cluster-omnistrate/tests/kind-config.yaml
+          wait: 300s
+
+      - name: Verify cluster
+        if: matrix.test-suite.if == 'true'
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+          kubectl wait --for=condition=Ready nodes --all --timeout=300s
+
+      - name: Install VolumeSnapshot CRDs
+        if: matrix.test-suite.if == 'true'
+        run: |
+          if kubectl get crd volumesnapshots.snapshot.storage.k8s.io >/dev/null 2>&1; then
+            echo "VolumeSnapshot CRDs already present"
+            exit 0
+          fi
+          SNAPSHOTTER_VERSION="v6.3.3"
+          kubectl apply -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml"
+          kubectl apply -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml"
+          kubectl apply -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml"
+
+      - name: Cache Poetry virtualenv
+        if: matrix.test-suite.if == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: ${{ runner.os }}-poetry-helm-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-helm-
+            ${{ runner.os }}-poetry-
+
+      - name: Install Poetry
+        if: matrix.test-suite.if == 'true'
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install Python dependencies
+        if: matrix.test-suite.if == 'true'
+        run: |
+          poetry install
+
+      - name: Install KubeBlocks CRDs
+        if: matrix.test-suite.if == 'true'
+        run: |
+          kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/${{ env.KUBEBLOCKS_VERSION }}/kubeblocks_crds.yaml
+
+      - name: Add KubeBlocks Helm repo
+        if: matrix.test-suite.if == 'true'
+        run: |
+          helm repo add kubeblocks https://apecloud.github.io/helm-charts
+          helm repo update
+
+      - name: Install KubeBlocks
+        if: matrix.test-suite.if == 'true'
+        run: |
+          helm install kubeblocks kubeblocks/kubeblocks \
+            --namespace kb-system \
+            --version ${{ env.KUBEBLOCKS_VERSION }} \
+            --create-namespace \
+            --set autoInstalledAddons={} \
+            --wait \
+            --timeout 10m
+
+      - name: Wait for KubeBlocks pods
+        if: matrix.test-suite.if == 'true'
+        run: |
+          kubectl wait --for=condition=Ready pods --all -n kb-system --timeout=300s
+          kubectl get pods -n kb-system
+
+      - name: Install FalkorDB addon
+        if: matrix.test-suite.if == 'true'
+        run: |
+          ADDON_PATH="helm/kubeblocks/kubeblocks-addons/addons/falkordb"
+          if [ -d "$ADDON_PATH" ]; then
+            echo "Building FalkorDB addon dependencies..."
+            helm dependency build "$ADDON_PATH" || true
+            echo "Installing FalkorDB addon..."
+            helm upgrade --install falkordb --namespace kb-system "$ADDON_PATH" --wait --timeout 5m
+            sleep 10
+            kubectl -n kb-system get clusterdefinitions
+          else
+            echo "FalkorDB addon directory not found at $ADDON_PATH"
+            ls -la helm/kubeblocks/kubeblocks-addons/ || echo "kubeblocks-addons directory not found"
+            exit 1
+          fi
+
+      - name: Verify FalkorDB addon
+        if: matrix.test-suite.if == 'true'
+        run: |
+          timeout=60
+          elapsed=0
+          while [ $elapsed -lt $timeout ]; do
+            status=$(kubectl -n kb-system get clusterdefinitions falkordb -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+            if [ "$status" = "Available" ]; then
+              echo "FalkorDB addon is enabled"
+              break
+            fi
+            echo "Waiting for addon to be enabled... (${elapsed}s/${timeout}s)"
+            sleep 5
+            elapsed=$((elapsed + 5))
+          done
+          kubectl -n kb-system get clusterdefinitions falkordb -o yaml
+
+      - name: Create test namespace
+        if: matrix.test-suite.if == 'true'
+        run: |
+          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Build Helm chart dependencies
+        if: matrix.test-suite.if == 'true'
+        working-directory: helm/kubeblocks/falkordb-cluster-omnistrate
+        run: |
+          helm dependency build
+
+      - name: Cleanup existing test resources
+        if: matrix.test-suite.if == 'true'
+        working-directory: helm/kubeblocks/falkordb-cluster-omnistrate/tests
+        run: |
+          # Cleanup any existing helm releases
+          if helm list -n ${{ env.NAMESPACE }} --all 2>/dev/null | grep -q "test-cluster"; then
+            helm uninstall test-cluster -n ${{ env.NAMESPACE }} || true
+            sleep 5
+          fi
+
+          # Cleanup any leftover PVCs
+          kubectl delete pvc -n ${{ env.NAMESPACE }} -l app.kubernetes.io/instance=test-cluster --ignore-not-found=true || true
+
+      - name: Run ${{ matrix.test-suite.name }}
+        if: matrix.test-suite.if == 'true'
+        working-directory: helm/kubeblocks/falkordb-cluster-omnistrate/tests
+        run: |
+          poetry run pytest -v -s --tb=short \
+            --cluster-name=${{ env.CLUSTER_NAME }} \
+            --namespace=${{ env.NAMESPACE }} \
+            ${{ matrix.test-suite.path }}
+
+      - name: Collect logs on failure
+        if: failure() && matrix.test-suite.if == 'true'
+        run: |
+          echo "=== Cluster Definitions ==="
+          kubectl get clusterdefinitions -n kb-system
+
+          echo "=== Clusters ==="
+          kubectl get clusters -n ${{ env.NAMESPACE }}
+
+          echo "=== Pods ==="
+          kubectl get pods -n ${{ env.NAMESPACE }} -o wide
+
+          echo "=== Pod Logs ==="
+          for pod in $(kubectl get pods -n ${{ env.NAMESPACE }} -o name); do
+            echo "--- $pod ---"
+            kubectl logs -n ${{ env.NAMESPACE }} $pod --all-containers --tail=100 || true
+          done
+
+          echo "=== Events ==="
+          kubectl get events -n ${{ env.NAMESPACE }} --sort-by='.lastTimestamp'
+
+          echo "=== KubeBlocks Pods ==="
+          kubectl get pods -n kb-system
+
+          echo "=== KubeBlocks Logs ==="
+          for pod in $(kubectl get pods -n kb-system -o name); do
+            echo "--- $pod ---"
+            kubectl logs -n kb-system $pod --tail=100 || true
+          done
+
+      - name: Upload test results
+        if: always() && matrix.test-suite.if == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results-${{ matrix.test-suite.name }}
+          path: |
+            helm/kubeblocks/falkordb-cluster-omnistrate/tests/.pytest_cache/
+            helm/kubeblocks/falkordb-cluster-omnistrate/tests/test-results/
+
+  package-and-push-helm-chart:
+    name: Package and Push Helm Chart
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all') ||
+      contains(github.ref, 'refs/tags/v') ||
+      github.ref == 'refs/heads/kubeblocks' ||
+      (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks')
+    outputs:
+      chart-version: ${{ steps.package.outputs.chart-version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Checkout KubeBlocks Addons
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ env.KUBEBLOCKS_ADDONS_REPOSITORY }}
+          ref: ${{ env.KUBEBLOCKS_ADDONS_REPOSITORY_REF }}
+          path: helm/kubeblocks/kubeblocks-addons
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Determine chart version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" =~ ^refs/tags/v ]]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION="0.0.0-dev-${{ github.run_id }}"
+          fi
+          echo "chart-version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Chart version: $VERSION"
+
+      - name: Update Chart.yaml version
+        working-directory: helm/kubeblocks/falkordb-cluster-omnistrate
+        run: |
+          sed -i "s/^version:.*/version: ${{ steps.version.outputs.chart-version }}/" Chart.yaml
+          cat Chart.yaml
+
+      - name: Build Helm chart dependencies
+        working-directory: helm/kubeblocks/falkordb-cluster-omnistrate
+        run: |
+          helm dependency build
+
+      - name: Package Helm chart
+        id: package
+        working-directory: helm/kubeblocks/falkordb-cluster-omnistrate
+        run: |
+          helm package . --destination /tmp/charts
+          echo "chart-version=${{ steps.version.outputs.chart-version }}" >> $GITHUB_OUTPUT
+          ls -la /tmp/charts
+
+      - name: Configure Git for GitHub Pages
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v6
+        with:
+          repository: FalkorDB/helm-charts
+          ref: gh-pages
+          path: gh-pages
+          token: ${{ secrets.GH_HELM_PAT }}
+
+      - name: Update Helm repository index
+        run: |
+          mkdir -p gh-pages/charts
+          cp /tmp/charts/*.tgz gh-pages/charts/
+          helm repo index gh-pages/charts --url https://falkordb.github.io/helm-charts/charts --merge gh-pages/index.yaml
+          mv gh-pages/charts/index.yaml gh-pages/index.yaml
+
+      - name: Push to gh-pages
+        working-directory: gh-pages
+        run: |
+          git add index.yaml charts/
+          git commit -m "Add Helm chart version ${{ steps.version.outputs.chart-version }}" || echo "No changes to commit"
+          git push origin gh-pages
+
+  update-omnistrate-plans:
+    name: Update Omnistrate Plans
+    runs-on: ubuntu-latest
+    needs: package-and-push-helm-chart
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all') ||
+      contains(github.ref, 'refs/tags/v') ||
+      github.ref == 'refs/heads/kubeblocks' ||
+      (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks')
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        plans:
+          - service-name: KubeBlocks
+            plan-name: Kubeblocks Free
+            file: kubeblocks.free.yaml
+            key: free
+            tier-name: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+          - service-name: KubeBlocks
+            plan-name: Kubeblocks Startup
+            file: kubeblocks.startup.yaml
+            key: startup
+            tier-name: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+          - service-name: KubeBlocks
+            plan-name: Kubeblocks Pro
+            file: kubeblocks.pro.yaml
+            key: pro
+            tier-name: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+          - service-name: KubeBlocks
+            plan-name: Enterprise
+            file: kubeblocks.enterprise.yaml
+            key: enterprise
+            tier-name: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Wait for Helm chart availability
+        env:
+          CHART_VERSION: ${{ needs.package-and-push-helm-chart.outputs.chart-version }}
+        run: |
+          CHART_REPO_URL="https://falkordb.github.io/helm-charts/"
+          MAX_ATTEMPTS=30
+          SLEEP_SECONDS=10
+
+          echo "Waiting for helm chart version ${CHART_VERSION} to be available..."
+
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            echo "Attempt $i/$MAX_ATTEMPTS: Checking helm chart availability..."
+            
+            # Update helm repo
+            helm repo add falkordb-temp ${CHART_REPO_URL} --force-update || true
+            helm repo update falkordb-temp || true
+            
+            # Search for the specific chart version (including development versions)
+            if helm search repo falkordb-temp/falkordb-cluster-omnistrate --version ${CHART_VERSION} --devel | grep -q ${CHART_VERSION}; then
+              echo "✅ Helm chart version ${CHART_VERSION} is available!"
+              helm repo remove falkordb-temp || true
+              exit 0
+            fi
+            
+            echo "Chart not yet available. Waiting ${SLEEP_SECONDS} seconds..."
+            sleep ${SLEEP_SECONDS}
+          done
+
+          echo "❌ Helm chart version ${CHART_VERSION} not available after $((MAX_ATTEMPTS * SLEEP_SECONDS)) seconds"
+          helm repo remove falkordb-temp || true
+          exit 1
+
+      - name: Replace Variables
+        working-directory: compose
+        env:
+          CHART_VERSION: ${{ needs.package-and-push-helm-chart.outputs.chart-version }}
+        run: |
+          sed -i 's/$OmnistrateTierName/${{ matrix.plans.tier-name }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$GcpProjectId/${{ vars.GCP_PROJECT_ID }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$GcpProjectNumber/${{ vars.GCP_PROJECT_NUMBER }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$GcpServiceAccountEmail/${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$AwsAccountId/${{ vars.AWS_ACCOUNT_ID }}/g' ${{ matrix.plans.file }}
+          sed -i 's|$AwsBootstrapRoleAccountArn|${{ vars.AWS_BOOTSTRAP_ROLE_ACCOUNT_ARN }}|g' ${{ matrix.plans.file }}
+          sed -i 's/$AzureSubscriptionId/${{ vars.AZURE_SUBSCRIPTION_ID }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$AzureTenantId/${{ vars.AZURE_TENANT_ID }}/g' ${{ matrix.plans.file }}
+          sed -i 's/$MeteringBucketName/${{ secrets.METERING_BUCKET_NAME }}/g' ${{ matrix.plans.file }}
+          sed -i 's|$ChartVersion|'"${CHART_VERSION}"'|g' ${{ matrix.plans.file }}
+          sed -i 's|$ChartRepoURL|https://falkordb.github.io/helm-charts/|g' ${{ matrix.plans.file }}
+          sed -i 's|$FalkorDBServiceVersion|${{ env.FALKORDB_SERVICE_VERSION }}|g' ${{ matrix.plans.file }}
+          sed -i 's/validPaymentMethodRequired: true/validPaymentMethodRequired: false/g' ${{ matrix.plans.file }}
+
+      - name: Upload yaml as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.plans.file }}
+          path: compose/${{ matrix.plans.file }}
+
+      - name: Update Omnistrate plan
+        uses: ./.github/actions/update-omnistrate-plan
+        id: update_omnistrate_plan
+        with:
+          username: ${{ secrets.OMNISTRATE_USERNAME }}
+          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          file: compose/${{ matrix.plans.file }}
+          service-name: ${{ matrix.plans.service-name }}
+          environment: dev
+          environment-type: dev
+          release-description: helm-chart-${{ needs.package-and-push-helm-chart.outputs.chart-version }}
+          spec-type: ServicePlanSpec
+
+  omnistrate-e2e-tests:
+    name: Omnistrate E2E Tests
+    runs-on: ubuntu-latest
+    needs: update-omnistrate-plans
+    if: ${{ needs.update-omnistrate-plans.result == 'success' }}
+    env:
+      # Test mode: basic runs on schedule/manual full, full runs on tags
+      TEST_MODE: ${{ (contains(github.ref, 'refs/tags/v')) && 'full' || 'basic' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        instances:
+          ######################## FREE • AWS (BASIC) #####################
+          - name: "[01] free/Standalone - AWS/us-east-2"
+            if: "basic"
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
+            tests: "all"
+            tierName: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: standalone
+            instanceType: t2.medium
+
+          ######################## STARTUP • AWS (BASIC) #####################
+          - name: "[02] startup/Standalone - AWS/us-east-2"
+            if: "basic"
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
+            tests: "all"
+            tierName: startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: standalone
+            instanceType: t2.medium
+
+          ######################## PRO • AWS (BASIC) #####################
+          - name: "[03] pro/Standalone - AWS/us-east-2"
+            if: "basic"
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
+            tests: "all"
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: standalone
+            instanceType: t2.medium
+            storageSize: "30"
+
+          - name: "[04] pro/Replication - AWS/us-east-2"
+            if: "basic"
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_replication.py
+            tests: "all"
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: replication
+            instanceType: t2.medium
+
+          - name: "[05] pro/Cluster - AWS/us-east-2"
+            if: "basic"
+            testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_cluster.py
+            tests: "all"
+            tierName: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+            cloudProvider: aws
+            cloudRegion: us-east-2
+            resourceKey: cluster
+            instanceType: t2.medium
+            hostCount: "6"
+            clusterReplicas: "2"
+
+          # ######################## ENTERPRISE • AWS (FULL) ########################
+          # - name: "[08] enterprise/Standalone - AWS/us-east-2"
+          #   if: "full"
+          #   testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_standalone.py
+          #   tests: "failover,stopstart,oom,resize"
+          #   tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+          #   cloudProvider: aws
+          #   cloudRegion: us-east-2
+          #   resourceKey: standalone
+          #   instanceType: t2.medium
+          #   newInstanceType: m6i.large
+          #   maxmemory: "2GB"
+
+          # - name: "[09] enterprise/SingleZone - AWS/us-east-2"
+          #   if: "full"
+          #   testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_replication.py
+          #   tests: "failover,stopstart,oom,resize"
+          #   tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+          #   cloudProvider: aws
+          #   cloudRegion: us-east-2
+          #   resourceKey: replication
+          #   instanceType: t2.medium
+          #   newInstanceType: m6i.large
+          #   maxmemory: "2GB"
+
+          # - name: "[10] enterprise/MultiZone - AWS/us-east-2"
+          #   if: "full"
+          #   testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_replication.py
+          #   tests: "failover,stopstart,oom,resize"
+          #   tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+          #   cloudProvider: aws
+          #   cloudRegion: us-east-2
+          #   resourceKey: replication
+          #   instanceType: t2.medium
+          #   newInstanceType: m6i.large
+          #   maxmemory: "2GB"
+          #   multiZone: "true"
+
+          # - name: "[11] enterprise/ClusterSingleZone - AWS/us-east-2"
+          #   if: "full"
+          #   testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_cluster.py
+          #   tests: "failover,stopstart,oom,resize"
+          #   tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+          #   cloudProvider: aws
+          #   cloudRegion: us-east-2
+          #   resourceKey: cluster
+          #   instanceType: t2.medium
+          #   hostCount: "6"
+          #   clusterReplicas: "2"
+          #   newInstanceType: m6i.large
+          #   maxmemory: "2GB"
+
+          # - name: "[12] enterprise/ClusterMultiZone - AWS/us-east-2"
+          #   if: "full"
+          #   testFile: helm/kubeblocks/falkordb-cluster-omnistrate/tests/e2e_omnistrate/test_omnistrate_cluster.py
+          #   tests: "failover,stopstart,oom,resize"
+          #   tierName: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
+          #   cloudProvider: aws
+          #   cloudRegion: us-east-2
+          #   resourceKey: cluster
+          #   instanceType: t2.medium
+          #   hostCount: "6"
+          #   clusterReplicas: "2"
+          #   newInstanceType: m6i.large
+          #   maxmemory: "2GB"
+          #   multiZone: "true"
+
+    steps:
+      - name: Checkout
+        if: (matrix.instances.if == 'basic' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all') || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks'))) || (matrix.instances.if == 'full' && (env.TEST_MODE == 'full' || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks')))
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Python
+        if: (matrix.instances.if == 'basic' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all') || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks'))) || (matrix.instances.if == 'full' && (env.TEST_MODE == 'full' || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks')))
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache Poetry virtualenv
+        if: (matrix.instances.if == 'basic' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all') || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks'))) || (matrix.instances.if == 'full' && (env.TEST_MODE == 'full' || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks')))
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: ${{ runner.os }}-poetry-helm-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-helm-
+            ${{ runner.os }}-poetry-
+
+      - name: Install Poetry
+        if: (matrix.instances.if == 'basic' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all') || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks'))) || (matrix.instances.if == 'full' && (env.TEST_MODE == 'full' || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks')))
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install Python dependencies
+        if: (matrix.instances.if == 'basic' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all') || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks'))) || (matrix.instances.if == 'full' && (env.TEST_MODE == 'full' || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks')))
+        run: |
+          poetry install
+
+      - name: ${{ matrix.instances.name }}
+        if: (matrix.instances.if == 'basic' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_type == 'all') || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks'))) || (matrix.instances.if == 'full' && (env.TEST_MODE == 'full' || github.ref == 'refs/heads/kubeblocks' || (github.event_name == 'pull_request' && github.head_ref == 'kubeblocks')))
+        env:
+          OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
+          OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          EXTRA_ARGS=()
+
+          [[ -n "${{ matrix.instances.storageSize || '' }}" ]] && \
+            EXTRA_ARGS+=(--storage-size "${{ matrix.instances.storageSize }}")
+
+          [[ -n "${{ matrix.instances.newInstanceType || '' }}" ]] && \
+            EXTRA_ARGS+=(--new-instance-type "${{ matrix.instances.newInstanceType }}")
+
+          [[ -n "${{ matrix.instances.hostCount || '' }}" ]] && \
+            EXTRA_ARGS+=(--host-count "${{ matrix.instances.hostCount }}")
+
+          [[ -n "${{ matrix.instances.clusterReplicas || '' }}" ]] && \
+            EXTRA_ARGS+=(--cluster-replicas "${{ matrix.instances.clusterReplicas }}")
+
+          [[ -n "${{ matrix.instances.maxmemory || '' }}" ]] && \
+            EXTRA_ARGS+=(--maxmemory "${{ matrix.instances.maxmemory }}")
+
+          [[ -n "${{ matrix.instances.instanceType || '' }}" ]] && \
+            EXTRA_ARGS+=(--instance-type "${{ matrix.instances.instanceType }}")
+
+          [[ -n "${{ matrix.instances.tls || '' }}" ]] && \
+            EXTRA_ARGS+=(--tls)
+
+          [[ "${{ matrix.instances.multiZone || 'false' }}" == "true" ]] && \
+            EXTRA_ARGS+=(--multi-zone)
+
+          poetry run pytest -s -v "${{ matrix.instances.testFile }}" \
+            --service-id "${{ vars.KUBEBLOCKS_SERVICE_ID }}" \
+            --environment-id "${{ vars.KUBEBLOCKS_ENVIRONMENT_ID }}" \
+            --subscription-id "${{ vars.KUBEBLOCKS_SUBSCRIPTION_ID }}" \
+            --tier-name "${{ matrix.instances.tierName }}" \
+            --cloud-provider "${{ matrix.instances.cloudProvider }}" \
+            --region "${{ matrix.instances.cloudRegion }}" \
+            --resource-key "${{ matrix.instances.resourceKey }}" \
+            --instance-name "helm-e2e-${{ matrix.instances.resourceKey }}-${{ github.run_id }}" \
+            --e2e-steps "${{ matrix.instances.tests }}" \
+            --network-type "${{ matrix.instances.networkType || 'PUBLIC' }}" \
+            "${EXTRA_ARGS[@]}"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: omnistrate-e2e-test-results-${{ matrix.instances.name }}
+          path: |
+            .pytest_cache/
+            test-results/
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, omnistrate-e2e-tests]
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          echo "Unit Tests: ${{ needs.unit-tests.result }}"
+          echo "Integration Tests: ${{ needs.integration-tests.result }}"
+          echo "Omnistrate E2E Tests: ${{ needs.omnistrate-e2e-tests.result }}"
+
+          if [ "${{ needs.unit-tests.result }}" != "success" ]; then
+            echo "❌ Unit tests failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.integration-tests.result }}" != "success" ] && [ "${{ needs.integration-tests.result }}" != "skipped" ]; then
+            echo "❌ Integration tests failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.omnistrate-e2e-tests.result }}" != "success" ] && [ "${{ needs.omnistrate-e2e-tests.result }}" != "skipped" ]; then
+            echo "❌ Omnistrate E2E tests failed"
+            exit 1
+          fi
+
+          echo "✅ All tests passed!"
+
+      - name: Post summary
+        if: always()
+        run: |
+          echo "## 🧪 Helm Chart Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Suite | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Omnistrate E2E Tests | ${{ needs.omnistrate-e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Ref:** ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY

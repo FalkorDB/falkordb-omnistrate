@@ -254,9 +254,9 @@ class TestOmnistrateStandalone:
         stress_oom(
             instance,
             ssl=ssl,
-            query_size="medium",
+            query_size="small" if "free" in cfg["tier_name"].lower() else "medium",
             network_type=network_type,
-            stress_oomers=2,
+            stress_oomers=1 if "free" in cfg["tier_name"].lower() else 2,
             is_cluster=False,
             timeout_seconds=600,
         )

@@ -59,7 +59,7 @@ if [[ $(basename "$DATA_DIR") != 'data' ]]; then DATA_DIR=$DATA_DIR/data; fi
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 
-LDAP_AUTH_SERVER_HOSTNAME=${LDAP_AUTH_SERVER_HOSTNAME:-'ldap-auth-service.ldap-auth.svc.cluster.local'}
+LDAP_AUTH_SERVER_HTTP_URL=${LDAP_AUTH_SERVER_HTTP_URL:-'https://ldap-auth-service.ldap-auth.svc.cluster.local:8080'}
 LDAP_AUTH_SERVER_URL=${LDAP_AUTH_SERVER_URL:-'ldaps://ldap-auth-service.ldap-auth.svc.cluster.local:3389'}
 LDAP_AUTH_PASSWORD=${LDAP_AUTH_PASSWORD:-''}
 LDAP_AUTH_NAMESPACE=${LDAP_AUTH_NAMESPACE:-'ldap-auth'}
@@ -74,7 +74,7 @@ fi
 
 # Retrieve ldap server CA certificate
 echo "Retrieving LDAP server CA certificate"
-curl -s --insecure --header "Authorization: Bearer $LDAP_AUTH_PASSWORD" http://$LDAP_AUTH_SERVER_HOSTNAME/api/v1/ca-certificate > $LDAP_AUTH_CA_CERT_PATH
+curl -s --insecure $LDAP_AUTH_SERVER_HTTP_URL/api/v1/ca-certificate > $LDAP_AUTH_CA_CERT_PATH
 echo "LDAP CA certificate saved to $LDAP_AUTH_CA_CERT_PATH"
 
 

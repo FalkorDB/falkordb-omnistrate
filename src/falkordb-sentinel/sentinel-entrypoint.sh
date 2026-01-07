@@ -59,6 +59,14 @@ if [[ $(basename "$DATA_DIR") != 'data' ]]; then DATA_DIR=$DATA_DIR/data; fi
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 
+LDAP_AUTH_PASSWORD=${LDAP_AUTH_PASSWORD:-''}
+LDAP_AUTH_NAMESPACE=${LDAP_AUTH_NAMESPACE:-'ldap-auth'}
+LDAP_AUTH_PASSWORD_SECRET_NAME=${LDAP_AUTH_PASSWORD_SECRET_NAME:-'ldap-auth-admin-secret'}
+# if LDAP_AUTH_PASSWORD is empty, retrieve with with curl from namespace secret
+if [[ -z "$LDAP_AUTH_PASSWORD" ]]; then
+  LDAP_AUTH_PASSWORD=$(curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --header "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$LDAP_AUTH_NAMESPACE/secrets/$LDAP_AUTH_PASSWORD_SECRET_NAME" | jq -r ".data.\"$LDAP_AUTH_PASSWORD_SECRET_KEY\"" | base64 --decode)
+fi
+
 handle_sigterm() {
   echo "Caught SIGTERM"
   echo "Stopping FalkorDB"
@@ -162,9 +170,10 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $SENTINEL_CONF_FILE
-
   sed -i "s/\$SENTINEL_HOST/$NODE_HOST/g" $SENTINEL_CONF_FILE
-
+  sed -i "s|\$TLS_CA_CERT_PATH|$ROOT_CA_PATH|g" $NODE_CONF_FILE
+  sed -i "s|\$NAMESPACE|$NAMESPACE|g" $NODE_CONF_FILE
+  sed -i "s|\$LDAP_AUTH_PASSWORD|$LDAP_AUTH_PASSWORD|g" $NODE_CONF_FILE
   echo "Starting Sentinel"
 
   if [[ $TLS == "true" ]]; then

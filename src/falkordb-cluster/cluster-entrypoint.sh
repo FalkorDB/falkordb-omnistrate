@@ -86,6 +86,14 @@ DATE_NOW=$(date +"%Y%m%d%H%M%S")
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo "/dev/null"; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 
+LDAP_AUTH_PASSWORD=${LDAP_AUTH_PASSWORD:-''}
+LDAP_AUTH_NAMESPACE=${LDAP_AUTH_NAMESPACE:-'ldap-auth'}
+LDAP_AUTH_PASSWORD_SECRET_NAME=${LDAP_AUTH_PASSWORD_SECRET_NAME:-'ldap-auth-admin-secret'}
+# if LDAP_AUTH_PASSWORD is empty, retrieve with with curl from namespace secret
+if [[ -z "$LDAP_AUTH_PASSWORD" ]]; then
+  LDAP_AUTH_PASSWORD=$(curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --header "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$LDAP_AUTH_NAMESPACE/secrets/$LDAP_AUTH_PASSWORD_SECRET_NAME" | jq -r ".data.\"$LDAP_AUTH_PASSWORD_SECRET_KEY\"" | base64 --decode)
+fi
+
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
   DEBUG=1
 fi
@@ -489,6 +497,9 @@ run_node() {
   sed -i "s/\$FALKORDB_QUERY_MEM_CAPACITY/$FALKORDB_QUERY_MEM_CAPACITY/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_VKEY_MAX_ENTITY_COUNT/$FALKORDB_VKEY_MAX_ENTITY_COUNT/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_EFFECTS_THRESHOLD/$FALKORDB_EFFECTS_THRESHOLD/g" $NODE_CONF_FILE
+  sed -i "s|\$TLS_CA_CERT_PATH|$ROOT_CA_PATH|g" $NODE_CONF_FILE
+  sed -i "s|\$NAMESPACE|$NAMESPACE|g" $NODE_CONF_FILE
+  sed -i "s|\$LDAP_AUTH_PASSWORD|$LDAP_AUTH_PASSWORD|g" $NODE_CONF_FILE
   echo "dir $DATA_DIR/$i" >>$NODE_CONF_FILE
 
   if [[ $TLS == "true" ]]; then

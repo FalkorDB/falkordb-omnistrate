@@ -59,13 +59,24 @@ if [[ $(basename "$DATA_DIR") != 'data' ]]; then DATA_DIR=$DATA_DIR/data; fi
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
 
+LDAP_AUTH_SERVER_HOSTNAME=${LDAP_AUTH_SERVER_HOSTNAME:-'ldap-auth-service.ldap-auth.svc.cluster.local'}
+LDAP_AUTH_SERVER_URL=${LDAP_AUTH_SERVER_URL:-'ldaps://ldap-auth-service.ldap-auth.svc.cluster.local:3389'}
 LDAP_AUTH_PASSWORD=${LDAP_AUTH_PASSWORD:-''}
 LDAP_AUTH_NAMESPACE=${LDAP_AUTH_NAMESPACE:-'ldap-auth'}
 LDAP_AUTH_PASSWORD_SECRET_NAME=${LDAP_AUTH_PASSWORD_SECRET_NAME:-'ldap-auth-admin-secret'}
+LDAP_AUTH_CA_CERT_PATH=${LDAP_AUTH_CA_CERT_PATH:-'/data/ldap-ca-cert.crt'}
 # if LDAP_AUTH_PASSWORD is empty, retrieve with with curl from namespace secret
 if [[ -z "$LDAP_AUTH_PASSWORD" ]]; then
-  LDAP_AUTH_PASSWORD=$(curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --header "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$LDAP_AUTH_NAMESPACE/secrets/$LDAP_AUTH_PASSWORD_SECRET_NAME" | jq -r ".data.\"$LDAP_AUTH_PASSWORD_SECRET_KEY\"" | base64 --decode)
+  echo "Retrieving LDAP auth password from Kubernetes secret"
+  LDAP_AUTH_PASSWORD=$(curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --header "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$LDAP_AUTH_NAMESPACE/secrets/$LDAP_AUTH_PASSWORD_SECRET_NAME" | jq -r ".data.\"$LDAP_AUTH_PASSWORD_SECRET_KEY\"" | base64 -d)
+  echo "LDAP auth password retrieved"
 fi
+
+# Retrieve ldap server CA certificate
+echo "Retrieving LDAP server CA certificate"
+curl -s --insecure --header "Authorization: Bearer $LDAP_AUTH_PASSWORD" http://$LDAP_AUTH_SERVER_HOSTNAME/api/v1/ca-certificate > $LDAP_AUTH_CA_CERT_PATH
+echo "LDAP CA certificate saved to $LDAP_AUTH_CA_CERT_PATH"
+
 
 handle_sigterm() {
   echo "Caught SIGTERM"
@@ -171,8 +182,9 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $SENTINEL_CONF_FILE
   sed -i "s/\$SENTINEL_HOST/$NODE_HOST/g" $SENTINEL_CONF_FILE
-  sed -i "s|\$TLS_CA_CERT_PATH|$ROOT_CA_PATH|g" $NODE_CONF_FILE
-  sed -i "s|\$NAMESPACE|$NAMESPACE|g" $NODE_CONF_FILE
+  sed -i "s|\$LDAP_AUTH_SERVER_URL|$LDAP_AUTH_SERVER_URL|g" $NODE_CONF_FILE
+  sed -i "s|\$LDAP_AUTH_CA_CERT_PATH|$LDAP_AUTH_CA_CERT_PATH|g" $NODE_CONF_FILE
+  sed -i "s|\$INSTANCE_ID|$INSTANCE_ID|g" $NODE_CONF_FILE
   sed -i "s|\$LDAP_AUTH_PASSWORD|$LDAP_AUTH_PASSWORD|g" $NODE_CONF_FILE
   echo "Starting Sentinel"
 

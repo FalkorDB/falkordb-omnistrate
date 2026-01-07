@@ -22,6 +22,7 @@ COPY src/falkordb-sentinel/sentinel-entrypoint.sh /usr/local/bin/
 # download valkey-ldap.so module
 RUN mkdir -p /var/lib/falkordb/bin && \
   MACHINE=$(uname -m) && \
+  echo "Detected machine: $MACHINE" && \
   if [ "$MACHINE" = "x86_64" ]; then \
     ARCH="amd64"; \
     EXPECTED_SHA="71406b86934844d26a088d4f6da6b5aebfdcb3d528d53c61b16d66ab4b964771"; \
@@ -31,7 +32,10 @@ RUN mkdir -p /var/lib/falkordb/bin && \
   else \
     echo "Unsupported architecture: $MACHINE" && exit 1; \
   fi && \
-  curl -o /var/lib/falkordb/bin/valkey_ldap.so https://github.com/FalkorDB/valkey-ldap/releases/download/v0.0.4/libvalkey_ldap-${ARCH}.so && \
+  echo "Using ARCH: $ARCH, SHA: $EXPECTED_SHA" && \
+  URL="https://github.com/FalkorDB/valkey-ldap/releases/download/v0.0.4/libvalkey_ldap-${ARCH}.so" && \
+  echo "Downloading from: $URL" && \
+  curl -L -o /var/lib/falkordb/bin/valkey_ldap.so "$URL" && \
   echo "${EXPECTED_SHA}  /var/lib/falkordb/bin/valkey_ldap.so" | sha256sum -c - && \
   chmod 755 /var/lib/falkordb/bin/valkey_ldap.so
 

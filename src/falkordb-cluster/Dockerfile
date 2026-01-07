@@ -3,7 +3,7 @@ ARG FALKORDB_VERSION=v4.16.0-alpine
 FROM falkordb/falkordb-server:$FALKORDB_VERSION
 
 RUN apk update && \
-    apk add --no-cache bash curl jq openssl supervisor gdb ca-certificates openssl
+    apk add --no-cache bash curl jq openssl supervisor gdb ca-certificates openssl libc6-compat libgcc libstdc++
 
 ADD https://secure.globalsign.com/cacert/root-r1.crt /usr/local/share/ca-certificates/GlobalSign_Root_CA_R1.crt
 
@@ -26,15 +26,15 @@ RUN mkdir -p /var/lib/falkordb/bin && \
   echo "Detected machine: $MACHINE" && \
   if [ "$MACHINE" = "x86_64" ]; then \
     ARCH="amd64"; \
-    EXPECTED_SHA="71406b86934844d26a088d4f6da6b5aebfdcb3d528d53c61b16d66ab4b964771"; \
+    EXPECTED_SHA="a0762b87a90cddbb72480a4b26211617e1f1c936011d78e661972abe4ecbaef4"; \
   elif [ "$MACHINE" = "aarch64" ]; then \
     ARCH="arm64"; \
-    EXPECTED_SHA="3c98648ac3a8c51b79c91c4bbdcbece79f5640c6b7c9c9b0a71a98af8c7100c1"; \
+    EXPECTED_SHA="e3e3568b1320eb16594dcc30a537d0cf9dabcedf34b8b934c7989edf4955c97b"; \
   else \
     echo "Unsupported architecture: $MACHINE" && exit 1; \
   fi && \
   echo "Using ARCH: $ARCH, SHA: $EXPECTED_SHA" && \
-  URL="https://github.com/FalkorDB/valkey-ldap/releases/download/v0.0.4/libvalkey_ldap-${ARCH}.so" && \
+  URL="https://github.com/FalkorDB/valkey-ldap/releases/download/v0.0.7/libvalkey_ldap-alpine-${ARCH}.so" && \
   echo "Downloading from: $URL" && \
   curl -L -o /var/lib/falkordb/bin/valkey_ldap.so "$URL" && \
   echo "${EXPECTED_SHA}  /var/lib/falkordb/bin/valkey_ldap.so" | sha256sum -c - && \

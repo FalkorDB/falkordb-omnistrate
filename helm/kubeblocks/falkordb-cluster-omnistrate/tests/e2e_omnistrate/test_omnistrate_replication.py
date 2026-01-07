@@ -55,6 +55,9 @@ def _sentinel_client(instance, ssl):
             "password": instance.falkordb_password,
             "ssl": ssl,
         },
+        username="falkordb",
+        password=instance.falkordb_password,
+        ssl=ssl,
     )
 
 

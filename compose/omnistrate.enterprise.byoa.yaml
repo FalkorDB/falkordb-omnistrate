@@ -101,8 +101,8 @@ x-clusterparam: &clusterparam
         - "always"
 
     - key: falkorDBCacheSize
-      description: Choose the cache size for your database
-      name: FalkorDB Cache Size
+      description: Choose the cache size for your database (in megabytes)
+      name: FalkorDB Cache Size (MB)
       type: Float64
       modifiable: false
       required: false
@@ -112,8 +112,8 @@ x-clusterparam: &clusterparam
         min: 0
         max: 256
     - key: falkorDBNodeCreationBuffer
-      description: Choose the buffer size for your database
-      name: FalkorDB Node Creation Buffer
+      description: Choose the buffer size for your database (in bytes)
+      name: FalkorDB Node Creation Buffer (bytes)
       type: Float64
       modifiable: false
       required: false
@@ -134,8 +134,8 @@ x-clusterparam: &clusterparam
         min: 0
         max: 512
     - key: falkorDBTimeoutMax
-      description: Choose the timeout max for your database
-      name: FalkorDB Timeout Max
+      description: Choose the timeout max for your database (in milliseconds)
+      name: FalkorDB Timeout Max (ms)
       type: Float64
       modifiable: false
       required: false
@@ -145,8 +145,8 @@ x-clusterparam: &clusterparam
         min: 0
         max: 45000
     - key: falkorDBTimeoutDefault
-      description: Choose the timeout default for your database
-      name: FalkorDB Timeout Default
+      description: Choose the timeout default for your database (in milliseconds)
+      name: FalkorDB Timeout Default (ms)
       type: Float64
       modifiable: false
       required: false
@@ -167,8 +167,8 @@ x-clusterparam: &clusterparam
         min: 0
         max: 1000000
     - key: falkorDBQueryMemCapacity
-      description: Choose the query mem capacity for your database
-      name: FalkorDB Query Mem Capacity
+      description: Choose the query mem capacity for your database (in bytes)
+      name: FalkorDB Query Mem Capacity (bytes)
       type: Float64
       modifiable: false
       required: false
@@ -462,8 +462,8 @@ services:
           node-s: AOFPersistenceConfig
 
       - key: falkorDBCacheSize
-        description: Choose the cache size for your database
-        name: FalkorDB Cache Size
+        description: Choose the cache size for your database (in megabytes)
+        name: FalkorDB Cache Size (MB)
         type: Float64
         modifiable: false
         required: false
@@ -475,8 +475,8 @@ services:
         parameterDependencyMap:
           node-s: falkorDBCacheSize
       - key: falkorDBNodeCreationBuffer
-        description: Choose the buffer size for your database
-        name: FalkorDB Node Creation Buffer
+        description: Choose the buffer size for your database (in bytes)
+        name: FalkorDB Node Creation Buffer (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -501,8 +501,8 @@ services:
         parameterDependencyMap:
           node-s: falkorDBMaxQueuedQueries
       - key: falkorDBTimeoutMax
-        description: Choose the timeout max for your database
-        name: FalkorDB Timeout Max
+        description: Choose the timeout max for your database (in milliseconds)
+        name: FalkorDB Timeout Max (ms)
         type: Float64
         modifiable: false
         required: false
@@ -514,8 +514,8 @@ services:
         parameterDependencyMap:
           node-s: falkorDBTimeoutMax
       - key: falkorDBTimeoutDefault
-        description: Choose the timeout default for your database
-        name: FalkorDB Timeout Default
+        description: Choose the timeout default for your database (in milliseconds)
+        name: FalkorDB Timeout Default (ms)
         type: Float64
         modifiable: false
         required: false
@@ -540,8 +540,8 @@ services:
         parameterDependencyMap:
           node-s: falkorDBResultSetSize
       - key: falkorDBQueryMemCapacity
-        description: Choose the query mem capacity for your database
-        name: FalkorDB Query Mem Capacity
+        description: Choose the query mem capacity for your database (in bytes)
+        name: FalkorDB Query Mem Capacity (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -636,8 +636,8 @@ services:
           - "always"
 
       - key: falkorDBCacheSize
-        description: Choose the cache size for your database
-        name: FalkorDB Cache Size
+        description: Choose the cache size for your database (in megabytes)
+        name: FalkorDB Cache Size (MB)
         type: Float64
         modifiable: false
         required: false
@@ -647,8 +647,8 @@ services:
           min: 0
           max:  256
       - key: falkorDBNodeCreationBuffer
-        description: Choose the buffer size for your database
-        name: FalkorDB Node Creation Buffer
+        description: Choose the buffer size for your database (in bytes)
+        name: FalkorDB Node Creation Buffer (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -669,8 +669,8 @@ services:
           min: 0
           max:  512
       - key: falkorDBTimeoutMax
-        description: Choose the timeout max for your database
-        name: FalkorDB Timeout Max
+        description: Choose the timeout max for your database (in milliseconds)
+        name: FalkorDB Timeout Max (ms)
         type: Float64
         modifiable: false
         required: false
@@ -680,8 +680,8 @@ services:
           min: 0
           max:  45000
       - key: falkorDBTimeoutDefault
-        description: Choose the timeout default for your database
-        name: FalkorDB Timeout Default
+        description: Choose the timeout default for your database (in milliseconds)
+        name: FalkorDB Timeout Default (ms)
         type: Float64
         modifiable: false
         required: false
@@ -702,8 +702,8 @@ services:
           min: 0
           max:  1000000
       - key: falkorDBQueryMemCapacity
-        description: Choose the query mem capacity for your database
-        name: FalkorDB Query Mem Capacity
+        description: Choose the query mem capacity for your database (in bytes)
+        name: FalkorDB Query Mem Capacity (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -949,8 +949,8 @@ services:
         parameterDependencyMap:
           node-sz: AOFPersistenceConfig
       - key: falkorDBCacheSize
-        description: Choose the cache size for your database
-        name: FalkorDB Cache Size
+        description: Choose the cache size for your database (in megabytes)
+        name: FalkorDB Cache Size (MB)
         type: Float64
         modifiable: false
         required: false
@@ -962,8 +962,8 @@ services:
         parameterDependencyMap:
           node-sz: falkorDBCacheSize
       - key: falkorDBNodeCreationBuffer
-        description: Choose the buffer size for your database
-        name: FalkorDB Node Creation Buffer
+        description: Choose the buffer size for your database (in bytes)
+        name: FalkorDB Node Creation Buffer (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -988,8 +988,8 @@ services:
         parameterDependencyMap:
           node-sz: falkorDBMaxQueuedQueries
       - key: falkorDBTimeoutMax
-        description: Choose the timeout max for your database
-        name: FalkorDB Timeout Max
+        description: Choose the timeout max for your database (in milliseconds)
+        name: FalkorDB Timeout Max (ms)
         type: Float64
         modifiable: false
         required: false
@@ -1001,8 +1001,8 @@ services:
         parameterDependencyMap:
           node-sz: falkorDBTimeoutMax
       - key: falkorDBTimeoutDefault
-        description: Choose the timeout default for your database
-        name: FalkorDB Timeout Default
+        description: Choose the timeout default for your database (in milliseconds)
+        name: FalkorDB Timeout Default (ms)
         type: Float64
         modifiable: false
         required: false
@@ -1027,8 +1027,8 @@ services:
         parameterDependencyMap:
           node-sz: falkorDBResultSetSize
       - key: falkorDBQueryMemCapacity
-        description: Choose the query mem capacity for your database
-        name: FalkorDB Query Mem Capacity
+        description: Choose the query mem capacity for your database (in bytes)
+        name: FalkorDB Query Mem Capacity (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -1140,8 +1140,8 @@ services:
           - "always"
 
       - key: falkorDBCacheSize
-        description: Choose the cache size for your database
-        name: FalkorDB Cache Size
+        description: Choose the cache size for your database (in megabytes)
+        name: FalkorDB Cache Size (MB)
         type: Float64
         modifiable: false
         required: false
@@ -1151,8 +1151,8 @@ services:
           min: 0
           max:  256
       - key: falkorDBNodeCreationBuffer
-        description: Choose the buffer size for your database
-        name: FalkorDB Node Creation Buffer
+        description: Choose the buffer size for your database (in bytes)
+        name: FalkorDB Node Creation Buffer (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -1173,8 +1173,8 @@ services:
           min: 0
           max:  512
       - key: falkorDBTimeoutMax
-        description: Choose the timeout max for your database
-        name: FalkorDB Timeout Max
+        description: Choose the timeout max for your database (in milliseconds)
+        name: FalkorDB Timeout Max (ms)
         type: Float64
         modifiable: false
         required: false
@@ -1184,8 +1184,8 @@ services:
           min: 0
           max:  45000
       - key: falkorDBTimeoutDefault
-        description: Choose the timeout default for your database
-        name: FalkorDB Timeout Default
+        description: Choose the timeout default for your database (in milliseconds)
+        name: FalkorDB Timeout Default (ms)
         type: Float64
         modifiable: false
         required: false
@@ -1206,8 +1206,8 @@ services:
           min: 0
           max:  1000000
       - key: falkorDBQueryMemCapacity
-        description: Choose the query mem capacity for your database
-        name: FalkorDB Query Mem Capacity
+        description: Choose the query mem capacity for your database (in bytes)
+        name: FalkorDB Query Mem Capacity (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -1712,8 +1712,8 @@ services:
         parameterDependencyMap:
           node-mz: AOFPersistenceConfig
       - key: falkorDBCacheSize
-        description: Choose the cache size for your database
-        name: FalkorDB Cache Size
+        description: Choose the cache size for your database (in megabytes)
+        name: FalkorDB Cache Size (MB)
         type: Float64
         modifiable: false
         required: false
@@ -1725,8 +1725,8 @@ services:
         parameterDependencyMap:
           node-mz: falkorDBCacheSize
       - key: falkorDBNodeCreationBuffer
-        description: Choose the buffer size for your database
-        name: FalkorDB Node Creation Buffer
+        description: Choose the buffer size for your database (in bytes)
+        name: FalkorDB Node Creation Buffer (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -1751,8 +1751,8 @@ services:
         parameterDependencyMap:
           node-mz: falkorDBMaxQueuedQueries
       - key: falkorDBTimeoutMax
-        description: Choose the timeout max for your database
-        name: FalkorDB Timeout Max
+        description: Choose the timeout max for your database (in milliseconds)
+        name: FalkorDB Timeout Max (ms)
         type: Float64
         modifiable: false
         required: false
@@ -1764,8 +1764,8 @@ services:
         parameterDependencyMap:
           node-mz: falkorDBTimeoutMax
       - key: falkorDBTimeoutDefault
-        description: Choose the timeout default for your database
-        name: FalkorDB Timeout Default
+        description: Choose the timeout default for your database (in milliseconds)
+        name: FalkorDB Timeout Default (ms)
         type: Float64
         modifiable: false
         required: false
@@ -1790,8 +1790,8 @@ services:
         parameterDependencyMap:
           node-mz: falkorDBResultSetSize
       - key: falkorDBQueryMemCapacity
-        description: Choose the query mem capacity for your database
-        name: FalkorDB Query Mem Capacity
+        description: Choose the query mem capacity for your database (in bytes)
+        name: FalkorDB Query Mem Capacity (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -1902,8 +1902,8 @@ services:
           - "always"
 
       - key: falkorDBCacheSize
-        description: Choose the cache size for your database
-        name: FalkorDB Cache Size
+        description: Choose the cache size for your database (in megabytes)
+        name: FalkorDB Cache Size (MB)
         type: Float64
         modifiable: false
         required: false
@@ -1913,8 +1913,8 @@ services:
           min: 0
           max:  256
       - key: falkorDBNodeCreationBuffer
-        description: Choose the buffer size for your database
-        name: FalkorDB Node Creation Buffer
+        description: Choose the buffer size for your database (in bytes)
+        name: FalkorDB Node Creation Buffer (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -1935,8 +1935,8 @@ services:
           min: 0
           max:  512
       - key: falkorDBTimeoutMax
-        description: Choose the timeout max for your database
-        name: FalkorDB Timeout Max
+        description: Choose the timeout max for your database (in milliseconds)
+        name: FalkorDB Timeout Max (ms)
         type: Float64
         modifiable: false
         required: false
@@ -1946,8 +1946,8 @@ services:
           min: 0
           max:  45000
       - key: falkorDBTimeoutDefault
-        description: Choose the timeout default for your database
-        name: FalkorDB Timeout Default
+        description: Choose the timeout default for your database (in milliseconds)
+        name: FalkorDB Timeout Default (ms)
         type: Float64
         modifiable: false
         required: false
@@ -1968,8 +1968,8 @@ services:
           min: 0
           max:  1000000
       - key: falkorDBQueryMemCapacity
-        description: Choose the query mem capacity for your database
-        name: FalkorDB Query Mem Capacity
+        description: Choose the query mem capacity for your database (in bytes)
+        name: FalkorDB Query Mem Capacity (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -2458,8 +2458,8 @@ services:
         parameterDependencyMap:
           cluster-sz: AOFPersistenceConfig
       - key: falkorDBCacheSize
-        description: Choose the cache size for your database
-        name: FalkorDB Cache Size
+        description: Choose the cache size for your database (in megabytes)
+        name: FalkorDB Cache Size (MB)
         type: Float64
         modifiable: false
         required: false
@@ -2471,8 +2471,8 @@ services:
         parameterDependencyMap:
           cluster-sz: falkorDBCacheSize
       - key: falkorDBNodeCreationBuffer
-        description: Choose the buffer size for your database
-        name: FalkorDB Node Creation Buffer
+        description: Choose the buffer size for your database (in bytes)
+        name: FalkorDB Node Creation Buffer (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -2497,8 +2497,8 @@ services:
         parameterDependencyMap:
           cluster-sz: falkorDBMaxQueuedQueries
       - key: falkorDBTimeoutMax
-        description: Choose the timeout max for your database
-        name: FalkorDB Timeout Max
+        description: Choose the timeout max for your database (in milliseconds)
+        name: FalkorDB Timeout Max (ms)
         type: Float64
         modifiable: false
         required: false
@@ -2510,8 +2510,8 @@ services:
         parameterDependencyMap:
           cluster-sz: falkorDBTimeoutMax
       - key: falkorDBTimeoutDefault
-        description: Choose the timeout default for your database
-        name: FalkorDB Timeout Default
+        description: Choose the timeout default for your database (in milliseconds)
+        name: FalkorDB Timeout Default (ms)
         type: Float64
         modifiable: false
         required: false
@@ -2536,8 +2536,8 @@ services:
         parameterDependencyMap:
           cluster-sz: falkorDBResultSetSize
       - key: falkorDBQueryMemCapacity
-        description: Choose the query mem capacity for your database
-        name: FalkorDB Query Mem Capacity
+        description: Choose the query mem capacity for your database (in bytes)
+        name: FalkorDB Query Mem Capacity (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -2825,8 +2825,8 @@ services:
         parameterDependencyMap:
           cluster-mz: AOFPersistenceConfig
       - key: falkorDBCacheSize
-        description: Choose the cache size for your database
-        name: FalkorDB Cache Size
+        description: Choose the cache size for your database (in megabytes)
+        name: FalkorDB Cache Size (MB)
         type: Float64
         modifiable: false
         required: false
@@ -2838,8 +2838,8 @@ services:
         parameterDependencyMap:
           cluster-mz: falkorDBCacheSize
       - key: falkorDBNodeCreationBuffer
-        description: Choose the buffer size for your database
-        name: FalkorDB Node Creation Buffer
+        description: Choose the buffer size for your database (in bytes)
+        name: FalkorDB Node Creation Buffer (bytes)
         type: Float64
         modifiable: false
         required: false
@@ -2864,8 +2864,8 @@ services:
         parameterDependencyMap:
           cluster-mz: falkorDBMaxQueuedQueries
       - key: falkorDBTimeoutMax
-        description: Choose the timeout max for your database
-        name: FalkorDB Timeout Max
+        description: Choose the timeout max for your database (in milliseconds)
+        name: FalkorDB Timeout Max (ms)
         type: Float64
         modifiable: false
         required: false
@@ -2877,8 +2877,8 @@ services:
         parameterDependencyMap:
           cluster-mz: falkorDBTimeoutMax
       - key: falkorDBTimeoutDefault
-        description: Choose the timeout default for your database
-        name: FalkorDB Timeout Default
+        description: Choose the timeout default for your database (in milliseconds)
+        name: FalkorDB Timeout Default (ms)
         type: Float64
         modifiable: false
         required: false
@@ -2903,8 +2903,8 @@ services:
         parameterDependencyMap:
           cluster-mz: falkorDBResultSetSize
       - key: falkorDBQueryMemCapacity
-        description: Choose the query mem capacity for your database
-        name: FalkorDB Query Mem Capacity
+        description: Choose the query mem capacity for your database (in bytes)
+        name: FalkorDB Query Mem Capacity (bytes)
         type: Float64
         modifiable: false
         required: false

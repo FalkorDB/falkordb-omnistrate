@@ -347,7 +347,7 @@ services:
           node-s: AOFPersistenceConfig
 
       - key: falkorDBCacheSize
-        description: Choose the cache size for your database (number of queries to cache)
+        description: Choose the cache size for your database
         name: FalkorDB Cache Size
         type: Float64
         modifiable: false
@@ -360,7 +360,7 @@ services:
         parameterDependencyMap:
           node-s: falkorDBCacheSize
       - key: falkorDBNodeCreationBuffer
-        description: Choose the buffer size for your database (number of nodes that can be created without resizing matrices)
+        description: Choose the buffer size for your database
         name: FalkorDB Node Creation Buffer
         type: Float64
         modifiable: false
@@ -373,7 +373,7 @@ services:
         parameterDependencyMap:
           node-s: falkorDBNodeCreationBuffer
       - key: falkorDBMaxQueuedQueries
-        description: Choose the max queued queries for your database (number of queries)
+        description: Choose the max queued queries for your database
         name: FalkorDB Max Queued Queries
         type: Float64
         modifiable: false
@@ -525,7 +525,7 @@ services:
           - "always"
 
       - key: falkorDBCacheSize
-        description: Choose the cache size for your database (number of queries to cache)
+        description: Choose the cache size for your database
         name: FalkorDB Cache Size
         type: Float64
         modifiable: false
@@ -536,7 +536,7 @@ services:
           min: 0
           max:  256
       - key: falkorDBNodeCreationBuffer
-        description: Choose the buffer size for your database (number of nodes that can be created without resizing matrices)
+        description: Choose the buffer size for your database
         name: FalkorDB Node Creation Buffer
         type: Float64
         modifiable: false
@@ -547,7 +547,7 @@ services:
           min: 256
           max:  32768
       - key: falkorDBMaxQueuedQueries
-        description: Choose the max queued queries for your database (number of queries)
+        description: Choose the max queued queries for your database
         name: FalkorDB Max Queued Queries
         type: Float64
         modifiable: false
@@ -840,7 +840,7 @@ services:
         parameterDependencyMap:
           node-sz: AOFPersistenceConfig
       - key: falkorDBCacheSize
-        description: Choose the cache size for your database (number of queries to cache)
+        description: Choose the cache size for your database
         name: FalkorDB Cache Size
         type: Float64
         modifiable: false
@@ -853,7 +853,7 @@ services:
         parameterDependencyMap:
           node-sz: falkorDBCacheSize
       - key: falkorDBNodeCreationBuffer
-        description: Choose the buffer size for your database (number of nodes that can be created without resizing matrices)
+        description: Choose the buffer size for your database
         name: FalkorDB Node Creation Buffer
         type: Float64
         modifiable: false
@@ -866,7 +866,7 @@ services:
         parameterDependencyMap:
           node-sz: falkorDBNodeCreationBuffer
       - key: falkorDBMaxQueuedQueries
-        description: Choose the max queued queries for your database (number of queries)
+        description: Choose the max queued queries for your database
         name: FalkorDB Max Queued Queries
         type: Float64
         modifiable: false
@@ -1032,7 +1032,7 @@ services:
           - "always"
 
       - key: falkorDBCacheSize
-        description: Choose the cache size for your database (number of queries to cache)
+        description: Choose the cache size for your database
         name: FalkorDB Cache Size
         type: Float64
         modifiable: false
@@ -1043,7 +1043,7 @@ services:
           min: 0
           max:  256
       - key: falkorDBNodeCreationBuffer
-        description: Choose the buffer size for your database (number of nodes that can be created without resizing matrices)
+        description: Choose the buffer size for your database
         name: FalkorDB Node Creation Buffer
         type: Float64
         modifiable: false
@@ -1054,7 +1054,7 @@ services:
           min: 256
           max:  32768
       - key: falkorDBMaxQueuedQueries
-        description: Choose the max queued queries for your database (number of queries)
+        description: Choose the max queued queries for your database
         name: FalkorDB Max Queued Queries
         type: Float64
         modifiable: false
@@ -1600,7 +1600,7 @@ services:
         parameterDependencyMap:
           node-mz: AOFPersistenceConfig
       - key: falkorDBCacheSize
-        description: Choose the cache size for your database (number of queries to cache)
+        description: Choose the cache size for your database
         name: FalkorDB Cache Size
         type: Float64
         modifiable: false
@@ -1613,7 +1613,7 @@ services:
         parameterDependencyMap:
           node-mz: falkorDBCacheSize
       - key: falkorDBNodeCreationBuffer
-        description: Choose the buffer size for your database (number of nodes that can be created without resizing matrices)
+        description: Choose the buffer size for your database
         name: FalkorDB Node Creation Buffer
         type: Float64
         modifiable: false
@@ -1626,7 +1626,7 @@ services:
         parameterDependencyMap:
           node-mz: falkorDBNodeCreationBuffer
       - key: falkorDBMaxQueuedQueries
-        description: Choose the max queued queries for your database (number of queries)
+        description: Choose the max queued queries for your database
         name: FalkorDB Max Queued Queries
         type: Float64
         modifiable: false
@@ -1792,7 +1792,7 @@ services:
           - "always"
 
       - key: falkorDBCacheSize
-        description: Choose the cache size for your database (number of queries to cache)
+        description: Choose the cache size for your database
         name: FalkorDB Cache Size
         type: Float64
         modifiable: false
@@ -1803,7 +1803,7 @@ services:
           min: 0
           max:  256
       - key: falkorDBNodeCreationBuffer
-        description: Choose the buffer size for your database (number of nodes that can be created without resizing matrices)
+        description: Choose the buffer size for your database
         name: FalkorDB Node Creation Buffer
         type: Float64
         modifiable: false
@@ -1814,7 +1814,7 @@ services:
           min: 256
           max:  32768
       - key: falkorDBMaxQueuedQueries
-        description: Choose the max queued queries for your database (number of queries)
+        description: Choose the max queued queries for your database
         name: FalkorDB Max Queued Queries
         type: Float64
         modifiable: false

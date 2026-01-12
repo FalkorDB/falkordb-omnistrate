@@ -134,7 +134,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           node-s: falkordbPassword
       - key: RDBPersistenceConfig
@@ -308,7 +308,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config

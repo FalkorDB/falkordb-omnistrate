@@ -26,15 +26,15 @@ RUN mkdir -p /var/lib/falkordb/bin && \
   echo "Detected machine: $MACHINE" && \
   if [ "$MACHINE" = "x86_64" ]; then \
     ARCH="amd64"; \
-    EXPECTED_SHA="a0762b87a90cddbb72480a4b26211617e1f1c936011d78e661972abe4ecbaef4"; \
+    EXPECTED_SHA="0859a29330adff45b55c700cb088dfc5684bc08e352222d6df4bef612145c594"; \
   elif [ "$MACHINE" = "aarch64" ]; then \
     ARCH="arm64"; \
-    EXPECTED_SHA="e3e3568b1320eb16594dcc30a537d0cf9dabcedf34b8b934c7989edf4955c97b"; \
+    EXPECTED_SHA="3e7f1a48951d9210d98bdc6715a91aec9851b366a1dd457102588c9d6ff84f81"; \
   else \
     echo "Unsupported architecture: $MACHINE" && exit 1; \
   fi && \
   echo "Using ARCH: $ARCH, SHA: $EXPECTED_SHA" && \
-  URL="https://github.com/FalkorDB/valkey-ldap/releases/download/v0.0.7/libvalkey_ldap-alpine-${ARCH}.so" && \
+  URL="https://github.com/FalkorDB/valkey-ldap/releases/download/v0.1.0/libvalkey_ldap-alpine-${ARCH}.so" && \
   echo "Downloading from: $URL" && \
   curl -L -o /var/lib/falkordb/bin/valkey_ldap.so "$URL" && \
   echo "${EXPECTED_SHA}  /var/lib/falkordb/bin/valkey_ldap.so" | sha256sum -c - && \

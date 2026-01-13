@@ -91,7 +91,8 @@ LDAP_AUTH_SERVER_URL=${LDAP_AUTH_SERVER_URL:-'ldaps://ldap-auth-service.ldap-aut
 LDAP_AUTH_PASSWORD=${LDAP_AUTH_PASSWORD:-''}
 LDAP_AUTH_NAMESPACE=${LDAP_AUTH_NAMESPACE:-'ldap-auth'}
 LDAP_AUTH_PASSWORD_SECRET_NAME=${LDAP_AUTH_PASSWORD_SECRET_NAME:-'ldap-auth-admin-secret'}
-LDAP_AUTH_CA_CERT_PATH=${LDAP_AUTH_CA_CERT_PATH:-'/data/ldap-ca-cert.crt'}
+LDAP_AUTH_PASSWORD_SECRET_KEY=${LDAP_AUTH_PASSWORD_SECRET_KEY:-'LDAP_ADMIN_PASSWORD'}
+LDAP_AUTH_CA_CERT_PATH=${LDAP_AUTH_CA_CERT_PATH:-"$DATA_DIR/ldap-ca-cert.crt"}
 # if LDAP_AUTH_PASSWORD is empty, retrieve with with curl from namespace secret
 if [[ -z "$LDAP_AUTH_PASSWORD" ]]; then
   echo "Retrieving LDAP auth password from Kubernetes secret"

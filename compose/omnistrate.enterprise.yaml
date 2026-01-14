@@ -199,6 +199,10 @@ x-pre-upgrade-hook: &preupgradehook
     set -euo pipefail
 
     echo "Running BGREWRITEAOF before upgrade"
+    echo "[DEBUG] RESOURCE_ALIAS: $RESOURCE_ALIAS"
+    echo "[DEBUG] NODE_PORT: ${NODE_PORT:-6379}"
+    echo "[DEBUG] TLS: ${TLS:-false}"
+    echo "[DEBUG] FALKORDB_UPGRADE_PASSWORD: $FALKORDB_UPGRADE_PASSWORD"
 
     readonly REDIS_USER="falkordbUpgradeUser"
     readonly NODE_PORT="${NODE_PORT:-6379}"
@@ -212,44 +216,60 @@ x-pre-upgrade-hook: &preupgradehook
 
     # Add TLS flag if enabled
     [[ "${TLS:-false}" == "true" ]] && REDIS_OPTS+=(--tls)
+    echo "[DEBUG] TLS flag added: ${TLS:-false}"
 
     # Add the actual command at the end
     REDIS_OPTS+=(BGREWRITEAOF)
+    echo "[DEBUG] Redis CLI options configured"
 
     execute_bgrewriteaof() {
       local node_host=$1
 
+      echo "[DEBUG] Starting BGREWRITEAOF for node: $node_host"
       echo "Executing BGREWRITEAOF on $node_host"
+      
       redis-cli -h "$node_host" -p "$NODE_PORT" "${REDIS_OPTS[@]}"
+      local exit_code=$?
+      
+      echo "[DEBUG] BGREWRITEAOF completed for $node_host with exit code: $exit_code"
+      return $exit_code
     }
 
     run_for_range() {
       local prefix=$1
       local count=$2
 
+      echo "[DEBUG] Running for range: prefix=$prefix, count=$count"
       for ((i = 0; i < count; i++)); do
+        echo "[DEBUG] Processing node $i of $count"
         execute_bgrewriteaof "${prefix}-${i}"
       done
+      echo "[DEBUG] Completed range processing for $prefix"
     }
 
     case "$RESOURCE_ALIAS" in
       node-s)
+        echo "[DEBUG] Matched RESOURCE_ALIAS: node-s"
         execute_bgrewriteaof "node-s-0"
         ;;
 
       node-mz)
+        echo "[DEBUG] Matched RESOURCE_ALIAS: node-mz, NUM_REPLICAS: ${NUM_REPLICAS}"
         run_for_range "node-mz" "${NUM_REPLICAS}"
         ;;
 
       node-sz)
+        echo "[DEBUG] Matched RESOURCE_ALIAS: node-sz, NUM_REPLICAS: ${NUM_REPLICAS}"
         run_for_range "node-sz" "${NUM_REPLICAS}"
         ;;
 
       cluster-mz)
+        echo "[DEBUG] Matched RESOURCE_ALIAS: cluster-mz"
         run_for_range "cluster-mz" 6
         ;;
 
       cluster-sz)
+        echo "[DEBUG] Matched RESOURCE_ALIAS: cluster-sz"
         run_for_range "cluster-sz" 6
         ;;
 
@@ -258,6 +278,8 @@ x-pre-upgrade-hook: &preupgradehook
         exit 1
         ;;
     esac
+    
+    echo "[DEBUG] Pre-upgrade hook completed successfully"
 x-post-upgrade-hook: &postupgradehook
   commandTemplate: |
     #!/bin/bash

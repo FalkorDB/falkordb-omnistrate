@@ -107,6 +107,7 @@ x-pre-upgrade-hook: &preupgradehook
     esac
     
     echo "[DEBUG] Pre-upgrade hook completed successfully"
+    
 services:
   # Standalone
 

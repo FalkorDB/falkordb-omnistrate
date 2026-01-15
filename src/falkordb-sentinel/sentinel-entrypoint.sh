@@ -150,13 +150,6 @@ fi
 # This must be called after sentinel.conf is created/copied but before server starts
 fix_namespace_in_config_files
 
-create_user(){
-  local acl_commands='~* +SENTINEL|get-master-addr-by-name +SENTINEL|remove +SENTINEL|flushconfig +SENTINEL|monitor'
-  redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER falkordbUpgradeUser on ">$FALKORDB_UPGRADE_PASSWORD" $acl_commands
-  redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
-}
-
-
 if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" == "1" ]]); then
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
@@ -214,9 +207,7 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   supervisord -c $DATA_DIR/supervisord.conf &
 
   sleep 10
-
-  create_user
-
+  
   if [[ "$RUN_NODE" -eq "1" ]]; then
     log "Master Name: $MASTER_NAME\Master Host: $NODE_HOST\Master Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
     wait_until_node_host_resolves $SENTINEL_HOST $SENTINEL_PORT

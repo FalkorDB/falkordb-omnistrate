@@ -516,7 +516,30 @@ get_self_host_ip
 # This must be called after node.conf is created/copied but before server starts
 fix_namespace_in_config_files
 
+add_ldap_config_to_conf() {
+  if ! grep -q "^loadmodule /var/lib/falkordb/bin/valkey_ldap.so" "$NODE_CONF_FILE"; then
+    echo "Adding LDAP module to node.conf"
+    {
+      echo "loadmodule /var/lib/falkordb/bin/valkey_ldap.so"
+      echo "ldap.servers \"$LDAP_AUTH_SERVER_URL\""
+      echo "ldap.auth_mode bind"
+      echo "ldap.tls_ca_cert_path \"$LDAP_AUTH_CA_CERT_PATH\""
+      echo "ldap.bind_dn_suffix \",ou=$INSTANCE_ID,dc=falkordb,dc=cloud\""
+      echo "ldap.search_base \"ou=$INSTANCE_ID,dc=falkordb,dc=cloud\""
+      echo "ldap.search_bind_dn \"cn=admin,ou=admin,dc=falkordb,dc=cloud\""
+      echo "ldap.search_bind_passwd \"$LDAP_AUTH_PASSWORD\""
+      echo "ldap.groups_rules_attribute \"description\""
+      echo "ldap.exempted_users_regex \"^(default|falkordbUpgradeUser)$\""
+      echo "ldap.acl_fallback_enabled yes"
+      echo "ldap.tls_skip_verify yes"
+    } >> "$NODE_CONF_FILE"
+  else
+    echo "LDAP module already present in node.conf"
+  fi
+}
+
 if [ "$RUN_NODE" -eq "1" ]; then
+  add_ldap_config_to_conf
 
   # Update .SO path for old instances
   sed -i "s|/FalkorDB/bin/src/bin/falkordb.so|/var/lib/falkordb/bin/falkordb.so|g" $NODE_CONF_FILE

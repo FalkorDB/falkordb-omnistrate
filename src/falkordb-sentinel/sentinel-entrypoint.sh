@@ -176,17 +176,40 @@ create_user(){
   redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL FLUSHCONFIG
 }
 
+add_ldap_config_to_conf() {
+  if ! grep -q "^loadmodule /var/lib/falkordb/bin/valkey_ldap.so" "$SENTINEL_CONF_FILE"; then
+    echo "Adding LDAP module to node.conf"
+    {
+      echo "loadmodule /var/lib/falkordb/bin/valkey_ldap.so"
+      echo "ldap.servers \"$LDAP_AUTH_SERVER_URL\""
+      echo "ldap.auth_mode bind"
+      echo "ldap.tls_ca_cert_path \"$LDAP_AUTH_CA_CERT_PATH\""
+      echo "ldap.bind_dn_suffix \",ou=$INSTANCE_ID,dc=falkordb,dc=cloud\""
+      echo "ldap.search_base \"ou=$INSTANCE_ID,dc=falkordb,dc=cloud\""
+      echo "ldap.search_bind_dn \"cn=admin,ou=admin,dc=falkordb,dc=cloud\""
+      echo "ldap.search_bind_passwd \"$LDAP_AUTH_PASSWORD\""
+      echo "ldap.groups_rules_attribute \"description\""
+      echo "ldap.exempted_users_regex \"^(default|falkordbUpgradeUser)$\""
+      echo "ldap.acl_fallback_enabled yes"
+      echo "ldap.tls_skip_verify yes"
+    } >> "$SENTINEL_CONF_FILE"
+  else
+    echo "LDAP module already present in node.conf"
+  fi
+}
 
 if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" == "1" ]]); then
+  add_ldap_config_to_conf
+
   sed -i "s/\$ADMIN_PASSWORD/$ADMIN_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_USER/$FALKORDB_USER/g" $SENTINEL_CONF_FILE
   sed -i "s/\$FALKORDB_PASSWORD/$FALKORDB_PASSWORD/g" $SENTINEL_CONF_FILE
   sed -i "s/\$LOG_LEVEL/$LOG_LEVEL/g" $SENTINEL_CONF_FILE
   sed -i "s/\$SENTINEL_HOST/$NODE_HOST/g" $SENTINEL_CONF_FILE
-  sed -i "s|\$LDAP_AUTH_SERVER_URL|$LDAP_AUTH_SERVER_URL|g" $NODE_CONF_FILE
-  sed -i "s|\$LDAP_AUTH_CA_CERT_PATH|$LDAP_AUTH_CA_CERT_PATH|g" $NODE_CONF_FILE
-  sed -i "s|\$INSTANCE_ID|$INSTANCE_ID|g" $NODE_CONF_FILE
-  sed -i "s|\$LDAP_AUTH_PASSWORD|$LDAP_AUTH_PASSWORD|g" $NODE_CONF_FILE
+  sed -i "s|\$LDAP_AUTH_SERVER_URL|$LDAP_AUTH_SERVER_URL|g" $SENTINEL_CONF_FILE
+  sed -i "s|\$LDAP_AUTH_CA_CERT_PATH|$LDAP_AUTH_CA_CERT_PATH|g" $SENTINEL_CONF_FILE
+  sed -i "s|\$INSTANCE_ID|$INSTANCE_ID|g" $SENTINEL_CONF_FILE
+  sed -i "s|\$LDAP_AUTH_PASSWORD|$LDAP_AUTH_PASSWORD|g" $SENTINEL_CONF_FILE
   echo "Starting Sentinel"
 
   if [[ $TLS == "true" ]]; then

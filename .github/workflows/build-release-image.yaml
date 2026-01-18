@@ -29,7 +29,7 @@ env:
 jobs:
   build-and-push:
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
-    runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-22.04-arm64' || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-22.04-arm' || 'ubuntu-latest' }}
     strategy:
       fail-fast: true
       matrix:

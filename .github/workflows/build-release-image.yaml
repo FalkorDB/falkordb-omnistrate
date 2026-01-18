@@ -29,23 +29,24 @@ env:
 jobs:
   build-and-push:
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-22.04-arm64' || 'ubuntu-latest' }}
     strategy:
       fail-fast: true
       matrix:
-        include:
+        platform: [amd64, arm64]
+        image:
           - dockerfile: ./src/falkordb-node/Dockerfile
-            image-name: falkordb-node
+            image_name: falkordb-node
           - dockerfile: ./src/falkordb-cluster/Dockerfile
-            image-name: falkordb-cluster
+            image_name: falkordb-cluster
           - dockerfile: ./src/falkordb-cluster-rebalance/Dockerfile
-            image-name: falkordb-cluster-rebalance
+            image_name: falkordb-cluster-rebalance
           - dockerfile: ./src/healthcheck_rs/Dockerfile
-            image-name: falkordb-cloud-healthcheck
+            image_name: falkordb-cloud-healthcheck
           - dockerfile: ./src/falkordb-exporter/Dockerfile
-            image-name: falkordb-cloud-exporter
+            image_name: falkordb-cloud-exporter
           - dockerfile: ./src/falkordb-sentinel/Dockerfile
-            image-name: falkordb-cloud-sentinel
+            image_name: falkordb-cloud-sentinel
     steps:
       - run: ${{ tojson(github.event) }}
         shell: cat {0}
@@ -59,9 +60,9 @@ jobs:
         id: set_tag
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+            echo "tag=${{ inputs.tag }}-${{ matrix.platform }}" >> $GITHUB_OUTPUT
           else
-            echo "tag=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
+            echo "tag=${{ github.event.workflow_run.head_branch }}-${{ matrix.platform }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Set up Docker Buildx
@@ -77,11 +78,42 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: FALKORDB_VERSION=${{ env.FALKORDB_VERSION }}
+          platforms: linux/${{ matrix.platform }}
           context: .
-          file: ${{ matrix.dockerfile }}
+          file: ${{ matrix.image.dockerfile }}
           push: true
-          tags: falkordb/${{ matrix.image-name }}:${{ steps.set_tag.outputs.tag }}, falkordb/${{ matrix.image-name }}:latest
+          tags: falkordb/${{ matrix.image.image_name }}:${{ steps.set_tag.outputs.tag }}, falkordb/${{ matrix.image.image_name }}:latest-${{ matrix.platform }}
 
+
+  create-image-manifest:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set release tag
+        id: set_tag
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Create and push manifest lists
+        run: |
+          images=("falkordb-node" "falkordb-cluster" "falkordb-cluster-rebalance" "falkordb-cloud-healthcheck" "falkordb-cloud-exporter" "falkordb-cloud-sentinel")
+          for image in "${images[@]}"; do
+            docker manifest create falkordb/$image:${{ steps.set_tag.outputs.tag }} \
+              --amend falkordb/$image:${{ steps.set_tag.outputs.tag }}-amd64 \
+              --amend falkordb/$image:${{ steps.set_tag.outputs.tag }}-arm64
+            docker manifest push falkordb/$image:${{ steps.set_tag.outputs.tag }}
+          done
+  
   omnistrate-update-plans:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -156,6 +188,7 @@ jobs:
           path: compose/${{ matrix.plans.file }}
 
       - name: Create FALKORDB_PASSWORD/ADMIN_PASSWORD files
+        if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
         run: |
           export sec=$(grep '^secrets' compose/omnistrate.free.yaml)
           if [[ -n "$sec" ]];then

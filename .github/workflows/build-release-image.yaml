@@ -29,7 +29,7 @@ env:
 jobs:
   build-and-push:
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
-    runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-22.04-arm' || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-22.04-arm64' || 'ubuntu-latest' }}
     strategy:
       fail-fast: true
       matrix:
@@ -54,7 +54,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.workflow_run.head_branch }}
 
       - name: Set release tag
         id: set_tag
@@ -82,6 +82,8 @@ jobs:
           context: .
           file: ${{ matrix.image.dockerfile }}
           push: true
+          cache-from: type=gha,scope=${{ matrix.image.image_name }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.image_name }}-${{ matrix.platform }}
           tags: falkordb/${{ matrix.image.image_name }}:${{ steps.set_tag.outputs.tag }}, falkordb/${{ matrix.image.image_name }}:latest-${{ matrix.platform }}
 
 
@@ -98,6 +100,9 @@ jobs:
             echo "tag=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -106,12 +111,12 @@ jobs:
 
       - name: Create and push manifest lists
         run: |
-          images=("falkordb-node" "falkordb-cluster" "falkordb-cluster-rebalance" "falkordb-cloud-healthcheck" "falkordb-cloud-exporter" "falkordb-cloud-sentinel")
+          images=("${{env.FALKORDB_NODE_IMAGE_NAME}}" "${{env.FALKORDB_CLUSTER_IMAGE_NAME}}" "${{env.FALKORDB_CLUSTER_REBALANCE_IMAGE_NAME}}" "${{env.HEALTHCHECK_IMAGE_NAME}}" "${{env.FALKORDB_EXPORTER_IMAGE_NAME}}" "${{env.FALKORDB_SENTINEL_IMAGE_NAME}}")
           for image in "${images[@]}"; do
-            docker manifest create falkordb/$image:${{ steps.set_tag.outputs.tag }} \
-              --amend falkordb/$image:${{ steps.set_tag.outputs.tag }}-amd64 \
-              --amend falkordb/$image:${{ steps.set_tag.outputs.tag }}-arm64
-            docker manifest push falkordb/$image:${{ steps.set_tag.outputs.tag }}
+            docker buildx imagetools create \
+              --tag falkordb/$image:${{ steps.set_tag.outputs.tag }} \
+              falkordb/$image:${{ steps.set_tag.outputs.tag }}-amd64 \
+              falkordb/$image:${{ steps.set_tag.outputs.tag }}-arm64
           done
   
   omnistrate-update-plans:

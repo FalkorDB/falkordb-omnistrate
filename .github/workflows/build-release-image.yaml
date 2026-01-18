@@ -111,7 +111,7 @@ jobs:
 
       - name: Create and push manifest lists
         run: |
-          images=("${{env.FALKORDB_NODE_IMAGE_NAME}}" "${{env.FALKORDB_CLUSTER_IMAGE_NAME}}" "${{env.FALKORDB_CLUSTER_REBALANCE_IMAGE_NAME}}" "${{env.HEALTHCHECK_IMAGE_NAME}}" "${{env.FALKORDB_EXPORTER_IMAGE_NAME}}" "${{env.FALKORDB_SENTINEL_IMAGE_NAME}}")
+          images=("${{env.NODE_IMAGE_NAME}}" "${{env.CLUSTER_IMAGE_NAME}}" "${{env.CLUSTER_REBALANCE_IMAGE_NAME}}" "${{env.HEALTHCHECK_IMAGE_NAME}}" "${{env.FALKORDB_EXPORTER_IMAGE_NAME}}" "${{env.FALKORDB_SENTINEL_IMAGE_NAME}}")
           for image in "${images[@]}"; do
             docker buildx imagetools create \
               --tag falkordb/$image:${{ steps.set_tag.outputs.tag }} \

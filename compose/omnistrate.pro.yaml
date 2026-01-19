@@ -60,11 +60,9 @@ x-pre-upgrade-hook: &preupgradehook
   commandTemplate: |
     #!/usr/bin/env bash
     set -euo pipefail
-
     echo "Running BGREWRITEAOF before upgrade"
 
     adminpass=$(curl -s   --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt   -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"   https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)/secrets | grep '.*adminpassword.*"$' | awk 'NR==1{print $2}' | base64 -d)
-    echo "[DEBUG] $adminpass retrieved"
     readonly NODE_PORT="${NODE_PORT:-6379}"
 
     # Build redis-cli options safely
@@ -83,16 +81,29 @@ x-pre-upgrade-hook: &preupgradehook
       local node_host=$1
 
       echo "Executing BGREWRITEAOF on $node_host"
-      for i in {1..3}; do
-        response=(redis-cli -h "$node_host" -p "$NODE_PORT" "${REDIS_OPTS[@]}")
-        if [[ "$response" == "Background append only file rewriting started" ]]; then
-          echo "$response"
+      
+      redis-cli -h "$node_host" -p "$NODE_PORT" "${REDIS_OPTS[@]}"
+      
+      # Wait for AOF rewrite to complete
+      echo "Waiting for AOF rewrite to complete on $node_host..."
+      local max_wait=300  # Maximum wait time in seconds (5 minutes)
+      local elapsed=0
+      local check_interval=2
+      
+      while [ $elapsed -lt $max_wait ]; do
+        local aof_status=$(redis-cli -h "$node_host" -p "$NODE_PORT" "${REDIS_OPTS[@]:0:${#REDIS_OPTS[@]}-1}" INFO persistence | grep "aof_rewrite_in_progress" | cut -d: -f2 | tr -d '\r')
+        
+        if [ "$aof_status" == "0" ]; then
+          echo "AOF rewrite completed on $node_host"
           return 0
-        else
-          echo "Attempt $i: Failed to start BGREWRITEAOF on $node_host. Response: $response"
-          sleep 5
         fi
+        
+        sleep $check_interval
+        elapsed=$((elapsed + check_interval))
+        echo "Still waiting... (${elapsed}s elapsed)"
       done
+      
+      echo "Warning: AOF rewrite did not complete within ${max_wait}s on $node_host"
     }
 
     run_for_range() {
@@ -133,14 +144,10 @@ x-pre-upgrade-hook: &preupgradehook
 x-post-upgrade-hook: &postupgradehook
   commandTemplate: |
     #!/bin/bash
-
-    # Exit on any error, undefined variables, and pipe failures
     set -euo pipefail
-
     # Constants
     readonly LINK="Please refer to the documentation for instructions on how to resolve this issue: https://github.com/FalkorDB/runbooks/blob/main/alerts/SentinelSplitBrainAlertsRunbook.md"
     adminpass=$(curl -s   --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt   -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"   https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)/secrets | grep '.*adminpassword.*"$' | awk 'NR==1{print $2}' | base64 -d)
-    echo "[DEBUG] $adminpass retrieved"
 
     # Derived configuration
     readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
@@ -149,15 +156,39 @@ x-post-upgrade-hook: &postupgradehook
 
     # Common Redis CLI options
     readonly REDIS_OPTS="--no-auth-warning -a $adminpass $SSL_FLAG"
+    readonly MAX_RETRIES=3
+    readonly RETRY_DELAY=2
 
-    # Function to execute Redis CLI commands with error handling
+    # Function to execute Redis CLI commands with error handling and retry logic
     redis_exec() {
         local host=$1 port=$2
         shift 2
-        redis-cli $REDIS_OPTS -h "$host" -p "$port" "$@" || {
-            echo "$LINK" >&2
-            exit 1
-        }
+        local attempt=1
+        local output
+        local exit_code
+        
+        while [[ $attempt -le $MAX_RETRIES ]]; do
+            output=$(redis-cli $REDIS_OPTS -h "$host" -p "$port" "$@" 2>&1)
+            exit_code=$?
+            
+            if [[ $exit_code -eq 0 ]]; then
+                echo "$output"
+                return 0
+            fi
+            
+            if [[ $attempt -lt $MAX_RETRIES ]]; then
+                echo "Could not connect to Redis at ${host}:${port} (attempt $attempt/$MAX_RETRIES): $output" >&2
+                echo "Retrying in ${RETRY_DELAY} seconds..." >&2
+                sleep $RETRY_DELAY
+            fi
+            
+            ((attempt++))
+        done
+        
+        # All retries failed
+        echo "Could not connect to Redis at ${host}:${port}: Connection refused" >&2
+        echo "$LINK" >&2
+        exit 1
     }
 
     # Function to get master address from sentinel

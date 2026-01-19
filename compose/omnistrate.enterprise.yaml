@@ -291,8 +291,9 @@ x-post-upgrade-hook: &postupgradehook
     readonly RESOURCE_KEY=$([[ "$RESOURCE_ALIAS" =~ .*mz.* ]] && echo "mz" || echo "sz")
     readonly INTERNAL_SUFFIX=$([[ "${NETWORKING_TYPE:-}" == "INTERNAL" ]] && echo "-internal" || echo "")
 
-    # Common Redis CLI options
-    readonly REDIS_OPTS="--no-auth-warning -a $adminpass $SSL_FLAG"
+    # Common Redis CLI options (as array to preserve argument integrity)
+    readonly REDIS_OPTS=(--no-auth-warning -a "$adminpass")
+    [[ -n "$SSL_FLAG" ]] && REDIS_OPTS+=("$SSL_FLAG")
     readonly MAX_RETRIES=3
     readonly RETRY_DELAY=2
 
@@ -305,8 +306,11 @@ x-post-upgrade-hook: &postupgradehook
         local exit_code
         
         while [[ $attempt -le $MAX_RETRIES ]]; do
-            output=$(redis-cli $REDIS_OPTS -h "$host" -p "$port" "$@" 2>&1)
+            # Temporarily disable errexit to prevent premature exit during retries
+            set +e
+            output=$(redis-cli "${REDIS_OPTS[@]}" -h "$host" -p "$port" "$@" 2>&1)
             exit_code=$?
+            set -e
             
             if [[ $exit_code -eq 0 ]]; then
                 echo "$output"

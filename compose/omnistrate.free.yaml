@@ -62,7 +62,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           node-f: falkordbPassword
     depends_on:
@@ -104,7 +104,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
       # - key: enableTLS
       #   description: Whether to enable TLS for the database
       #   name: Enable TLS

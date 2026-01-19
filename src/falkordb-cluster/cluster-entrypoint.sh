@@ -86,6 +86,25 @@ DATE_NOW=$(date +"%Y%m%d%H%M%S")
 FALKORDB_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/falkordb_$DATE_NOW.log; else echo "/dev/null"; fi)
 NODE_CONF_FILE=$DATA_DIR/node.conf
 
+LDAP_AUTH_SERVER_HTTP_URL=${LDAP_AUTH_SERVER_HTTP_URL:-'https://ldap-auth-service.ldap-auth.svc.cluster.local:8080'}
+LDAP_AUTH_SERVER_URL=${LDAP_AUTH_SERVER_URL:-'ldaps://ldap-auth-service.ldap-auth.svc.cluster.local:3389'}
+LDAP_AUTH_PASSWORD=${LDAP_AUTH_PASSWORD:-''}
+LDAP_AUTH_NAMESPACE=${LDAP_AUTH_NAMESPACE:-'ldap-auth'}
+LDAP_AUTH_PASSWORD_SECRET_NAME=${LDAP_AUTH_PASSWORD_SECRET_NAME:-'ldap-auth-admin-secret'}
+LDAP_AUTH_PASSWORD_SECRET_KEY=${LDAP_AUTH_PASSWORD_SECRET_KEY:-'LDAP_ADMIN_PASSWORD'}
+LDAP_AUTH_CA_CERT_PATH=${LDAP_AUTH_CA_CERT_PATH:-"$DATA_DIR/ldap-ca-cert.crt"}
+# if LDAP_AUTH_PASSWORD is empty, retrieve with with curl from namespace secret
+if [[ -z "$LDAP_AUTH_PASSWORD" ]]; then
+  echo "Retrieving LDAP auth password from Kubernetes secret"
+  LDAP_AUTH_PASSWORD=$(curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --header "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$LDAP_AUTH_NAMESPACE/secrets/$LDAP_AUTH_PASSWORD_SECRET_NAME" | jq -r ".data.\"$LDAP_AUTH_PASSWORD_SECRET_KEY\"" | base64 -d)
+  echo "LDAP auth password retrieved"
+fi
+
+# Retrieve ldap server CA certificate
+echo "Retrieving LDAP server CA certificate"
+curl -s --insecure $LDAP_AUTH_SERVER_HTTP_URL/api/v1/ca-certificate > $LDAP_AUTH_CA_CERT_PATH
+echo "LDAP CA certificate saved to $LDAP_AUTH_CA_CERT_PATH"
+
 if [[ $OMNISTRATE_ENVIRONMENT_TYPE != "PROD" ]]; then
   DEBUG=1
 fi
@@ -472,7 +491,30 @@ join_cluster() {
 
 }
 
+add_ldap_config_to_conf() {
+  if ! grep -q "^loadmodule /var/lib/falkordb/bin/valkey_ldap.so" "$NODE_CONF_FILE"; then
+    echo "Adding LDAP module to node.conf"
+    {
+      echo "loadmodule /var/lib/falkordb/bin/valkey_ldap.so"
+      echo "ldap.servers \"$LDAP_AUTH_SERVER_URL\""
+      echo "ldap.auth_mode bind"
+      echo "ldap.tls_ca_cert_path \"$LDAP_AUTH_CA_CERT_PATH\""
+      echo "ldap.bind_dn_suffix \",ou=$INSTANCE_ID,dc=falkordb,dc=cloud\""
+      echo "ldap.search_base \"ou=$INSTANCE_ID,dc=falkordb,dc=cloud\""
+      echo "ldap.search_bind_dn \"cn=admin,ou=admin,dc=falkordb,dc=cloud\""
+      echo "ldap.search_bind_passwd \"$LDAP_AUTH_PASSWORD\""
+      echo "ldap.groups_rules_attribute \"description\""
+      echo "ldap.exempted_users_regex \"^(default|falkordbUpgradeUser)$\""
+      echo "ldap.acl_fallback_enabled yes"
+      echo "ldap.tls_skip_verify yes"
+    } >> "$NODE_CONF_FILE"
+  else
+    echo "LDAP module already present in node.conf"
+  fi
+}
+
 run_node() {
+  add_ldap_config_to_conf
 
   # Update .SO path for old instances
   sed -i "s|/FalkorDB/bin/src/bin/falkordb.so|/var/lib/falkordb/bin/falkordb.so|g" $NODE_CONF_FILE
@@ -488,6 +530,10 @@ run_node() {
   sed -i "s/\$FALKORDB_QUERY_MEM_CAPACITY/$FALKORDB_QUERY_MEM_CAPACITY/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_VKEY_MAX_ENTITY_COUNT/$FALKORDB_VKEY_MAX_ENTITY_COUNT/g" $NODE_CONF_FILE
   sed -i "s/\$FALKORDB_EFFECTS_THRESHOLD/$FALKORDB_EFFECTS_THRESHOLD/g" $NODE_CONF_FILE
+  sed -i "s|\$LDAP_AUTH_SERVER_URL|$LDAP_AUTH_SERVER_URL|g" $NODE_CONF_FILE
+  sed -i "s|\$LDAP_AUTH_CA_CERT_PATH|$LDAP_AUTH_CA_CERT_PATH|g" $NODE_CONF_FILE
+  sed -i "s|\$INSTANCE_ID|$INSTANCE_ID|g" $NODE_CONF_FILE
+  sed -i "s|\$LDAP_AUTH_PASSWORD|$LDAP_AUTH_PASSWORD|g" $NODE_CONF_FILE
   echo "dir $DATA_DIR/$i" >>$NODE_CONF_FILE
 
   if [[ $TLS == "true" ]]; then

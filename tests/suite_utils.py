@@ -17,10 +17,19 @@ log = logging.getLogger(__name__)
 
 
 def add_data(
-    instance: OmnistrateFleetInstance, ssl=False, key="test", n=1, network_type="PUBLIC"
+    instance: OmnistrateFleetInstance, ssl=False, key="test", n=1, network_type="PUBLIC", retry_on_ldap_fail_seconds=10
 ):
     logging.info(f"Adding {n} data entries to graph '{key}'")
-    db = instance.create_connection(ssl=ssl, network_type=network_type)
+    try:
+        db = instance.create_connection(ssl=ssl, network_type=network_type)
+    except Exception as e:
+        if "LDAP authentication failed" in str(e):
+            if retry_on_ldap_fail_seconds > 0:
+                time.sleep(retry_on_ldap_fail_seconds)
+                logging.warning("LDAP authentication failed, retrying after delay")
+                return add_data(instance, ssl, key, n, network_type, retry_on_ldap_fail_seconds=retry_on_ldap_fail_seconds-5)
+        logging.error("Failed to create database connection: " + str(e))
+        raise
     g = db.select_graph(key)
     for _ in range(n):
         g.query("CREATE (n:Person {name: 'Alice'})")

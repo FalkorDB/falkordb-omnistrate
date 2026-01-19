@@ -192,6 +192,10 @@ x-pre-upgrade-hook: &preupgradehook
     echo "Running BGREWRITEAOF before upgrade"
 
     adminpass=$(curl -s   --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt   -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"   https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)/secrets | grep '.*adminpassword.*"$' | awk 'NR==1{print $2}' | base64 -d)
+    if [[ -z "$adminpass" ]]; then
+        echo "ERROR: Failed to retrieve admin password from secret. Cannot proceed with Redis operations." >&2
+        exit 1
+    fi
     readonly NODE_PORT="${NODE_PORT:-6379}"
 
     # Build redis-cli options safely
@@ -277,6 +281,10 @@ x-post-upgrade-hook: &postupgradehook
     # Constants
     readonly LINK="Please refer to the documentation for instructions on how to resolve this issue: https://github.com/FalkorDB/runbooks/blob/main/alerts/SentinelSplitBrainAlertsRunbook.md"
     adminpass=$(curl -s   --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt   -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"   https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)/secrets | grep '.*adminpassword.*"$' | awk 'NR==1{print $2}' | base64 -d)
+    if [[ -z "$adminpass" ]]; then
+        echo "ERROR: Failed to retrieve admin password from secret. Cannot proceed with Redis operations." >&2
+        exit 1
+    fi
 
     # Derived configuration
     readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
@@ -284,8 +292,9 @@ x-post-upgrade-hook: &postupgradehook
     readonly INTERNAL_SUFFIX=$([[ "${NETWORKING_TYPE:-}" == "INTERNAL" ]] && echo "-internal" || echo "")
 
     # Common Redis CLI options (as array to preserve argument integrity)
-    readonly REDIS_OPTS=(--no-auth-warning -a "$adminpass")
+    REDIS_OPTS=(--no-auth-warning -a "$adminpass")
     [[ -n "$SSL_FLAG" ]] && REDIS_OPTS+=("$SSL_FLAG")
+    readonly REDIS_OPTS
     readonly MAX_RETRIES=3
     readonly RETRY_DELAY=2
 
@@ -350,7 +359,7 @@ x-post-upgrade-hook: &postupgradehook
         
         redis_exec "$host" "$SENTINEL_PORT" SENTINEL remove "$MASTER_NAME"
         redis_exec "$host" "$SENTINEL_PORT" SENTINEL MONITOR "$MASTER_NAME" "$true_master" "$NODE_PORT" "$SENTINEL_QUORUM"
-        redis_exec "$host" "$SENTINEL_PORT" SENTINEL SET master auth-pass "$adminpass"
+        redis_exec "$host" "$SENTINEL_PORT" SENTINEL SET "$MASTER_NAME" auth-pass "$adminpass"
         redis_exec "$host" "$SENTINEL_PORT" SENTINEL FLUSHCONFIG
     }
 

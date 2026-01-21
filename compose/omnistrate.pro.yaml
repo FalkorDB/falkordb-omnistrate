@@ -328,20 +328,20 @@ services:
         required: true
         export: true
         labeledOptions:
-          "2 vCPUs,4GB memory (gcp)": "e2-medium"
-          "2 vCPUs,8GB memory (gcp)": "e2-standard-2"
-          "4 vCPUs,16GB memory (gcp)": "e2-standard-4"
-          "4 vCPUs,8GB memory (gcp)": "e2-custom-4-8192"
-          "8 vCPUs,16GB memory (gcp)": "e2-custom-8-16384"
-          "16 vCPUs,32GB memory (gcp)": "e2-custom-16-32768"
-          "32 vCPUs,64GB memory (gcp)": "e2-custom-32-65536"
-          "2 vCPUs,4GB memory (aws)": "t2.medium"
-          "2 vCPUs,8GB memory (aws)": "m6i.large"
-          "4 vCPUs,16GB memory (aws)": "m6i.xlarge"
-          "4 vCPU,16GB memory (aws)": "c6i.xlarge"
-          "8 vCPUs,32GB memory (aws)": "c6i.2xlarge"
-          "16 vCPUs,64GB memory (aws)": "c6i.4xlarge"
-          "32 vCPUs,128GB memory (aws)": "c6i.8xlarge"
+          "2 vCPUs, 4GB memory (gcp)": "e2-medium"
+          "2 vCPUs ,8GB memory (gcp)": "e2-standard-2"
+          "4 vCPUs, 16GB memory (gcp)": "e2-standard-4"
+          "4 vCPUs, 8GB memory (gcp)": "e2-custom-4-8192"
+          "8 vCPUs, 16GB memory (gcp)": "e2-custom-8-16384"
+          "16 vCPUs, 32GB memory (gcp)": "e2-custom-16-32768"
+          "32 vCPUs, 64GB memory (gcp)": "e2-custom-32-65536"
+          "2 vCPUs, 4GB memory (aws)": "t2.medium"
+          "2 vCPUs, 8GB memory (aws)": "m6i.large"
+          "4 vCPUs, 16GB memory (aws)": "m6i.xlarge"
+          "4 vCPU, 8GB memory (aws)": "c6i.xlarge"
+          "8 vCPUs, 16GB memory (aws)": "c6i.2xlarge"
+          "16 vCPUs, 32GB memory (aws)": "c6i.4xlarge"
+          "32 vCPUs, 64GB memory (aws)": "c6i.8xlarge"
         parameterDependencyMap:
           node-s: nodeInstanceType
       - key: enableTLS
@@ -518,20 +518,20 @@ services:
         required: true
         export: true
         labeledOptions:
-          "2 vCPUs,4GB memory (gcp)": "e2-medium"
-          "2 vCPUs,8GB memory (gcp)": "e2-standard-2"
-          "4 vCPUs,16GB memory (gcp)": "e2-standard-4"
-          "4 vCPUs,8GB memory (gcp)": "e2-custom-4-8192"
-          "8 vCPUs,16GB memory (gcp)": "e2-custom-8-16384"
-          "16 vCPUs,32GB memory (gcp)": "e2-custom-16-32768"
-          "32 vCPUs,64GB memory (gcp)": "e2-custom-32-65536"
-          "2 vCPUs,4GB memory (aws)": "t2.medium"
-          "2 vCPUs,8GB memory (aws)": "m6i.large"
-          "4 vCPUs,16GB memory (aws)": "m6i.xlarge"
-          "4 vCPU,16GB memory (aws)": "c6i.xlarge"
-          "8 vCPUs,32GB memory (aws)": "c6i.2xlarge"
-          "16 vCPUs,64GB memory (aws)": "c6i.4xlarge"
-          "32 vCPUs,128GB memory (aws)": "c6i.8xlarge"
+          "2 vCPUs, 4GB memory (gcp)": "e2-medium"
+          "2 vCPUs ,8GB memory (gcp)": "e2-standard-2"
+          "4 vCPUs, 16GB memory (gcp)": "e2-standard-4"
+          "4 vCPUs, 8GB memory (gcp)": "e2-custom-4-8192"
+          "8 vCPUs, 16GB memory (gcp)": "e2-custom-8-16384"
+          "16 vCPUs, 32GB memory (gcp)": "e2-custom-16-32768"
+          "32 vCPUs, 64GB memory (gcp)": "e2-custom-32-65536"
+          "2 vCPUs, 4GB memory (aws)": "t2.medium"
+          "2 vCPUs, 8GB memory (aws)": "m6i.large"
+          "4 vCPUs, 16GB memory (aws)": "m6i.xlarge"
+          "4 vCPU, 8GB memory (aws)": "c6i.xlarge"
+          "8 vCPUs, 16GB memory (aws)": "c6i.2xlarge"
+          "16 vCPUs, 32GB memory (aws)": "c6i.4xlarge"
+          "32 vCPUs, 64GB memory (aws)": "c6i.8xlarge"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -808,20 +808,20 @@ services:
         required: true
         export: true
         labeledOptions:
-          "2 vCPUs,4GB memory (gcp)": "e2-medium"
-          "2 vCPUs,8GB memory (gcp)": "e2-standard-2"
-          "4 vCPUs,16GB memory (gcp)": "e2-standard-4"
-          "4 vCPUs,8GB memory (gcp)": "e2-custom-4-8192"
-          "8 vCPUs,16GB memory (gcp)": "e2-custom-8-16384"
-          "16 vCPUs,32GB memory (gcp)": "e2-custom-16-32768"
-          "32 vCPUs,64GB memory (gcp)": "e2-custom-32-65536"
-          "2 vCPUs,4GB memory (aws)": "t2.medium"
-          "2 vCPUs,8GB memory (aws)": "m6i.large"
-          "4 vCPUs,16GB memory (aws)": "m6i.xlarge"
-          "4 vCPU,16GB memory (aws)": "c6i.xlarge"
-          "8 vCPUs,32GB memory (aws)": "c6i.2xlarge"
-          "16 vCPUs,64GB memory (aws)": "c6i.4xlarge"
-          "32 vCPUs,128GB memory (aws)": "c6i.8xlarge"
+          "2 vCPUs, 4GB memory (gcp)": "e2-medium"
+          "2 vCPUs ,8GB memory (gcp)": "e2-standard-2"
+          "4 vCPUs, 16GB memory (gcp)": "e2-standard-4"
+          "4 vCPUs, 8GB memory (gcp)": "e2-custom-4-8192"
+          "8 vCPUs, 16GB memory (gcp)": "e2-custom-8-16384"
+          "16 vCPUs, 32GB memory (gcp)": "e2-custom-16-32768"
+          "32 vCPUs, 64GB memory (gcp)": "e2-custom-32-65536"
+          "2 vCPUs, 4GB memory (aws)": "t2.medium"
+          "2 vCPUs, 8GB memory (aws)": "m6i.large"
+          "4 vCPUs, 16GB memory (aws)": "m6i.xlarge"
+          "4 vCPU, 8GB memory (aws)": "c6i.xlarge"
+          "8 vCPUs, 16GB memory (aws)": "c6i.2xlarge"
+          "16 vCPUs, 32GB memory (aws)": "c6i.4xlarge"
+          "32 vCPUs, 64GB memory (aws)": "c6i.8xlarge"
         parameterDependencyMap:
           node-sz: nodeInstanceType
 
@@ -1011,20 +1011,20 @@ services:
         required: true
         export: true
         labeledOptions:
-          "2 vCPUs,4GB memory (gcp)": "e2-medium"
-          "2 vCPUs,8GB memory (gcp)": "e2-standard-2"
-          "4 vCPUs,16GB memory (gcp)": "e2-standard-4"
-          "4 vCPUs,8GB memory (gcp)": "e2-custom-4-8192"
-          "8 vCPUs,16GB memory (gcp)": "e2-custom-8-16384"
-          "16 vCPUs,32GB memory (gcp)": "e2-custom-16-32768"
-          "32 vCPUs,64GB memory (gcp)": "e2-custom-32-65536"
-          "2 vCPUs,4GB memory (aws)": "t2.medium"
-          "2 vCPUs,8GB memory (aws)": "m6i.large"
-          "4 vCPUs,16GB memory (aws)": "m6i.xlarge"
-          "4 vCPU,16GB memory (aws)": "c6i.xlarge"
-          "8 vCPUs,32GB memory (aws)": "c6i.2xlarge"
-          "16 vCPUs,64GB memory (aws)": "c6i.4xlarge"
-          "32 vCPUs,128GB memory (aws)": "c6i.8xlarge"
+          "2 vCPUs, 4GB memory (gcp)": "e2-medium"
+          "2 vCPUs ,8GB memory (gcp)": "e2-standard-2"
+          "4 vCPUs, 16GB memory (gcp)": "e2-standard-4"
+          "4 vCPUs, 8GB memory (gcp)": "e2-custom-4-8192"
+          "8 vCPUs, 16GB memory (gcp)": "e2-custom-8-16384"
+          "16 vCPUs, 32GB memory (gcp)": "e2-custom-16-32768"
+          "32 vCPUs, 64GB memory (gcp)": "e2-custom-32-65536"
+          "2 vCPUs, 4GB memory (aws)": "t2.medium"
+          "2 vCPUs, 8GB memory (aws)": "m6i.large"
+          "4 vCPUs, 16GB memory (aws)": "m6i.xlarge"
+          "4 vCPU, 8GB memory (aws)": "c6i.xlarge"
+          "8 vCPUs, 16GB memory (aws)": "c6i.2xlarge"
+          "16 vCPUs, 32GB memory (aws)": "c6i.4xlarge"
+          "32 vCPUs, 64GB memory (aws)": "c6i.8xlarge"
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1568,20 +1568,20 @@ services:
         required: true
         export: true
         labeledOptions:
-          "2 vCPUs,4GB memory (gcp)": "e2-medium"
-          "2 vCPUs,8GB memory (gcp)": "e2-standard-2"
-          "4 vCPUs,16GB memory (gcp)": "e2-standard-4"
-          "4 vCPUs,8GB memory (gcp)": "e2-custom-4-8192"
-          "8 vCPUs,16GB memory (gcp)": "e2-custom-8-16384"
-          "16 vCPUs,32GB memory (gcp)": "e2-custom-16-32768"
-          "32 vCPUs,64GB memory (gcp)": "e2-custom-32-65536"
-          "2 vCPUs,4GB memory (aws)": "t2.medium"
-          "2 vCPUs,8GB memory (aws)": "m6i.large"
-          "4 vCPUs,16GB memory (aws)": "m6i.xlarge"
-          "4 vCPU,16GB memory (aws)": "c6i.xlarge"
-          "8 vCPUs,32GB memory (aws)": "c6i.2xlarge"
-          "16 vCPUs,64GB memory (aws)": "c6i.4xlarge"
-          "32 vCPUs,128GB memory (aws)": "c6i.8xlarge"
+          "2 vCPUs, 4GB memory (gcp)": "e2-medium"
+          "2 vCPUs ,8GB memory (gcp)": "e2-standard-2"
+          "4 vCPUs, 16GB memory (gcp)": "e2-standard-4"
+          "4 vCPUs, 8GB memory (gcp)": "e2-custom-4-8192"
+          "8 vCPUs, 16GB memory (gcp)": "e2-custom-8-16384"
+          "16 vCPUs, 32GB memory (gcp)": "e2-custom-16-32768"
+          "32 vCPUs, 64GB memory (gcp)": "e2-custom-32-65536"
+          "2 vCPUs, 4GB memory (aws)": "t2.medium"
+          "2 vCPUs, 8GB memory (aws)": "m6i.large"
+          "4 vCPUs, 16GB memory (aws)": "m6i.xlarge"
+          "4 vCPU, 8GB memory (aws)": "c6i.xlarge"
+          "8 vCPUs, 16GB memory (aws)": "c6i.2xlarge"
+          "16 vCPUs, 32GB memory (aws)": "c6i.4xlarge"
+          "32 vCPUs, 64GB memory (aws)": "c6i.8xlarge"
         parameterDependencyMap:
           node-mz: nodeInstanceType
 
@@ -1771,20 +1771,20 @@ services:
         required: true
         export: true
         labeledOptions:
-          "2 vCPUs,4GB memory (gcp)": "e2-medium"
-          "2 vCPUs,8GB memory (gcp)": "e2-standard-2"
-          "4 vCPUs,16GB memory (gcp)": "e2-standard-4"
-          "4 vCPUs,8GB memory (gcp)": "e2-custom-4-8192"
-          "8 vCPUs,16GB memory (gcp)": "e2-custom-8-16384"
-          "16 vCPUs,32GB memory (gcp)": "e2-custom-16-32768"
-          "32 vCPUs,64GB memory (gcp)": "e2-custom-32-65536"
-          "2 vCPUs,4GB memory (aws)": "t2.medium"
-          "2 vCPUs,8GB memory (aws)": "m6i.large"
-          "4 vCPUs,16GB memory (aws)": "m6i.xlarge"
-          "4 vCPU,16GB memory (aws)": "c6i.xlarge"
-          "8 vCPUs,32GB memory (aws)": "c6i.2xlarge"
-          "16 vCPUs,64GB memory (aws)": "c6i.4xlarge"
-          "32 vCPUs,128GB memory (aws)": "c6i.8xlarge"
+          "2 vCPUs, 4GB memory (gcp)": "e2-medium"
+          "2 vCPUs ,8GB memory (gcp)": "e2-standard-2"
+          "4 vCPUs, 16GB memory (gcp)": "e2-standard-4"
+          "4 vCPUs, 8GB memory (gcp)": "e2-custom-4-8192"
+          "8 vCPUs, 16GB memory (gcp)": "e2-custom-8-16384"
+          "16 vCPUs, 32GB memory (gcp)": "e2-custom-16-32768"
+          "32 vCPUs, 64GB memory (gcp)": "e2-custom-32-65536"
+          "2 vCPUs, 4GB memory (aws)": "t2.medium"
+          "2 vCPUs, 8GB memory (aws)": "m6i.large"
+          "4 vCPUs, 16GB memory (aws)": "m6i.xlarge"
+          "4 vCPU, 8GB memory (aws)": "c6i.xlarge"
+          "8 vCPUs, 16GB memory (aws)": "c6i.2xlarge"
+          "16 vCPUs, 32GB memory (aws)": "c6i.4xlarge"
+          "32 vCPUs, 64GB memory (aws)": "c6i.8xlarge"
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas

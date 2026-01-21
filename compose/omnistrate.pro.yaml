@@ -410,7 +410,7 @@ services:
         export: true
         defaultValue: "25"
         limits:
-          min: 0
+          min: 1
           max:  256
         parameterDependencyMap:
           node-s: falkorDBCacheSize
@@ -436,7 +436,7 @@ services:
         export: true
         defaultValue: "50"
         limits:
-          min: 0
+          min: 1
           max:  512
         parameterDependencyMap:
           node-s: falkorDBMaxQueuedQueries
@@ -486,10 +486,10 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0"
+        defaultValue: "21474836480"
         limits:
-          min: 0
-          max:  2000000000
+          min: 5242880
+          max:  21474836480
         parameterDependencyMap:
           node-s: falkorDBQueryMemCapacity
     x-omnistrate-capabilities:
@@ -588,7 +588,7 @@ services:
         export: true
         defaultValue: "25"
         limits:
-          min: 0
+          min: 1
           max:  256
       - key: falkorDBNodeCreationBuffer
         description: Choose the buffer size for your database
@@ -610,7 +610,7 @@ services:
         export: true
         defaultValue: "50"
         limits:
-          min: 0
+          min: 1
           max:  512
       - key: falkorDBTimeoutMax
         description: Choose the timeout max for your database
@@ -652,10 +652,10 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0"
+        defaultValue: "21474836480"
         limits:
-          min: 0
-          max:  2000000000
+          min: 5242880
+          max:  21474836480
     volumes:
       - source: ./data
         target: /data
@@ -903,7 +903,7 @@ services:
         export: true
         defaultValue: "25"
         limits:
-          min: 0
+          min: 1
           max:  256
         parameterDependencyMap:
           node-sz: falkorDBCacheSize
@@ -929,7 +929,7 @@ services:
         export: true
         defaultValue: "50"
         limits:
-          min: 0
+          min: 1
           max:  512
         parameterDependencyMap:
           node-sz: falkorDBMaxQueuedQueries
@@ -979,10 +979,10 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0"
+        defaultValue: "21474836480"
         limits:
-          min: 0
-          max:  2000000000
+          min: 5242880
+          max:  21474836480
         parameterDependencyMap:
           node-sz: falkorDBQueryMemCapacity
     x-omnistrate-capabilities:
@@ -1095,7 +1095,7 @@ services:
         export: true
         defaultValue: "25"
         limits:
-          min: 0
+          min: 1
           max:  256
       - key: falkorDBNodeCreationBuffer
         description: Choose the buffer size for your database
@@ -1117,7 +1117,7 @@ services:
         export: true
         defaultValue: "50"
         limits:
-          min: 0
+          min: 1
           max:  512
       - key: falkorDBTimeoutMax
         description: Choose the timeout max for your database
@@ -1159,10 +1159,10 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0"
+        defaultValue: "21474836480"
         limits:
-          min: 0
-          max:  2000000000
+          min: 5242880
+          max:  21474836480
     volumes:
       - source: ./data
         target: /data
@@ -1663,7 +1663,7 @@ services:
         export: true
         defaultValue: "25"
         limits:
-          min: 0
+          min: 1
           max:  256
         parameterDependencyMap:
           node-mz: falkorDBCacheSize
@@ -1689,7 +1689,7 @@ services:
         export: true
         defaultValue: "50"
         limits:
-          min: 0
+          min: 1
           max:  512
         parameterDependencyMap:
           node-mz: falkorDBMaxQueuedQueries
@@ -1739,10 +1739,10 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0"
+        defaultValue: "21474836480"
         limits:
-          min: 0
-          max:  2000000000
+          min: 5242880
+          max:  21474836480
         parameterDependencyMap:
           node-mz: falkorDBQueryMemCapacity
     x-omnistrate-capabilities:
@@ -1855,7 +1855,7 @@ services:
         export: true
         defaultValue: "25"
         limits:
-          min: 0
+          min: 1
           max:  256
       - key: falkorDBNodeCreationBuffer
         description: Choose the buffer size for your database
@@ -1877,7 +1877,7 @@ services:
         export: true
         defaultValue: "50"
         limits:
-          min: 0
+          min: 1
           max:  512
       - key: falkorDBTimeoutMax
         description: Choose the timeout max for your database
@@ -1919,10 +1919,10 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0"
+        defaultValue: "21474836480"
         limits:
-          min: 0
-          max:  2000000000
+          min: 5242880
+          max:  21474836480
     volumes:
       - source: ./data
         target: /data

@@ -281,8 +281,8 @@ services:
         parameterDependencyMap:
           node-s: falkorDBQueryMemCapacity
       - key: memoryRequestsAndLimits
-        description: Choose the memory amount for your database
-        name: Memory
+        description: Choose the cpu andmemory amount for your database
+        name: vCPU and Memory
         type: String
         modifiable: false
         required: false
@@ -435,8 +435,8 @@ services:
           min: 0
           max:  2000000000
       - key: memoryRequestsAndLimits
-        description: Choose the memory amount for your database
-        name: Memory
+        description: Choose the cpu and memory amount for your database
+        name: vCPU and Memory
         type: String
         modifiable: false
         required: false

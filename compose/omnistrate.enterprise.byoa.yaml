@@ -603,7 +603,7 @@ services:
         export: true
         defaultValue: "2000000000"
         limits:
-          min: 1
+          min: 5242880
           max:  2000000000
         parameterDependencyMap:
           node-s: falkorDBQueryMemCapacity
@@ -765,7 +765,7 @@ services:
         export: true
         defaultValue: "2000000000"
         limits:
-          min: 1
+          min: 5242880
           max:  2000000000
       - key: maxMemory
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
@@ -1090,7 +1090,7 @@ services:
         export: true
         defaultValue: "2000000000"
         limits:
-          min: 1
+          min: 5242880
           max:  2000000000
         parameterDependencyMap:
           node-sz: falkorDBQueryMemCapacity
@@ -1269,7 +1269,7 @@ services:
         export: true
         defaultValue: "2000000000"
         limits:
-          min: 1
+          min: 5242880
           max:  2000000000
       - key: maxMemory
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
@@ -1853,7 +1853,7 @@ services:
         export: true
         defaultValue: "2000000000"
         limits:
-          min: 1
+          min: 5242880
           max:  2000000000
         parameterDependencyMap:
           node-mz: falkorDBQueryMemCapacity
@@ -2031,7 +2031,7 @@ services:
         export: true
         defaultValue: "2000000000"
         limits:
-          min: 1
+          min: 5242880
           max:  2000000000
       - key: maxMemory
         description: Choose the maxmemory for your database (do not exceed InstanceType memory)
@@ -2599,7 +2599,7 @@ services:
         export: true
         defaultValue: "2000000000"
         limits:
-          min: 1
+          min: 5242880
           max:  2000000000
         parameterDependencyMap:
           cluster-sz: falkorDBQueryMemCapacity
@@ -2966,7 +2966,7 @@ services:
         export: true
         defaultValue: "2000000000"
         limits:
-          min: 1
+          min: 5242880
           max:  2000000000
         parameterDependencyMap:
           cluster-mz: falkorDBQueryMemCapacity

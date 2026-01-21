@@ -374,7 +374,7 @@ jobs:
             cloudRegion: us-east-2
             resourceKey: standalone
             instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs,8GB memory (aws)"
+            newInstanceType: "2 vCPUs, 8GB memory (aws)"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -387,7 +387,7 @@ jobs:
             cloudRegion: us-east-2
             resourceKey: single-Zone
             instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs,8GB memory (aws)"
+            newInstanceType: "2 vCPUs, 8GB memory (aws)"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -400,7 +400,7 @@ jobs:
             cloudRegion: us-east-2
             resourceKey: multi-Zone
             instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs,8GB memory (aws)"
+            newInstanceType: "2 vCPUs, 8GB memory (aws)"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -415,7 +415,7 @@ jobs:
             instanceType: "2 vCPUs, 4GB memory (aws)"
             hostCount: "6"
             clusterReplicas: "1"
-            newInstanceType: "2 vCPUs,8GB memory (aws)"
+            newInstanceType: "2 vCPUs, 8GB memory (aws)"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -430,7 +430,7 @@ jobs:
             instanceType: "2 vCPUs, 4GB memory (aws)"
             hostCount: "6"
             clusterReplicas: "1"
-            newInstanceType: "2 vCPUs,8GB memory (aws)"
+            newInstanceType: "2 vCPUs, 8GB memory (aws)"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -529,7 +529,7 @@ jobs:
             cloudRegion: us-east-2
             resourceKey: standalone
             instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs,8GB memory (aws)"
+            newInstanceType: "2 vCPUs, 8GB memory (aws)"
             maxmemory: "2GB"
 
           - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
@@ -541,7 +541,7 @@ jobs:
             cloudRegion: us-east-2
             resourceKey: single-Zone
             instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs,8GB memory (aws)"
+            newInstanceType: "2 vCPUs, 8GB memory (aws)"
             maxmemory: "2GB"
 
           - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
@@ -553,7 +553,7 @@ jobs:
             cloudRegion: us-east-2
             resourceKey: multi-Zone
             instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs,8GB memory (aws)"
+            newInstanceType: "2 vCPUs, 8GB memory (aws)"
             maxmemory: "2GB"
 
           ######################## PRIVATE • GCP (INTERNAL) ########################
@@ -579,7 +579,7 @@ jobs:
             cloudRegion: us-east-2
             resourceKey: standalone
             instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs,8GB memory (aws)"
+            newInstanceType: "2 vCPUs, 8GB memory (aws)"
             maxmemory: "2GB"
             tls: true
           - name: "[26] pro/SingleZone/TLS - AWS/us-east-2 - Grouped"
@@ -591,7 +591,7 @@ jobs:
             cloudRegion: us-east-2
             resourceKey: single-Zone
             instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs,8GB memory (aws)"
+            newInstanceType: "2 vCPUs, 8GB memory (aws)"
             maxmemory: "2GB"
             tls: true
     steps:

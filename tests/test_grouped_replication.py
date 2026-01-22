@@ -127,6 +127,9 @@ def test_replication_pack(instance):
         logging.info("Stopping and starting the instance")
         instance.stop(wait_for_ready=True)
         instance.start(wait_for_ready=True)
+        # Wait for Sentinel to detect new master after restart
+        logging.debug("Waiting for Sentinel to update master information")
+        time.sleep(10)
         logging.debug("Validating data after stop/start")
         assert_data(
             instance,
@@ -144,6 +147,9 @@ def test_replication_pack(instance):
             wait_for_ready=False,
             resource_id=instance.get_resource_id(f"sentinel-{id_key}"),
         )
+        # Wait for Sentinel topology to stabilize
+        logging.debug("Waiting for Sentinel topology to stabilize")
+        time.sleep(10)
         logging.debug("Validating data after sentinel failover")
         assert_data(
             instance,
@@ -161,6 +167,9 @@ def test_replication_pack(instance):
             wait_for_ready=False,
             resource_id=instance.get_resource_id(f"node-{id_key}"),
         )
+        # Wait for master topology to stabilize
+        logging.debug("Waiting for master topology to stabilize")
+        time.sleep(10)
         logging.debug("Validating data after second failover")
         assert_data(
             instance,
@@ -236,6 +245,9 @@ def test_replication_pack(instance):
         )
         new_type = cfg["new_instance_type"] or cfg["orig_instance_type"]
         instance.update_instance_type(new_type, wait_until_ready=True)
+        # Wait for Sentinel to stabilize after resize
+        logging.debug("Waiting for Sentinel to stabilize after resize")
+        time.sleep(10)
         logging.debug("Validating data after resize")
         assert_data(
             instance,

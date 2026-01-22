@@ -1,9 +1,9 @@
-ARG FALKORDB_VERSION=v4.16.0-alpine
+ARG FALKORDB_VERSION=v4.16.0
 
 FROM falkordb/falkordb-server:$FALKORDB_VERSION
 
-RUN apk update && \
-    apk add --no-cache bash curl jq openssl supervisor gdb ca-certificates openssl
+RUN apt-get update && \
+    apt-get install -y bash curl jq openssl supervisor gdb ca-certificates openssl
 
 ADD https://secure.globalsign.com/cacert/root-r1.crt /usr/local/share/ca-certificates/GlobalSign_Root_CA_R1.crt
 

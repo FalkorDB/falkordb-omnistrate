@@ -24,7 +24,7 @@ env:
   HEALTHCHECK_IMAGE_NAME: falkordb-cloud-healthcheck
   FALKORDB_EXPORTER_IMAGE_NAME: falkordb-cloud-exporter
   FALKORDB_SENTINEL_IMAGE_NAME: falkordb-cloud-sentinel
-  FALKORDB_VERSION: v4.16.0
+  FALKORDB_VERSION: v4.14.12
   
 jobs:
   build-and-push:

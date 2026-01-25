@@ -31,20 +31,11 @@ jobs:
           CURRENT_VERSION=$(grep "FALKORDB_VERSION:" .github/workflows/build-release-image.yaml | head -1 | cut -d':' -f2 | xargs)
           echo "Current version found: $CURRENT_VERSION"
 
-          # Extract base version without -alpine suffix
-          CURRENT_BASE_VERSION=$(echo "$CURRENT_VERSION" | sed 's/-alpine$//')
-          echo "Current base version: $CURRENT_BASE_VERSION"
-
           NEW_VERSION="${{ github.event_name == 'workflow_dispatch' && inputs.new_version || github.event.client_payload.new_version }}"
-          # Prepare new version with -alpine suffix
-          NEW_VERSION_ALPINE="$NEW_VERSION-alpine"
-          echo "New version with alpine: $NEW_VERSION_ALPINE"
 
           # Set outputs
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          echo "current_base_version=$CURRENT_BASE_VERSION" >> $GITHUB_OUTPUT
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "new_version_alpine=$NEW_VERSION_ALPINE" >> $GITHUB_OUTPUT
 
       - name: Create issue for version bump
         id: create_issue
@@ -92,7 +83,7 @@ jobs:
       - name: Update version in workflows
         run: |
           CURRENT_VERSION="${{ steps.extract_version.outputs.current_version }}"
-          NEW_VERSION="${{ steps.extract_version.outputs.new_version_alpine }}"
+          NEW_VERSION="${{ steps.extract_version.outputs.new_version }}"
           ESCAPED_CURRENT_VERSION=$(printf '%s\n' "$CURRENT_VERSION" | sed -e 's/[]\/$*.^[]/\\&/g')
           ESCAPED_NEW_VERSION=$(printf '%s\n' "$NEW_VERSION" | sed -e 's/[]\/$*.^[]/\\&/g')
           
@@ -105,7 +96,7 @@ jobs:
       - name: Update version in Dockerfiles
         run: |
           CURRENT_VERSION="${{ steps.extract_version.outputs.current_version }}"
-          NEW_VERSION="${{ steps.extract_version.outputs.new_version_alpine }}"
+          NEW_VERSION="${{ steps.extract_version.outputs.new_version }}"
           ESCAPED_CURRENT_VERSION=$(printf '%s\n' "$CURRENT_VERSION" | sed -e 's/[]\/$*.^[]/\\&/g')
           ESCAPED_NEW_VERSION=$(printf '%s\n' "$NEW_VERSION" | sed -e 's/[]\/$*.^[]/\\&/g')
           

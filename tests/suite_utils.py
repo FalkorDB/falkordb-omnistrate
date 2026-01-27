@@ -20,7 +20,7 @@ def add_data(
     instance: OmnistrateFleetInstance, ssl=False, key="test", n=1, network_type="PUBLIC"
 ):
     logging.info(f"Adding {n} data entries to graph '{key}'")
-    db = instance.create_connection(ssl=ssl, force_reconnect=True, network_type=network_type)
+    db = instance.create_connection(ssl=ssl, network_type=network_type)
     g = db.select_graph(key)
     for _ in range(n):
         g.query("CREATE (n:Person {name: 'Alice'})")
@@ -35,33 +35,16 @@ def has_data(
     network_type="PUBLIC",
 ):
     logging.info(f"Checking if graph '{key}' has at least {min_rows} rows")
-    
-    # Retry logic to handle master topology changes after disruptive operations
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            db = instance.create_connection(
-                ssl=ssl, force_reconnect=True, network_type=network_type
-            )
-            g = db.select_graph(key)
-            # Use read_only=True for read queries to avoid issues with stale master connections
-            rs = g.ro_query("MATCH (n:Person) RETURN n")
-            result = len(rs.result_set) >= min_rows
-            logging.debug(
-                f"Graph '{key}' has {len(rs.result_set)} rows. Meets requirement: {result}"
-            )
-            return result
-        except (ReadOnlyError, Exception) as e:
-            if "read only replica" in str(e).lower() or "master is now a slave" in str(e).lower():
-                logging.warning(
-                    f"Connection to stale master detected (attempt {attempt + 1}/{max_retries}): {e}"
-                )
-                if attempt < max_retries - 1:
-                    # Force connection reset
-                    instance._connection = None
-                    time.sleep(5)  # Wait for sentinel to update
-                    continue
-            raise
+    db = instance.create_connection(
+        ssl=ssl, force_reconnect=True, network_type=network_type
+    )
+    g = db.select_graph(key)
+    rs = g.query("MATCH (n:Person) RETURN n")
+    result = len(rs.result_set) >= min_rows
+    logging.debug(
+        f"Graph '{key}' has {len(rs.result_set)} rows. Meets requirement: {result}"
+    )
+    return result
 
 
 def assert_data(
@@ -159,7 +142,7 @@ def stress_oom(
     Keep writing until we hit OOM.
     """
     logging.info("Starting stress test to trigger OOM with query size '%s'", query_size)
-    db = instance.create_connection(ssl=ssl, force_reconnect=True, network_type=network_type)
+    db = instance.create_connection(ssl=ssl, network_type=network_type)
     g = db.select_graph("test")
     big = "UNWIND RANGE(1, 100000) AS id CREATE (n:Person {name: 'Alice'})"
     medium = "UNWIND RANGE(1, 25000) AS id CREATE (n:Person {name: 'Alice'})"

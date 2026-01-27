@@ -58,12 +58,12 @@ jobs:
       matrix:
         machines:
           - name: replication-runner-private-gcp
-            machine_type: "e2-medium"
+            machine_type: e2-medium
             runner_label: replication-${{ github.run_id }}-${{ github.run_number }}
             arm: false
             image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
           - name: cluster-runner-private-gcp
-            machine_type: "e2-medium"
+            machine_type: e2-medium
             runner_label: cluster-${{ github.run_id }}-${{ github.run_number }}
             arm: false
             image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
@@ -373,8 +373,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs, 8GB memory (aws)"
+            instanceType: t2.medium
+            newInstanceType: m6i.large
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -386,8 +386,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs, 8GB memory (aws)"
+            instanceType: t2.medium
+            newInstanceType: m6i.large
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -399,8 +399,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: multi-Zone
-            instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs, 8GB memory (aws)"
+            instanceType: t2.medium
+            newInstanceType: m6i.large
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -412,10 +412,10 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Single-Zone
-            instanceType: "2 vCPUs, 4GB memory (aws)"
+            instanceType: t2.medium
             hostCount: "6"
             clusterReplicas: "1"
-            newInstanceType: "2 vCPUs, 8GB memory (aws)"
+            newInstanceType: m6i.large
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -427,10 +427,10 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Multi-Zone
-            instanceType: "2 vCPUs, 4GB memory (aws)"
+            instanceType: t2.medium
             hostCount: "6"
             clusterReplicas: "1"
-            newInstanceType: "2 vCPUs, 8GB memory (aws)"
+            newInstanceType: m6i.large
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -443,7 +443,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: standalone
-            instanceType: "2 vCPUs, 4GB memory (gcp)"
+            instanceType: e2-medium
             maxmemory: "2GB"
             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -455,7 +455,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: single-Zone
-            instanceType: "2 vCPUs, 4GB memory (gcp)"
+            instanceType: e2-medium
             maxmemory: "2GB"
             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -467,7 +467,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: multi-Zone
-            instanceType: "2 vCPUs, 4GB memory (gcp)"
+            instanceType: e2-medium
             maxmemory: "2GB"
             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -479,7 +479,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: cluster-Single-Zone
-            instanceType: "2 vCPUs, 4GB memory (gcp)"
+            instanceType: e2-medium
             hostCount: "6"
             clusterReplicas: "1"
             maxmemory: "2GB"
@@ -493,7 +493,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: cluster-Multi-Zone
-            instanceType: "2 vCPUs, 4GB memory (gcp)"
+            instanceType: e2-medium
             hostCount: "6"
             clusterReplicas: "1"
             maxmemory: "2GB"
@@ -528,8 +528,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs, 8GB memory (aws)"
+            instanceType: t2.medium
+            newInstanceType: m6i.large
             maxmemory: "2GB"
 
           - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
@@ -540,8 +540,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs, 8GB memory (aws)"
+            instanceType: t2.medium
+            newInstanceType: m6i.large
             maxmemory: "2GB"
 
           - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
@@ -552,8 +552,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: multi-Zone
-            instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs, 8GB memory (aws)"
+            instanceType: t2.medium
+            newInstanceType: m6i.large
             maxmemory: "2GB"
 
           ######################## PRIVATE • GCP (INTERNAL) ########################
@@ -566,7 +566,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: multi-Zone
-            instanceType: "2 vCPUs, 4GB memory (gcp)"
+            instanceType: e2-medium
             maxmemory: "2GB"
             networkType: INTERNAL
           ######################## PRO • AWS (TLS) ########################
@@ -578,8 +578,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs, 8GB memory (aws)"
+            instanceType: t2.medium
+            newInstanceType: m6i.large
             maxmemory: "2GB"
             tls: true
           - name: "[26] pro/SingleZone/TLS - AWS/us-east-2 - Grouped"
@@ -590,8 +590,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs, 8GB memory (aws)"
+            instanceType: t2.medium
+            newInstanceType: m6i.large
             maxmemory: "2GB"
             tls: true
     steps:
@@ -703,7 +703,7 @@ jobs:
   #           subscriptionId: sub-GJPV3NoNC0
   #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
   #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-  #           extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-upgrade' --instance-description 'test-standalone-upgrade' --instance-type '"2 vCPUs, 4GB memory (aws)"' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+  #           extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-upgrade' --instance-description 'test-standalone-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
   #         - name: PRO/SingleZone - AWS/us-east-2 - Upgrade Version
   #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
   #           testFile: test_upgrade_version.py
@@ -713,7 +713,7 @@ jobs:
   #           subscriptionId: sub-GJPV3NoNC0
   #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
   #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-  #           extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-upgrade' --instance-description 'test-replication-upgrade' --instance-type '"2 vCPUs, 4GB memory (aws)"' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+  #           extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-upgrade' --instance-description 'test-replication-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
   #         - name: PRO/ClusterSingleZone - AWS/us-east-2 - Upgrade Version
   #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
   #           testFile: test_upgrade_version.py
@@ -723,7 +723,7 @@ jobs:
   #           subscriptionId: sub-GJPV3NoNC0
   #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
   #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-  #           extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-upgrade' --instance-description 'test-cluster-upgrade' --instance-type '"2 vCPUs, 4GB memory (aws)"' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
+  #           extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-upgrade' --instance-description 'test-cluster-upgrade' --instance-type 't2.medium' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
 
   #   steps:
   #     - name: Checkout

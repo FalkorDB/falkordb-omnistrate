@@ -247,7 +247,7 @@ def test_upgrade_version():
 def add_data(instance: OmnistrateFleetInstance):
 
     # Get instance host and port
-    db = instance.create_connection(ssl=args.tls, force_reconnect=True)
+    db = instance.create_connection(ssl=args.tls)
 
     graph = db.select_graph("test")
 
@@ -258,12 +258,12 @@ def add_data(instance: OmnistrateFleetInstance):
 def query_data(instance: OmnistrateFleetInstance):
 
     # Get instance host and port
-    db = instance.create_connection(ssl=args.tls, force_reconnect=True)
+    db = instance.create_connection(ssl=args.tls)
 
     graph = db.select_graph("test")
 
     # Get info
-    result = graph.ro_query("MATCH (n:Person) RETURN n.name")
+    result = graph.query("MATCH (n:Person) RETURN n.name")
 
     if len(result.result_set) == 0:
         raise ValueError("No data found in the graph after upgrade")

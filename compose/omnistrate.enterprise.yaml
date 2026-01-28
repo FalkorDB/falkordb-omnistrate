@@ -117,7 +117,7 @@ x-clusterparam: &clusterparam
       export: true
       defaultValue: "25"
       limits:
-        min: 0
+        min: 1
         max: 256
     - key: falkorDBNodeCreationBuffer
       description: Choose the buffer size for your database
@@ -139,7 +139,7 @@ x-clusterparam: &clusterparam
       export: true
       defaultValue: "50"
       limits:
-        min: 0
+        min: 1
         max: 512
     - key: falkorDBTimeoutMax
       description: Choose the timeout max for your database
@@ -170,7 +170,7 @@ x-clusterparam: &clusterparam
       modifiable: false
       required: false
       export: true
-      defaultValue: "0"
+      defaultValue: "10000"
       limits:
         min: 0
         max: 1000000
@@ -181,10 +181,10 @@ x-clusterparam: &clusterparam
       modifiable: false
       required: false
       export: true
-      defaultValue: "0"
+      defaultValue: "21474836480"
       limits:
-        min: 0
-        max: 2000000000
+        min: 5242880
+        max: 21474836480
     - key: maxMemory
       description: Choose the maxmemory for your database (do not exceed InstanceType memory)
       name: FalkorDB Maxmemory
@@ -2029,7 +2029,7 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0"
+        defaultValue: "10000"
         limits:
           min: 0
           max:  1000000

@@ -1908,7 +1908,7 @@ services:
         modifiable: false
         required: false
         export: true
-        defaultValue: "0"
+        defaultValue: "10000"
         limits:
           min: 0
           max:  1000000

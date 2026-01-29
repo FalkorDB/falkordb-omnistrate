@@ -37,7 +37,60 @@ jobs:
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
+      - name: Compare versions
+        id: compare_versions
+        run: |
+          CURRENT_VERSION="${{ steps.extract_version.outputs.current_version }}"
+          NEW_VERSION="${{ steps.extract_version.outputs.new_version }}"
+          
+          echo "Current version: $CURRENT_VERSION"
+          echo "New version: $NEW_VERSION"
+          
+          # Validate that versions are not empty
+          if [ -z "$CURRENT_VERSION" ]; then
+            echo "❌ Error: Could not extract current version from build-release-image.yaml"
+            exit 1
+          fi
+          
+          if [ -z "$NEW_VERSION" ]; then
+            echo "❌ Error: New version not provided"
+            exit 1
+          fi
+          
+          # Remove 'v' prefix for comparison if present
+          CURRENT_VERSION_NUM="${CURRENT_VERSION#v}"
+          NEW_VERSION_NUM="${NEW_VERSION#v}"
+          
+          # Use sort -V (version sort) to compare versions
+          # If current version is greater than or equal to new version, skip bump
+          SORTED_VERSIONS=$(printf "%s\n%s\n" "$CURRENT_VERSION_NUM" "$NEW_VERSION_NUM" | sort -V)
+          FIRST_VERSION=$(echo "$SORTED_VERSIONS" | head -n1)
+          
+          if [ "$FIRST_VERSION" = "$NEW_VERSION_NUM" ] && [ "$CURRENT_VERSION_NUM" != "$NEW_VERSION_NUM" ]; then
+            echo "ℹ️  Skipping version bump: new version is older than current version"
+            echo "   Current version: $CURRENT_VERSION"
+            echo "   Attempted version: $NEW_VERSION"
+            echo ""
+            echo "The new version ($NEW_VERSION) is older than the current version ($CURRENT_VERSION)."
+            echo "Version bumps should only move forward. If a patch was released for an older version,"
+            echo "the current version should remain unchanged."
+            echo ""
+            echo "Workflow completed successfully without making changes."
+            echo "bump_required=false" >> $GITHUB_OUTPUT
+          elif [ "$CURRENT_VERSION_NUM" = "$NEW_VERSION_NUM" ]; then
+            echo "ℹ️  Skipping version bump: new version is the same as current version"
+            echo "   Version: $CURRENT_VERSION"
+            echo "   No changes needed."
+            echo ""
+            echo "Workflow completed successfully without making changes."
+            echo "bump_required=false" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Version comparison passed: $CURRENT_VERSION → $NEW_VERSION"
+            echo "bump_required=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create issue for version bump
+        if: steps.compare_versions.outputs.bump_required == 'true'
         id: create_issue
         uses: actions/github-script@v7
         with:
@@ -47,7 +100,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `Bump FalkorDB to version ${{ steps.extract_version.outputs.new_version }}`,
-              body: `This issue tracks the version bump from ${{ steps.extract_version.outputs.current_base_version }} to ${{ steps.extract_version.outputs.new_version }}.
+              body: `This issue tracks the version bump from ${{ steps.extract_version.outputs.current_version }} to ${{ steps.extract_version.outputs.new_version }}.
 
               ## Changes to be made:
               - Update FALKORDB_VERSION in GitHub Actions workflows
@@ -68,6 +121,7 @@ jobs:
             return issue.data.number;
 
       - name: Create branch for version bump
+        if: steps.compare_versions.outputs.bump_required == 'true'
         run: |
           BRANCH_NAME="bump-falkordb-${{ steps.extract_version.outputs.new_version }}"
           # Remove special characters from branch name
@@ -76,11 +130,13 @@ jobs:
           git checkout -b "$BRANCH_NAME"
 
       - name: Configure Git
+        if: steps.compare_versions.outputs.bump_required == 'true'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
       - name: Update version in workflows
+        if: steps.compare_versions.outputs.bump_required == 'true'
         run: |
           CURRENT_VERSION="${{ steps.extract_version.outputs.current_version }}"
           NEW_VERSION="${{ steps.extract_version.outputs.new_version }}"
@@ -94,6 +150,7 @@ jobs:
           sed -i "s/FALKORDB_VERSION: $ESCAPED_CURRENT_VERSION/FALKORDB_VERSION: $ESCAPED_NEW_VERSION/g" .github/workflows/build-test-image.yaml
 
       - name: Update version in Dockerfiles
+        if: steps.compare_versions.outputs.bump_required == 'true'
         run: |
           CURRENT_VERSION="${{ steps.extract_version.outputs.current_version }}"
           NEW_VERSION="${{ steps.extract_version.outputs.new_version }}"
@@ -110,6 +167,7 @@ jobs:
           sed -i "s/ARG FALKORDB_VERSION=$ESCAPED_CURRENT_VERSION/ARG FALKORDB_VERSION=$ESCAPED_NEW_VERSION/g" src/falkordb-sentinel/Dockerfile
 
       - name: Verify changes
+        if: steps.compare_versions.outputs.bump_required == 'true'
         run: |
           echo "=== Files that will be changed ==="
           git diff --name-only
@@ -121,13 +179,14 @@ jobs:
           git diff
 
       - name: Commit changes
+        if: steps.compare_versions.outputs.bump_required == 'true'
         run: |
           git add .
           if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0
           fi
-          git commit -m "Bump FalkorDB version from ${{ steps.extract_version.outputs.current_base_version }} to ${{ steps.extract_version.outputs.new_version }}
+          git commit -m "Bump FalkorDB version from ${{ steps.extract_version.outputs.current_version }} to ${{ steps.extract_version.outputs.new_version }}
 
           Closes #${{ steps.create_issue.outputs.result }}
 
@@ -139,10 +198,12 @@ jobs:
           - src/falkordb-sentinel/Dockerfile"
 
       - name: Push changes
+        if: steps.compare_versions.outputs.bump_required == 'true'
         run: |
           git push origin "${{ env.BRANCH_NAME }}"
 
       - name: Create Pull Request
+        if: steps.compare_versions.outputs.bump_required == 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.WORKFLOW_TOKEN }}
@@ -153,7 +214,7 @@ jobs:
               title: `Bump FalkorDB to version ${{ steps.extract_version.outputs.new_version }}`,
               head: '${{ env.BRANCH_NAME }}',
               base: 'main',
-              body: `## 🚀 Version Bump: FalkorDB ${{ steps.extract_version.outputs.current_base_version }} → ${{ steps.extract_version.outputs.new_version }}
+              body: `## 🚀 Version Bump: FalkorDB ${{ steps.extract_version.outputs.current_version }} → ${{ steps.extract_version.outputs.new_version }}
 
               This PR updates the FalkorDB version across all relevant files.
 
@@ -194,14 +255,26 @@ jobs:
 
       - name: Summary
         run: |
-          echo "✅ Version bump workflow completed successfully!"
-          echo "📋 Summary:"
-          echo "   - Created issue for tracking"
-          echo "   - Created branch: ${{ env.BRANCH_NAME }}"
-          echo "   - Updated FalkorDB version from ${{ steps.extract_version.outputs.current_base_version }} to ${{ steps.extract_version.outputs.new_version }}"
-          echo "   - Created pull request for review"
-          echo ""
-          echo "🔍 Next steps:"
-          echo "   1. Review the created pull request"
-          echo "   2. Test the changes in a development environment"
-          echo "   3. Merge the PR when ready"
+          if [ "${{ steps.compare_versions.outputs.bump_required }}" = "true" ]; then
+            echo "✅ Version bump workflow completed successfully!"
+            echo "📋 Summary:"
+            echo "   - Created issue for tracking"
+            echo "   - Created branch: ${{ env.BRANCH_NAME }}"
+            echo "   - Updated FalkorDB version from ${{ steps.extract_version.outputs.current_version }} to ${{ steps.extract_version.outputs.new_version }}"
+            echo "   - Created pull request for review"
+            echo ""
+            echo "🔍 Next steps:"
+            echo "   1. Review the created pull request"
+            echo "   2. Test the changes in a development environment"
+            echo "   3. Merge the PR when ready"
+          else
+            echo "✅ Workflow completed successfully!"
+            echo "📋 Summary:"
+            echo "   - Version comparison completed"
+            echo "   - Current version: ${{ steps.extract_version.outputs.current_version }}"
+            echo "   - Requested version: ${{ steps.extract_version.outputs.new_version }}"
+            echo "   - No changes were made (version bump not required)"
+            echo ""
+            echo "ℹ️  The requested version is not newer than the current version."
+            echo "   Version bumps only proceed when the new version is higher than the current version."
+          fi

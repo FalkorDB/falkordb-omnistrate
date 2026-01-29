@@ -254,16 +254,27 @@ jobs:
             });
 
       - name: Summary
-        if: steps.compare_versions.outputs.bump_required == 'true'
         run: |
-          echo "✅ Version bump workflow completed successfully!"
-          echo "📋 Summary:"
-          echo "   - Created issue for tracking"
-          echo "   - Created branch: ${{ env.BRANCH_NAME }}"
-          echo "   - Updated FalkorDB version from ${{ steps.extract_version.outputs.current_version }} to ${{ steps.extract_version.outputs.new_version }}"
-          echo "   - Created pull request for review"
-          echo ""
-          echo "🔍 Next steps:"
-          echo "   1. Review the created pull request"
-          echo "   2. Test the changes in a development environment"
-          echo "   3. Merge the PR when ready"
+          if [ "${{ steps.compare_versions.outputs.bump_required }}" = "true" ]; then
+            echo "✅ Version bump workflow completed successfully!"
+            echo "📋 Summary:"
+            echo "   - Created issue for tracking"
+            echo "   - Created branch: ${{ env.BRANCH_NAME }}"
+            echo "   - Updated FalkorDB version from ${{ steps.extract_version.outputs.current_version }} to ${{ steps.extract_version.outputs.new_version }}"
+            echo "   - Created pull request for review"
+            echo ""
+            echo "🔍 Next steps:"
+            echo "   1. Review the created pull request"
+            echo "   2. Test the changes in a development environment"
+            echo "   3. Merge the PR when ready"
+          else
+            echo "✅ Workflow completed successfully!"
+            echo "📋 Summary:"
+            echo "   - Version comparison completed"
+            echo "   - Current version: ${{ steps.extract_version.outputs.current_version }}"
+            echo "   - Requested version: ${{ steps.extract_version.outputs.new_version }}"
+            echo "   - No changes were made (version bump not required)"
+            echo ""
+            echo "ℹ️  The requested version is not newer than the current version."
+            echo "   Version bumps only proceed when the new version is higher than the current version."
+          fi

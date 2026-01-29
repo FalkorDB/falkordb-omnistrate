@@ -93,7 +93,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `Bump FalkorDB to version ${{ steps.extract_version.outputs.new_version }}`,
-              body: `This issue tracks the version bump from ${{ steps.extract_version.outputs.current_base_version }} to ${{ steps.extract_version.outputs.new_version }}.
+              body: `This issue tracks the version bump from ${{ steps.extract_version.outputs.current_version }} to ${{ steps.extract_version.outputs.new_version }}.
 
               ## Changes to be made:
               - Update FALKORDB_VERSION in GitHub Actions workflows
@@ -173,7 +173,7 @@ jobs:
             echo "No changes to commit"
             exit 0
           fi
-          git commit -m "Bump FalkorDB version from ${{ steps.extract_version.outputs.current_base_version }} to ${{ steps.extract_version.outputs.new_version }}
+          git commit -m "Bump FalkorDB version from ${{ steps.extract_version.outputs.current_version }} to ${{ steps.extract_version.outputs.new_version }}
 
           Closes #${{ steps.create_issue.outputs.result }}
 
@@ -199,7 +199,7 @@ jobs:
               title: `Bump FalkorDB to version ${{ steps.extract_version.outputs.new_version }}`,
               head: '${{ env.BRANCH_NAME }}',
               base: 'main',
-              body: `## 🚀 Version Bump: FalkorDB ${{ steps.extract_version.outputs.current_base_version }} → ${{ steps.extract_version.outputs.new_version }}
+              body: `## 🚀 Version Bump: FalkorDB ${{ steps.extract_version.outputs.current_version }} → ${{ steps.extract_version.outputs.new_version }}
 
               This PR updates the FalkorDB version across all relevant files.
 
@@ -244,7 +244,7 @@ jobs:
           echo "📋 Summary:"
           echo "   - Created issue for tracking"
           echo "   - Created branch: ${{ env.BRANCH_NAME }}"
-          echo "   - Updated FalkorDB version from ${{ steps.extract_version.outputs.current_base_version }} to ${{ steps.extract_version.outputs.new_version }}"
+          echo "   - Updated FalkorDB version from ${{ steps.extract_version.outputs.current_version }} to ${{ steps.extract_version.outputs.new_version }}"
           echo "   - Created pull request for review"
           echo ""
           echo "🔍 Next steps:"

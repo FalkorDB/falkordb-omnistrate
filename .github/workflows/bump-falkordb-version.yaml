@@ -45,6 +45,17 @@ jobs:
           echo "Current version: $CURRENT_VERSION"
           echo "New version: $NEW_VERSION"
           
+          # Validate that versions are not empty
+          if [ -z "$CURRENT_VERSION" ]; then
+            echo "❌ Error: Could not extract current version from build-release-image.yaml"
+            exit 1
+          fi
+          
+          if [ -z "$NEW_VERSION" ]; then
+            echo "❌ Error: New version not provided"
+            exit 1
+          fi
+          
           # Remove 'v' prefix for comparison if present
           CURRENT_VERSION_NUM="${CURRENT_VERSION#v}"
           NEW_VERSION_NUM="${NEW_VERSION#v}"

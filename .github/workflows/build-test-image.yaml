@@ -386,8 +386,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: "2 vCPUs, 4GB memory (aws)"
-            newInstanceType: "2 vCPUs, 8GB memory (aws)"
+            instanceType: "t2.medium"
+            newInstanceType: "m6i.large"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 

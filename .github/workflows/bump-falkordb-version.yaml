@@ -37,6 +37,41 @@ jobs:
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
+      - name: Compare versions
+        run: |
+          CURRENT_VERSION="${{ steps.extract_version.outputs.current_version }}"
+          NEW_VERSION="${{ steps.extract_version.outputs.new_version }}"
+          
+          echo "Current version: $CURRENT_VERSION"
+          echo "New version: $NEW_VERSION"
+          
+          # Remove 'v' prefix for comparison if present
+          CURRENT_VERSION_NUM="${CURRENT_VERSION#v}"
+          NEW_VERSION_NUM="${NEW_VERSION#v}"
+          
+          # Use sort -V (version sort) to compare versions
+          # If current version is greater than or equal to new version, fail
+          SORTED_VERSIONS=$(printf "%s\n%s\n" "$CURRENT_VERSION_NUM" "$NEW_VERSION_NUM" | sort -V)
+          FIRST_VERSION=$(echo "$SORTED_VERSIONS" | head -n1)
+          
+          if [ "$FIRST_VERSION" = "$NEW_VERSION_NUM" ] && [ "$CURRENT_VERSION_NUM" != "$NEW_VERSION_NUM" ]; then
+            echo "❌ Error: Cannot downgrade FalkorDB version!"
+            echo "   Current version: $CURRENT_VERSION"
+            echo "   Attempted version: $NEW_VERSION"
+            echo ""
+            echo "The new version ($NEW_VERSION) is older than the current version ($CURRENT_VERSION)."
+            echo "Version bumps should only move forward. If a patch was released for an older version,"
+            echo "the current version should remain unchanged."
+            exit 1
+          elif [ "$CURRENT_VERSION_NUM" = "$NEW_VERSION_NUM" ]; then
+            echo "⚠️  Warning: New version is the same as current version."
+            echo "   Version: $CURRENT_VERSION"
+            echo "   No changes needed."
+            exit 1
+          else
+            echo "✅ Version comparison passed: $CURRENT_VERSION → $NEW_VERSION"
+          fi
+
       - name: Create issue for version bump
         id: create_issue
         uses: actions/github-script@v7

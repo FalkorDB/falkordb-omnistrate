@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 import argparse
+from google.cloud import storage
 
 
 @dataclass
@@ -410,34 +411,45 @@ class GCSUploader:
     """Uploads logs to Google Cloud Storage"""
     
     def __init__(self, bucket: str):
-        self.bucket = bucket
+        self.bucket_name = bucket
+        self.client = storage.Client()
+        self.bucket = self.client.bucket(bucket)
     
     def upload_logs(self, logs: str, customer_email: str, timestamp: str) -> str:
         """Upload logs to GCS and return signed URL"""
-        # Write logs to temp file
-        log_file = Path(f"redis-crash-{timestamp}.log")
-        log_file.write_text(logs)
+        log_filename = f"redis-crash-{timestamp}.log"
+        temp_file = Path(log_filename)
         
-        # Upload to GCS
-        gcs_path = f"{customer_email}/{timestamp}/{log_file.name}"
-        gcs_uri = f"gs://{self.bucket}/{gcs_path}"
-        
-        os.system(f'gcloud storage cp "{log_file}" "{gcs_uri}"')
-        
-        # Generate signed URL (12 hour expiry)
-        result = os.popen(f'gcloud storage sign-url "{gcs_uri}" --duration=12h').read()
-        
-        # Extract URL from output
-        for line in result.split('\n'):
-            if line.startswith('https://'):
-                return line.strip()
-        
-        return gcs_uri
-    
-    @staticmethod
-    def cleanup(log_file: str):
-        """Remove temporary log file"""
-        Path(log_file).unlink(missing_ok=True)
+        try:
+            # Write logs to temp file
+            temp_file.write_text(logs, encoding='utf-8')
+            
+            # Build GCS path: customer@email.com/20260201-121530/redis-crash-20260201-121530.log
+            gcs_path = f"{customer_email}/{timestamp}/{log_filename}"
+            
+            # Upload to GCS
+            blob = self.bucket.blob(gcs_path)
+            blob.upload_from_filename(str(temp_file))
+            
+            print(f"Uploaded to gs://{self.bucket_name}/{gcs_path}")
+            
+            # Generate signed URL (7 day expiry - maximum allowed)
+            signed_url = blob.generate_signed_url(
+                version="v4",
+                expiration=timedelta(days=7),
+                method="GET"
+            )
+            
+            return signed_url
+            
+        except Exception as e:
+            print(f"Error uploading to GCS: {e}", file=sys.stderr)
+            raise
+        finally:
+            # Clean up temp file
+            if temp_file.exists():
+                temp_file.unlink()
+                print(f"Cleaned up temp file: {log_filename}")
 
 
 class GoogleChatNotifier:

@@ -1,0 +1,76 @@
+# GitHub Workflow for FalkorDB/falkordb-omnistrate repository
+# Place at: .github/workflows/redis-crash-handler.yml
+
+name: Redis Crash Handler
+
+on:
+  workflow_dispatch:
+    inputs:
+      pod:
+        description: 'Pod name'
+        required: true
+        type: string
+      namespace:
+        description: 'Namespace (subscription ID)'
+        required: true
+        type: string
+      cluster:
+        description: 'Cluster name'
+        required: true
+        type: string
+      container:
+        description: 'Container name (service)'
+        required: true
+        type: string
+
+env:
+  ISSUE_REPO: 'FalkorDB/private'
+  GCS_BUCKET: 'falkordb-crash-logs'
+  PROJECT_ID: 'PVT_kwDOCfJmL84AqS92'
+
+jobs:
+  handle-crash:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install requests
+      
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Process crash
+        env:
+          OMNISTRATE_API_URL: ${{ secrets.OMNISTRATE_API_URL }}
+          OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
+          OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
+          OMNISTRATE_SERVICE_ID_DEV: ${{ secrets.OMNISTRATE_SERVICE_ID_DEV }}
+          OMNISTRATE_SERVICE_ID_PROD: ${{ secrets.OMNISTRATE_SERVICE_ID_PROD }}
+          OMNISTRATE_ENVIRONMENT_ID_DEV: ${{ secrets.OMNISTRATE_ENVIRONMENT_ID_DEV }}
+          OMNISTRATE_ENVIRONMENT_ID_PROD: ${{ secrets.OMNISTRATE_ENVIRONMENT_ID_PROD }}
+          VMAUTH_USERNAME: ${{ secrets.VMAUTH_USERNAME }}
+          VMAUTH_PASSWORD: ${{ secrets.VMAUTH_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+          ISSUE_REPO: ${{ env.ISSUE_REPO }}
+          GCS_BUCKET: ${{ env.GCS_BUCKET }}
+        run: |
+          python ./scripts/redis_crash_handler.py \
+            --pod "${{ inputs.pod }}" \
+            --namespace "${{ inputs.namespace }}" \
+            --cluster "${{ inputs.cluster }}" \
+            --container "${{ inputs.container }}"

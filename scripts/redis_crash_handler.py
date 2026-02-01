@@ -526,6 +526,7 @@ def main():
     parser.add_argument('--namespace', required=True, help='Namespace')
     parser.add_argument('--cluster', required=True, help='Cluster name')
     parser.add_argument('--container', required=True, help='Container name')
+    parser.add_argument('--vmauth-url', required=True, help='VMAuth URL for log collection')
     
     args = parser.parse_args()
     
@@ -533,7 +534,10 @@ def main():
     omnistrate_url = os.environ['OMNISTRATE_API_URL']
     omnistrate_user = os.environ['OMNISTRATE_USERNAME']
     omnistrate_pass = os.environ['OMNISTRATE_PASSWORD']
+    service_id = os.environ['OMNISTRATE_SERVICE_ID']
+    environment_id = os.environ['OMNISTRATE_ENVIRONMENT_ID']
     
+    vmauth_url = args.vmauth_url
     vmauth_user = os.environ['VMAUTH_USERNAME']
     vmauth_pass = os.environ['VMAUTH_PASSWORD']
     
@@ -542,18 +546,6 @@ def main():
     
     gcs_bucket = os.environ['GCS_BUCKET']
     google_chat_webhook = os.environ['GOOGLE_CHAT_WEBHOOK_URL']
-    
-    # Determine environment from cluster name
-    is_dev = 'dev' in args.cluster.lower()
-    
-    if is_dev:
-        service_id = os.environ['OMNISTRATE_SERVICE_ID_DEV']
-        environment_id = os.environ['OMNISTRATE_ENVIRONMENT_ID_DEV']
-        vmauth_url = os.environ['VMAUTH_URL_DEV']
-    else:
-        service_id = os.environ['OMNISTRATE_SERVICE_ID_PROD']
-        environment_id = os.environ['OMNISTRATE_ENVIRONMENT_ID_PROD']
-        vmauth_url = os.environ['VMAUTH_URL_PROD']
     
     # Generate timestamp
     timestamp = datetime.utcnow().strftime('%Y%m%d-%H%M%S')

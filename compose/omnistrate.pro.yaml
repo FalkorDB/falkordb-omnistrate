@@ -496,7 +496,7 @@ services:
       backupConfiguration:
         backupRetentionInDays: 7
         backupPeriodInHours: 12
-        snapshotBeforeDeletion: true
+        snapshotBeforeDeletion: false
     depends_on:
       - node-s
 
@@ -990,7 +990,7 @@ services:
       backupConfiguration:
         backupRetentionInDays: 7
         backupPeriodInHours: 12
-        snapshotBeforeDeletion: true
+        snapshotBeforeDeletion: false
     depends_on:
       - node-sz
 
@@ -1751,7 +1751,7 @@ services:
       backupConfiguration:
         backupRetentionInDays: 7
         backupPeriodInHours: 12
-        snapshotBeforeDeletion: true
+        snapshotBeforeDeletion: false
     depends_on:
       - node-mz
 

@@ -621,7 +621,7 @@ services:
       backupConfiguration:
         backupRetentionInDays: 2
         backupPeriodInHours: 2
-        snapshotBeforeDeletion: true
+        snapshotBeforeDeletion: false
     depends_on:
       - node-s
 
@@ -1110,7 +1110,7 @@ services:
       backupConfiguration:
         backupRetentionInDays: 2
         backupPeriodInHours: 2
-        snapshotBeforeDeletion: true
+        snapshotBeforeDeletion: false
     depends_on:
       - node-sz
 
@@ -1873,7 +1873,7 @@ services:
       backupConfiguration:
         backupRetentionInDays: 2
         backupPeriodInHours: 2
-        snapshotBeforeDeletion: true
+        snapshotBeforeDeletion: false
     depends_on:
       - node-mz
 
@@ -2620,7 +2620,7 @@ services:
       backupConfiguration:
         backupRetentionInDays: 2
         backupPeriodInHours: 2
-        snapshotBeforeDeletion: true
+        snapshotBeforeDeletion: false
     depends_on:
       - cluster-sz
       - cluster-sz-rebalance
@@ -2988,7 +2988,7 @@ services:
       backupConfiguration:
         backupRetentionInDays: 2
         backupPeriodInHours: 2
-        snapshotBeforeDeletion: true
+        snapshotBeforeDeletion: false
     depends_on:
       - cluster-mz
       - cluster-mz-rebalance

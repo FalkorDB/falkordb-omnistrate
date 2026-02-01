@@ -549,11 +549,11 @@ def main():
     if is_dev:
         service_id = os.environ['OMNISTRATE_SERVICE_ID_DEV']
         environment_id = os.environ['OMNISTRATE_ENVIRONMENT_ID_DEV']
-        vmauth_url = "https://vmauth.observability.dev.internal.falkordb.cloud"
+        vmauth_url = os.environ['VMAUTH_URL_DEV']
     else:
         service_id = os.environ['OMNISTRATE_SERVICE_ID_PROD']
         environment_id = os.environ['OMNISTRATE_ENVIRONMENT_ID_PROD']
-        vmauth_url = "https://vmauth.observability.internal.falkordb.cloud"
+        vmauth_url = os.environ['VMAUTH_URL_PROD']
     
     # Generate timestamp
     timestamp = datetime.utcnow().strftime('%Y%m%d-%H%M%S')

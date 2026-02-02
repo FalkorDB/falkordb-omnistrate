@@ -185,6 +185,12 @@ jobs:
           sed -i 's/- e2-medium//g' ${{ matrix.plans.file }}
           sed -i 's/- t2.medium//g' ${{ matrix.plans.file }}
 
+      - name: Enable snapshotBeforeDeletion
+        if: ${{ contains( vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) && (matrix.plans.key != 'free')}}
+        working-directory: compose
+        run: |
+          sed -i 's/snapshotBeforeDeletion: false/snapshotBeforeDeletion: true/g' ${{ matrix.plans.file }}
+          
       - name: Upload yaml to artifacts
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
         uses: actions/upload-artifact@v4 

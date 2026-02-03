@@ -4,6 +4,9 @@
 name: Redis Crash Handler
 
 on:
+  push:
+    branches:
+      - add-redis-crash-handler
   workflow_dispatch:
     inputs:
       pod:

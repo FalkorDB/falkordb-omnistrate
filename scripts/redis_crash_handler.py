@@ -152,12 +152,6 @@ class VMAauthClient:
             'limit': 10000
         }
         
-        print(f"DEBUG: VictoriaLogs query: {query}")
-        print(f"DEBUG: Time range: {start_time} to {end_time}")
-        print(f"DEBUG: Request URL: {self.base_url}/select/logsql/query")
-        print(f"DEBUG: Auth username: {self.auth[0]}")
-        print(f"DEBUG: Auth password length: {len(self.auth[1])} chars")
-        
         response = requests.get(
             f"{self.base_url}/select/logsql/query",
             params=params,
@@ -166,21 +160,12 @@ class VMAauthClient:
             verify=False
         )
         
-        print(f"DEBUG: Response status: {response.status_code}")
-        print(f"DEBUG: Response headers: {dict(response.headers)}")
-        print(f"DEBUG: Response length: {len(response.text)} bytes")
-        print(f"DEBUG: First 500 chars of response: {response.text[:500]}")
-        
         # Check for authentication issues
         if response.status_code == 401:
             print("❌ ERROR: Authentication failed (401 Unauthorized)")
-            print(f"DEBUG: Using username: {self.auth[0]}")
-            print(f"DEBUG: Response body: {response.text}")
             raise ValueError(f"Authentication failed for VictoriaLogs. Check VMAUTH_USERNAME and VMAUTH_PASSWORD.")
         elif response.status_code == 403:
             print("❌ ERROR: Access forbidden (403 Forbidden)")
-            print(f"DEBUG: Username '{self.auth[0]}' may not have permission")
-            print(f"DEBUG: Response body: {response.text}")
             raise ValueError(f"Access forbidden for VictoriaLogs. User '{self.auth[0]}' may lack permissions.")
         
         response.raise_for_status()
@@ -188,14 +173,11 @@ class VMAauthClient:
         # Parse response - VictoriaLogs returns newline-delimited JSON (NDJSON)
         logs = []
         
-        line_count = 0
         for line in response.text.strip().split('\n'):
-            line_count += 1
             if not line:
                 continue
             try:
                 data = json.loads(line)
-                print(f"DEBUG: Parsed line {line_count}, keys: {data.keys()}")
                 
                 # VictoriaLogs returns _msg directly in each JSON object
                 msg = data.get('_msg', '')
@@ -203,11 +185,8 @@ class VMAauthClient:
                     logs.append(msg)
             except json.JSONDecodeError as e:
                 # Skip malformed lines
-                print(f"Warning: Failed to parse log line {line_count}: {e}", file=sys.stderr)
-                print(f"DEBUG: Line content: {line[:200]}")
+                print(f"Warning: Failed to parse log line: {e}", file=sys.stderr)
                 continue
-        
-        print(f"DEBUG: Processed {line_count} lines, extracted {len(logs)} log messages")
         
         result = '\n'.join(logs)
         if not result:
@@ -400,7 +379,11 @@ class GitHubIssueManager:
     
     def _add_issue_to_project(self, issue_node_id: str):
         """Add issue to GitHub project using GraphQL API"""
+        print(f"DEBUG: _add_issue_to_project called with node_id: {issue_node_id}")
+        print(f"DEBUG: self.project_id = {self.project_id}")
+        
         if not self.project_id:
+            print("DEBUG: No project_id configured, skipping project linking")
             return  # No project configured
         
         # GraphQL mutation to add issue to project
@@ -554,6 +537,9 @@ class GitHubIssueManager:
         issue_data = response.json()
         issue_number = issue_data['number']
         issue_node_id = issue_data['node_id']
+        
+        print(f"DEBUG: Created issue #{issue_number} with node_id: {issue_node_id}")
+        print(f"DEBUG: Project ID configured: {self.project_id}")
         
         # Add issue to project
         self._add_issue_to_project(issue_node_id)

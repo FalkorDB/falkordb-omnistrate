@@ -353,9 +353,10 @@ class CrashAnalyzer:
 class GitHubIssueManager:
     """Manages GitHub issues for crash tracking"""
     
-    def __init__(self, token: str, repo: str):
+    def __init__(self, token: str, repo: str, project_id: str = None):
         self.token = token
         self.repo = repo  # format: "owner/repo"
+        self.project_id = project_id  # format: "PVT_kwDOCfJmL84AqS92"
         self.session = requests.Session()
         self.session.headers.update({
             'Authorization': f'Bearer {token}',
@@ -396,6 +397,42 @@ class GitHubIssueManager:
             pass
         else:
             response.raise_for_status()
+    
+    def _add_issue_to_project(self, issue_node_id: str):
+        """Add issue to GitHub project using GraphQL API"""
+        if not self.project_id:
+            return  # No project configured
+        
+        # GraphQL mutation to add issue to project
+        mutation = """
+        mutation($projectId: ID!, $contentId: ID!) {
+          addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
+            item {
+              id
+            }
+          }
+        }
+        """
+        
+        variables = {
+            "projectId": self.project_id,
+            "contentId": issue_node_id
+        }
+        
+        response = self.session.post(
+            "https://api.github.com/graphql",
+            json={"query": mutation, "variables": variables},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            if "errors" in result:
+                print(f"Warning: Failed to add issue to project: {result['errors']}", file=sys.stderr)
+            else:
+                print(f"Issue added to project {self.project_id}")
+        else:
+            print(f"Warning: Failed to add issue to project (HTTP {response.status_code})", file=sys.stderr)
     
     def find_duplicate(self, customer_email: str, namespace: str, crash: CrashSummary, hours: int = 24) -> Optional[int]:
         """Find duplicate issue for same customer, namespace, and crash signature"""
@@ -511,7 +548,14 @@ class GitHubIssueManager:
             timeout=30
         )
         response.raise_for_status()
-        return response.json()['number']
+        issue_data = response.json()
+        issue_number = issue_data['number']
+        issue_node_id = issue_data['node_id']
+        
+        # Add issue to project
+        self._add_issue_to_project(issue_node_id)
+        
+        return issue_number
     
     def add_comment(
         self,
@@ -696,6 +740,7 @@ def main():
     
     github_token = os.environ['GITHUB_TOKEN']
     issue_repo = os.environ['ISSUE_REPO']
+    project_id = os.environ.get('PROJECT_ID')  # Optional
     
     grafana_url = args.grafana_url
     google_chat_webhook = os.environ['GOOGLE_CHAT_WEBHOOK_URL']
@@ -731,7 +776,7 @@ def main():
     
     # Step 5: Check for duplicates
     print("Checking for duplicate issues...")
-    github = GitHubIssueManager(github_token, issue_repo)
+    github = GitHubIssueManager(github_token, issue_repo, project_id)
     duplicate_issue = github.find_duplicate(customer.email, args.namespace, crash)
     
     if duplicate_issue:

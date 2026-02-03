@@ -8,8 +8,6 @@ permissions:
   issues: write
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       pod:
@@ -82,6 +80,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
           GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
           ISSUE_REPO: ${{ env.ISSUE_REPO }}
+          PROJECT_ID: ${{ env.PROJECT_ID }}
         run: |
           python ./scripts/redis_crash_handler.py \
             --pod "${{ inputs.pod }}" \

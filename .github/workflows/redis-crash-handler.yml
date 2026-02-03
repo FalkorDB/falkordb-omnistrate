@@ -79,7 +79,7 @@ jobs:
           OMNISTRATE_SERVICE_ID: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
           VMAUTH_USERNAME: ${{ vars.VMAUTH_USERNAME }}
           VMAUTH_PASSWORD: ${{ env.VMAUTH_PASSWORD }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
           GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
           ISSUE_REPO: ${{ env.ISSUE_REPO }}
         run: |

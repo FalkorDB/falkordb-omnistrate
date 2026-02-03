@@ -46,42 +46,78 @@ class OmnistrateClient:
         self.api_url = api_url.rstrip('/')
         self.username = username
         self.password = password
-        self.session = requests.Session()
+        self.token = None
         self._login()
     
     def _login(self):
-        """Authenticate with Omnistrate API"""
-        response = self.session.post(
+        """Authenticate with Omnistrate API and get JWT token"""
+        response = requests.post(
             f"{self.api_url}/signin",
             json={"email": self.username, "password": self.password},
             timeout=30
         )
         response.raise_for_status()
-        # Session cookies are automatically handled by requests.Session
+        self.token = response.json()["jwtToken"]
+    
+    def _get_headers(self):
+        """Get authentication headers"""
+        return {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.token}"
+        }
     
     def get_customer_info(self, service_id: str, environment_id: str, namespace: str) -> CustomerInfo:
-        """Extract customer info from namespace (subscription ID)"""
-        # Get all subscriptions
-        response = self.session.get(
-            f"{self.api_url}/service/{service_id}/environment/{environment_id}/subscription",
+        """Extract customer info from instance details
+        
+        The namespace parameter is the subscription ID.
+        We query instances by subscription ID to get the owner, then look up the user email.
+        """
+        # Get instances filtered by subscription ID (namespace)
+        response = requests.get(
+            f"{self.api_url}/fleet/service/{service_id}/environment/{environment_id}/instances",
+            params={
+                "Filter": "excludeCloudAccounts",
+                "ExcludeDetail": "true",
+                "SubscriptionId": namespace
+            },
+            headers=self._get_headers(),
             timeout=30
         )
         response.raise_for_status()
-        subscriptions = response.json()
+        resource_instances = response.json().get("resourceInstances", [])
         
-        # Find subscription by namespace (subscription ID)
-        for sub in subscriptions:
-            if sub.get('id') == namespace:
+        if not resource_instances:
+            return CustomerInfo(
+                email='unknown@unknown.com',
+                name='Unknown Customer',
+                subscription_id=namespace
+            )
+        
+        # Get subscription owner name from first instance
+        subscription_owner_name = resource_instances[0].get("subscriptionOwnerName", "Unknown")
+        
+        # Get all users to find the email
+        users_response = requests.get(
+            f"{self.api_url}/fleet/users",
+            headers=self._get_headers(),
+            timeout=30
+        )
+        users_response.raise_for_status()
+        users = users_response.json().get("users", [])
+        
+        # Find user by matching userName with subscriptionOwnerName
+        for user in users:
+            if user.get("userName") == subscription_owner_name:
                 return CustomerInfo(
-                    email=sub.get('customerEmail', 'unknown@unknown.com'),
-                    name=sub.get('customerOrgName', 'Unknown Customer'),
-                    subscription_id=sub.get('id', namespace)
+                    email=user.get('email', 'unknown@unknown.com'),
+                    name=subscription_owner_name,
+                    subscription_id=namespace
                 )
         
-        # If not found, return unknown
+        # If user not found, return with known name but unknown email
         return CustomerInfo(
             email='unknown@unknown.com',
-            name='Unknown Customer',
+            name=subscription_owner_name,
             subscription_id=namespace
         )
 

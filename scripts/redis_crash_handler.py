@@ -425,14 +425,17 @@ class GitHubIssueManager:
             timeout=30
         )
         
+        print(f"DEBUG: Project linking response status: {response.status_code}")
+        print(f"DEBUG: Project linking response: {response.text}")
+        
         if response.status_code == 200:
             result = response.json()
             if "errors" in result:
-                print(f"Warning: Failed to add issue to project: {result['errors']}", file=sys.stderr)
+                print(f"❌ ERROR: Failed to add issue to project: {result['errors']}", file=sys.stderr)
             else:
-                print(f"Issue added to project {self.project_id}")
+                print(f"✅ Issue added to project {self.project_id}")
         else:
-            print(f"Warning: Failed to add issue to project (HTTP {response.status_code})", file=sys.stderr)
+            print(f"❌ ERROR: Failed to add issue to project (HTTP {response.status_code}): {response.text}", file=sys.stderr)
     
     def find_duplicate(self, customer_email: str, namespace: str, crash: CrashSummary, hours: int = 24) -> Optional[int]:
         """Find duplicate issue for same customer, namespace, and crash signature"""
@@ -796,14 +799,17 @@ def main():
         print(f"Created issue #{issue_number}")
         is_duplicate = False
     
-    # Step 6: Send notification
-    print("Sending Google Chat notification...")
-    notifier = GoogleChatNotifier(google_chat_webhook)
-    notifier.send_notification(
-        customer.email, args.cluster, args.pod, args.namespace,
-        crash, issue_number, issue_repo, log_url, is_duplicate
-    )
-    print("Notification sent!")
+    # Step 6: Send notification (only for new crashes, not duplicates)
+    if not is_duplicate:
+        print("Sending Google Chat notification...")
+        notifier = GoogleChatNotifier(google_chat_webhook)
+        notifier.send_notification(
+            customer.email, args.cluster, args.pod, args.namespace,
+            crash, issue_number, issue_repo, log_url, is_duplicate
+        )
+        print("Notification sent!")
+    else:
+        print("Skipping Google Chat notification for duplicate crash")
     
     # Output for GitHub Actions
     github_output = os.environ.get('GITHUB_OUTPUT')

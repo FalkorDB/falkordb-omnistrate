@@ -40,7 +40,7 @@ on:
         type: string
 env:
   ISSUE_REPO: 'FalkorDB/private'
-  PROJECT_ID: 'PVT_kwDOCfJmL84AqS92'
+  PROJECT_ID: 'PVT_kwDOCFj3QM4BM1wV'
 
 jobs:
   handle-crash:

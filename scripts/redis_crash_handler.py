@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import List, Optional
 from dataclasses import dataclass
 import argparse
-from google.cloud import storage
 import urllib3
 
 # Disable SSL warnings for dev environment
@@ -398,15 +397,15 @@ class GitHubIssueManager:
         else:
             response.raise_for_status()
     
-    def find_duplicate(self, customer_email: str, crash: CrashSummary, hours: int = 24) -> Optional[int]:
-        """Find duplicate issue for same customer and crash signature"""
+    def find_duplicate(self, customer_email: str, namespace: str, crash: CrashSummary, hours: int = 24) -> Optional[int]:
+        """Find duplicate issue for same customer, namespace, and crash signature"""
         # Calculate cutoff time (24 hours ago)
         cutoff = datetime.utcnow() - timedelta(hours=hours)
         
-        # Get all open issues for this customer
+        # Get all open issues for this customer and namespace
         params = {
             'state': 'open',
-            'labels': f'customer:{customer_email}',
+            'labels': f'customer:{customer_email},namespace:{namespace}',
             'per_page': 100
         }
         
@@ -487,10 +486,15 @@ class GitHubIssueManager:
 **Memory RSS:** {crash.memory_rss} bytes
 **Client Command:** {crash.client_command}
 
-**Crash Logs:** [Download from GCS]({log_url})"""
+**Crash Logs:** [View in Grafana]({log_url})"""
         
         # Ensure all labels exist before creating the issue
-        labels = [f'customer:{customer.email}', 'crash', 'redis']
+        labels = [
+            f'customer:{customer.email}',
+            f'namespace:{namespace}',
+            'crash',
+            'redis'
+        ]
         for label in labels:
             self._ensure_label_exists(label)
         
@@ -534,7 +538,7 @@ class GitHubIssueManager:
 **Memory RSS:** {crash.memory_rss} bytes
 **Client Command:** {crash.client_command}
 
-**Crash Logs:** [Download from GCS]({log_url})"""
+**Crash Logs:** [View in Grafana]({log_url})"""
         
         response = self.session.post(
             f"{self.api_url}/repos/{self.repo}/issues/{issue_number}/comments",
@@ -544,49 +548,33 @@ class GitHubIssueManager:
         response.raise_for_status()
 
 
-class GCSUploader:
-    """Uploads logs to Google Cloud Storage"""
+class GrafanaLinkGenerator:
+    """Generates Grafana log viewer links"""
     
-    def __init__(self, bucket: str):
-        self.bucket_name = bucket
-        self.client = storage.Client()
-        self.bucket = self.client.bucket(bucket)
+    def __init__(self, base_url: str):
+        self.base_url = base_url.rstrip('/')
     
-    def upload_logs(self, logs: str, customer_email: str, timestamp: str) -> str:
-        """Upload logs to GCS and return signed URL"""
-        log_filename = f"redis-crash-{timestamp}.log"
-        temp_file = Path(log_filename)
+    def generate_link(self, namespace: str, pod: str, container: str, minutes: int = 7) -> str:
+        """Generate Grafana link with log query parameters"""
+        # Calculate time range (7 minutes from now backwards)
+        end_time = datetime.utcnow()
+        start_time = end_time - timedelta(minutes=minutes)
         
-        try:
-            # Write logs to temp file
-            temp_file.write_text(logs, encoding='utf-8')
-            
-            # Build GCS path: customer@email.com/20260201-121530/redis-crash-20260201-121530.log
-            gcs_path = f"{customer_email}/{timestamp}/{log_filename}"
-            
-            # Upload to GCS
-            blob = self.bucket.blob(gcs_path)
-            blob.upload_from_filename(str(temp_file))
-            
-            print(f"Uploaded to gs://{self.bucket_name}/{gcs_path}")
-            
-            # Generate signed URL (7 day expiry - maximum allowed)
-            signed_url = blob.generate_signed_url(
-                version="v4",
-                expiration=timedelta(days=7),
-                method="GET"
-            )
-            
-            return signed_url
-            
-        except Exception as e:
-            print(f"Error uploading to GCS: {e}", file=sys.stderr)
-            raise
-        finally:
-            # Clean up temp file
-            if temp_file.exists():
-                temp_file.unlink()
-                print(f"Cleaned up temp file: {log_filename}")
+        # Convert to milliseconds for Grafana
+        from_ms = int(start_time.timestamp() * 1000)
+        to_ms = int(end_time.timestamp() * 1000)
+        
+        # Build query: namespace:instance-123 AND container:service AND pod:node-f-0
+        query = f'namespace:{namespace} AND container:{container} AND pod:{pod}'
+        
+        # URL encode the query
+        from urllib.parse import quote
+        encoded_query = quote(query)
+        
+        # Construct Grafana explore URL
+        grafana_url = f"{self.base_url}/explore?left=%5B%22{from_ms}%22,%22{to_ms}%22,%22Loki%22,%7B%22expr%22:%22{encoded_query}%22%7D%5D"
+        
+        return grafana_url
 
 
 class GoogleChatNotifier:
@@ -649,7 +637,7 @@ class GoogleChatNotifier:
                                 },
                                 {
                                     "textButton": {
-                                        "text": "Download Logs",
+                                        "text": "View Logs in Grafana",
                                         "onClick": {
                                             "openLink": {
                                                 "url": log_url
@@ -685,7 +673,7 @@ def main():
         'OMNISTRATE_SERVICE_ID', 'OMNISTRATE_ENVIRONMENT_ID',
         'VMAUTH_USERNAME', 'VMAUTH_PASSWORD',
         'GITHUB_TOKEN', 'ISSUE_REPO',
-        'GCS_BUCKET', 'GOOGLE_CHAT_WEBHOOK_URL'
+        'GRAFANA_URL', 'GOOGLE_CHAT_WEBHOOK_URL'
     ]
     
     missing_vars = [var for var in required_env_vars if not os.environ.get(var)]
@@ -707,7 +695,7 @@ def main():
     github_token = os.environ['GITHUB_TOKEN']
     issue_repo = os.environ['ISSUE_REPO']
     
-    gcs_bucket = os.environ['GCS_BUCKET']
+    grafana_url = os.environ['GRAFANA_URL']
     google_chat_webhook = os.environ['GOOGLE_CHAT_WEBHOOK_URL']
     
     # Generate timestamp
@@ -733,16 +721,16 @@ def main():
     crash = analyzer.parse_logs(logs)
     print(f"Exit code: {crash.exit_code}, Stack traces: {len([s for s in crash.stack_traces if s != 'N/A'])}")
     
-    # Step 4: Upload to GCS
-    print("Uploading logs to GCS...")
-    uploader = GCSUploader(gcs_bucket)
-    log_url = uploader.upload_logs(logs, customer.email, timestamp)
-    print(f"Logs uploaded: {log_url}")
+    # Step 4: Generate Grafana link
+    print("Generating Grafana link...")
+    grafana = GrafanaLinkGenerator(grafana_url)
+    log_url = grafana.generate_link(args.namespace, args.pod, args.container, minutes=7)
+    print(f"Grafana link: {log_url}")
     
     # Step 5: Check for duplicates
     print("Checking for duplicate issues...")
     github = GitHubIssueManager(github_token, issue_repo)
-    duplicate_issue = github.find_duplicate(customer.email, crash)
+    duplicate_issue = github.find_duplicate(customer.email, args.namespace, crash)
     
     if duplicate_issue:
         print(f"Duplicate found: Issue #{duplicate_issue}")

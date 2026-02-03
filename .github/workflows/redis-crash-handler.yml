@@ -36,7 +36,6 @@ on:
         type: string
 env:
   ISSUE_REPO: 'FalkorDB/private'
-  GCS_BUCKET: 'falkordb_rdbs_test_eu'
   PROJECT_ID: 'PVT_kwDOCfJmL84AqS92'
 
 jobs:
@@ -54,24 +53,18 @@ jobs:
       
       - name: Install dependencies
         run: |
-          pip install requests google-cloud-storage
-      
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_LOGS_BUCKET_SA }}
-      
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v3
+          pip install requests
       
       - name: Set environment variables
         run: |
           if [ "${{ inputs.environment }}" = "dev" ]; then
             echo "OMNISTRATE_ENVIRONMENT_ID=${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}" >> $GITHUB_ENV
             echo "VMAUTH_PASSWORD=${{ secrets.VMAUTH_PASSWORD_DEV }}" >> $GITHUB_ENV
+            echo "GRAFANA_URL=${{ vars.GRAFANA_URL_DEV }}" >> $GITHUB_ENV
           else
             echo "OMNISTRATE_ENVIRONMENT_ID=${{ vars.OMNISTRATE_INTERNAL_PROD_ENVIRONMENT }}" >> $GITHUB_ENV
             echo "VMAUTH_PASSWORD=${{ secrets.VMAUTH_PASSWORD_PROD }}" >> $GITHUB_ENV
+            echo "GRAFANA_URL=${{ vars.GRAFANA_URL_PROD }}" >> $GITHUB_ENV
           fi
       
       - name: Process crash
@@ -85,7 +78,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
           ISSUE_REPO: ${{ env.ISSUE_REPO }}
-          GCS_BUCKET: ${{ env.GCS_BUCKET }}
+          GRAFANA_URL: ${{ env.GRAFANA_URL }}
         run: |
           python ./scripts/redis_crash_handler.py \
             --pod "${{ inputs.pod }}" \

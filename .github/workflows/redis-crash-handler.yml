@@ -36,7 +36,7 @@ on:
         type: string
 env:
   ISSUE_REPO: 'FalkorDB/private'
-  GCS_BUCKET: 'alkordb_rdbs_test_eu'
+  GCS_BUCKET: 'falkordb_rdbs_test_eu'
   PROJECT_ID: 'PVT_kwDOCfJmL84AqS92'
 
 jobs:

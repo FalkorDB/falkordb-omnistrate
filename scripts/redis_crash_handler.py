@@ -15,6 +15,10 @@ from typing import List, Optional
 from dataclasses import dataclass
 import argparse
 from google.cloud import storage
+import urllib3
+
+# Disable SSL warnings for dev environment
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 @dataclass
@@ -54,7 +58,8 @@ class OmnistrateClient:
         response = requests.post(
             f"{self.api_url}/signin",
             json={"email": self.username, "password": self.password},
-            timeout=30
+            timeout=30,
+            verify=False
         )
         response.raise_for_status()
         self.token = response.json()["jwtToken"]
@@ -81,7 +86,8 @@ class OmnistrateClient:
                 "SubscriptionId": namespace
             },
             headers=self._get_headers(),
-            timeout=30
+            timeout=30,
+            verify=False
         )
         response.raise_for_status()
         resource_instances = response.json().get("resourceInstances", [])
@@ -100,7 +106,8 @@ class OmnistrateClient:
         users_response = requests.get(
             f"{self.api_url}/fleet/users",
             headers=self._get_headers(),
-            timeout=30
+            timeout=30,
+            verify=False
         )
         users_response.raise_for_status()
         users = users_response.json().get("users", [])
@@ -149,7 +156,8 @@ class VMAauthClient:
             f"{self.base_url}/select/logsql/query",
             params=params,
             auth=self.auth,
-            timeout=60
+            timeout=60,
+            verify=False
         )
         response.raise_for_status()
         
@@ -606,7 +614,7 @@ class GoogleChatNotifier:
             }]
         }
         
-        response = requests.post(self.webhook_url, json=payload, timeout=30)
+        response = requests.post(self.webhook_url, json=payload, timeout=30, verify=False)
         response.raise_for_status()
 
 

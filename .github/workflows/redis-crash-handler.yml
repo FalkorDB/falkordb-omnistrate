@@ -3,10 +3,11 @@
 
 name: Redis Crash Handler
 
+permissions:
+  contents: read
+  issues: write
+
 on:
-  push:
-    branches:
-      - add-redis-crash-handler
   workflow_dispatch:
     inputs:
       pod:
@@ -53,7 +54,7 @@ jobs:
       
       - name: Install dependencies
         run: |
-          pip install requests
+          pip install requests google-cloud-storage
       
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
@@ -61,7 +62,7 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
       
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
       
       - name: Set environment variables
         run: |
@@ -80,7 +81,7 @@ jobs:
           OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
           OMNISTRATE_SERVICE_ID: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
           VMAUTH_USERNAME: ${{ vars.VMAUTH_USERNAME }}
-          VMAUTH_PASSWORD: ${{ secrets.VMAUTH_PASSWORD }}
+          VMAUTH_PASSWORD: ${{ env.VMAUTH_PASSWORD }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
           ISSUE_REPO: ${{ env.ISSUE_REPO }}
@@ -90,4 +91,5 @@ jobs:
             --pod "${{ inputs.pod }}" \
             --namespace "${{ inputs.namespace }}" \
             --cluster "${{ inputs.cluster }}" \
-            --container "${{ inputs.container }}"
+            --container "${{ inputs.container }}" \
+            --vmauth-url "${{ inputs.vmauth_url }}"

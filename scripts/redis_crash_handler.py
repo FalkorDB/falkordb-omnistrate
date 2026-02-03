@@ -8,6 +8,7 @@ analyzing crashes, and managing GitHub issues.
 import os
 import sys
 import re
+import json
 import requests
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -161,17 +162,31 @@ class VMAauthClient:
         )
         response.raise_for_status()
         
-        # Parse response and extract log messages
-        data = response.json()
+        # Parse response - VictoriaLogs returns newline-delimited JSON (NDJSON)
         logs = []
         
-        for hit in data.get('hits', []):
-            fields = hit.get('fields', [])
-            for field in fields:
-                if field.get('name') == '_msg':
-                    logs.append(field.get('value', ''))
+        for line in response.text.strip().split('\n'):
+            if not line:
+                continue
+            try:
+                data = json.loads(line)
+                # Extract log message from fields
+                for hit in data.get('hits', []):
+                    fields = hit.get('fields', [])
+                    for field in fields:
+                        if field.get('name') == '_msg':
+                            msg = field.get('value', '')
+                            if msg:
+                                logs.append(msg)
+            except json.JSONDecodeError as e:
+                # Skip malformed lines
+                print(f"Warning: Failed to parse log line: {e}", file=sys.stderr)
+                continue
         
-        return '\n'.join(logs)
+        result = '\n'.join(logs)
+        if not result:
+            raise ValueError("No logs retrieved from VictoriaLogs. Check query parameters and data availability.")
+        return result
 
 
 class CrashAnalyzer:
@@ -378,7 +393,13 @@ class GitHubIssueManager:
         
         for issue in issues:
             # Check if issue was created in last 24 hours
-            created_at = datetime.fromisoformat(issue['created_at'].replace('Z', '+00:00'))
+            try:
+                created_at_str = issue['created_at'].replace('Z', '+00:00')
+                created_at = datetime.fromisoformat(created_at_str)
+            except (ValueError, KeyError) as e:
+                print(f"Warning: Failed to parse issue creation date: {e}", file=sys.stderr)
+                continue
+            
             if created_at < cutoff:
                 continue  # Skip issues older than 24 hours
             
@@ -629,6 +650,20 @@ def main():
     
     args = parser.parse_args()
     
+    # Validate required environment variables
+    required_env_vars = [
+        'OMNISTRATE_API_URL', 'OMNISTRATE_USERNAME', 'OMNISTRATE_PASSWORD',
+        'OMNISTRATE_SERVICE_ID', 'OMNISTRATE_ENVIRONMENT_ID',
+        'VMAUTH_USERNAME', 'VMAUTH_PASSWORD',
+        'GITHUB_TOKEN', 'ISSUE_REPO',
+        'GCS_BUCKET', 'GOOGLE_CHAT_WEBHOOK_URL'
+    ]
+    
+    missing_vars = [var for var in required_env_vars if not os.environ.get(var)]
+    if missing_vars:
+        print(f"❌ Error: Missing required environment variables: {', '.join(missing_vars)}", file=sys.stderr)
+        sys.exit(1)
+    
     # Get environment variables
     omnistrate_url = os.environ['OMNISTRATE_API_URL']
     omnistrate_user = os.environ['OMNISTRATE_USERNAME']
@@ -707,9 +742,15 @@ def main():
     print("Notification sent!")
     
     # Output for GitHub Actions
-    print(f"\n::set-output name=issue_number::{issue_number}")
-    print(f"::set-output name=is_duplicate::{str(is_duplicate).lower()}")
-    print(f"::set-output name=customer_email::{customer.email}")
+    github_output = os.environ.get('GITHUB_OUTPUT')
+    if github_output:
+        with open(github_output, 'a') as f:
+            f.write(f"issue_number={issue_number}\n")
+            f.write(f"is_duplicate={str(is_duplicate).lower()}\n")
+            f.write(f"customer_email={customer.email}\n")
+    else:
+        # Fallback for local testing or older GitHub Actions
+        print(f"\nIssue: #{issue_number}, Duplicate: {is_duplicate}, Customer: {customer.email}")
     
     print("\n✅ Crash handling complete!")
 

@@ -26,7 +26,10 @@ on:
         description: 'VMAuth URL for log collection'
         required: true
         type: string
-
+      environment:
+        description: 'Environment (dev or prod)'
+        required: true
+        type: string
 env:
   ISSUE_REPO: 'FalkorDB/private'
   GCS_BUCKET: 'alkordb_rdbs_test_eu'
@@ -57,16 +60,23 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
       
+      - name: Set environment variables
+        run: |
+          if [ "${{ inputs.environment }}" = "dev" ]; then
+            echo "OMNISTRATE_ENVIRONMENT_ID=${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "VMAUTH_PASSWORD=${{ secrets.VMAUTH_PASSWORD_DEV }}" >> $GITHUB_ENV
+          else
+            echo "OMNISTRATE_ENVIRONMENT_ID=${{ vars.OMNISTRATE_INTERNAL_PROD_ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "VMAUTH_PASSWORD=${{ secrets.VMAUTH_PASSWORD_PROD }}" >> $GITHUB_ENV
+          fi
+      
       - name: Process crash
         env:
-          OMNISTRATE_API_URL: ${{ secrets.OMNISTRATE_API_URL }}
+          OMNISTRATE_API_URL: "https://api.omnistrate.cloud/2022-09-01-00/"
           OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
           OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
-          OMNISTRATE_SERVICE_ID_DEV: ${{ secrets.OMNISTRATE_SERVICE_ID_DEV }}
-          OMNISTRATE_SERVICE_ID_PROD: ${{ secrets.OMNISTRATE_SERVICE_ID_PROD }}
-          OMNISTRATE_ENVIRONMENT_ID_DEV: ${{ secrets.OMNISTRATE_ENVIRONMENT_ID_DEV }}
-          OMNISTRATE_ENVIRONMENT_ID_PROD: ${{ secrets.OMNISTRATE_ENVIRONMENT_ID_PROD }}
-          VMAUTH_USERNAME: ${{ secrets.VMAUTH_USERNAME }}
+          OMNISTRATE_SERVICE_ID: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          VMAUTH_USERNAME: ${{ vars.VMAUTH_USERNAME }}
           VMAUTH_PASSWORD: ${{ secrets.VMAUTH_PASSWORD }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}

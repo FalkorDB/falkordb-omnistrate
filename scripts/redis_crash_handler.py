@@ -53,7 +53,8 @@ class OmnistrateClient:
         """Authenticate with Omnistrate API"""
         response = self.session.post(
             f"{self.api_url}/signin",
-            json={"email": self.username, "password": self.password}
+            json={"email": self.username, "password": self.password},
+            timeout=30
         )
         response.raise_for_status()
         # Session cookies are automatically handled by requests.Session
@@ -62,7 +63,8 @@ class OmnistrateClient:
         """Extract customer info from namespace (subscription ID)"""
         # Get all subscriptions
         response = self.session.get(
-            f"{self.api_url}/service/{service_id}/environment/{environment_id}/subscription"
+            f"{self.api_url}/service/{service_id}/environment/{environment_id}/subscription",
+            timeout=30
         )
         response.raise_for_status()
         subscriptions = response.json()
@@ -274,6 +276,40 @@ class GitHubIssueManager:
         })
         self.api_url = "https://api.github.com"
     
+    def _ensure_label_exists(self, label: str):
+        """Ensure a label exists in the repository, create if it doesn't"""
+        # Check if label exists
+        response = self.session.get(
+            f"{self.api_url}/repos/{self.repo}/labels/{label}",
+            timeout=30
+        )
+        
+        if response.status_code == 404:
+            # Label doesn't exist, create it
+            # Use a default color based on label type
+            color = "d73a4a"  # Red for crash/redis
+            if label.startswith("customer:"):
+                color = "0075ca"  # Blue for customer labels
+            
+            create_response = self.session.post(
+                f"{self.api_url}/repos/{self.repo}/labels",
+                json={"name": label, "color": color},
+                timeout=30
+            )
+            
+            if create_response.status_code == 201:
+                print(f"Created label: {label}")
+            elif create_response.status_code == 422:
+                # Label was created by another process, ignore
+                pass
+            else:
+                create_response.raise_for_status()
+        elif response.status_code == 200:
+            # Label exists, all good
+            pass
+        else:
+            response.raise_for_status()
+    
     def find_duplicate(self, customer_email: str, crash: CrashSummary, hours: int = 24) -> Optional[int]:
         """Find duplicate issue for same customer and crash signature"""
         # Calculate cutoff time (24 hours ago)
@@ -288,7 +324,8 @@ class GitHubIssueManager:
         
         response = self.session.get(
             f"{self.api_url}/repos/{self.repo}/issues",
-            params=params
+            params=params,
+            timeout=30
         )
         response.raise_for_status()
         issues = response.json()
@@ -345,7 +382,7 @@ class GitHubIssueManager:
 **Container:** {container}
 **Namespace:** {namespace}
 **Cluster:** {cluster}
-**Time (IST):** {timestamp}
+**Time (UTC):** {timestamp}
 
 ### Crash Summary
 
@@ -358,15 +395,21 @@ class GitHubIssueManager:
 
 **Crash Logs:** [Download from GCS]({log_url})"""
         
+        # Ensure all labels exist before creating the issue
+        labels = [f'customer:{customer.email}', 'crash', 'redis']
+        for label in labels:
+            self._ensure_label_exists(label)
+        
         data = {
             'title': title,
             'body': body,
-            'labels': [f'customer:{customer.email}', 'crash', 'redis']
+            'labels': labels
         }
         
         response = self.session.post(
             f"{self.api_url}/repos/{self.repo}/issues",
-            json=data
+            json=data,
+            timeout=30
         )
         response.raise_for_status()
         return response.json()['number']
@@ -401,7 +444,8 @@ class GitHubIssueManager:
         
         response = self.session.post(
             f"{self.api_url}/repos/{self.repo}/issues/{issue_number}/comments",
-            json={'body': comment}
+            json={'body': comment},
+            timeout=30
         )
         response.raise_for_status()
 
@@ -526,7 +570,7 @@ class GoogleChatNotifier:
             }]
         }
         
-        response = requests.post(self.webhook_url, json=payload)
+        response = requests.post(self.webhook_url, json=payload, timeout=30)
         response.raise_for_status()
 
 

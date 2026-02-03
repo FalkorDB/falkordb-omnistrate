@@ -399,8 +399,9 @@ class GitHubIssueManager:
     
     def find_duplicate(self, customer_email: str, namespace: str, crash: CrashSummary, hours: int = 24) -> Optional[int]:
         """Find duplicate issue for same customer, namespace, and crash signature"""
-        # Calculate cutoff time (24 hours ago)
-        cutoff = datetime.utcnow() - timedelta(hours=hours)
+        # Calculate cutoff time (24 hours ago) - make it timezone-aware
+        from datetime import timezone
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
         
         # Get all open issues for this customer and namespace
         params = {

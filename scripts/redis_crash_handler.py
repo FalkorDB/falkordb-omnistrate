@@ -664,6 +664,7 @@ def main():
     parser.add_argument('--cluster', required=True, help='Cluster name')
     parser.add_argument('--container', required=True, help='Container name')
     parser.add_argument('--vmauth-url', required=True, help='VMAuth URL for log collection')
+    parser.add_argument('--grafana-url', required=True, help='Grafana URL for log viewing')
     
     args = parser.parse_args()
     
@@ -673,7 +674,7 @@ def main():
         'OMNISTRATE_SERVICE_ID', 'OMNISTRATE_ENVIRONMENT_ID',
         'VMAUTH_USERNAME', 'VMAUTH_PASSWORD',
         'GITHUB_TOKEN', 'ISSUE_REPO',
-        'GRAFANA_URL', 'GOOGLE_CHAT_WEBHOOK_URL'
+        'GOOGLE_CHAT_WEBHOOK_URL'
     ]
     
     missing_vars = [var for var in required_env_vars if not os.environ.get(var)]
@@ -695,7 +696,7 @@ def main():
     github_token = os.environ['GITHUB_TOKEN']
     issue_repo = os.environ['ISSUE_REPO']
     
-    grafana_url = os.environ['GRAFANA_URL']
+    grafana_url = args.grafana_url
     google_chat_webhook = os.environ['GOOGLE_CHAT_WEBHOOK_URL']
     
     # Generate timestamp

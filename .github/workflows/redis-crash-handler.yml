@@ -30,6 +30,10 @@ on:
         description: 'VMAuth URL for log collection'
         required: true
         type: string
+      grafana_url:
+        description: 'Grafana URL for log viewing'
+        required: true
+        type: string
       environment:
         description: 'Environment (dev or prod)'
         required: true
@@ -60,11 +64,9 @@ jobs:
           if [ "${{ inputs.environment }}" = "dev" ]; then
             echo "OMNISTRATE_ENVIRONMENT_ID=${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}" >> $GITHUB_ENV
             echo "VMAUTH_PASSWORD=${{ secrets.VMAUTH_PASSWORD_DEV }}" >> $GITHUB_ENV
-            echo "GRAFANA_URL=${{ vars.GRAFANA_URL_DEV }}" >> $GITHUB_ENV
           else
             echo "OMNISTRATE_ENVIRONMENT_ID=${{ vars.OMNISTRATE_INTERNAL_PROD_ENVIRONMENT }}" >> $GITHUB_ENV
             echo "VMAUTH_PASSWORD=${{ secrets.VMAUTH_PASSWORD_PROD }}" >> $GITHUB_ENV
-            echo "GRAFANA_URL=${{ vars.GRAFANA_URL_PROD }}" >> $GITHUB_ENV
           fi
       
       - name: Process crash
@@ -78,11 +80,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
           ISSUE_REPO: ${{ env.ISSUE_REPO }}
-          GRAFANA_URL: ${{ env.GRAFANA_URL }}
         run: |
           python ./scripts/redis_crash_handler.py \
             --pod "${{ inputs.pod }}" \
             --namespace "${{ inputs.namespace }}" \
             --cluster "${{ inputs.cluster }}" \
             --container "${{ inputs.container }}" \
-            --vmauth-url "${{ inputs.vmauth_url }}"
+            --vmauth-url "${{ inputs.vmauth_url }}" \
+            --grafana-url "${{ inputs.grafana_url }}"

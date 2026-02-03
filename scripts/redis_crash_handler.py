@@ -198,14 +198,10 @@ class VMAauthClient:
                 data = json.loads(line)
                 print(f"DEBUG: Parsed line {line_count}, keys: {data.keys()}")
                 
-                # Extract log message from fields
-                for hit in data.get('hits', []):
-                    fields = hit.get('fields', [])
-                    for field in fields:
-                        if field.get('name') == '_msg':
-                            msg = field.get('value', '')
-                            if msg:
-                                logs.append(msg)
+                # VictoriaLogs returns _msg directly in each JSON object
+                msg = data.get('_msg', '')
+                if msg:
+                    logs.append(msg)
             except json.JSONDecodeError as e:
                 # Skip malformed lines
                 print(f"Warning: Failed to parse log line {line_count}: {e}", file=sys.stderr)

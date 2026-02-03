@@ -8,8 +8,6 @@ permissions:
   issues: write
 
 on:
-  pull_request:
-    types: [opened, synchronize]
   workflow_dispatch:
     inputs:
       pod:

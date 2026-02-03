@@ -153,6 +153,12 @@ class VMAauthClient:
             'limit': 10000
         }
         
+        print(f"DEBUG: VictoriaLogs query: {query}")
+        print(f"DEBUG: Time range: {start_time} to {end_time}")
+        print(f"DEBUG: Request URL: {self.base_url}/select/logsql/query")
+        print(f"DEBUG: Auth username: {self.auth[0]}")
+        print(f"DEBUG: Auth password length: {len(self.auth[1])} chars")
+        
         response = requests.get(
             f"{self.base_url}/select/logsql/query",
             params=params,
@@ -160,16 +166,38 @@ class VMAauthClient:
             timeout=60,
             verify=False
         )
+        
+        print(f"DEBUG: Response status: {response.status_code}")
+        print(f"DEBUG: Response headers: {dict(response.headers)}")
+        print(f"DEBUG: Response length: {len(response.text)} bytes")
+        print(f"DEBUG: First 500 chars of response: {response.text[:500]}")
+        
+        # Check for authentication issues
+        if response.status_code == 401:
+            print("❌ ERROR: Authentication failed (401 Unauthorized)")
+            print(f"DEBUG: Using username: {self.auth[0]}")
+            print(f"DEBUG: Response body: {response.text}")
+            raise ValueError(f"Authentication failed for VictoriaLogs. Check VMAUTH_USERNAME and VMAUTH_PASSWORD.")
+        elif response.status_code == 403:
+            print("❌ ERROR: Access forbidden (403 Forbidden)")
+            print(f"DEBUG: Username '{self.auth[0]}' may not have permission")
+            print(f"DEBUG: Response body: {response.text}")
+            raise ValueError(f"Access forbidden for VictoriaLogs. User '{self.auth[0]}' may lack permissions.")
+        
         response.raise_for_status()
         
         # Parse response - VictoriaLogs returns newline-delimited JSON (NDJSON)
         logs = []
         
+        line_count = 0
         for line in response.text.strip().split('\n'):
+            line_count += 1
             if not line:
                 continue
             try:
                 data = json.loads(line)
+                print(f"DEBUG: Parsed line {line_count}, keys: {data.keys()}")
+                
                 # Extract log message from fields
                 for hit in data.get('hits', []):
                     fields = hit.get('fields', [])
@@ -180,11 +208,16 @@ class VMAauthClient:
                                 logs.append(msg)
             except json.JSONDecodeError as e:
                 # Skip malformed lines
-                print(f"Warning: Failed to parse log line: {e}", file=sys.stderr)
+                print(f"Warning: Failed to parse log line {line_count}: {e}", file=sys.stderr)
+                print(f"DEBUG: Line content: {line[:200]}")
                 continue
+        
+        print(f"DEBUG: Processed {line_count} lines, extracted {len(logs)} log messages")
         
         result = '\n'.join(logs)
         if not result:
+            print(f"DEBUG: Empty result. Response text length: {len(response.text)}")
+            print(f"DEBUG: Full response text:\n{response.text}")
             raise ValueError("No logs retrieved from VictoriaLogs. Check query parameters and data availability.")
         return result
 

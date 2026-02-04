@@ -456,9 +456,16 @@ class GitHubIssueManager:
         else:
             print(f"❌ ERROR: Failed to add issue to project (HTTP {response.status_code}): {response.text}", file=sys.stderr)
     
-    def find_duplicate(self, customer_email: str, namespace: str, crash: CrashSummary, hours: int = 24) -> Optional[int]:
-        """Find duplicate issue for same customer, namespace, and crash signature"""
-        # Calculate cutoff time (24 hours ago) - make it timezone-aware
+    def find_or_get_issue(self, customer_email: str, namespace: str, crash: CrashSummary, hours: int = 168) -> tuple[Optional[int], bool]:
+        """Find existing issue for customer+namespace and check if crash already exists
+        
+        Returns:
+            tuple[Optional[int], bool]: (issue_number, is_crash_duplicate)
+            - If no issue exists: (None, False)
+            - If issue exists with same crash: (issue_number, True) - don't add comment
+            - If issue exists with different crash: (issue_number, False) - add comment
+        """
+        # Calculate cutoff time (7 days default) - make it timezone-aware
         from datetime import timezone
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
         
@@ -469,7 +476,7 @@ class GitHubIssueManager:
             'per_page': 100
         }
         
-        print(f"\n🔍 Searching for duplicate crashes...")
+        print(f"\n🔍 Searching for existing issue...")
         print(f"   Customer: {customer_email}")
         print(f"   Namespace: {namespace}")
         
@@ -481,42 +488,65 @@ class GitHubIssueManager:
         response.raise_for_status()
         issues = response.json()
         
-        print(f"   Found {len(issues)} open issue(s) to check")
+        print(f"   Found {len(issues)} open issue(s)")
         
-        current_sig = crash.signature
-        print(f"\n📊 Current crash signature:")
-        print(f"   {current_sig}")
-        print(f"\n   Stack traces: {crash.stack_traces}")
-        print(f"   Exit code: {crash.exit_code}")
-        print(f"   Client command: {crash.client_command}")
+        if not issues:
+            print(f"   No existing issues found")
+            return None, False
         
-        for issue in issues:
-            issue_num = issue['number']
-            print(f"\n   Checking issue #{issue_num}...")
-            
-            # Check if issue was created in last 24 hours
-            try:
-                created_at_str = issue['created_at'].replace('Z', '+00:00')
-                created_at = datetime.fromisoformat(created_at_str)
-            except (ValueError, KeyError) as e:
-                print(f"   ⚠️  Warning: Failed to parse issue creation date: {e}", file=sys.stderr)
-                continue
-            
+        # Use the first (most recent) open issue for this customer+namespace
+        issue = issues[0]
+        issue_num = issue['number']
+        
+        print(f"\n   Using existing issue #{issue_num}")
+        
+        # Check if issue is too old
+        try:
+            created_at_str = issue['created_at'].replace('Z', '+00:00')
+            created_at = datetime.fromisoformat(created_at_str)
+        except (ValueError, KeyError) as e:
+            print(f"   ⚠️  Warning: Failed to parse issue creation date: {e}", file=sys.stderr)
+            # If can't parse date, assume it's valid
+            pass
+        else:
             age_hours = (datetime.now(timezone.utc) - created_at).total_seconds() / 3600
             print(f"   Issue age: {age_hours:.1f} hours")
             
             if created_at < cutoff:
-                print(f"   ⏭️  Skipping (too old)")
-                continue  # Skip issues older than 24 hours
+                print(f"   ⚠️  Issue is older than {hours} hours, will create new issue")
+                return None, False
+        
+        # Now check if this exact crash signature already exists in the issue
+        current_sig = crash.signature
+        print(f"\n📊 Current crash signature:")
+        print(f"   {current_sig}")
+        print(f"   Stack traces: {crash.stack_traces}")
+        print(f"   Exit code: {crash.exit_code}")
+        print(f"   Client command: {crash.client_command}")
+        
+        # Get issue body + all comments to check for this crash signature
+        body_and_comments = [issue.get('body', '')]
+        
+        # Fetch comments
+        comments_response = self.session.get(
+            f"{self.api_url}/repos/{self.repo}/issues/{issue_num}/comments",
+            timeout=30
+        )
+        if comments_response.status_code == 200:
+            comments = comments_response.json()
+            body_and_comments.extend([c.get('body', '') for c in comments])
+            print(f"   Checking issue body + {len(comments)} comment(s) for matching crash")
+        
+        # Check each section for matching signature
+        for idx, text in enumerate(body_and_comments):
+            location = "issue body" if idx == 0 else f"comment {idx}"
             
-            body = issue.get('body', '')
-            
-            # Extract crash signature from issue body
-            stack_1 = self._extract_field(body, 'Stack Trace 1')
-            stack_2 = self._extract_field(body, 'Stack Trace 2')
-            stack_3 = self._extract_field(body, 'Stack Trace 3')
-            exit_code = self._extract_field(body, 'Exit Code')
-            client_cmd = self._extract_field(body, 'Client Command')
+            # Extract crash signature from text
+            stack_1 = self._extract_field(text, 'Stack Trace 1')
+            stack_2 = self._extract_field(text, 'Stack Trace 2')
+            stack_3 = self._extract_field(text, 'Stack Trace 3')
+            exit_code = self._extract_field(text, 'Exit Code')
+            client_cmd = self._extract_field(text, 'Client Command')
             
             # Build existing signature using the same logic as CrashSummary
             existing_stacks = [stack_1, stack_2, stack_3]
@@ -529,18 +559,17 @@ class GitHubIssueManager:
             
             existing_sig = "|".join(components)
             
-            print(f"   Existing signature: {existing_sig}")
-            print(f"   Stacks: [{stack_1}, {stack_2}, {stack_3}]")
-            print(f"   Exit: {exit_code}, Command: {client_cmd}")
+            if not existing_sig or existing_sig == exit_code:
+                # Empty or minimal signature, skip
+                continue
             
             if current_sig == existing_sig:
-                print(f"   ✅ DUPLICATE FOUND: Issue #{issue_num}")
-                return issue_num
-            else:
-                print(f"   ❌ Not a match")
+                print(f"   ✅ EXACT SAME CRASH found in {location}")
+                print(f"      Signature: {existing_sig}")
+                return issue_num, True  # Issue exists, crash is duplicate
         
-        print(f"\n   No duplicates found")
-        return None
+        print(f"   ℹ️  This is a NEW crash type for this instance")
+        return issue_num, False  # Issue exists, but crash is different
     
     @staticmethod
     def _extract_field(text: str, field_name: str) -> str:
@@ -699,17 +728,22 @@ class GoogleChatNotifier:
         issue_number: int,
         issue_repo: str,
         log_url: str,
-        is_duplicate: bool
+        is_new_crash_type: bool
     ):
         """Send crash notification to Google Chat"""
-        crash_type = "🔄 Redis Crash (Duplicate)" if is_duplicate else "🚨 Redis Crash (New)"
+        if is_new_crash_type:
+            crash_type = "⚠️ Redis Crash (New Type)"
+            subtitle = f"New crash type for {customer_email}"
+        else:
+            crash_type = "🚨 Redis Crash (New Issue)"
+            subtitle = f"Customer: {customer_email}"
         
         payload = {
             "text": crash_type,
             "cards": [{
                 "header": {
                     "title": crash_type,
-                    "subtitle": f"Customer: {customer_email}"
+                    "subtitle": subtitle
                 },
                 "sections": [
                     {
@@ -835,35 +869,46 @@ def main():
     log_url = grafana.generate_link(args.namespace, args.pod, args.container, minutes=7)
     print(f"Grafana link: {log_url}")
     
-    # Step 5: Check for duplicates
-    print("Checking for duplicate issues...")
+    # Step 5: Check for existing issue and crash duplication
+    print("Checking for existing issue...")
     github = GitHubIssueManager(github_token, issue_repo, project_id)
-    duplicate_issue = github.find_duplicate(customer.email, args.namespace, crash)
+    existing_issue, is_same_crash = github.find_or_get_issue(customer.email, args.namespace, crash)
     
-    if duplicate_issue:
-        print(f"Duplicate found: Issue #{duplicate_issue}")
+    if existing_issue and is_same_crash:
+        # Same crash already reported in this issue - do nothing
+        print(f"✅ Exact same crash already reported in issue #{existing_issue}")
+        print("   No action needed - skipping comment and notification")
+        issue_number = existing_issue
+        is_duplicate = True
+        is_new_crash_type = False
+    elif existing_issue and not is_same_crash:
+        # Issue exists but this is a different crash type - add comment
+        print(f"📝 Different crash detected for existing issue #{existing_issue}")
         github.add_comment(
-            duplicate_issue, crash, args.pod, args.namespace,
+            existing_issue, crash, args.pod, args.namespace,
             args.cluster, args.container, log_url, timestamp
         )
-        issue_number = duplicate_issue
-        is_duplicate = True
+        issue_number = existing_issue
+        is_duplicate = False
+        is_new_crash_type = True
     else:
-        print("No duplicate found, creating new issue...")
+        # No issue exists - create new one
+        print("🆕 No existing issue found, creating new issue...")
         issue_number = github.create_issue(
             customer, crash, args.pod, args.namespace,
             args.cluster, args.container, log_url, timestamp
         )
         print(f"Created issue #{issue_number}")
         is_duplicate = False
+        is_new_crash_type = False
     
-    # Step 6: Send notification (only for new crashes, not duplicates)
-    if not is_duplicate:
+    # Step 6: Send notification (only for new issues or new crash types, not same crashes)
+    if not is_same_crash:
         print("Sending Google Chat notification...")
         notifier = GoogleChatNotifier(google_chat_webhook)
         notifier.send_notification(
             customer.email, args.cluster, args.pod, args.namespace,
-            crash, issue_number, issue_repo, log_url, is_duplicate
+            crash, issue_number, issue_repo, log_url, is_new_crash_type
         )
         print("Notification sent!")
     else:

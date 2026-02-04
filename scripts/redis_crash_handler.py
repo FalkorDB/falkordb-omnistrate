@@ -311,21 +311,43 @@ class CrashAnalyzer:
         # Extract client command
         client_command = "unknown"
         
+        # Find the most recent crash dump section to extract command from
+        # Crash dumps are between "=== REDIS BUG REPORT START ===" and "=== REDIS BUG REPORT END ==="
+        crash_sections = []
+        current_section = []
+        in_crash_dump = False
+        
+        for line in lines:
+            if "=== REDIS BUG REPORT START ===" in line or "REDIS BUG REPORT START" in line:
+                in_crash_dump = True
+                current_section = [line]
+            elif in_crash_dump:
+                current_section.append(line)
+                if "=== REDIS BUG REPORT END ===" in line or "REDIS BUG REPORT END" in line:
+                    crash_sections.append(current_section)
+                    current_section = []
+                    in_crash_dump = False
+        
+        # If we have crash sections, use the most recent one (last in the list)
+        # Otherwise use all lines
+        lines_to_search = crash_sections[-1] if crash_sections else lines
+        
+        if crash_sections:
+            print(f"   Found {len(crash_sections)} crash dump section(s), analyzing most recent")
+        
         # Pattern 1: FalkorDB graph command format: graph_command:GRAPH.QUERY MATCH ...
         graph_cmd_pattern = re.compile(r'graph_command:GRAPH\.QUERY\s+(.+)', re.IGNORECASE)
-        for line in lines:
+        for line in lines_to_search:
             match = graph_cmd_pattern.search(line)
             if match:
-                # Extract just the query part, limit to first 100 chars for signature
                 query = match.group(1).strip()
-                # Take first significant part of query for differentiation
                 client_command = f"GRAPH.QUERY {query[:100]}"
-                break
+                break  # Can break now since we're only looking in the relevant crash section
         
         # Pattern 2: Redis client info format: cmd=debug
         if client_command == "unknown":
             cmd_pattern = re.compile(r'cmd=(\S+)', re.IGNORECASE)
-            for line in lines:
+            for line in lines_to_search:
                 match = cmd_pattern.search(line)
                 if match:
                     client_command = match.group(1)
@@ -851,10 +873,10 @@ def main():
     customer = omnistrate.get_customer_info(service_id, environment_id, args.namespace)
     print(f"Customer: {customer.name} ({customer.email})")
     
-    # Step 2: Collect logs
-    print("Collecting logs from VictoriaLogs...")
+    # Step 2: Collect logs (last 5 minutes - crash just happened)
+    print("Collecting logs from VictoriaLogs (last 5 minutes)...")
     vmauth = VMAauthClient(vmauth_url, vmauth_user, vmauth_pass)
-    logs = vmauth.get_logs(args.namespace, args.pod, args.container)
+    logs = vmauth.get_logs(args.namespace, args.pod, args.container, hours=5/60)  # 5 minutes
     print(f"Collected {len(logs)} bytes of logs")
     
     # Step 3: Parse crash summary

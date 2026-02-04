@@ -11,6 +11,7 @@ import re
 import json
 import requests
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import List, Optional
 from dataclasses import dataclass
@@ -862,8 +863,8 @@ def main():
     grafana_url = args.grafana_url
     google_chat_webhook = os.environ['GOOGLE_CHAT_WEBHOOK_URL']
     
-    # Generate timestamp
-    timestamp = datetime.utcnow().strftime('%Y%m%d-%H%M%S')
+    # Generate timestamp in Israel timezone
+    timestamp = datetime.now(ZoneInfo('Asia/Jerusalem')).strftime('%Y%m%d-%H%M%S')
     
     print(f"Processing crash for pod {args.pod} in namespace {args.namespace}")
     

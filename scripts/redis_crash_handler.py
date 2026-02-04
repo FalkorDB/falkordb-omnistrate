@@ -39,8 +39,23 @@ class CrashSummary:
     
     @property
     def signature(self) -> str:
-        """Unique signature for duplicate detection"""
-        return "|".join(self.stack_traces[:3] + [self.exit_code])
+        """Unique signature for duplicate detection
+        
+        Includes stack traces, exit code, and client command to ensure
+        different crashes are not incorrectly marked as duplicates.
+        Excludes 'N/A' and 'unknown' values for more accurate matching.
+        """
+        # Filter out N/A stack traces for signature
+        meaningful_stacks = [st for st in self.stack_traces[:3] if st != "N/A"]
+        
+        # Build signature components
+        components = meaningful_stacks + [self.exit_code]
+        
+        # Add client command if it's meaningful
+        if self.client_command and self.client_command != "unknown":
+            components.append(self.client_command)
+        
+        return "|".join(components)
 
 
 class OmnistrateClient:
@@ -204,20 +219,29 @@ class CrashAnalyzer:
         """Parse crash logs and extract summary"""
         lines = logs.split('\n')
         
-        # Extract stack traces - look for Redis crash format
-        # Pattern: redis-server *:6379(debugCommand+0x244)[0xaaaab1e89984]
+        # Extract stack traces - try multiple formats
         stack_traces = []
         
-        # First, try Redis crash stack trace format (function+offset)
-        redis_stack_pattern = re.compile(r'redis-server[^(]*\(([^+)]+)(?:\+0x[0-9a-f]+)?\)')
+        # Pattern 1: FalkorDB module format: /var/lib/falkordb/bin/falkordb.so(AlgebraicExpression_Dest+0x4)[0x7fae4dd95664]
+        falkordb_pattern = re.compile(r'/var/lib/falkordb/[^(]+\(([^+)]+)(?:\+0x[0-9a-f]+)?\)')
         for line in lines:
-            if 'redis-server' in line and '(' in line:
-                matches = redis_stack_pattern.findall(line)
+            if '/var/lib/falkordb/' in line and '(' in line:
+                matches = falkordb_pattern.findall(line)
                 for func in matches:
                     if func and func not in ['_start', '_libc_start_main']:
                         stack_traces.append(func)
         
-        # If no Redis format found, try generic file:line format
+        # Pattern 2: Redis crash stack trace format: redis-server *:6379(debugCommand+0x244)[0xaaaab1e89984]
+        if not stack_traces:
+            redis_stack_pattern = re.compile(r'redis-server[^(]*\(([^+)]+)(?:\+0x[0-9a-f]+)?\)')
+            for line in lines:
+                if 'redis-server' in line and '(' in line:
+                    matches = redis_stack_pattern.findall(line)
+                    for func in matches:
+                        if func and func not in ['_start', '_libc_start_main']:
+                            stack_traces.append(func)
+        
+        # Pattern 3: Generic file:line format
         if not stack_traces:
             file_pattern = re.compile(r'([a-zA-Z0-9_/.-]+\.[ch]:?\d+)(?:\s+\(?(\w+)\)?)?')
             for line in lines:
@@ -287,15 +311,27 @@ class CrashAnalyzer:
         # Extract client command
         client_command = "unknown"
         
-        # Try Redis client info format: cmd=debug
-        cmd_pattern = re.compile(r'cmd=(\S+)', re.IGNORECASE)
+        # Pattern 1: FalkorDB graph command format: graph_command:GRAPH.QUERY MATCH ...
+        graph_cmd_pattern = re.compile(r'graph_command:GRAPH\.QUERY\s+(.+)', re.IGNORECASE)
         for line in lines:
-            match = cmd_pattern.search(line)
+            match = graph_cmd_pattern.search(line)
             if match:
-                client_command = match.group(1)
+                # Extract just the query part, limit to first 100 chars for signature
+                query = match.group(1).strip()
+                # Take first significant part of query for differentiation
+                client_command = f"GRAPH.QUERY {query[:100]}"
                 break
         
-        # Try argv format: argv[0]: '"debug"' argv[1]: '"segfault"'
+        # Pattern 2: Redis client info format: cmd=debug
+        if client_command == "unknown":
+            cmd_pattern = re.compile(r'cmd=(\S+)', re.IGNORECASE)
+            for line in lines:
+                match = cmd_pattern.search(line)
+                if match:
+                    client_command = match.group(1)
+                    break
+        
+        # Pattern 3: argv format: argv[0]: '"debug"' argv[1]: '"segfault"'
         if client_command == "unknown":
             argv_parts = []
             argv_pattern = re.compile(r"argv\[\d+\]:\s*['\"]([^'\"]+)['\"]")
@@ -305,7 +341,7 @@ class CrashAnalyzer:
             if argv_parts:
                 client_command = ' '.join(argv_parts)
         
-        # Try generic command format
+        # Pattern 4: Generic command format
         if client_command == "unknown":
             command_patterns = [
                 re.compile(r'client.*command[:\s]+["\']?([^"\']+)["\']?', re.IGNORECASE),
@@ -433,6 +469,10 @@ class GitHubIssueManager:
             'per_page': 100
         }
         
+        print(f"\n🔍 Searching for duplicate crashes...")
+        print(f"   Customer: {customer_email}")
+        print(f"   Namespace: {namespace}")
+        
         response = self.session.get(
             f"{self.api_url}/repos/{self.repo}/issues",
             params=params,
@@ -441,18 +481,32 @@ class GitHubIssueManager:
         response.raise_for_status()
         issues = response.json()
         
+        print(f"   Found {len(issues)} open issue(s) to check")
+        
         current_sig = crash.signature
+        print(f"\n📊 Current crash signature:")
+        print(f"   {current_sig}")
+        print(f"\n   Stack traces: {crash.stack_traces}")
+        print(f"   Exit code: {crash.exit_code}")
+        print(f"   Client command: {crash.client_command}")
         
         for issue in issues:
+            issue_num = issue['number']
+            print(f"\n   Checking issue #{issue_num}...")
+            
             # Check if issue was created in last 24 hours
             try:
                 created_at_str = issue['created_at'].replace('Z', '+00:00')
                 created_at = datetime.fromisoformat(created_at_str)
             except (ValueError, KeyError) as e:
-                print(f"Warning: Failed to parse issue creation date: {e}", file=sys.stderr)
+                print(f"   ⚠️  Warning: Failed to parse issue creation date: {e}", file=sys.stderr)
                 continue
             
+            age_hours = (datetime.now(timezone.utc) - created_at).total_seconds() / 3600
+            print(f"   Issue age: {age_hours:.1f} hours")
+            
             if created_at < cutoff:
+                print(f"   ⏭️  Skipping (too old)")
                 continue  # Skip issues older than 24 hours
             
             body = issue.get('body', '')
@@ -462,12 +516,30 @@ class GitHubIssueManager:
             stack_2 = self._extract_field(body, 'Stack Trace 2')
             stack_3 = self._extract_field(body, 'Stack Trace 3')
             exit_code = self._extract_field(body, 'Exit Code')
+            client_cmd = self._extract_field(body, 'Client Command')
             
-            existing_sig = f"{stack_1}|{stack_2}|{stack_3}|{exit_code}"
+            # Build existing signature using the same logic as CrashSummary
+            existing_stacks = [stack_1, stack_2, stack_3]
+            meaningful_stacks = [st for st in existing_stacks if st and st != "N/A"]
+            
+            components = meaningful_stacks + [exit_code] if exit_code else meaningful_stacks
+            
+            if client_cmd and client_cmd != "unknown":
+                components.append(client_cmd)
+            
+            existing_sig = "|".join(components)
+            
+            print(f"   Existing signature: {existing_sig}")
+            print(f"   Stacks: [{stack_1}, {stack_2}, {stack_3}]")
+            print(f"   Exit: {exit_code}, Command: {client_cmd}")
             
             if current_sig == existing_sig:
-                return issue['number']
+                print(f"   ✅ DUPLICATE FOUND: Issue #{issue_num}")
+                return issue_num
+            else:
+                print(f"   ❌ Not a match")
         
+        print(f"\n   No duplicates found")
         return None
     
     @staticmethod

@@ -100,7 +100,9 @@ jobs:
   
   upload-debug-data:
     needs: analyze-crash
-    if: needs.analyze-crash.outputs.is_new_crash == 'true'
+    # Temporarily disabled until crash handling is stable
+    if: false
+    # if: needs.analyze-crash.outputs.is_new_crash == 'true'
     runs-on: ubuntu-latest
     
     steps:

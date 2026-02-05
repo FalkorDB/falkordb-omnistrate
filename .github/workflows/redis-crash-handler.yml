@@ -54,6 +54,11 @@ jobs:
       cluster: ${{ steps.process_crash.outputs.cluster }}
     
     steps:
+      - name: If environment is dev exit early
+        if: ${{ inputs.environment == 'dev' }}
+        run: |
+          echo "Environment is 'dev'. Exiting job early. It is worth noting that a crash happened!."
+          exit 0
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       

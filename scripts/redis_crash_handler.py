@@ -943,10 +943,15 @@ def main():
         with open(github_output, 'a') as f:
             f.write(f"issue_number={issue_number}\n")
             f.write(f"is_duplicate={str(is_duplicate).lower()}\n")
+            f.write(f"is_new_crash={str(not is_duplicate).lower()}\n")
             f.write(f"customer_email={customer.email}\n")
+            f.write(f"namespace={args.namespace}\n")
+            f.write(f"pod={args.pod}\n")
+            f.write(f"cluster={args.cluster}\n")
     else:
         # Fallback for local testing or older GitHub Actions
         print(f"\nIssue: #{issue_number}, Duplicate: {is_duplicate}, Customer: {customer.email}")
+        print(f"Namespace: {args.namespace}, Pod: {args.pod}, Cluster: {args.cluster}")
     
     print("\n✅ Crash handling complete!")
 

@@ -43,8 +43,15 @@ env:
   PROJECT_ID: 'PVT_kwDOCFj3QM4BM1wV'
 
 jobs:
-  handle-crash:
+  analyze-crash:
     runs-on: ubuntu-latest
+    outputs:
+      issue_number: ${{ steps.process_crash.outputs.issue_number }}
+      is_new_crash: ${{ steps.process_crash.outputs.is_new_crash }}
+      customer_email: ${{ steps.process_crash.outputs.customer_email }}
+      namespace: ${{ steps.process_crash.outputs.namespace }}
+      pod: ${{ steps.process_crash.outputs.pod }}
+      cluster: ${{ steps.process_crash.outputs.cluster }}
     
     steps:
       - name: Checkout repository
@@ -70,6 +77,7 @@ jobs:
           fi
       
       - name: Process crash
+        id: process_crash
         env:
           OMNISTRATE_API_URL: "https://api.omnistrate.cloud/2022-09-01-00/"
           OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
@@ -89,3 +97,30 @@ jobs:
             --container "${{ inputs.container }}" \
             --vmauth-url "${{ inputs.vmauth_url }}" \
             --grafana-url "${{ inputs.grafana_url }}"
+  
+  upload-debug-data:
+    needs: analyze-crash
+    if: needs.analyze-crash.outputs.is_new_crash == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200 # v2
+        with:
+          project_id: pipelines-development-f7a2434f
+      
+      - name: Extract and upload FalkorDB data
+        uses: ./.github/actions/upload-falkordb-data
+        with:
+          omnistrate_username: ${{ secrets.OMNISTRATE_USERNAME }}
+          omnistrate_password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          deployment_cell_id: ${{ needs.analyze-crash.outputs.cluster }}
+          customer_email: ${{ needs.analyze-crash.outputs.customer_email }}
+          namespace: ${{ needs.analyze-crash.outputs.namespace }}
+          pod_name: ${{ needs.analyze-crash.outputs.pod }}
+          aof_enabled: 'false'
+          issue_number: ${{ needs.analyze-crash.outputs.issue_number }}
+          github_token: ${{ secrets.PRIVATE_REPO_TOKEN }}

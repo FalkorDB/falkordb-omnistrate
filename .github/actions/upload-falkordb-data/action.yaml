@@ -69,20 +69,28 @@ runs:
         DEPLOYMENT_CELL: ${{ inputs.deployment_cell_id }}
         CUSTOMER_EMAIL: ${{ inputs.customer_email }}
       run: |
-        # Login to Omnistrate
+        # Create directory for omnistrate credentials
+        mkdir -p $HOME/.omnistrate
+        
+        # Login to Omnistrate (mount credential directory to persist session)
         docker run --rm \
+          -v $HOME/.omnistrate:/root/.omnistrate \
           ghcr.io/omnistrate/ctl:0.9.89 \
           omnistrate-ctl login --email "$OMNISTRATE_USER" --password "$OMNISTRATE_PASS"
         
-        # Update kubeconfig
+        # Update kubeconfig (reuse mounted credential directory)
         if [ -n "$CUSTOMER_EMAIL" ]; then
-          docker run --rm -v $HOME/.kube:/root/.kube \
+          docker run --rm \
+            -v $HOME/.kube:/root/.kube \
+            -v $HOME/.omnistrate:/root/.omnistrate \
             ghcr.io/omnistrate/ctl:0.9.89 \
             omnistrate-ctl deployment-cell update-kubeconfig "$DEPLOYMENT_CELL" \
             --customer-email "$CUSTOMER_EMAIL" \
             --kubeconfig /root/.kube/omnistrate-config
         else
-          docker run --rm -v $HOME/.kube:/root/.kube \
+          docker run --rm \
+            -v $HOME/.kube:/root/.kube \
+            -v $HOME/.omnistrate:/root/.omnistrate \
             ghcr.io/omnistrate/ctl:0.9.89 \
             omnistrate-ctl deployment-cell update-kubeconfig "$DEPLOYMENT_CELL" \
             --kubeconfig /root/.kube/omnistrate-config

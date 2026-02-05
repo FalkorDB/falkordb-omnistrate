@@ -16,6 +16,7 @@ from typing import List, Optional
 from dataclasses import dataclass
 import argparse
 import urllib3
+from urllib.parse import quote
 
 # Disable SSL warnings for dev environment
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -43,13 +44,17 @@ class CrashSummary:
         
         Includes stack traces, exit code, and client command to ensure
         different crashes are not incorrectly marked as duplicates.
-        Filters out 'N/A' from stack traces and 'unknown' from client command.
+        Filters out 'N/A' from stack traces and 'unknown' from exit code and client command.
         """
         # Filter out N/A stack traces for signature
         meaningful_stacks = [st for st in self.stack_traces[:3] if st != "N/A"]
         
         # Build signature components
-        components = meaningful_stacks + [self.exit_code]
+        components = meaningful_stacks.copy()
+        
+        # Add exit code if it's meaningful
+        if self.exit_code and self.exit_code != "unknown":
+            components.append(self.exit_code)
         
         # Add client command if it's meaningful
         if self.client_command and self.client_command != "unknown":
@@ -183,7 +188,7 @@ class VMAauthClient:
             raise ValueError("Authentication failed for VictoriaLogs. Check VMAUTH_USERNAME and VMAUTH_PASSWORD.")
         elif response.status_code == 403:
             print("❌ ERROR: Access forbidden (403 Forbidden)")
-            raise ValueError(f"Access forbidden for VictoriaLogs. User '{self.auth[0]}' may lack permissions.")
+            raise ValueError("Access forbidden for VictoriaLogs. Check credentials and permissions.")
         
         response.raise_for_status()
         
@@ -405,9 +410,10 @@ class GitHubIssueManager:
     
     def _ensure_label_exists(self, label: str):
         """Ensure a label exists in the repository, create if it doesn't"""
-        # Check if label exists
+        # Check if label exists (URL-encode label for valid path)
+        encoded_label = quote(label, safe='')
         response = self.session.get(
-            f"{self.api_url}/repos/{self.repo}/labels/{label}",
+            f"{self.api_url}/repos/{self.repo}/labels/{encoded_label}",
             timeout=30
         )
         
@@ -575,8 +581,12 @@ class GitHubIssueManager:
             existing_stacks = [stack_1, stack_2, stack_3]
             meaningful_stacks = [st for st in existing_stacks if st and st != "N/A"]
             
-            # Always include exit_code (matching CrashSummary.signature line 53)
-            components = meaningful_stacks + [exit_code]
+            # Start with meaningful stacks
+            components = meaningful_stacks.copy()
+            
+            # Add exit_code if it's meaningful (matching CrashSummary.signature)
+            if exit_code and exit_code != "unknown":
+                components.append(exit_code)
             
             if client_cmd and client_cmd != "unknown":
                 components.append(client_cmd)

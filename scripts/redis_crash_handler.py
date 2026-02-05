@@ -634,7 +634,7 @@ class GitHubIssueManager:
 **Container:** {container}
 **Namespace:** {namespace}
 **Cluster:** {cluster}
-**Time (UTC):** {timestamp}
+**Time (Israel):** {timestamp}
 
 ### Crash Summary
 

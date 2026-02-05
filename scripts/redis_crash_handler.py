@@ -726,7 +726,7 @@ class GrafanaLinkGenerator:
     def generate_link(self, namespace: str, pod: str, container: str, minutes: int = 7) -> str:
         """Generate Grafana link with log query parameters"""
         # Calculate time range (7 minutes from now backwards)
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
         start_time = end_time - timedelta(minutes=minutes)
         
         # Convert to milliseconds for Grafana

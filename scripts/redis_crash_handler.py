@@ -10,9 +10,8 @@ import sys
 import re
 import json
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-from pathlib import Path
 from typing import List, Optional
 from dataclasses import dataclass
 import argparse
@@ -44,7 +43,7 @@ class CrashSummary:
         
         Includes stack traces, exit code, and client command to ensure
         different crashes are not incorrectly marked as duplicates.
-        Excludes 'N/A' and 'unknown' values for more accurate matching.
+        Filters out 'N/A' from stack traces and 'unknown' from client command.
         """
         # Filter out N/A stack traces for signature
         meaningful_stacks = [st for st in self.stack_traces[:3] if st != "N/A"]
@@ -62,10 +61,11 @@ class CrashSummary:
 class OmnistrateClient:
     """Client for Omnistrate API"""
     
-    def __init__(self, api_url: str, username: str, password: str):
+    def __init__(self, api_url: str, username: str, password: str, verify_ssl: bool = True):
         self.api_url = api_url.rstrip('/')
         self.username = username
         self.password = password
+        self.verify_ssl = verify_ssl
         self.token = None
         self._login()
     
@@ -75,7 +75,7 @@ class OmnistrateClient:
             f"{self.api_url}/signin",
             json={"email": self.username, "password": self.password},
             timeout=30,
-            verify=False
+            verify=self.verify_ssl
         )
         response.raise_for_status()
         self.token = response.json()["jwtToken"]
@@ -103,7 +103,7 @@ class OmnistrateClient:
             },
             headers=self._get_headers(),
             timeout=30,
-            verify=False
+            verify=self.verify_ssl
         )
         response.raise_for_status()
         resource_instances = response.json().get("resourceInstances", [])
@@ -123,7 +123,7 @@ class OmnistrateClient:
             f"{self.api_url}/fleet/users",
             headers=self._get_headers(),
             timeout=30,
-            verify=False
+            verify=self.verify_ssl
         )
         users_response.raise_for_status()
         users = users_response.json().get("users", [])
@@ -148,14 +148,15 @@ class OmnistrateClient:
 class VMAauthClient:
     """Client for VictoriaLogs via VMAuth"""
     
-    def __init__(self, base_url: str, username: str, password: str):
+    def __init__(self, base_url: str, username: str, password: str, verify_ssl: bool = True):
         self.base_url = base_url.rstrip('/')
         self.auth = (username, password)
+        self.verify_ssl = verify_ssl
     
     def get_logs(self, namespace: str, pod: str, container: str, hours: int = 24) -> str:
         """Fetch logs from VictoriaLogs"""
         # Calculate time range
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
         start_time = end_time - timedelta(hours=hours)
         
         # Build LogsQL query
@@ -173,13 +174,13 @@ class VMAauthClient:
             params=params,
             auth=self.auth,
             timeout=60,
-            verify=False
+            verify=self.verify_ssl
         )
         
         # Check for authentication issues
         if response.status_code == 401:
             print("❌ ERROR: Authentication failed (401 Unauthorized)")
-            raise ValueError(f"Authentication failed for VictoriaLogs. Check VMAUTH_USERNAME and VMAUTH_PASSWORD.")
+            raise ValueError("Authentication failed for VictoriaLogs. Check VMAUTH_USERNAME and VMAUTH_PASSWORD.")
         elif response.status_code == 403:
             print("❌ ERROR: Access forbidden (403 Forbidden)")
             raise ValueError(f"Access forbidden for VictoriaLogs. User '{self.auth[0]}' may lack permissions.")
@@ -391,7 +392,7 @@ class CrashAnalyzer:
 class GitHubIssueManager:
     """Manages GitHub issues for crash tracking"""
     
-    def __init__(self, token: str, repo: str, project_id: str = None):
+    def __init__(self, token: str, repo: str, project_id: Optional[str] = None):
         self.token = token
         self.repo = repo  # format: "owner/repo"
         self.project_id = project_id  # format: "PVT_kwDOCfJmL84AqS92"
@@ -499,7 +500,7 @@ class GitHubIssueManager:
             'per_page': 100
         }
         
-        print(f"\n🔍 Searching for existing issue...")
+        print("\n🔍 Searching for existing issue...")
         print(f"   Customer: {customer_email}")
         print(f"   Namespace: {namespace}")
         
@@ -514,7 +515,7 @@ class GitHubIssueManager:
         print(f"   Found {len(issues)} open issue(s)")
         
         if not issues:
-            print(f"   No existing issues found")
+            print("   No existing issues found")
             return None, False
         
         # Use the first (most recent) open issue for this customer+namespace
@@ -530,7 +531,6 @@ class GitHubIssueManager:
         except (ValueError, KeyError) as e:
             print(f"   ⚠️  Warning: Failed to parse issue creation date: {e}", file=sys.stderr)
             # If can't parse date, assume it's valid
-            pass
         else:
             age_hours = (datetime.now(timezone.utc) - created_at).total_seconds() / 3600
             print(f"   Issue age: {age_hours:.1f} hours")
@@ -541,7 +541,7 @@ class GitHubIssueManager:
         
         # Now check if this exact crash signature already exists in the issue
         current_sig = crash.signature
-        print(f"\n📊 Current crash signature:")
+        print("\n📊 Current crash signature:")
         print(f"   {current_sig}")
         print(f"   Stack traces: {crash.stack_traces}")
         print(f"   Exit code: {crash.exit_code}")
@@ -575,7 +575,8 @@ class GitHubIssueManager:
             existing_stacks = [stack_1, stack_2, stack_3]
             meaningful_stacks = [st for st in existing_stacks if st and st != "N/A"]
             
-            components = meaningful_stacks + [exit_code] if exit_code else meaningful_stacks
+            # Always include exit_code (matching CrashSummary.signature line 53)
+            components = meaningful_stacks + [exit_code]
             
             if client_cmd and client_cmd != "unknown":
                 components.append(client_cmd)
@@ -591,7 +592,7 @@ class GitHubIssueManager:
                 print(f"      Signature: {existing_sig}")
                 return issue_num, True  # Issue exists, crash is duplicate
         
-        print(f"   ℹ️  This is a NEW crash type for this instance")
+        print("   ℹ️  This is a NEW crash type for this instance")
         return issue_num, False  # Issue exists, but crash is different
     
     @staticmethod
@@ -738,8 +739,9 @@ class GrafanaLinkGenerator:
 class GoogleChatNotifier:
     """Sends notifications to Google Chat"""
     
-    def __init__(self, webhook_url: str):
+    def __init__(self, webhook_url: str, verify_ssl: bool = True):
         self.webhook_url = webhook_url
+        self.verify_ssl = verify_ssl
     
     def send_notification(
         self,
@@ -815,7 +817,7 @@ class GoogleChatNotifier:
             }]
         }
         
-        response = requests.post(self.webhook_url, json=payload, timeout=30, verify=False)
+        response = requests.post(self.webhook_url, json=payload, timeout=30, verify=self.verify_ssl)
         response.raise_for_status()
 
 
@@ -830,6 +832,12 @@ def main():
     parser.add_argument('--grafana-url', required=True, help='Grafana URL for log viewing')
     
     args = parser.parse_args()
+    
+    # Configure SSL verification: True for prod (default), False for dev
+    # Set DISABLE_SSL_VERIFY=true in dev environments only
+    verify_ssl = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() != 'true'
+    if not verify_ssl:
+        print("⚠️  WARNING: SSL verification is DISABLED. Use only in development environments.", file=sys.stderr)
     
     # Validate required environment variables
     required_env_vars = [
@@ -870,13 +878,13 @@ def main():
     
     # Step 1: Extract customer info
     print("Extracting customer information...")
-    omnistrate = OmnistrateClient(omnistrate_url, omnistrate_user, omnistrate_pass)
+    omnistrate = OmnistrateClient(omnistrate_url, omnistrate_user, omnistrate_pass, verify_ssl=verify_ssl)
     customer = omnistrate.get_customer_info(service_id, environment_id, args.namespace)
     print(f"Customer: {customer.name} ({customer.email})")
     
     # Step 2: Collect logs (last 5 minutes - crash just happened)
     print("Collecting logs from VictoriaLogs (last 5 minutes)...")
-    vmauth = VMAauthClient(vmauth_url, vmauth_user, vmauth_pass)
+    vmauth = VMAauthClient(vmauth_url, vmauth_user, vmauth_pass, verify_ssl=verify_ssl)
     logs = vmauth.get_logs(args.namespace, args.pod, args.container, hours=5/60)  # 5 minutes
     print(f"Collected {len(logs)} bytes of logs")
     
@@ -928,7 +936,7 @@ def main():
     # Step 6: Send notification (only for new issues or new crash types, not same crashes)
     if not is_same_crash:
         print("Sending Google Chat notification...")
-        notifier = GoogleChatNotifier(google_chat_webhook)
+        notifier = GoogleChatNotifier(google_chat_webhook, verify_ssl=verify_ssl)
         notifier.send_notification(
             customer.email, args.cluster, args.pod, args.namespace,
             crash, issue_number, issue_repo, log_url, is_new_crash_type

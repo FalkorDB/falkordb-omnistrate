@@ -208,20 +208,26 @@ runs:
         AOF_ENABLED: ${{ inputs.aof_enabled }}
         NAMESPACE: ${{ inputs.namespace }}
       run: |
-        comment_body="### 📊 Debug Data Available
-
-Namespace: \`$NAMESPACE\`
-
-**RDB Snapshot:** [Download dump.rdb]($RDB_URL) _(valid for 12 hours)_"
+        cat << 'EOF' > comment.md
+        ### 📊 Debug Data Available
+        
+        Namespace: `$NAMESPACE`
+        
+        **RDB Snapshot:** [Download dump.rdb]($RDB_URL) _(valid for 12 hours)_
+        EOF
         
         if [ "$AOF_ENABLED" = "true" ]; then
-          comment_body="$comment_body
-
-**AOF Directory:** [Download appendonlydir.tar.gz]($AOF_URL) _(valid for 12 hours)_"
+          cat << 'EOF' >> comment.md
+        
+        **AOF Directory:** [Download appendonlydir.tar.gz]($AOF_URL) _(valid for 12 hours)_
+        EOF
         fi
         
-        comment_body="$comment_body
-
-> Extract and load these files into a local FalkorDB instance to reproduce the crash."
+        cat << 'EOF' >> comment.md
         
+        > Extract and load these files into a local FalkorDB instance to reproduce the crash.
+        EOF
+        
+        # Expand environment variables in the comment
+        comment_body=$(envsubst < comment.md)
         gh issue comment "$ISSUE_NUMBER" --body "$comment_body"

@@ -281,16 +281,16 @@ services:
         parameterDependencyMap:
           node-s: falkorDBQueryMemCapacity
       - key: memoryRequestsAndLimits
-        description: Choose the cpu and memory amount for your database
-        name: vCPU and Memory
+        description: Choose the memory amount for your database
+        name: Memory
         type: String
         modifiable: false
         required: false
         export: true
-        defaultValue: "1 vCPU, 1GB memory"
+        defaultValue: "1GB"
         labeledOptions:
-          "1 vCPU, 1GB memory": "1200M"
-          "1 vCPU, 2GB memory": "2200M"
+          1GB: "1200M"
+          2GB: "2200M"
         parameterDependencyMap:
           node-s: memoryRequestsAndLimits
     x-omnistrate-capabilities:
@@ -436,16 +436,16 @@ services:
           min: 5242880
           max:  21474836480
       - key: memoryRequestsAndLimits
-        description: Choose the cpu and memory amount for your database
-        name: vCPU and Memory
+        description: Choose the memory amount for your database
+        name: Memory
         type: String
         modifiable: false
         required: false
         export: true
-        defaultValue: "1 vCPU, 1GB memory"
+        defaultValue: "1GB"
         labeledOptions:
-          "1 vCPU, 1GB memory": "1200M"
-          "1 vCPU, 2GB memory": "2200M"
+          1GB: "1200M"
+          2GB: "2200M"
       - key: resourceRequestCPU
         name: CPU Request
         description: CPU Request for the Falkordb instance

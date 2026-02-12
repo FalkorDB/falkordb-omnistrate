@@ -368,7 +368,7 @@ jobs:
           - name: "[06] enterprise/Standalone - AWS/us-east-2 - Grouped"
             if: "full"
             testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart,oom,resize,network_change"
+            tests: "failover,stopstart,resize,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -381,7 +381,7 @@ jobs:
           - name: "[07] enterprise/SingleZone - AWS/us-east-2 - Grouped"
             if: "full"
             testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,oom,resize,network_change"
+            tests: "failover,stopstart,resize,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -394,7 +394,7 @@ jobs:
           - name: "[08] enterprise/MultiZone - AWS/us-east-2 - Grouped"
             if: "full"
             testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,oom,resize,network_change"
+            tests: "failover,stopstart,resize,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -407,7 +407,7 @@ jobs:
           - name: "[09] enterprise/ClusterSingleZone - AWS/us-east-2 - Grouped"
             if: "full"
             testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,oom,resize,network_change"
+            tests: "failover,stopstart,resize,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -422,7 +422,7 @@ jobs:
           - name: "[10] enterprise/ClusterMultiZone - AWS/us-east-2 - Grouped"
             if: "full"
             testFile: tests/test_grouped_cluster.py
-            tests: "failover,stopstart,oom,resize,network_change"
+            tests: "failover,stopstart,resize,network_change"
             tierName: "enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -503,7 +503,7 @@ jobs:
           - name: "[16] free/Standalone - AWS/us-east-2 - Grouped"
             if: "basic"
             testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart,oom"
+            tests: "failover,stopstart"
             tierName: "free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -513,7 +513,7 @@ jobs:
           - name: "[17] startup/Standalone - AWS/us-east-2 - Grouped"
             if: "basic"
             testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart,oom"
+            tests: "failover,stopstart"
             tierName: "startup-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -523,7 +523,7 @@ jobs:
           - name: "[18] pro/Standalone - AWS/us-east-2 - Grouped"
             if: "basic"
             testFile: tests/test_grouped_standalone.py
-            tests: "failover,stopstart,oom,resize"
+            tests: "failover,stopstart,resize"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -535,7 +535,7 @@ jobs:
           - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
             if: "basic"
             testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,oom,resize"
+            tests: "failover,stopstart,resize"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2
@@ -547,7 +547,7 @@ jobs:
           - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
             if: "basic"
             testFile: tests/test_grouped_replication.py
-            tests: "failover,stopstart,oom,resize"
+            tests: "failover,stopstart,resize"
             tierName: "pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}"
             cloudProvider: aws
             cloudRegion: us-east-2

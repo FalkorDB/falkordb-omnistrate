@@ -16,6 +16,30 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
+def is_stale_master_error(exception):
+    """
+    Check if an exception is due to a stale master connection during failover.
+    
+    This typically occurs when:
+    1. A failover happens and the master becomes a slave
+    2. Sentinels haven't fully propagated the topology change yet
+    3. The client is still connected to the old (now demoted) master
+    
+    Args:
+        exception: The exception to check
+        
+    Returns:
+        bool: True if this is a stale master error that should trigger a retry
+    """
+    error_str = str(exception).lower()
+    return (
+        isinstance(exception, ReadOnlyError)
+        or "read only replica" in error_str
+        or "master is now a slave" in error_str
+        or "previous master" in error_str
+    )
+
+
 def add_data(
     instance: OmnistrateFleetInstance, ssl=False, key="test", n=1, network_type="PUBLIC"
 ):
@@ -52,14 +76,14 @@ def has_data(
             )
             return result
         except (ReadOnlyError, Exception) as e:
-            if "read only replica" in str(e).lower() or "master is now a slave" in str(e).lower():
+            if is_stale_master_error(e):
                 logging.warning(
                     f"Connection to stale master detected (attempt {attempt + 1}/{max_retries}): {e}"
                 )
                 if attempt < max_retries - 1:
                     # Force connection reset
                     instance._connection = None
-                    time.sleep(5)  # Wait for sentinel to update
+                    time.sleep(35)  # Wait for sentinel to update (30s down-after + 5s buffer)
                     continue
             raise
 
@@ -92,14 +116,41 @@ def zero_downtime_worker(
     network_type="PUBLIC",
 ):
     logging.info("Starting zero-downtime worker")
+    
     try:
         db = instance.create_connection(
             ssl=ssl, force_reconnect=True, network_type=network_type
         )
         g = db.select_graph(key)
+        
         while not stop_evt.is_set():
-            g.query("CREATE (n:Person {name: 'Alice'})")
-            g.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+            retries_left = 3
+            
+            while retries_left > 0:
+                try:
+                    g.query("CREATE (n:Person {name: 'Alice'})")
+                    g.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+                    break  # Success, exit retry loop
+                except (ReadOnlyError, Exception) as e:
+                    retries_left -= 1
+                    
+                    if is_stale_master_error(e) and retries_left > 0:
+                        # Retry on stale master error if we have retries left
+                        logging.warning(
+                            f"Connection to stale master detected in zero-downtime worker "
+                            f"({3 - retries_left}/3 attempts): {e}"
+                        )
+                        # Force connection reset and retry
+                        instance._connection = None
+                        time.sleep(35)  # Wait for sentinel to update (30s down-after + 5s buffer)
+                        db = instance.create_connection(
+                            ssl=ssl, force_reconnect=True, network_type=network_type
+                        )
+                        g = db.select_graph(key)
+                    else:
+                        # Either not a stale master error, or no retries left
+                        raise
+            
             time.sleep(2)
     except Exception as e:
         logging.exception("Error in zero-downtime worker")

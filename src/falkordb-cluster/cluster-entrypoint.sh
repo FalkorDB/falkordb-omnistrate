@@ -272,6 +272,8 @@ fix_namespace_in_config_files() {
     
     # Check and fix node.conf
     if [[ -f "$NODE_CONF_FILE" ]]; then
+      # First check if the file contains the current DNS suffix - if so, likely no replacement needed
+      # But we still run the replacement to handle mixed cases where some entries might be outdated
       echo "Checking node.conf for DNS suffix mismatches"
       # Replace old DNS suffixes with current one for specific configuration parameters
       # This regex matches hostnames that have a multi-segment domain suffix (e.g., .svc.cluster.local, .namespace.svc.cluster.local)
@@ -281,12 +283,14 @@ fix_namespace_in_config_files() {
       # Note: DNS domain segments cannot contain underscores per RFC 1035, so domain part uses [a-zA-Z0-9-]+
       # Note: This intentionally replaces ANY multi-segment DNS suffix with the new one,
       # as we don't know what the old suffix was (could vary between clusters)
+      # The replacement is idempotent - if DNS suffix is already correct, it stays the same
       sed -i -E "s/([a-zA-Z0-9_-]*[a-zA-Z][a-zA-Z0-9_-]*)\.(([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+)/\1.${escaped_dns_suffix}/g" "$NODE_CONF_FILE"
     fi
     
     # Check and fix nodes.conf (cluster mode)
     if [[ -f "$DATA_DIR/nodes.conf" ]]; then
       echo "Checking nodes.conf for DNS suffix mismatches"
+      # The replacement is idempotent - if DNS suffix is already correct, it stays the same
       sed -i -E "s/([a-zA-Z0-9_-]*[a-zA-Z][a-zA-Z0-9_-]*)\.(([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+)/\1.${escaped_dns_suffix}/g" "$DATA_DIR/nodes.conf"
     fi
   else

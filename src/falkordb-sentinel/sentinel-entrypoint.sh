@@ -141,6 +141,8 @@ fix_namespace_in_config_files() {
     
     # Check and fix sentinel.conf
     if [[ -f "$SENTINEL_CONF_FILE" ]]; then
+      # First check if the file contains the current DNS suffix - if so, likely no replacement needed
+      # But we still run the replacement to handle mixed cases where some entries might be outdated
       echo "Checking sentinel.conf for DNS suffix mismatches"
       # Replace old DNS suffixes with current one for specific configuration parameters
       # This regex matches hostnames that have a multi-segment domain suffix (e.g., .svc.cluster.local, .namespace.svc.cluster.local)
@@ -150,6 +152,7 @@ fix_namespace_in_config_files() {
       # Note: DNS domain segments cannot contain underscores per RFC 1035, so domain part uses [a-zA-Z0-9-]+
       # Note: This intentionally replaces ANY multi-segment DNS suffix with the new one,
       # as we don't know what the old suffix was (could vary between clusters)
+      # The replacement is idempotent - if DNS suffix is already correct, it stays the same
       sed -i -E "s/([a-zA-Z0-9_-]*[a-zA-Z][a-zA-Z0-9_-]*)\.(([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+)/\1.${escaped_dns_suffix}/g" "$SENTINEL_CONF_FILE"
     fi
   else

@@ -276,15 +276,43 @@ def test_zero_downtime(
     ssl=False,
 ):
     """This function should test the ability to read and write while an upgrade version happens"""
+    from redis.exceptions import ReadOnlyError
+    from redis.sentinel import MasterNotFoundError
+    import sys
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    from tests.suite_utils import is_stale_master_error
+    
     try:
         db = instance.create_connection(ssl=ssl, force_reconnect=True)
-
         graph = db.select_graph("test")
 
         while not thread_signal.is_set():
-            # Write some data to the DB
-            graph.query("CREATE (n:Person {name: 'Alice'})")
-            graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+            retries_left = 3
+            
+            while retries_left > 0:
+                try:
+                    # Write some data to the DB
+                    graph.query("CREATE (n:Person {name: 'Alice'})")
+                    graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
+                    break  # Success, exit retry loop
+                except (ReadOnlyError, MasterNotFoundError, Exception) as e:
+                    retries_left -= 1
+                    
+                    if is_stale_master_error(e) and retries_left > 0:
+                        # Retry on stale master error if we have retries left
+                        logging.warning(
+                            f"Connection to stale master detected in test_zero_downtime "
+                            f"({3 - retries_left}/3 attempts): {e}"
+                        )
+                        # Force connection reset and retry
+                        instance._connection = None
+                        time.sleep(35)  # Wait for sentinel to update (30s down-after + 5s buffer)
+                        db = instance.create_connection(ssl=ssl, force_reconnect=True)
+                        graph = db.select_graph("test")
+                    else:
+                        # Either not a stale master error, or no retries left
+                        raise
+            
             time.sleep(3)
     except Exception as e:
         logging.exception(e)

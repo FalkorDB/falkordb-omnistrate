@@ -155,7 +155,12 @@ x-post-upgrade-hook: &postupgradehook
     set -euo pipefail
     # Constants
     readonly LINK="Please refer to the documentation for instructions on how to resolve this issue: https://github.com/FalkorDB/runbooks/blob/main/alerts/SentinelSplitBrainAlertsRunbook.md"
-    adminpass=$(curl -s   --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt   -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"   https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)/secrets | grep '.*adminpassword.*"$' | awk 'NR==1{print $2}' | base64 -d)
+    if [[ -f /run/secrets/adminpassword ]]; then
+      adminpass=$(cat /run/secrets/adminpassword)
+    else
+      adminpass=$(curl -s   --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt   -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"   https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)/secrets | grep '.*adminpassword.*"$' | awk 'NR==1{print $2}' | tr -d '"' | base64 -d)
+    fi
+    
     if [[ -z "$adminpass" ]]; then
         echo "ERROR: Failed to retrieve admin password from secret. Cannot proceed with Redis operations." >&2
         exit 1

@@ -131,6 +131,23 @@ fix_namespace_in_config_files() {
   else
     echo "INSTANCE_ID not set, skipping namespace fix"
   fi
+  
+  # Fix DNS suffix mismatches when snapshot is restored in different cluster
+  if [[ -n "$LOCAL_DNS_SUFFIX" ]]; then
+    echo "Current DNS suffix: $LOCAL_DNS_SUFFIX"
+    
+    # Check and fix sentinel.conf
+    if [[ -f "$SENTINEL_CONF_FILE" ]]; then
+      echo "Checking sentinel.conf for DNS suffix mismatches"
+      # Replace old DNS suffixes with current one for specific configuration parameters
+      # This regex matches hostnames that have a multi-segment domain suffix (e.g., .svc.cluster.local, .namespace.svc.cluster.local)
+      # and replaces the suffix while keeping the hostname part intact
+      # Pattern: captures hostname, then replaces any .word.word or longer suffix with the current DNS suffix
+      sed -i -E "s/([a-zA-Z0-9_-]+)\.(([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9_-]+)/\1.${LOCAL_DNS_SUFFIX}/g" "$SENTINEL_CONF_FILE"
+    fi
+  else
+    echo "LOCAL_DNS_SUFFIX not set, skipping DNS suffix fix"
+  fi
 }
 
 # If sentinel.conf doesn't exist or $REPLACE_SENTINEL_CONF=1, copy it from /falkordb

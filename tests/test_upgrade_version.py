@@ -277,6 +277,7 @@ def test_zero_downtime(
 ):
     """This function should test the ability to read and write while an upgrade version happens"""
     from redis.exceptions import ReadOnlyError
+    from redis.sentinel import MasterNotFoundError
     import sys
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     from tests.suite_utils import is_stale_master_error
@@ -294,7 +295,7 @@ def test_zero_downtime(
                     graph.query("CREATE (n:Person {name: 'Alice'})")
                     graph.ro_query("MATCH (n:Person {name: 'Alice'}) RETURN n")
                     break  # Success, exit retry loop
-                except (ReadOnlyError, Exception) as e:
+                except (ReadOnlyError, MasterNotFoundError, Exception) as e:
                     retries_left -= 1
                     
                     if is_stale_master_error(e) and retries_left > 0:

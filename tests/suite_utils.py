@@ -24,6 +24,7 @@ def is_stale_master_error(exception):
     1. A failover happens and the master becomes a slave
     2. Sentinels haven't fully propagated the topology change yet
     3. The client is still connected to the old (now demoted) master
+    4. Sentinels are still electing a new master (MasterNotFoundError)
     
     Args:
         exception: The exception to check
@@ -32,11 +33,14 @@ def is_stale_master_error(exception):
         bool: True if this is a stale master error that should trigger a retry
     """
     error_str = str(exception).lower()
+    exception_name = type(exception).__name__
     return (
         isinstance(exception, ReadOnlyError)
         or "read only replica" in error_str
         or "master is now a slave" in error_str
         or "previous master" in error_str
+        or "masternotfounderror" in exception_name.lower()
+        or "no master found" in error_str
     )
 
 

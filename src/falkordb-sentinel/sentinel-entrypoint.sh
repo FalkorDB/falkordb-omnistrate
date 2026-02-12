@@ -136,8 +136,9 @@ fix_namespace_in_config_files() {
   if [[ -n "$LOCAL_DNS_SUFFIX" ]]; then
     echo "Current DNS suffix: $LOCAL_DNS_SUFFIX"
     
-    # Escape special regex characters in LOCAL_DNS_SUFFIX for safe use in sed
-    local escaped_dns_suffix=$(echo "$LOCAL_DNS_SUFFIX" | sed 's/[.[\*^$()+?{|]/\\&/g')
+    # Escape dots in LOCAL_DNS_SUFFIX for safe use in sed replacement string
+    # DNS suffixes primarily contain dots, hyphens, and alphanumeric characters
+    local escaped_dns_suffix=$(echo "$LOCAL_DNS_SUFFIX" | sed 's/\./\\./g')
     
     # Check and fix sentinel.conf
     if [[ -f "$SENTINEL_CONF_FILE" ]]; then

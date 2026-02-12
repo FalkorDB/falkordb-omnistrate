@@ -142,8 +142,9 @@ fix_namespace_in_config_files() {
       # Replace old DNS suffixes with current one for specific configuration parameters
       # This regex matches hostnames that have a multi-segment domain suffix (e.g., .svc.cluster.local, .namespace.svc.cluster.local)
       # and replaces the suffix while keeping the hostname part intact
-      # Pattern: captures hostname, then replaces any .word.word or longer suffix with the current DNS suffix
-      sed -i -E "s/([a-zA-Z0-9_-]+)\.(([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9_-]+)/\1.${LOCAL_DNS_SUFFIX}/g" "$SENTINEL_CONF_FILE"
+      # Pattern: captures hostname (must contain at least one letter to avoid matching IPs), 
+      # then replaces any .word.word or longer suffix with the current DNS suffix
+      sed -i -E "s/([a-zA-Z0-9_-]*[a-zA-Z][a-zA-Z0-9_-]*)\.(([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9_-]+)/\1.${LOCAL_DNS_SUFFIX}/g" "$SENTINEL_CONF_FILE"
     fi
   else
     echo "LOCAL_DNS_SUFFIX not set, skipping DNS suffix fix"

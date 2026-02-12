@@ -262,6 +262,40 @@ fix_namespace_in_config_files() {
   else
     echo "INSTANCE_ID not set, skipping namespace fix"
   fi
+  
+  # Fix DNS suffix mismatches when snapshot is restored in different cluster
+  if [[ -n "$LOCAL_DNS_SUFFIX" ]]; then
+    echo "Current DNS suffix: $LOCAL_DNS_SUFFIX"
+    
+    # Escape special sed characters (&, \, /) in LOCAL_DNS_SUFFIX for safe use in replacement string
+    local escaped_dns_suffix=$(echo "$LOCAL_DNS_SUFFIX" | sed 's/[&\\/]/\\&/g')
+    
+    # Check and fix node.conf
+    if [[ -f "$NODE_CONF_FILE" ]]; then
+      # First check if the file contains the current DNS suffix - if so, likely no replacement needed
+      # But we still run the replacement to handle mixed cases where some entries might be outdated
+      echo "Checking node.conf for DNS suffix mismatches"
+      # Replace old DNS suffixes with current one for specific configuration parameters
+      # This regex matches hostnames that have a multi-segment domain suffix (e.g., .svc.cluster.local, .namespace.svc.cluster.local)
+      # and replaces the suffix while keeping the hostname part intact
+      # Pattern: captures hostname (may contain underscores, must have at least one letter to avoid matching IPs), 
+      # then replaces any .word.word or longer suffix with the current DNS suffix
+      # Note: DNS domain segments cannot contain underscores per RFC 1035, so domain part uses [a-zA-Z0-9-]+
+      # Note: This intentionally replaces ANY multi-segment DNS suffix with the new one,
+      # as we don't know what the old suffix was (could vary between clusters)
+      # The replacement is idempotent - if DNS suffix is already correct, it stays the same
+      sed -i -E "s/([a-zA-Z0-9_-]*[a-zA-Z][a-zA-Z0-9_-]*)\.(([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+)/\1.${escaped_dns_suffix}/g" "$NODE_CONF_FILE"
+    fi
+    
+    # Check and fix nodes.conf (cluster mode)
+    if [[ -f "$DATA_DIR/nodes.conf" ]]; then
+      echo "Checking nodes.conf for DNS suffix mismatches"
+      # The replacement is idempotent - if DNS suffix is already correct, it stays the same
+      sed -i -E "s/([a-zA-Z0-9_-]*[a-zA-Z][a-zA-Z0-9_-]*)\.(([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+)/\1.${escaped_dns_suffix}/g" "$DATA_DIR/nodes.conf"
+    fi
+  else
+    echo "LOCAL_DNS_SUFFIX not set, skipping DNS suffix fix"
+  fi
 }
 
 wait_for_bgrewrite_to_finish() {

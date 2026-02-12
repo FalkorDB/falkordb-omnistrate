@@ -136,6 +136,9 @@ fix_namespace_in_config_files() {
   if [[ -n "$LOCAL_DNS_SUFFIX" ]]; then
     echo "Current DNS suffix: $LOCAL_DNS_SUFFIX"
     
+    # Escape special sed characters (&, \, /) in LOCAL_DNS_SUFFIX for safe use in replacement string
+    local escaped_dns_suffix=$(echo "$LOCAL_DNS_SUFFIX" | sed 's/[&\\/]/\\&/g')
+    
     # Check and fix sentinel.conf
     if [[ -f "$SENTINEL_CONF_FILE" ]]; then
       echo "Checking sentinel.conf for DNS suffix mismatches"
@@ -146,7 +149,7 @@ fix_namespace_in_config_files() {
       # then replaces any .word.word or longer suffix with the current DNS suffix
       # Note: This intentionally replaces ANY multi-segment DNS suffix with the new one,
       # as we don't know what the old suffix was (could vary between clusters)
-      sed -i -E "s/([a-zA-Z0-9_-]*[a-zA-Z][a-zA-Z0-9_-]*)\.(([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9_-]+)/\1.${LOCAL_DNS_SUFFIX}/g" "$SENTINEL_CONF_FILE"
+      sed -i -E "s/([a-zA-Z0-9_-]*[a-zA-Z][a-zA-Z0-9_-]*)\.(([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9_-]+)/\1.${escaped_dns_suffix}/g" "$SENTINEL_CONF_FILE"
     fi
   else
     echo "LOCAL_DNS_SUFFIX not set, skipping DNS suffix fix"

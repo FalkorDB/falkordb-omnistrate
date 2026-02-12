@@ -267,6 +267,9 @@ fix_namespace_in_config_files() {
   if [[ -n "$LOCAL_DNS_SUFFIX" ]]; then
     echo "Current DNS suffix: $LOCAL_DNS_SUFFIX"
     
+    # Escape special sed characters (&, \, /) in LOCAL_DNS_SUFFIX for safe use in replacement string
+    local escaped_dns_suffix=$(echo "$LOCAL_DNS_SUFFIX" | sed 's/[&\\/]/\\&/g')
+    
     # Check and fix node.conf
     if [[ -f "$NODE_CONF_FILE" ]]; then
       echo "Checking node.conf for DNS suffix mismatches"
@@ -277,13 +280,13 @@ fix_namespace_in_config_files() {
       # then replaces any .word.word or longer suffix with the current DNS suffix
       # Note: This intentionally replaces ANY multi-segment DNS suffix with the new one,
       # as we don't know what the old suffix was (could vary between clusters)
-      sed -i -E "s/([a-zA-Z0-9_-]*[a-zA-Z][a-zA-Z0-9_-]*)\.(([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9_-]+)/\1.${LOCAL_DNS_SUFFIX}/g" "$NODE_CONF_FILE"
+      sed -i -E "s/([a-zA-Z0-9_-]*[a-zA-Z][a-zA-Z0-9_-]*)\.(([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9_-]+)/\1.${escaped_dns_suffix}/g" "$NODE_CONF_FILE"
     fi
     
     # Check and fix nodes.conf (cluster mode)
     if [[ -f "$DATA_DIR/nodes.conf" ]]; then
       echo "Checking nodes.conf for DNS suffix mismatches"
-      sed -i -E "s/([a-zA-Z0-9_-]*[a-zA-Z][a-zA-Z0-9_-]*)\.(([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9_-]+)/\1.${LOCAL_DNS_SUFFIX}/g" "$DATA_DIR/nodes.conf"
+      sed -i -E "s/([a-zA-Z0-9_-]*[a-zA-Z][a-zA-Z0-9_-]*)\.(([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9_-]+)/\1.${escaped_dns_suffix}/g" "$DATA_DIR/nodes.conf"
     fi
   else
     echo "LOCAL_DNS_SUFFIX not set, skipping DNS suffix fix"

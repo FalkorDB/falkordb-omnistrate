@@ -1,0 +1,104 @@
+# GitHub Workflow for FalkorDB/falkordb-omnistrate repository
+# Place at: .github/workflows/redis-crash-handler.yml
+
+name: Redis Crash Handler
+
+permissions:
+  contents: read
+  issues: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      pod:
+        description: 'Pod name'
+        required: true
+        type: string
+      namespace:
+        description: 'Namespace (subscription ID)'
+        required: true
+        type: string
+      cluster:
+        description: 'Cluster name'
+        required: true
+        type: string
+      container:
+        description: 'Container name (service)'
+        required: true
+        type: string
+      vmauth_url:
+        description: 'VMAuth URL for log collection'
+        required: true
+        type: string
+      grafana_url:
+        description: 'Grafana URL for log viewing'
+        required: true
+        type: string
+      environment:
+        description: 'Environment (dev or prod)'
+        required: true
+        type: string
+env:
+  ISSUE_REPO: 'FalkorDB/private'
+  PROJECT_ID: 'PVT_kwDOCFj3QM4BM1wV'
+
+jobs:
+  analyze-crash:
+    runs-on: ubuntu-latest
+    outputs:
+      issue_number: ${{ steps.process_crash.outputs.issue_number }}
+      is_new_crash: ${{ steps.process_crash.outputs.is_new_crash }}
+      customer_email: ${{ steps.process_crash.outputs.customer_email }}
+      namespace: ${{ steps.process_crash.outputs.namespace }}
+      pod: ${{ steps.process_crash.outputs.pod }}
+      cluster: ${{ steps.process_crash.outputs.cluster }}
+    
+    steps:
+      - name: If environment is dev exit early
+        if: ${{ inputs.environment == 'dev' }}
+        run: |
+          echo "Environment is 'dev'. Exiting job early. It is worth noting that a crash happened!."
+          exit 0
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install requests
+      
+      - name: Set environment variables
+        run: |
+          if [ "${{ inputs.environment }}" = "dev" ]; then
+            echo "OMNISTRATE_ENVIRONMENT_ID=${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "VMAUTH_PASSWORD=${{ secrets.VMAUTH_PASSWORD_DEV }}" >> $GITHUB_ENV
+          else
+            echo "OMNISTRATE_ENVIRONMENT_ID=${{ vars.OMNISTRATE_INTERNAL_PROD_ENVIRONMENT }}" >> $GITHUB_ENV
+            echo "VMAUTH_PASSWORD=${{ secrets.VMAUTH_PASSWORD_PROD }}" >> $GITHUB_ENV
+          fi
+      
+      - name: Process crash
+        id: process_crash
+        env:
+          OMNISTRATE_API_URL: "https://api.omnistrate.cloud/2022-09-01-00/"
+          OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
+          OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
+          OMNISTRATE_SERVICE_ID: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          VMAUTH_USERNAME: ${{ vars.VMAUTH_USERNAME }}
+          VMAUTH_PASSWORD: ${{ env.VMAUTH_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+          ISSUE_REPO: ${{ env.ISSUE_REPO }}
+          PROJECT_ID: ${{ env.PROJECT_ID }}
+        run: |
+          python ./scripts/redis_crash_handler.py \
+            --pod "${{ inputs.pod }}" \
+            --namespace "${{ inputs.namespace }}" \
+            --cluster "${{ inputs.cluster }}" \
+            --container "${{ inputs.container }}" \
+            --vmauth-url "${{ inputs.vmauth_url }}" \
+            --grafana-url "${{ inputs.grafana_url }}"

@@ -4,6 +4,8 @@ import socket
 import pytest
 import logging
 import secrets
+import signal
+import sys
 
 from tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
 
@@ -11,6 +13,20 @@ from tests.classes.omnistrate_fleet_api import OmnistrateFleetAPI
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
+
+
+# Signal handler to terminate pytest gracefully
+def _handle_termination_signal(signum, frame):
+    """Handle SIGTERM and SIGINT to terminate pytest gracefully"""
+    signal_name = "SIGTERM" if signum == signal.SIGTERM else "SIGINT"
+    logging.warning(f"Received {signal_name}, terminating pytest gracefully...")
+    # Exit with code 130 for SIGINT/SIGTERM to indicate interrupted execution
+    sys.exit(128 + signum)
+
+
+# Register signal handlers
+signal.signal(signal.SIGTERM, _handle_termination_signal)
+signal.signal(signal.SIGINT, _handle_termination_signal)
 
 
 def pytest_addoption(parser):

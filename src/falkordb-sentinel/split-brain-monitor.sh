@@ -10,9 +10,7 @@ readonly MONITORING_INTERVAL=${SPLIT_BRAIN_MONITORING_INTERVAL:-1}
 # Constants
 readonly LINK="Please refer to the documentation for instructions on how to resolve this issue: https://github.com/FalkorDB/runbooks/blob/main/alerts/SentinelSplitBrainAlertsRunbook.md"
 readonly MAX_STARTUP_RETRIES=300  # Wait up to 5 minutes (300 seconds) for services to be ready
-readonly STARTUP_CHECK_INTERVAL=1
-
-echo "Starting split-brain monitor with ${MONITORING_INTERVAL}s interval"
+readonly STARTUP_CHECK_INTERVAL=60
 
 # Function to check if a Redis instance is responding
 check_redis_connectivity() {
@@ -101,8 +99,6 @@ get_admin_password() {
 
 # Main monitoring loop
 main() {
-    echo "Split-brain monitor starting on ${HOSTNAME}"
-    
     local adminpass
     
     # Get admin password once at startup
@@ -122,44 +118,29 @@ main() {
         exit 1
     fi
     
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - Split-brain monitor started"
+    
     # Common Redis CLI options (as array to preserve argument integrity)
     REDIS_OPTS=(--no-auth-warning -a "$adminpass")
     [[ -n "$SSL_FLAG" ]] && REDIS_OPTS+=("$SSL_FLAG")
     readonly REDIS_OPTS
-    readonly MAX_RETRIES=3
-    readonly RETRY_DELAY=2
     
-    # Function to execute Redis CLI commands with error handling and retry logic
+    # Function to execute Redis CLI commands with error handling (no retries for monitoring)
     redis_exec() {
         local host=$1 port=$2
         shift 2
-        local attempt=1
         local output
-        local exit_code
         
-        while [[ $attempt -le $MAX_RETRIES ]]; do
-            # Temporarily disable errexit to prevent premature exit during retries
-            set +e
-            output=$(redis-cli "${REDIS_OPTS[@]}" -h "$host" -p "$port" "$@" 2>&1)
-            exit_code=$?
-            set -e
-            
-            if [[ $exit_code -eq 0 ]]; then
-                echo "$output"
-                return 0
-            fi
-            
-            if [[ $attempt -lt $MAX_RETRIES ]]; then
-                echo "Could not connect to Redis at ${host}:${port} (attempt $attempt/$MAX_RETRIES): $output" >&2
-                echo "Retrying in ${RETRY_DELAY} seconds..." >&2
-                sleep $RETRY_DELAY
-            fi
-            
-            ((attempt++))
-        done
+        set +e
+        output=$(redis-cli "${REDIS_OPTS[@]}" -h "$host" -p "$port" "$@" 2>&1)
+        local exit_code=$?
+        set -e
         
-        # All retries failed - log but don't exit (we're in monitoring loop)
-        echo "Could not connect to Redis at ${host}:${port} after $MAX_RETRIES attempts" >&2
+        if [[ $exit_code -eq 0 ]]; then
+            echo "$output"
+            return 0
+        fi
+        
         return 1
     }
     
@@ -187,7 +168,6 @@ main() {
         local host=$1
         echo "Resolving split brain for host: $host"
         
-        redis_exec "$host" "$SENTINEL_PORT" SENTINEL remove "$MASTER_NAME" || true
         redis_exec "$host" "$SENTINEL_PORT" SENTINEL MONITOR "$MASTER_NAME" "$true_master" "$NODE_PORT" "$SENTINEL_QUORUM" || true
         redis_exec "$host" "$SENTINEL_PORT" SENTINEL SET "$MASTER_NAME" auth-pass "$adminpass" || true
         redis_exec "$host" "$SENTINEL_PORT" SENTINEL FLUSHCONFIG || true
@@ -210,78 +190,84 @@ main() {
             
             # Get master address from this sentinel
             if hosts[$((i + 1))]=$(get_master_addr "$node_host"); then
-                : # Success, continue
-            else
-                echo "Warning: Could not get master address from $node_host" >&2
+        # Step 1: Verify ALL sentinels and nodes are reachable
+        if ! check_redis_connectivity "sentinel-${RESOURCE_KEY}-0" "$SENTINEL_PORT" "$adminpass" "$SSL_FLAG"; then
+            return
+        fi
+        
+        for ((i = 0; i < NUM_REPLICAS; i++)); do
+            local node_host="node-${RESOURCE_KEY}-$i"
+            # Check sentinel connectivity
+            if ! check_redis_connectivity "$node_host" "$SENTINEL_PORT" "$adminpass" "$SSL_FLAG"; then
+                return
             fi
-            
-            # Check if this node is the actual master
+            # Check node connectivity
+            if ! check_redis_connectivity "$node_host" "$NODE_PORT" "$adminpass" "$SSL_FLAG"; then
+                return
+            fi
+        done
+        
+        # Step 2: Find all actual masters (nodes with role:master)
+        local -a actual_masters=()
+        for ((i = 0; i < NUM_REPLICAS; i++)); do
+            local node_host="node-${RESOURCE_KEY}-$i"
             if is_master "$node_host"; then
-                true_master="${node_host}${INTERNAL_SUFFIX}.${EXTERNAL_DNS_SUFFIX}"
+                actual_masters+=("${node_host}${INTERNAL_SUFFIX}.${EXTERNAL_DNS_SUFFIX}")
             fi
         done
         
-        # Filter out empty/invalid responses
-        local -a valid_hosts=()
-        for host in "${hosts[@]}"; do
-            if [[ -n "$host" && "$host" != "null" ]]; then
-                valid_hosts+=("$host")
+        # Step 3: If there are multiple actual masters, do nothing (alert will fire)
+        if [[ ${#actual_masters[@]} -gt 1 ]]; then
+            echo "$(date '+%Y-%m-%d %H:%M:%S') - Multiple actual masters detected (${#actual_masters[@]}). Skipping fix - alert should fire."
+            return
+        fi
+        
+        # Step 4: If no master found, skip
+        if [[ ${#actual_masters[@]} -eq 0 ]]; then
+            return
+        fi
+        
+        # We have exactly one master
+        local true_master="${actual_masters[0]}"
+        
+        # Step 5: Check what each sentinel reports
+        local -a sentinel_views=()
+        
+        # Get sentinel-0 view
+        if ! sentinel_views[0]=$(get_master_addr "sentinel-${RESOURCE_KEY}-0"); then
+            return
+        fi
+        
+        # Get replica sentinel views
+        for ((i = 0; i < NUM_REPLICAS; i++)); do
+            local node_host="node-${RESOURCE_KEY}-$i"
+            if ! sentinel_views[$((i + 1))]=$(get_master_addr "$node_host"); then
+                return
             fi
         done
         
-        # Need at least one valid host to proceed
-        if [[ ${#valid_hosts[@]} -eq 0 ]]; then
-            echo "Warning: No valid sentinel responses" >&2
-            return
-        fi
+        # Step 6: Check if all sentinels agree
+        local all_agree=true
+        for view in "${sentinel_views[@]}"; do
+            if [[ "$view" != "$true_master" ]]; then
+                all_agree=false
+                break
+            fi
+        done
         
-        # Get unique hosts (split brain detection)
-        local -a unique_hosts
-        readarray -t unique_hosts < <(printf "%s\n" "${valid_hosts[@]}" | sort -u)
-        
-        if [[ -z "$true_master" ]]; then
-            echo "Warning: Unable to determine the real master, skipping split-brain check" >&2
-            return
-        fi
-        
-        # Check for split brain condition
-        if [[ ${#unique_hosts[@]} -gt 1 ]]; then
-            echo "$(date '+%Y-%m-%d %H:%M:%S') - Split brain detected - ${#unique_hosts[@]} different masters reported"
-            echo "True master: $true_master"
+        # Step 7: If not all agree, fix the disagreeing sentinels
+        if [[ "$all_agree" == "false" ]]; then
+            echo "$(date '+%Y-%m-%d %H:%M:%S') - Split brain detected. True master: $true_master"
             
             # Fix sentinel-0 if needed
-            if [[ "${hosts[0]}" != "$true_master" ]]; then
-                echo "Fixing sentinel-${RESOURCE_KEY}-0"
+            if [[ "${sentinel_views[0]}" != "$true_master" ]]; then
                 resolve_split_brain "sentinel-${RESOURCE_KEY}-0"
             fi
             
             # Fix replica sentinels if needed
             for ((i = 0; i < NUM_REPLICAS; i++)); do
-                if [[ "${hosts[$((i + 1))]}" != "$true_master" ]]; then
-                    echo "Fixing node-${RESOURCE_KEY}-$i sentinel"
-                    resolve_split_brain "node-${RESOURCE_KEY}-$i"
-                fi
-            done
-            
-            echo "$(date '+%Y-%m-%d %H:%M:%S') - Split brain resolution completed"
-        else
-            echo "$(date '+%Y-%m-%d %H:%M:%S') - No split brain detected - all sentinels report same master: ${unique_hosts[0]}"
-        fi
-    }
-    
-    # Infinite monitoring loop
-    while true; do
-        echo "$(date '+%Y-%m-%d %H:%M:%S') - Running split-brain check"
-        
         # Run check in a subshell to prevent any errors from terminating the loop
-        (check_split_brain) || {
-            echo "Warning: Split-brain check encountered an error" >&2
-        }
+        (check_split_brain) || true
         
-        echo "$(date '+%Y-%m-%d %H:%M:%S') - Sleeping for ${MONITORING_INTERVAL} seconds"
-        sleep "$MONITORING_INTERVAL"
-    done
-}
-
 # Run main function
 main

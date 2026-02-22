@@ -166,8 +166,8 @@ main() {
     # Function to resolve split brain for a specific sentinel
     resolve_split_brain() {
         local host=$1
-        echo "Resolving split brain for host: $host"
         
+        redis_exec "$host" "$SENTINEL_PORT" SENTINEL remove "$MASTER_NAME" || true
         redis_exec "$host" "$SENTINEL_PORT" SENTINEL MONITOR "$MASTER_NAME" "$true_master" "$NODE_PORT" "$SENTINEL_QUORUM" || true
         redis_exec "$host" "$SENTINEL_PORT" SENTINEL SET "$MASTER_NAME" auth-pass "$adminpass" || true
         redis_exec "$host" "$SENTINEL_PORT" SENTINEL FLUSHCONFIG || true
@@ -175,21 +175,6 @@ main() {
     
     # Monitoring loop
     check_split_brain() {
-        local -a hosts=()
-        local true_master=""
-        
-        # Get sentinel-0 master address
-        if ! hosts[0]=$(get_master_addr "sentinel-${RESOURCE_KEY}-0"); then
-            echo "Warning: Could not get master address from sentinel-${RESOURCE_KEY}-0" >&2
-            return
-        fi
-        
-        # Process replicas
-        for ((i = 0; i < NUM_REPLICAS; i++)); do
-            local node_host="node-${RESOURCE_KEY}-$i"
-            
-            # Get master address from this sentinel
-            if hosts[$((i + 1))]=$(get_master_addr "$node_host"); then
         # Step 1: Verify ALL sentinels and nodes are reachable
         if ! check_redis_connectivity "sentinel-${RESOURCE_KEY}-0" "$SENTINEL_PORT" "$adminpass" "$SSL_FLAG"; then
             return
@@ -266,8 +251,23 @@ main() {
             
             # Fix replica sentinels if needed
             for ((i = 0; i < NUM_REPLICAS; i++)); do
+                if [[ "${sentinel_views[$((i + 1))]}" != "$true_master" ]]; then
+                    resolve_split_brain "node-${RESOURCE_KEY}-$i"
+                fi
+            done
+            
+            echo "$(date '+%Y-%m-%d %H:%M:%S') - Split brain fixed"
+        fi
+    }
+    
+    # Infinite monitoring loop
+    while true; do
         # Run check in a subshell to prevent any errors from terminating the loop
         (check_split_brain) || true
         
+        sleep "$MONITORING_INTERVAL"
+    done
+}
+
 # Run main function
 main

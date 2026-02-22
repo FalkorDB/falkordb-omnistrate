@@ -233,8 +233,10 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   [program:split-brain-monitor]
   command=/usr/local/bin/split-brain-monitor.sh
   autorestart=true
-  stdout_logfile=$DATA_DIR/split-brain-monitor.log
-  stderr_logfile=$DATA_DIR/split-brain-monitor.log
+  stdout_logfile=/dev/stdout
+  stdout_logfile_maxbytes=0
+  stderr_logfile=/dev/stderr
+  stderr_logfile_maxbytes=0
   startretries=3
   startsecs=10
     " >>$DATA_DIR/supervisord.conf

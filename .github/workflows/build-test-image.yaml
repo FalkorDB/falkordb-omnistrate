@@ -293,6 +293,7 @@ jobs:
 
   test:
     needs: [create-custom-networks, create-runners]
+    if: always()
     runs-on: ${{ (contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full') && matrix.instances.runner_label || 'ubuntu-latest' }}
     strategy:
       fail-fast: false

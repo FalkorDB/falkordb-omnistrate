@@ -1386,9 +1386,9 @@ services:
       - scope: CLUSTER
         type: PRE_UPGRADE
         <<: *preupgradehook
-      - scope: CLUSTER
-        type: POST_UPGRADE
-        <<: *postupgradehook
+      # - scope: CLUSTER
+      #   type: POST_UPGRADE
+      #   <<: *postupgradehook
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -2149,9 +2149,9 @@ services:
       - scope: CLUSTER
         type: PRE_UPGRADE
         <<: *preupgradehook
-      - scope: CLUSTER
-        type: POST_UPGRADE
-        <<: *postupgradehook
+      # - scope: CLUSTER
+      #   type: POST_UPGRADE
+      #   <<: *postupgradehook
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |

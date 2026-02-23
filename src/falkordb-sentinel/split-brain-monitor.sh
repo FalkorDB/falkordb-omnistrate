@@ -169,7 +169,7 @@ main() {
         for ((i = 0; i < NUM_REPLICAS; i++)); do
             local node_host="node-${RESOURCE_KEY}-$i"
             if ! sentinel_views[$((i + 1))]=$(get_master_addr "$node_host"); then
-                return
+                sentinel_views[$((i + 1))]=""  # Leave empty if get_master_addr fails
             fi
         done
         
@@ -193,6 +193,10 @@ main() {
             
             # Fix replica sentinels if needed
             for ((i = 0; i < NUM_REPLICAS; i++)); do
+                # Skip entries where get_master_addr failed (empty or unset)
+                if [[ -z "${sentinel_views[$((i + 1))]}" ]]; then
+                    continue
+                fi
                 if [[ "${sentinel_views[$((i + 1))]}" != "$true_master" ]]; then
                     resolve_split_brain "node-${RESOURCE_KEY}-$i"
                 fi

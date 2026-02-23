@@ -5,12 +5,7 @@ set -euo pipefail
 # It runs in a loop and is managed by supervisord
 
 # Monitoring interval (seconds) - check every second
-readonly MONITORING_INTERVAL=${SPLIT_BRAIN_MONITORING_INTERVAL:-1}
-
-# Constants
-readonly LINK="Please refer to the documentation for instructions on how to resolve this issue: https://github.com/FalkorDB/runbooks/blob/main/alerts/SentinelSplitBrainAlertsRunbook.md"
-readonly MAX_STARTUP_RETRIES=300  # Wait up to 5 minutes (300 seconds) for services to be ready
-readonly STARTUP_CHECK_INTERVAL=60
+readonly MONITORING_INTERVAL=${SPLIT_BRAIN_MONITORING_INTERVAL:-5}
 
 # Function to check if a Redis instance is responding
 check_redis_connectivity() {
@@ -21,57 +16,6 @@ check_redis_connectivity() {
     
     redis-cli --no-auth-warning -a "$password" ${ssl_flag} -h "$host" -p "$port" PING &>/dev/null
     return $?
-}
-
-# Function to wait for minimum required services to be ready
-wait_for_services_ready() {
-    local adminpass=$1
-    local ssl_flag=$2
-    local resource_key=$3
-    
-    echo "Waiting for minimum required services to be ready before starting monitoring..."
-    echo "Required: sentinel-${resource_key}-0 and at least one node"
-    
-    local attempt=1
-    local sentinel_ready=false
-    local at_least_one_node_ready=false
-    
-    while [[ $attempt -le $MAX_STARTUP_RETRIES ]]; do
-        # Check sentinel-sz/mz-0 (mandatory)
-        if check_redis_connectivity "sentinel-${resource_key}-0" "$SENTINEL_PORT" "$adminpass" "$ssl_flag"; then
-            sentinel_ready=true
-        else
-            echo "Waiting for sentinel-${resource_key}-0 to be ready (attempt $attempt/$MAX_STARTUP_RETRIES)..."
-            sentinel_ready=false
-        fi
-        
-        # Check if at least one node is ready (check all NUM_REPLICAS nodes)
-        at_least_one_node_ready=false
-        for ((i = 0; i < NUM_REPLICAS; i++)); do
-            if check_redis_connectivity "node-${resource_key}-$i" "$NODE_PORT" "$adminpass" "$ssl_flag"; then
-                at_least_one_node_ready=true
-                break
-            fi
-        done
-        
-        if [[ "$at_least_one_node_ready" == "false" ]]; then
-            echo "Waiting for at least one node to be ready (attempt $attempt/$MAX_STARTUP_RETRIES)..."
-        fi
-        
-        # If minimum required services are ready, break out of the loop
-        if [[ "$sentinel_ready" == "true" && "$at_least_one_node_ready" == "true" ]]; then
-            echo "Minimum required services are ready! Starting monitoring..."
-            echo "Note: The monitor will handle temporarily unavailable nodes during operation."
-            return 0
-        fi
-        
-        sleep $STARTUP_CHECK_INTERVAL
-        ((attempt++))
-    done
-    
-    echo "ERROR: Timeout waiting for minimum required services after $MAX_STARTUP_RETRIES seconds" >&2
-    echo "Required: sentinel-${resource_key}-0 (ready: $sentinel_ready) and at least one node (ready: $at_least_one_node_ready)" >&2
-    return 1
 }
 
 # Function to get admin password
@@ -112,12 +56,6 @@ main() {
     readonly RESOURCE_KEY=$([[ "$RESOURCE_ALIAS" =~ .*mz.* ]] && echo "mz" || echo "sz")
     readonly INTERNAL_SUFFIX=$([[ "${NETWORKING_TYPE:-}" == "INTERNAL" ]] && echo "-internal" || echo "")
     
-    # Wait for all required services before starting monitoring
-    if ! wait_for_services_ready "$adminpass" "$SSL_FLAG" "$RESOURCE_KEY"; then
-        echo "ERROR: Cannot start monitoring - required services are not ready" >&2
-        exit 1
-    fi
-    
     echo "$(date '+%Y-%m-%d %H:%M:%S') - Split-brain monitor started"
     
     # Common Redis CLI options (as array to preserve argument integrity)
@@ -153,8 +91,8 @@ main() {
         # Get the output from redis_exec
         output=$(redis_exec "$host" "$SENTINEL_PORT" SENTINEL get-master-addr-by-name "$MASTER_NAME" 2>/dev/null) || return 1
         
-        # Extract just the hostname (first line)
-        result=$(echo "$output" | head -n 1)
+        # Extract just the hostname (first line) using bash string manipulation to avoid broken pipe
+        result="${output%%$'\n'*}"
         
         [[ -n "$result" && "$result" != "null" ]] && echo "$result" || return 1
     }
@@ -162,7 +100,9 @@ main() {
     # Function to check if node is master
     is_master() {
         local host=$1
-        redis_exec "$host" "$NODE_PORT" info | grep -q "role:master"
+        local info
+        info=$(redis_exec "$host" "$NODE_PORT" info 2>/dev/null) || return 1
+        [[ "$info" == *"role:master"* ]]
     }
     
     # Function to resolve split brain for a specific sentinel

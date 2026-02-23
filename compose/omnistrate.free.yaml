@@ -62,7 +62,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           node-f: falkordbPassword
     depends_on:
@@ -104,7 +104,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
       # - key: enableTLS
       #   description: Whether to enable TLS for the database
       #   name: Enable TLS
@@ -169,7 +169,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "60m"
             memory: 50Mi
         oom_score_patch:
           imageNameWithTag: busybox:latest

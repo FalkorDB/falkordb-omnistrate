@@ -379,7 +379,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           node-s: falkordbPassword
       - key: RDBPersistenceConfig
@@ -564,7 +564,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -720,7 +720,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "200m"
             memory: 50Mi
     x-omnistrate-actionhooks:
       - scope: CLUSTER
@@ -874,7 +874,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           node-sz: falkordbPassword
       - key: RDBPersistenceConfig
@@ -1070,7 +1070,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           sentinel-sz: falkordbPassword
       - key: RDBPersistenceConfig
@@ -1237,7 +1237,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "200m"
             memory: 50Mi
         healthcheck-sentinel:
           imageNameWithTag: $FalkorDBHealthcheckImage
@@ -1249,7 +1249,7 @@ services:
         exporter-sentinel:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "200m"
             memory: 50Mi
           args:
             - "26379"
@@ -1453,7 +1453,7 @@ services:
         exporter-sentinel:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "200m"
             memory: 50Mi
           args:
             - "26379"
@@ -1474,7 +1474,7 @@ services:
         type: Password
         modifiable: false
         required: true
-        export: false
+        export: true
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1635,7 +1635,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           node-mz: falkordbPassword
       - key: RDBPersistenceConfig
@@ -1831,7 +1831,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           sentinel-mz: falkordbPassword
       - key: RDBPersistenceConfig
@@ -1999,7 +1999,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "200m"
             memory: 50Mi
         healthcheck-sentinel:
           imageNameWithTag: $FalkorDBHealthcheckImage
@@ -2011,7 +2011,7 @@ services:
         exporter-sentinel:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "200m"
             memory: 50Mi
           args:
             - "26379"
@@ -2214,7 +2214,7 @@ services:
         exporter-sentinel:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "200m"
             memory: 50Mi
           args:
             - "26379"
@@ -2235,7 +2235,7 @@ services:
         type: Password
         modifiable: false
         required: true
-        export: false
+        export: true
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas

@@ -178,13 +178,6 @@ jobs:
           sed -i 's/$FalkorDBSentinelImage/falkordb\/${{ env.FALKORDB_SENTINEL_IMAGE_NAME }}:${{ steps.set_tag.outputs.tag }}/g' ${{ matrix.plans.file }}
           sed -i 's/$MeteringBucketName/${{ secrets.METERING_BUCKET_NAME }}/g' ${{ matrix.plans.file }}
 
-      - name: Remove e2-machine from pro and enterprise
-        if: ${{ contains( vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) && (matrix.plans.key == 'pro' || matrix.plans.key == 'enterprise') }}
-        working-directory: compose
-        run: |
-          sed -i 's/- e2-medium//g' ${{ matrix.plans.file }}
-          sed -i 's/- t2.medium//g' ${{ matrix.plans.file }}
-
       - name: Enable snapshotBeforeDeletion
         if: ${{ contains( vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) && (matrix.plans.key != 'free')}}
         working-directory: compose

@@ -52,7 +52,7 @@ x-clusterparam: &clusterparam
       modifiable: true
       required: true
       export: true
-      defaultValue: e2-custom-4-8192
+      defaultValue: n2-standard-4
     - key: enableTLS
       description: Whether to enable TLS for the database
       name: Enable TLS
@@ -466,7 +466,7 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
+        defaultValue: n2-standard-4
         parameterDependencyMap:
           node-s: nodeInstanceType
       - key: enableTLS
@@ -653,7 +653,7 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
+        defaultValue: n2-standard-4
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -942,7 +942,7 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
+        defaultValue: n2-standard-4
         parameterDependencyMap:
           node-sz: nodeInstanceType
       - key: numReplicas
@@ -1144,7 +1144,7 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
+        defaultValue: n2-standard-4
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1705,7 +1705,7 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
+        defaultValue: n2-standard-4
         parameterDependencyMap:
           node-mz: nodeInstanceType
 
@@ -1907,7 +1907,7 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
+        defaultValue: n2-standard-4
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -2465,7 +2465,7 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
+        defaultValue: n2-standard-4
         parameterDependencyMap:
           cluster-sz: nodeInstanceType
       - key: enableTLS
@@ -2833,7 +2833,7 @@ services:
         modifiable: true
         required: true
         export: true
-        defaultValue: e2-custom-4-8192
+        defaultValue: n2-standard-4
         parameterDependencyMap:
           cluster-mz: nodeInstanceType
       - key: enableTLS

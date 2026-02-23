@@ -147,13 +147,15 @@ main() {
     # Function to get master address from sentinel
     get_master_addr() {
         local host=$1
+        local output
         local result
-        # Redis SENTINEL returns hostname and port on separate lines
-        result=$(redis_exec "$host" "$SENTINEL_PORT" SENTINEL get-master-addr-by-name "$MASTER_NAME" 2>/dev/null | {
-            read -r hostname
-            read -r port
-            echo "$hostname"
-        }) || return 1
+        
+        # Get the output from redis_exec
+        output=$(redis_exec "$host" "$SENTINEL_PORT" SENTINEL get-master-addr-by-name "$MASTER_NAME" 2>/dev/null) || return 1
+        
+        # Extract just the hostname (first line)
+        result=$(echo "$output" | head -n 1)
+        
         [[ -n "$result" && "$result" != "null" ]] && echo "$result" || return 1
     }
     

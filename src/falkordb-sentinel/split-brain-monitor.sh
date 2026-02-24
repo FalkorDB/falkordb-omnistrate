@@ -115,8 +115,57 @@ main() {
         redis_exec "$host" "$SENTINEL_PORT" SENTINEL FLUSHCONFIG || true
     }
     
+    # Function to detect and fix self-replication loops
+    handle_self_replication() {
+        # Check each node to see if it's slave-of-self
+        for ((i = 0; i < NUM_REPLICAS; i++)); do
+            local node_host="node-${RESOURCE_KEY}-$i"
+            local info
+            
+            # Get replication info from the node
+            info=$(redis_exec "$node_host" "$NODE_PORT" info replication 2>/dev/null) || continue
+            
+            # Only check slaves
+            if [[ "$info" == *"role:slave"* ]]; then
+                local master_host
+                master_host=$(echo "$info" | grep "^master_host:" | cut -d: -f2 | tr -d '\r' | xargs)
+                
+                # Check if replicating from itself (compare hostname part)
+                if [[ "$master_host" == *"node-${RESOURCE_KEY}-$i"* ]]; then
+                    echo "$(date '+%Y-%m-%d %H:%M:%S') - SELF-REPLICATION detected on node-${RESOURCE_KEY}-$i (master_host: $master_host)"
+                    
+                    # Ask sentinel who the master should be
+                    local sentinel_master
+                    sentinel_master=$(get_master_addr "sentinel-${RESOURCE_KEY}-0" 2>/dev/null)
+                    
+                    if [[ -z "$sentinel_master" ]]; then
+                        echo "$(date '+%Y-%m-%d %H:%M:%S') - WARNING: Cannot get master from sentinel, skipping fix for node-${RESOURCE_KEY}-$i"
+                        continue
+                    fi
+                    
+                    # Compare sentinel's choice with this node
+                    local node_fqdn="${node_host}${INTERNAL_SUFFIX}.${EXTERNAL_DNS_SUFFIX}"
+                    
+                    if [[ "$sentinel_master" == "$node_fqdn" ]] || [[ "$sentinel_master" == "$node_host"* ]]; then
+                        # Sentinel says THIS node should be master
+                        echo "$(date '+%Y-%m-%d %H:%M:%S') - Sentinel says ${node_host} should be master, promoting with REPLICAOF NO ONE"
+                        redis_exec "$node_host" "$NODE_PORT" REPLICAOF NO ONE || true
+                    else
+                        # Sentinel says a different node should be master
+                        echo "$(date '+%Y-%m-%d %H:%M:%S') - Sentinel says master is ${sentinel_master}, reconfiguring ${node_host} to replicate from it"
+                        redis_exec "$node_host" "$NODE_PORT" REPLICAOF "$sentinel_master" "$NODE_PORT" || true
+                    fi
+                    
+                    echo "$(date '+%Y-%m-%d %H:%M:%S') - Self-replication fixed for node-${RESOURCE_KEY}-$i"
+                fi
+            fi
+        done
+    }
+    
     # Monitoring loop
     check_split_brain() {
+        # First, handle any self-replication bugs
+        handle_self_replication
         # Step 1: Verify ALL sentinels and nodes are reachable
         if ! check_redis_connectivity "sentinel-${RESOURCE_KEY}-0" "$SENTINEL_PORT" "$adminpass" "$SSL_FLAG"; then
             return

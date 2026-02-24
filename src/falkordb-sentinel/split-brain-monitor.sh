@@ -4,7 +4,8 @@ set -euo pipefail
 # This script continuously monitors and resolves split-brain conditions in Sentinel
 # It runs in a loop and is managed by supervisord
 
-# Monitoring interval (seconds) - check every second
+# Monitoring interval (seconds) - should be well below SENTINEL_DOWN_AFTER (default 30s)
+# so the monitor can detect and fix split-brain conditions within a single failover window.
 readonly MONITORING_INTERVAL=${SPLIT_BRAIN_MONITORING_INTERVAL:-5}
 
 # Function to check if a Redis instance is responding
@@ -162,6 +163,23 @@ main() {
         done
     }
     
+    # Check that all sentinel and node hostnames resolve before taking any action.
+    # Returns 1 (and logs a warning) if any hostname is unresolvable.
+    all_dns_resolved() {
+        local hosts_to_check=("sentinel-${RESOURCE_KEY}-0")
+        for ((i = 0; i < NUM_REPLICAS; i++)); do
+            hosts_to_check+=("node-${RESOURCE_KEY}-$i")
+        done
+
+        for host in "${hosts_to_check[@]}"; do
+            if ! getent hosts "$host" &>/dev/null; then
+                echo "$(date '+%Y-%m-%d %H:%M:%S') - DNS not yet resolved for $host, skipping check"
+                return 1
+            fi
+        done
+        return 0
+    }
+
     # Monitoring loop
     check_split_brain() {
         # First, handle any self-replication bugs
@@ -257,8 +275,11 @@ main() {
     
     # Infinite monitoring loop
     while true; do
-        # Run check in a subshell to prevent any errors from terminating the loop
-        (check_split_brain) || true
+        # Guard: skip everything if any hostname does not resolve yet
+        if all_dns_resolved; then
+            # Run check in a subshell to prevent any errors from terminating the loop
+            (check_split_brain) || true
+        fi
         
         sleep "$MONITORING_INTERVAL"
     done

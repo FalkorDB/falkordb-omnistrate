@@ -181,26 +181,21 @@ main() {
 
     # Monitoring loop
     check_split_brain() {
-        # First, handle any self-replication bugs
-        handle_self_replication
-        # Step 1: Verify ALL sentinels and nodes are reachable
+        # Step 1: Verify all sentinels and nodes are reachable via ping
         if ! check_redis_connectivity "sentinel-${RESOURCE_KEY}-0" "$SENTINEL_PORT" "$adminpass" "$SSL_FLAG"; then
             return
         fi
-        
         for ((i = 0; i < NUM_REPLICAS; i++)); do
             local node_host="node-${RESOURCE_KEY}-$i"
-            # Check sentinel connectivity
             if ! check_redis_connectivity "$node_host" "$SENTINEL_PORT" "$adminpass" "$SSL_FLAG"; then
                 return
             fi
-            # Check node connectivity
             if ! check_redis_connectivity "$node_host" "$NODE_PORT" "$adminpass" "$SSL_FLAG"; then
                 return
             fi
         done
-        
-        # Step 2: Find all nodes actually reporting role:master — bail early if ambiguous
+
+        # Step 2: Check if multiple nodes report role:master — log and bail, do not intervene
         local -a actual_masters=()
         for ((i = 0; i < NUM_REPLICAS; i++)); do
             local node_host="node-${RESOURCE_KEY}-$i"
@@ -210,12 +205,10 @@ main() {
         done
 
         if [[ ${#actual_masters[@]} -eq 0 ]]; then
-            # No node reports role:master — nothing to anchor on, bail
             return
         fi
 
         if [[ ${#actual_masters[@]} -gt 1 ]]; then
-            # Multiple nodes report role:master — genuine split-brain, do not intervene
             echo "$(date '+%Y-%m-%d %H:%M:%S') - Multiple masters detected (${actual_masters[*]}). Skipping fix - alert should fire."
             return
         fi
@@ -223,9 +216,11 @@ main() {
         # Exactly one actual master
         local actual_master="${actual_masters[0]}"
 
-        # Step 3: Collect sentinel views from all sentinels
-        local -a sentinel_hosts=()
-        sentinel_hosts+=("sentinel-${RESOURCE_KEY}-0")
+        # Step 3: Check for self-replication and fix it
+        handle_self_replication
+
+        # Step 4: Collect sentinel views
+        local -a sentinel_hosts=("sentinel-${RESOURCE_KEY}-0")
         for ((i = 0; i < NUM_REPLICAS; i++)); do
             sentinel_hosts+=("node-${RESOURCE_KEY}-$i")
         done
@@ -238,17 +233,30 @@ main() {
                 sentinel_views[$idx]="$view"
                 all_nil=false
             else
-                sentinel_views[$idx]=""  # nil / unconfigured
+                sentinel_views[$idx]=""
             fi
         done
 
-        # If every sentinel has no master, cluster is in unknown state — bail
         if [[ "$all_nil" == "true" ]]; then
             echo "$(date '+%Y-%m-%d %H:%M:%S') - All sentinels returned nil, cluster not stable yet - skipping"
             return
         fi
 
-        # Step 4: Determine sentinel quorum master (majority of non-nil views)
+        # Step 5: If all sentinels already agree on the actual master, nothing to do
+        local all_agree=true
+        for view in "${sentinel_views[@]}"; do
+            if [[ "$view" != "$actual_master" ]]; then
+                all_agree=false
+                break
+            fi
+        done
+        if [[ "$all_agree" == "true" ]]; then
+            return
+        fi
+
+        # Step 6: Determine true master
+        # a) actual_master = the node reporting role:master (already have it)
+        # b) check if at least two sentinels agree on a master (quorum)
         local total_sentinels=${#sentinel_hosts[@]}
         local quorum=$(( (total_sentinels / 2) + 1 ))
 
@@ -266,44 +274,32 @@ main() {
         done
         unset _vote_counts
 
-        # Step 5: Determine true_master by cross-referencing actual master with sentinel quorum
         local true_master=""
-        if [[ -z "$sentinel_quorum_master" || "$sentinel_quorum_master" == "$actual_master" ]]; then
-            # Sentinels agree with the actual master, or have no quorum — trust the actual master
+        if [[ -n "$sentinel_quorum_master" && "$sentinel_quorum_master" == "$actual_master" ]]; then
+            # c) Both INFO and sentinel quorum agree — definite master
+            true_master="$actual_master"
+        elif [[ -z "$sentinel_quorum_master" ]]; then
+            # d) Sentinels do not agree — trust INFO role:master
             true_master="$actual_master"
         else
-            # Sentinel quorum prefers a different node, but that node reports as replica.
-            # Sentinel is stale/confused — trust the live master.
+            # Sentinel quorum picks a node that is actually a replica — sentinel is stale
             echo "$(date '+%Y-%m-%d %H:%M:%S') - Sentinel quorum prefers $sentinel_quorum_master but it reports as replica. Trusting actual master $actual_master"
             true_master="$actual_master"
         fi
 
-        # Step 6: Check if all sentinels agree with true_master (nil counts as disagreement)
-        local all_agree=true
-        for view in "${sentinel_views[@]}"; do
+        # Step 7: Fix any sentinel that disagrees with true_master or has nil
+        echo "$(date '+%Y-%m-%d %H:%M:%S') - Split brain detected. True master: $true_master"
+        for idx in "${!sentinel_hosts[@]}"; do
+            local host="${sentinel_hosts[$idx]}"
+            local view="${sentinel_views[$idx]}"
             if [[ "$view" != "$true_master" ]]; then
-                all_agree=false
-                break
+                [[ -z "$view" ]] && \
+                    echo "$(date '+%Y-%m-%d %H:%M:%S') - ${host} has no master (nil), reconfiguring" || \
+                    echo "$(date '+%Y-%m-%d %H:%M:%S') - ${host} has wrong master ($view), reconfiguring"
+                resolve_split_brain "$host"
             fi
         done
-
-        # Step 7: Fix any sentinel that disagrees or has nil
-        if [[ "$all_agree" == "false" ]]; then
-            echo "$(date '+%Y-%m-%d %H:%M:%S') - Split brain detected. True master: $true_master"
-
-            for idx in "${!sentinel_hosts[@]}"; do
-                local host="${sentinel_hosts[$idx]}"
-                local view="${sentinel_views[$idx]}"
-                if [[ "$view" != "$true_master" ]]; then
-                    [[ -z "$view" ]] && \
-                        echo "$(date '+%Y-%m-%d %H:%M:%S') - ${host} has no master (nil), reconfiguring" || \
-                        echo "$(date '+%Y-%m-%d %H:%M:%S') - ${host} has wrong master ($view), reconfiguring"
-                    resolve_split_brain "$host"
-                fi
-            done
-
-            echo "$(date '+%Y-%m-%d %H:%M:%S') - Split brain fixed"
-        fi
+        echo "$(date '+%Y-%m-%d %H:%M:%S') - Split brain fixed"
     }
     
     # Infinite monitoring loop

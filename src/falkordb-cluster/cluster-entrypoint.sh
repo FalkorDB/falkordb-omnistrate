@@ -387,42 +387,58 @@ create_user() {
 }
 
 get_default_memory_limit() {
-  echo "$(awk '/MemTotal/ {printf "%d\n", (($2 / 1024 - 2330) > 100 ? ($2 / 1024 - 2330) : 100)}' /proc/meminfo)MB"
+  # Try to get container memory limit from cgroup (v2 then v1)
+  local container_memory_bytes=0
+
+  if [ -f /sys/fs/cgroup/memory.max ]; then
+    # cgroup v2
+    local mem_max=$(cat /sys/fs/cgroup/memory.max)
+    if [ "$mem_max" != "max" ]; then
+      container_memory_bytes=$mem_max
+    fi
+  elif [ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ]; then
+    # cgroup v1
+    container_memory_bytes=$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes)
+  fi
+
+  # If container memory limit is set and reasonable, calculate based on total memory
+  if [ "$container_memory_bytes" -gt 0 ] && [ "$container_memory_bytes" -lt 9223372036854771712 ]; then
+    # Calculate memory limit based on container size:
+    # - <4GB: 100MB
+    # - 4GB: minimum 2GB (50%)
+    # - >4GB: 75% of total
+    echo "$(awk -v mem_bytes="$container_memory_bytes" 'BEGIN {
+      total_mb = mem_bytes / 1024 / 1024
+      if (total_mb < 4096) {
+        printf "%d\n", 100
+      } else if (total_mb == 4096) {
+        printf "%d\n", 2048
+      } else {
+        limit_75 = total_mb * 0.75
+        printf "%d\n", limit_75
+      }
+    }')MB"
+  else
+    # Fall back to system memory from /proc/meminfo
+    echo "$(awk '/MemTotal/ {
+      total_mb = $2 / 1024
+      if (total_mb < 4096) {
+        printf "%d\n", 100
+      } else if (total_mb == 4096) {
+        printf "%d\n", 2048
+      } else {
+        limit_75 = total_mb * 0.75
+        printf "%d\n", limit_75
+      }
+    }' /proc/meminfo)MB"
+  fi
 }
 
 set_memory_limit() {
-  declare -A memory_limit_instance_type_map
-  memory_limit_instance_type_map=(
-    ["e2-standard-2"]="6GB"
-    ["e2-standard-4"]="14GB"
-    ["e2-custom-small-1024"]="100MB"
-    ["e2-medium"]="2GB"
-    ["e2-custom-4-8192"]="6GB"
-    ["e2-custom-8-16384"]="13GB"
-    ["e2-custom-16-32768"]="30GB"
-    ["e2-custom-32-65536"]="62GB"
-    ["t2.medium"]="2GB"
-    ["m6i.large"]="6GB"
-    ["m6i.xlarge"]="14GB"
-    ["c6i.xlarge"]="6GB"
-    ["c6i.2xlarge"]="13GB"
-    ["c6i.4xlarge"]="30GB"
-    ["c6i.8xlarge"]="62GB"
-  )
-  if [[ -z $INSTANCE_TYPE ]]; then
-    echo "INSTANCE_TYPE is not set"
+  if [[ -z $MEMORY_LIMIT ]]; then
     MEMORY_LIMIT=$(get_default_memory_limit)
   fi
 
-  instance_size_in_map=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
-
-  if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
-    MEMORY_LIMIT=$instance_size_in_map
-  elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
-    MEMORY_LIMIT=$(get_default_memory_limit)
-    echo "INSTANCE_TYPE is not set. Setting to default memory limit"
-  fi
-  
   echo "Setting maxmemory to $MEMORY_LIMIT"
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET maxmemory $MEMORY_LIMIT
 }

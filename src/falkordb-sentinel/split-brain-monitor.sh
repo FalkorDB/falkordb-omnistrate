@@ -116,53 +116,65 @@ main() {
         redis_exec "$host" "$SENTINEL_PORT" SENTINEL FLUSHCONFIG || true
     }
     
-    # Function to detect and fix self-replication loops
+    # Function to detect and fix self-replication loops (Case 3a)
+    # Takes actual_master (FQDN) as determined by INFO role:master scan — avoids
+    # relying on a single sentinel's view which may itself be stale.
     handle_self_replication() {
-        # Check each node to see if it's slave-of-self
+        local actual_master=$1
         for ((i = 0; i < NUM_REPLICAS; i++)); do
             local node_host="node-${RESOURCE_KEY}-$i"
+            local node_fqdn="${node_host}${INTERNAL_SUFFIX}.${EXTERNAL_DNS_SUFFIX}"
+
+            # Skip the node that is already identified as the actual master
+            if [[ "$node_fqdn" == "$actual_master" ]] || [[ "$actual_master" == "$node_host"* ]]; then
+                continue
+            fi
+
             local info
-            
-            # Get replication info from the node
             info=$(redis_exec "$node_host" "$NODE_PORT" info replication 2>/dev/null) || continue
-            
-            # Only check slaves
-            if [[ "$info" == *"role:slave"* ]]; then
-                local master_host
-                master_host=$(echo "$info" | grep "^master_host:" | cut -d: -f2 | tr -d '\r' | xargs)
-                
-                # Check if replicating from itself (compare hostname part)
-                if [[ "$master_host" == *"node-${RESOURCE_KEY}-$i"* ]]; then
-                    echo "$(date '+%Y-%m-%d %H:%M:%S') - SELF-REPLICATION detected on node-${RESOURCE_KEY}-$i (master_host: $master_host)"
-                    
-                    # Ask sentinel who the master should be
-                    local sentinel_master
-                    sentinel_master=$(get_master_addr "sentinel-${RESOURCE_KEY}-0" 2>/dev/null)
-                    
-                    if [[ -z "$sentinel_master" ]]; then
-                        echo "$(date '+%Y-%m-%d %H:%M:%S') - WARNING: Cannot get master from sentinel, skipping fix for node-${RESOURCE_KEY}-$i"
-                        continue
-                    fi
-                    
-                    # Compare sentinel's choice with this node
-                    local node_fqdn="${node_host}${INTERNAL_SUFFIX}.${EXTERNAL_DNS_SUFFIX}"
-                    
-                    if [[ "$sentinel_master" == "$node_fqdn" ]] || [[ "$sentinel_master" == "$node_host"* ]]; then
-                        # Sentinel says THIS node should be master
-                        echo "$(date '+%Y-%m-%d %H:%M:%S') - Sentinel says ${node_host} should be master, promoting with REPLICAOF NO ONE"
-                        redis_exec "$node_host" "$NODE_PORT" REPLICAOF NO ONE || true
-                    else
-                        # Sentinel says a different node should be master
-                        echo "$(date '+%Y-%m-%d %H:%M:%S') - Sentinel says master is ${sentinel_master}, reconfiguring ${node_host} to replicate from it"
-                        redis_exec "$node_host" "$NODE_PORT" REPLICAOF "$sentinel_master" "$NODE_PORT" || true
-                    fi
-                    
-                    echo "$(date '+%Y-%m-%d %H:%M:%S') - Self-replication fixed for node-${RESOURCE_KEY}-$i"
-                fi
+            [[ "$info" != *"role:slave"* ]] && continue
+
+            local master_host
+            master_host=$(echo "$info" | grep "^master_host:" | cut -d: -f2 | tr -d '\r' | xargs)
+
+            # Detect self-replication: master_host contains this node's own name
+            if [[ "$master_host" == *"node-${RESOURCE_KEY}-$i"* ]]; then
+                echo "$(date '+%Y-%m-%d %H:%M:%S') - SELF-REPLICATION detected on node-${RESOURCE_KEY}-$i (master_host: $master_host), redirecting to actual master $actual_master"
+                redis_exec "$node_host" "$NODE_PORT" REPLICAOF "$actual_master" "$NODE_PORT" || true
             fi
         done
     }
     
+    # Function to ensure all replica nodes are replicating from the correct master (Case 2)
+    fix_replica_replication() {
+        local quorum_master=$1
+        for ((i = 0; i < NUM_REPLICAS; i++)); do
+            local node_host="node-${RESOURCE_KEY}-$i"
+            local node_fqdn="${node_host}${INTERNAL_SUFFIX}.${EXTERNAL_DNS_SUFFIX}"
+            # Skip the master itself
+            if [[ "$node_fqdn" == "$quorum_master" ]] || [[ "$quorum_master" == "$node_host"* ]]; then
+                continue
+            fi
+            local info
+            info=$(redis_exec "$node_host" "$NODE_PORT" info replication 2>/dev/null) || continue
+            local role
+            role=$(echo "$info" | grep "^role:" | tr -d '\r' | cut -d: -f2 | xargs)
+            [[ "$role" != "slave" ]] && continue
+            local current_master
+            current_master=$(echo "$info" | grep "^master_host:" | cut -d: -f2 | tr -d '\r' | xargs)
+            # If master_host is unreadable, skip rather than risk a spurious REPLICAOF
+            [[ -z "$current_master" ]] && continue
+            # Match by exact FQDN, or quorum_master contains current_master short name, or vice-versa
+            if [[ "$current_master" == "$quorum_master" ]] \
+                || [[ "$quorum_master" == *"$current_master"* ]] \
+                || [[ "$current_master" == *"${quorum_master%%.*}"* ]]; then
+                continue
+            fi
+            echo "$(date '+%Y-%m-%d %H:%M:%S') - Replica $node_host is replicating from $current_master instead of $quorum_master, reconfiguring"
+            redis_exec "$node_host" "$NODE_PORT" REPLICAOF "$quorum_master" "$NODE_PORT" || true
+        done
+    }
+
     # Check that all sentinel and node hostnames resolve before taking any action.
     # Returns 1 (and logs a warning) if any hostname is unresolvable.
     all_dns_resolved() {
@@ -219,7 +231,7 @@ main() {
         local actual_master="${actual_masters[0]}"
 
         # Step 3: Check for self-replication and fix it
-        handle_self_replication
+        handle_self_replication "$actual_master"
 
         # Step 4: Collect sentinel views
         local -a sentinel_hosts=("sentinel-${RESOURCE_KEY}-0")
@@ -246,6 +258,8 @@ main() {
             fi
         done
         if [[ "$all_agree" == "true" ]]; then
+            # Sentinels agree on the master — still verify replica replication targets (Case 2)
+            fix_replica_replication "$actual_master"
             return
         fi
 
@@ -281,6 +295,9 @@ main() {
             echo "$(date '+%Y-%m-%d %H:%M:%S') - Sentinel quorum prefers $sentinel_quorum_master but it reports as replica. Trusting actual master $actual_master"
             true_master="$actual_master"
         fi
+
+        # Step 6.5: Ensure all replicas are replicating from true_master (Case 2)
+        fix_replica_replication "$true_master"
 
         # Step 7: Fix any sentinel that disagrees with true_master
         echo "$(date '+%Y-%m-%d %H:%M:%S') - Split brain detected. True master: $true_master"

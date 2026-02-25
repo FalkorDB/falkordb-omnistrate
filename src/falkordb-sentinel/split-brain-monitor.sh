@@ -145,6 +145,26 @@ main() {
         done
     }
     
+    # Returns 0 (true) if any sentinel reports master flags other than "master",
+    # meaning a failover or sdown/odown is actively in progress — skip all intervention.
+    is_failover_in_progress() {
+        local -a all_sentinels=("sentinel-${RESOURCE_KEY}-0")
+        for ((i = 0; i < NUM_REPLICAS; i++)); do
+            all_sentinels+=("node-${RESOURCE_KEY}-$i")
+        done
+
+        for host in "${all_sentinels[@]}"; do
+            local flags
+            flags=$(redis_exec "$host" "$SENTINEL_PORT" SENTINEL MASTER "$MASTER_NAME" 2>/dev/null \
+                | awk '/^flags$/{getline; print; exit}') || continue
+            if [[ -n "$flags" && "$flags" != "master" ]]; then
+                echo "$(date '+%Y-%m-%d %H:%M:%S') - Sentinel $host reports master flags='$flags', sentinel is handling this — skipping intervention"
+                return 0
+            fi
+        done
+        return 1
+    }
+
     # Function to ensure all replica nodes are replicating from the correct master (Case 2)
     fix_replica_replication() {
         local quorum_master=$1
@@ -231,7 +251,14 @@ main() {
         local actual_master="${actual_masters[0]}"
 
         # Step 3: Check for self-replication and fix it
+        # (runs regardless of failover state — self-replication is always wrong)
         handle_self_replication "$actual_master"
+
+        # Gate: if sentinel is actively handling a failover (flags != "master"),
+        # do not intervene with sentinel reconfiguration or replica redirection.
+        if is_failover_in_progress; then
+            return
+        fi
 
         # Step 4: Collect sentinel views
         local -a sentinel_hosts=("sentinel-${RESOURCE_KEY}-0")

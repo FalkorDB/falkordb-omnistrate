@@ -588,23 +588,44 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
   create_user
 
-  # If node should be master, add it to sentinel
+  # If node should be master, add it to sentinel — but only if sentinel does not already
+  # have a *different* node as master (which would mean a failover happened while this node
+  # was restarting and we must not overwrite it).
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
     echo "Adding master to sentinel"
     wait_until_sentinel_host_resolves
-
     wait_until_node_host_resolves $NODE_HOST $NODE_PORT
-    log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
-    res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
-    if [[ $res == *"ERR"* && $res != *"Duplicate master name"* ]]; then
-      echo "Could not add master to sentinel: $res"
-      exit 1
-    fi
 
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
-    redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
+    # Check whether sentinel already knows about a current master.
+    # get-master-addr-by-name returns two lines: line 1 = master hostname, line 2 = master node port (e.g. 6379).
+    # We capture both in one call to avoid a race between two separate queries.
+    _master_addr=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL get-master-addr-by-name $MASTER_NAME 2>/dev/null)
+    sentinel_current_master=$(echo "$_master_addr" | awk 'NR==1{print $1}')
+    master_current_port=$(echo "$_master_addr" | awk 'NR==2{print $1}')
+    master_current_port=${master_current_port:-$NODE_PORT}
+
+    if [[ -n "$sentinel_current_master" && "$sentinel_current_master" != "$NODE_HOST" && "$sentinel_current_master" != "$NODE_HOST_IP" ]]; then
+      # Sentinel already elected a different node as master (e.g. after a failover during
+      # restart).  Register ourselves as a replica of that node instead of overwriting
+      # sentinel's state.
+      echo "Sentinel already has master '$sentinel_current_master:$master_current_port'; this node ($NODE_HOST) will start as replica to avoid overwriting post-failover state"
+      redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING REPLICAOF $sentinel_current_master $master_current_port || true
+      IS_REPLICA=1
+    else
+      # Either no master is registered yet, or sentinel already points to this node — safe
+      # to call SENTINEL MONITOR.
+      log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
+      res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
+      if [[ $res == *"ERR"* && $res != *"Duplicate master name"* ]]; then
+        echo "Could not add master to sentinel: $res"
+        exit 1
+      fi
+
+      redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME auth-pass $ADMIN_PASSWORD
+      redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME failover-timeout $SENTINEL_FAILOVER
+      redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME down-after-milliseconds $SENTINEL_DOWN_AFTER
+      redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL set $MASTER_NAME parallel-syncs 1
+    fi
   fi
 
   # Set maxmemory based on instance type

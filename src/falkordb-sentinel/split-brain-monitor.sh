@@ -209,7 +209,9 @@ main() {
         fi
 
         if [[ ${#actual_masters[@]} -gt 1 ]]; then
-            echo "$(date '+%Y-%m-%d %H:%M:%S') - Multiple masters detected (${actual_masters[*]}). Skipping fix - alert should fire."
+            # Multiple nodes reporting role:master is expected during any failover transition
+            # (the old master has not yet received REPLICAOF from sentinel).  Intervening here
+            # would race with sentinel's own recovery, so we simply skip this cycle silently.
             return
         fi
 

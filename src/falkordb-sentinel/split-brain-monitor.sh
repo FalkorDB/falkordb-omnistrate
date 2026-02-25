@@ -166,9 +166,9 @@ main() {
     # Check that all sentinel and node hostnames resolve before taking any action.
     # Returns 1 (and logs a warning) if any hostname is unresolvable.
     all_dns_resolved() {
-        local hosts_to_check=("sentinel-${RESOURCE_KEY}-0")
+        local hosts_to_check=("sentinel-${RESOURCE_KEY}-0${INTERNAL_SUFFIX}.${EXTERNAL_DNS_SUFFIX}")
         for ((i = 0; i < NUM_REPLICAS; i++)); do
-            hosts_to_check+=("node-${RESOURCE_KEY}-$i")
+            hosts_to_check+=("node-${RESOURCE_KEY}-$i${INTERNAL_SUFFIX}.${EXTERNAL_DNS_SUFFIX}")
         done
 
         for host in "${hosts_to_check[@]}"; do
@@ -228,21 +228,15 @@ main() {
         done
 
         local -a sentinel_views=()
-        local all_nil=true
         for idx in "${!sentinel_hosts[@]}"; do
             local view
             if view=$(get_master_addr "${sentinel_hosts[$idx]}") && [[ -n "$view" ]]; then
                 sentinel_views[$idx]="$view"
-                all_nil=false
             else
-                sentinel_views[$idx]=""
+                echo "$(date '+%Y-%m-%d %H:%M:%S') - ${sentinel_hosts[$idx]} returned nil for master address, cluster not stable yet - skipping"
+                return
             fi
         done
-
-        if [[ "$all_nil" == "true" ]]; then
-            echo "$(date '+%Y-%m-%d %H:%M:%S') - All sentinels returned nil, cluster not stable yet - skipping"
-            return
-        fi
 
         # Step 5: If all sentinels already agree on the actual master, nothing to do
         local all_agree=true
@@ -289,15 +283,13 @@ main() {
             true_master="$actual_master"
         fi
 
-        # Step 7: Fix any sentinel that disagrees with true_master or has nil
+        # Step 7: Fix any sentinel that disagrees with true_master
         echo "$(date '+%Y-%m-%d %H:%M:%S') - Split brain detected. True master: $true_master"
         for idx in "${!sentinel_hosts[@]}"; do
             local host="${sentinel_hosts[$idx]}"
             local view="${sentinel_views[$idx]}"
             if [[ "$view" != "$true_master" ]]; then
-                [[ -z "$view" ]] && \
-                    echo "$(date '+%Y-%m-%d %H:%M:%S') - ${host} has no master (nil), reconfiguring" || \
-                    echo "$(date '+%Y-%m-%d %H:%M:%S') - ${host} has wrong master ($view), reconfiguring"
+                echo "$(date '+%Y-%m-%d %H:%M:%S') - ${host} has wrong master ($view), reconfiguring"
                 resolve_split_brain "$host"
             fi
         done

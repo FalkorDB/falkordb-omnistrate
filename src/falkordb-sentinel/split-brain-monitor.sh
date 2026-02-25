@@ -233,7 +233,6 @@ main() {
             if view=$(get_master_addr "${sentinel_hosts[$idx]}") && [[ -n "$view" ]]; then
                 sentinel_views[$idx]="$view"
             else
-                echo "$(date '+%Y-%m-%d %H:%M:%S') - ${sentinel_hosts[$idx]} returned nil for master address, cluster not stable yet - skipping"
                 return
             fi
         done

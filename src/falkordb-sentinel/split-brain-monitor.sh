@@ -84,6 +84,10 @@ main() {
     readonly SSL_FLAG=$([[ "${TLS:-false}" == "true" ]] && echo "--tls" || echo "")
     readonly RESOURCE_KEY=$([[ "$RESOURCE_ALIAS" =~ .*mz.* ]] && echo "mz" || echo "sz")
     readonly INTERNAL_SUFFIX=$([[ "${NETWORKING_TYPE:-}" == "INTERNAL" ]] && echo "-internal" || echo "")
+    # NUM_REPLICAS is injected by Omnistrate as an environment variable.
+    # The default here preserves the value if already set, or leaves it empty
+    # (which will cause the loop bounds to fail loudly rather than silently misbehave).
+    readonly NUM_REPLICAS=${NUM_REPLICAS:-}
     
     echo "$(date '+%Y-%m-%d %H:%M:%S') - Split-brain monitor started"
 

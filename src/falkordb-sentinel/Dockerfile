@@ -18,11 +18,13 @@ WORKDIR /falkordb
 
 COPY src/falkordb-sentinel/sentinel.conf .
 COPY src/falkordb-sentinel/sentinel-entrypoint.sh /usr/local/bin/
+COPY src/falkordb-sentinel/split-brain-monitor.sh /usr/local/bin/
 RUN mkdir -p /var/lib/falkordb && \
   chown 1000 /var/lib/falkordb && \
   chmod 700 /var/lib/falkordb && \
   chown -R 1000 /var/lib/falkordb && \
-  chmod +x /usr/local/bin/sentinel-entrypoint.sh
+  chmod +x /usr/local/bin/sentinel-entrypoint.sh && \
+  chmod +x /usr/local/bin/split-brain-monitor.sh
 
 ENV FALKORDB_HOME=/var/lib/falkordb
 

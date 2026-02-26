@@ -226,6 +226,24 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   stderr_logfile=$SENTINEL_LOG_FILE_PATH
   " >$DATA_DIR/supervisord.conf
 
+  # Add split-brain-monitor only if NODE_INDEX is 0 and HOSTNAME starts with sentinel-
+  if [[ "$NODE_INDEX" == "0" && "$HOSTNAME" =~ ^sentinel.* ]]; then
+    echo "Adding split-brain-monitor to supervisord configuration"
+    echo "
+  [program:split-brain-monitor]
+  command=/usr/local/bin/split-brain-monitor.sh
+  autorestart=true
+  stdout_logfile=/dev/stdout
+  stdout_logfile_maxbytes=0
+  stderr_logfile=/dev/stderr
+  stderr_logfile_maxbytes=0
+  startretries=3
+  startsecs=10
+    " >>$DATA_DIR/supervisord.conf
+  else
+    echo "Skipping split-brain-monitor (NODE_INDEX=$NODE_INDEX, HOSTNAME=$HOSTNAME)"
+  fi
+
   tail -F $SENTINEL_LOG_FILE_PATH &
 
   supervisord -c $DATA_DIR/supervisord.conf &

@@ -1,21 +1,49 @@
 #!/bin/bash
 set -euo pipefail
 
-# This script continuously monitors and resolves split-brain conditions in Sentinel
-# It runs in a loop and is managed by supervisord
+# This script continuously monitors and resolves split-brain conditions in a Redis Sentinel
+# cluster. It runs in an infinite loop and is managed by supervisord.
+#
+# Cases handled:
+#
+#   Case 1 — Minority of sentinels points to a different node as master
+#             Detected in Steps 4-7: all sentinel views are collected; any that disagree
+#             with the true master (the node actually reporting role:master) are reconfigured
+#             via SENTINEL remove + SENTINEL MONITOR.
+#
+#   Case 2 — A replica, agreed on by the majority of sentinels, is not replicating from
+#             the correct master
+#             Detected in fix_replica_replication(): called at Step 5 (when sentinels agree)
+#             and Step 6.5 (after true master is determined). Issues REPLICAOF to any
+#             slave whose master_host does not match the quorum master.
+#
+#   Case 3a — The sentinel-agreed master is a slave of itself (self-replication loop)
+#             Detected in handle_self_replication(): checks master_host against the node's
+#             own name using exact matching. Issues REPLICAOF <actual_master> to fix it.
+#
+#   Case 3b — The sentinel-agreed master is a slave of another node
+#             Covered by fix_replica_replication() as a subset of Case 2: any node that
+#             sentinel considers master but reports role:slave will be redirected.
+#
+# Safety guards:
+#   - All nodes must respond to PING before any action (Step 1)
+#   - Multiple role:master nodes → skip cycle (sentinel failover in progress, Step 2)
+#   - Sentinel flags != "master" → skip sentinel/replica intervention (is_failover_in_progress)
+#   - Self-replication fix (Step 3) always runs regardless of sentinel state
 
 # Monitoring interval (seconds) - should be well below SENTINEL_DOWN_AFTER (default 30s)
 # so the monitor can detect and fix split-brain conditions within a single failover window.
 readonly MONITORING_INTERVAL=${SPLIT_BRAIN_MONITORING_INTERVAL:-5}
 
 # Function to check if a Redis instance is responding
+# Uses a 5s timeout so a hung connection never blocks the monitoring loop.
 check_redis_connectivity() {
     local host=$1
     local port=$2
     local password=$3
     local ssl_flag=$4
-    
-    redis-cli --no-auth-warning -a "$password" ${ssl_flag} -h "$host" -p "$port" PING &>/dev/null
+
+    timeout 5 redis-cli --no-auth-warning -a "$password" ${ssl_flag} -h "$host" -p "$port" PING &>/dev/null
     return $?
 }
 
@@ -58,6 +86,11 @@ main() {
     readonly INTERNAL_SUFFIX=$([[ "${NETWORKING_TYPE:-}" == "INTERNAL" ]] && echo "-internal" || echo "")
     
     echo "$(date '+%Y-%m-%d %H:%M:%S') - Split-brain monitor started"
+
+    # Debug logger — set DEBUG=true to enable verbose output
+    log_debug() {
+        [[ "${DEBUG:-false}" == "true" ]] && echo "$(date '+%Y-%m-%d %H:%M:%S') [DEBUG] $*" >&2 || true
+    }
     
     # Common Redis CLI options (as array to preserve argument integrity)
     REDIS_OPTS=(--no-auth-warning -a "$adminpass")
@@ -65,21 +98,24 @@ main() {
     readonly REDIS_OPTS
     
     # Function to execute Redis CLI commands with error handling (no retries for monitoring)
+    # Uses a 5s timeout to prevent a hung node from blocking the monitoring cycle.
     redis_exec() {
         local host=$1 port=$2
         shift 2
         local output
         
         set +e
-        output=$(redis-cli "${REDIS_OPTS[@]}" -h "$host" -p "$port" "$@" 2>&1)
+        output=$(timeout 5 redis-cli "${REDIS_OPTS[@]}" -h "$host" -p "$port" "$@" 2>&1)
         local exit_code=$?
         set -e
         
         if [[ $exit_code -eq 0 ]]; then
+            log_debug "redis_exec $host:$port $* -> ok"
             echo "$output"
             return 0
         fi
-        
+
+        log_debug "redis_exec $host:$port $* -> failed (exit $exit_code)"
         return 1
     }
     
@@ -90,12 +126,21 @@ main() {
         local result
         
         # Get the output from redis_exec
-        output=$(redis_exec "$host" "$SENTINEL_PORT" SENTINEL get-master-addr-by-name "$MASTER_NAME" 2>/dev/null) || return 1
-        
+        output=$(redis_exec "$host" "$SENTINEL_PORT" SENTINEL get-master-addr-by-name "$MASTER_NAME" 2>/dev/null) || {
+            log_debug "get_master_addr: $host returned no response"
+            return 1
+        }
+
         # Extract just the hostname (first line) using bash string manipulation to avoid broken pipe
         result="${output%%$'\n'*}"
-        
-        [[ -n "$result" && "$result" != "null" && "$result" != "(nil)" ]] && echo "$result" || return 1
+
+        if [[ -z "$result" || "$result" == "null" || "$result" == "(nil)" ]]; then
+            log_debug "get_master_addr: $host returned nil/empty for $MASTER_NAME"
+            return 1
+        fi
+
+        log_debug "get_master_addr: $host reports master=$result"
+        echo "$result"
     }
     
     # Function to check if node is master
@@ -119,16 +164,13 @@ main() {
     # Function to detect and fix self-replication loops (Case 3a)
     # Takes actual_master (FQDN) as determined by INFO role:master scan — avoids
     # relying on a single sentinel's view which may itself be stale.
+    # Note: we do NOT skip actual_master here — there is a timing window between
+    # Step 2 (which identified it as role:master) and now where an external REPLICAOF
+    # could have demoted it. The role:slave check below is the authoritative gate.
     handle_self_replication() {
         local actual_master=$1
         for ((i = 0; i < NUM_REPLICAS; i++)); do
             local node_host="node-${RESOURCE_KEY}-$i"
-            local node_fqdn="${node_host}${INTERNAL_SUFFIX}.${EXTERNAL_DNS_SUFFIX}"
-
-            # Skip the node that is already identified as the actual master
-            if [[ "$node_fqdn" == "$actual_master" ]] || [[ "$actual_master" == "$node_host"* ]]; then
-                continue
-            fi
 
             local info
             info=$(redis_exec "$node_host" "$NODE_PORT" info replication 2>/dev/null) || continue
@@ -137,9 +179,11 @@ main() {
             local master_host
             master_host=$(echo "$info" | grep "^master_host:" | cut -d: -f2 | tr -d '\r' | xargs)
 
-            # Detect self-replication: master_host contains this node's own name
-            if [[ "$master_host" == *"node-${RESOURCE_KEY}-$i"* ]]; then
-                echo "$(date '+%Y-%m-%d %H:%M:%S') - SELF-REPLICATION detected on node-${RESOURCE_KEY}-$i (master_host: $master_host), redirecting to actual master $actual_master"
+            # Detect self-replication: master_host is exactly this node's short name,
+            # or is an FQDN starting with "<short-name>." (e.g. node-sz-1.instance-xxx.cloud).
+            # Exact matching avoids false positives like node-sz-1 matching node-sz-10.
+            if [[ "$master_host" == "$node_host" ]] || [[ "$master_host" == "$node_host."* ]]; then
+                echo "$(date '+%Y-%m-%d %H:%M:%S') - SELF-REPLICATION detected on $node_host (master_host: $master_host), redirecting to actual master $actual_master"
                 redis_exec "$node_host" "$NODE_PORT" REPLICAOF "$actual_master" "$NODE_PORT" || true
             fi
         done
@@ -161,6 +205,7 @@ main() {
                 echo "$(date '+%Y-%m-%d %H:%M:%S') - Sentinel $host reports master flags='$flags', sentinel is handling this — skipping intervention"
                 return 0
             fi
+            log_debug "is_failover_in_progress: $host flags='$flags' (idle)"
         done
         return 1
     }
@@ -168,11 +213,15 @@ main() {
     # Function to ensure all replica nodes are replicating from the correct master (Case 2)
     fix_replica_replication() {
         local quorum_master=$1
+        local quorum_short="${quorum_master%%.*}"  # short hostname extracted from FQDN
         for ((i = 0; i < NUM_REPLICAS; i++)); do
             local node_host="node-${RESOURCE_KEY}-$i"
             local node_fqdn="${node_host}${INTERNAL_SUFFIX}.${EXTERNAL_DNS_SUFFIX}"
-            # Skip the master itself
-            if [[ "$node_fqdn" == "$quorum_master" ]] || [[ "$quorum_master" == "$node_host"* ]]; then
+            # Skip the master itself — exact FQDN match, or quorum_master is this node's
+            # short name or FQDN (dot-delimited to avoid node-sz-1 matching node-sz-10)
+            if [[ "$node_fqdn" == "$quorum_master" ]] \
+                || [[ "$quorum_master" == "$node_host" ]] \
+                || [[ "$quorum_master" == "$node_host."* ]]; then
                 continue
             fi
             local info
@@ -183,11 +232,13 @@ main() {
             local current_master
             current_master=$(echo "$info" | grep "^master_host:" | cut -d: -f2 | tr -d '\r' | xargs)
             # If master_host is unreadable, skip rather than risk a spurious REPLICAOF
-            [[ -z "$current_master" ]] && continue
-            # Match by exact FQDN, or quorum_master contains current_master short name, or vice-versa
+            [[ -z "$current_master" ]] && { log_debug "fix_replica_replication: $node_host master_host empty, skipping"; continue; }
+            # Exact matching: current_master must equal the full FQDN, the short name,
+            # or an FQDN with the same short-name prefix (dot-delimited).
             if [[ "$current_master" == "$quorum_master" ]] \
-                || [[ "$quorum_master" == *"$current_master"* ]] \
-                || [[ "$current_master" == *"${quorum_master%%.*}"* ]]; then
+                || [[ "$current_master" == "$quorum_short" ]] \
+                || [[ "$current_master" == "$quorum_short."* ]]; then
+                log_debug "fix_replica_replication: $node_host correctly replicating from $current_master"
                 continue
             fi
             echo "$(date '+%Y-%m-%d %H:%M:%S') - Replica $node_host is replicating from $current_master instead of $quorum_master, reconfiguring"
@@ -205,6 +256,7 @@ main() {
 
         for host in "${hosts_to_check[@]}"; do
             if ! getent hosts "$host" &>/dev/null; then
+                log_debug "all_dns_resolved: $host not yet resolvable, skipping cycle"
                 return 1
             fi
         done
@@ -215,14 +267,17 @@ main() {
     check_split_brain() {
         # Step 1: Verify all sentinels and nodes are reachable via ping
         if ! check_redis_connectivity "sentinel-${RESOURCE_KEY}-0" "$SENTINEL_PORT" "$adminpass" "$SSL_FLAG"; then
+            log_debug "check_split_brain: sentinel-${RESOURCE_KEY}-0:${SENTINEL_PORT} unreachable, skipping cycle"
             return
         fi
         for ((i = 0; i < NUM_REPLICAS; i++)); do
             local node_host="node-${RESOURCE_KEY}-$i"
             if ! check_redis_connectivity "$node_host" "$SENTINEL_PORT" "$adminpass" "$SSL_FLAG"; then
+                log_debug "check_split_brain: ${node_host}:${SENTINEL_PORT} (sentinel port) unreachable, skipping cycle"
                 return
             fi
             if ! check_redis_connectivity "$node_host" "$NODE_PORT" "$adminpass" "$SSL_FLAG"; then
+                log_debug "check_split_brain: ${node_host}:${NODE_PORT} (redis port) unreachable, skipping cycle"
                 return
             fi
         done
@@ -237,11 +292,12 @@ main() {
         done
 
         if [[ ${#actual_masters[@]} -eq 0 ]]; then
+            log_debug "check_split_brain: no node reports role:master, skipping cycle"
             return
         fi
 
         if [[ ${#actual_masters[@]} -gt 1 ]]; then
-            # Multiple nodes reporting role:master is expected during any failover transition
+            log_debug "check_split_brain: ${#actual_masters[@]} nodes report role:master (${actual_masters[*]}), failover in progress, skipping cycle"
             # (the old master has not yet received REPLICAOF from sentinel).  Intervening here
             # would race with sentinel's own recovery, so we simply skip this cycle silently.
             return
@@ -249,6 +305,7 @@ main() {
 
         # Exactly one actual master
         local actual_master="${actual_masters[0]}"
+        log_debug "check_split_brain: actual master is $actual_master"
 
         # Step 3: Check for self-replication and fix it
         # (runs regardless of failover state — self-replication is always wrong)
@@ -285,14 +342,16 @@ main() {
             fi
         done
         if [[ "$all_agree" == "true" ]]; then
+            log_debug "check_split_brain: all sentinels agree on $actual_master, checking replica wiring"
             # Sentinels agree on the master — still verify replica replication targets (Case 2)
             fix_replica_replication "$actual_master"
             return
         fi
 
-        # Step 6: Determine true master
-        # a) actual_master = the node reporting role:master (already have it)
-        # b) check if at least two sentinels agree on a master (quorum)
+        # Step 6: Determine true master.
+        # We always trust the node that actually reports role:master via INFO (actual_master).
+        # We additionally compute the sentinel quorum master only to log a warning when
+        # sentinel's majority disagrees with the live state — useful for diagnostics.
         local total_sentinels=${#sentinel_hosts[@]}
         local quorum=$(( (total_sentinels / 2) + 1 ))
 
@@ -310,18 +369,11 @@ main() {
         done
         unset _vote_counts
 
-        local true_master=""
-        if [[ -n "$sentinel_quorum_master" && "$sentinel_quorum_master" == "$actual_master" ]]; then
-            # c) Both INFO and sentinel quorum agree — definite master
-            true_master="$actual_master"
-        elif [[ -z "$sentinel_quorum_master" ]]; then
-            # d) Sentinels do not agree — trust INFO role:master
-            true_master="$actual_master"
-        else
-            # Sentinel quorum picks a node that is actually a replica — sentinel is stale
+        if [[ -n "$sentinel_quorum_master" && "$sentinel_quorum_master" != "$actual_master" ]]; then
             echo "$(date '+%Y-%m-%d %H:%M:%S') - Sentinel quorum prefers $sentinel_quorum_master but it reports as replica. Trusting actual master $actual_master"
-            true_master="$actual_master"
         fi
+
+        local true_master="$actual_master"
 
         # Step 6.5: Ensure all replicas are replicating from true_master (Case 2)
         fix_replica_replication "$true_master"

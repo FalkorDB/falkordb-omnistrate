@@ -2,4 +2,3 @@ __pycache__/
 .omnistrate
 secrets
 grafana-data
-run_singlezone_test.sh

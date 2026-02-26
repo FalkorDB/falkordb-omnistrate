@@ -48,11 +48,25 @@ def add_data(
     instance: OmnistrateFleetInstance, ssl=False, key="test", n=1, network_type="PUBLIC"
 ):
     logging.info(f"Adding {n} data entries to graph '{key}'")
-    db = instance.create_connection(ssl=ssl, force_reconnect=True, network_type=network_type)
-    g = db.select_graph(key)
-    for _ in range(n):
-        g.query("CREATE (n:Person {name: 'Alice'})")
-    logging.debug(f"Successfully added {n} entries to graph '{key}'")
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            db = instance.create_connection(ssl=ssl, force_reconnect=True, network_type=network_type)
+            g = db.select_graph(key)
+            for _ in range(n):
+                g.query("CREATE (n:Person {name: 'Alice'})")
+            logging.debug(f"Successfully added {n} entries to graph '{key}'")
+            return
+        except (ReadOnlyError, Exception) as e:
+            if is_stale_master_error(e):
+                logging.warning(
+                    f"Connection to stale master detected in add_data (attempt {attempt + 1}/{max_retries}): {e}"
+                )
+                if attempt < max_retries - 1:
+                    instance._connection = None
+                    time.sleep(35)  # Wait for sentinel to update (30s down-after + 5s buffer)
+                    continue
+            raise
 
 
 def has_data(

@@ -600,12 +600,14 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
   create_user
 
-  # If node should be master, add it to sentinel
+  # If node should be master, add it to sentinel — but only if sentinel does not already
+  # have a *different* node as master (which would mean a failover happened while this node
+  # was restarting and we must not overwrite it).
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
     echo "Adding master to sentinel"
     wait_until_sentinel_host_resolves
-
     wait_until_node_host_resolves $NODE_HOST $NODE_PORT
+
     log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
     res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
     if [[ $res == *"ERR"* && $res != *"Duplicate master name"* ]]; then

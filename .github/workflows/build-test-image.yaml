@@ -68,7 +68,7 @@ jobs:
             arm: false
             image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
     runs-on: ubuntu-latest
-    # Only create runners for full test mode
+    # Only create runners for tagged releases and scheduled runs
     if: contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full'
     steps:
       - name: Create runners

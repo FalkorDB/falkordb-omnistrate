@@ -68,7 +68,7 @@ jobs:
             arm: false
             image: projects/app-plane-dev-f7a2434f/global/images/gh-runner-debian
     runs-on: ubuntu-latest
-    # Only create runners for tagged releases and scheduled runs
+    # Only create runners for full test mode
     if: contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full'
     steps:
       - name: Create runners
@@ -292,8 +292,12 @@ jobs:
           name: ${{ env.AZURE_NETWORK_NAME }}
 
   test:
-    needs: [create-custom-networks, create-runners]
-    if: always()
+    needs: [omnistrate-update-plans, create-custom-networks, create-runners]
+    if: >-
+      !cancelled() &&
+      needs.omnistrate-update-plans.result == 'success' &&
+      (needs.create-custom-networks.result == 'success' || needs.create-custom-networks.result == 'skipped') &&
+      (needs.create-runners.result == 'success' || needs.create-runners.result == 'skipped')
     runs-on: ${{ (contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full') && matrix.instances.runner_label || 'ubuntu-latest' }}
     strategy:
       fail-fast: false

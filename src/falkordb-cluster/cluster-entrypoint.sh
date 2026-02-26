@@ -74,6 +74,15 @@ fi
 
 if [[ $(basename "$DATA_DIR") != 'data' ]];then DATA_DIR=$DATA_DIR/data;fi 
 
+# If TLS is enabled and selfsigned-ca.crt exists, create a combined CA cert file
+if [[ "$TLS" == "true" ]] && [[ -f "$TLS_MOUNT_PATH/selfsigned-ca.crt" ]]; then
+  if ! cat "$ROOT_CA_PATH" "$TLS_MOUNT_PATH/selfsigned-ca.crt" > "$DATA_DIR/selfsigned-tls-combined.pem"; then
+    echo "Failed to create combined CA cert file"
+    exit 1
+  fi
+  ROOT_CA_PATH="$DATA_DIR/selfsigned-tls-combined.pem"
+fi
+
 DEBUG=${DEBUG:-0}
 REPLACE_NODE_CONF=${REPLACE_NODE_CONF:-0}
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)

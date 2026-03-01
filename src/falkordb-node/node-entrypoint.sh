@@ -580,11 +580,36 @@ if [ "$RUN_NODE" -eq "1" ]; then
       echo "tls-port $NODE_PORT" >>$NODE_CONF_FILE
       echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$NODE_CONF_FILE
       echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$NODE_CONF_FILE
+      echo "tls-client-cert-file $TLS_MOUNT_PATH/selfsigned-tls.crt" >>$NODE_CONF_FILE
+      echo "tls-client-key-file $TLS_MOUNT_PATH/selfsigned-tls.key" >>$NODE_CONF_FILE
       echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
       echo "tls-replication yes" >>$NODE_CONF_FILE
-      echo "tls-auth-clients no" >>$NODE_CONF_FILE
+      echo "tls-auth-clients optional" >>$NODE_CONF_FILE
     else
+      sed -i "s|tls-port .*|tls-port $NODE_PORT|g" "$NODE_CONF_FILE"
+      sed -i "s|tls-cert-file .*|tls-cert-file $TLS_MOUNT_PATH/tls.crt|g" "$NODE_CONF_FILE"
+      sed -i "s|tls-key-file .*|tls-key-file $TLS_MOUNT_PATH/tls.key|g" "$NODE_CONF_FILE"
+      if grep -q "^tls-client-cert-file " "$NODE_CONF_FILE"; then
+        sed -i "s|tls-client-cert-file .*|tls-client-cert-file $TLS_MOUNT_PATH/selfsigned-tls.crt|g" "$NODE_CONF_FILE"
+      else
+        echo "tls-client-cert-file $TLS_MOUNT_PATH/selfsigned-tls.crt" >>$NODE_CONF_FILE
+      fi
+      if grep -q "^tls-client-key-file " "$NODE_CONF_FILE"; then
+        sed -i "s|tls-client-key-file .*|tls-client-key-file $TLS_MOUNT_PATH/selfsigned-tls.key|g" "$NODE_CONF_FILE"
+      else
+        echo "tls-client-key-file $TLS_MOUNT_PATH/selfsigned-tls.key" >>$NODE_CONF_FILE
+      fi
       sed -i "s|tls-ca-cert-file .*|tls-ca-cert-file $ROOT_CA_PATH|g" "$NODE_CONF_FILE"
+      if grep -q "^tls-replication " "$NODE_CONF_FILE"; then
+        sed -i "s|tls-replication .*|tls-replication yes|g" "$NODE_CONF_FILE"
+      else
+        echo "tls-replication yes" >>$NODE_CONF_FILE
+      fi
+      if grep -q "^tls-auth-clients " "$NODE_CONF_FILE"; then
+        sed -i "s|tls-auth-clients .*|tls-auth-clients optional|g" "$NODE_CONF_FILE"
+      else
+        echo "tls-auth-clients optional" >>$NODE_CONF_FILE
+      fi
     fi
   else
     if ! grep -q "^port $NODE_PORT" "$NODE_CONF_FILE"; then
@@ -653,6 +678,11 @@ if [[ "$TLS" == "true" ]]; then
     set -e
     echo 'Refreshing node certificate'
     redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-cert-file $TLS_MOUNT_PATH/tls.crt
+    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-key-file $TLS_MOUNT_PATH/tls.key
+    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-client-cert-file $TLS_MOUNT_PATH/selfsigned-tls.crt
+    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-client-key-file $TLS_MOUNT_PATH/selfsigned-tls.key
+    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-auth-clients optional
+    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-ca-cert-file $ROOT_CA_PATH
     " >$DATA_DIR/cert_rotate_node.sh
     chmod +x $DATA_DIR/cert_rotate_node.sh
   fi

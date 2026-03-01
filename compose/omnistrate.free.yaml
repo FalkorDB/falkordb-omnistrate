@@ -62,7 +62,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           node-f: falkordbPassword
     depends_on:
@@ -104,7 +104,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
       # - key: enableTLS
       #   description: Whether to enable TLS for the database
       #   name: Enable TLS
@@ -144,6 +144,7 @@ services:
       - FALKORDB_USER=$var.falkordbUser
       - DATA_DIR=/var/lib/falkordb
       - INSTANCE_TYPE=e2-custom-small-1024
+      - MEMORY_LIMIT=100MB
       - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
       - FALKORDB_CACHE_SIZE=25
       - FALKORDB_NODE_CREATION_BUFFER=16384
@@ -169,7 +170,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "60m"
             memory: 50Mi
         oom_score_patch:
           imageNameWithTag: busybox:latest

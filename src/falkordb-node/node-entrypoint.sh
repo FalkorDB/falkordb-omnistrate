@@ -71,6 +71,7 @@ FALKORDB_MASTER_PORT_NUMBER=${MASTER_PORT:-6379}
 IS_REPLICA=${IS_REPLICA:-0}
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
+SELFSIGNED_CA_PATH="$TLS_MOUNT_PATH/selfsigned-ca.crt"
 DATA_DIR=${DATA_DIR:-"${FALKORDB_HOME}/data"}
 
 # Add backward compatibility for /data folder
@@ -83,6 +84,15 @@ if [[ "$DATA_DIR" != '/data' ]]; then
 fi
 
 if [[ $(basename "$DATA_DIR") != 'data' ]];then DATA_DIR=$DATA_DIR/data;fi
+
+# If TLS is enabled and selfsigned-ca.crt exists, create a combined CA cert file
+if [[ "$TLS" == "true" ]] && [[ -f "$SELFSIGNED_CA_PATH" ]]; then
+  if ! cat "$ROOT_CA_PATH" "$SELFSIGNED_CA_PATH" > "$DATA_DIR/selfsigned-tls-combined.pem"; then
+    echo "Failed to create combined CA cert file"
+    exit 1
+  fi
+  ROOT_CA_PATH="$DATA_DIR/selfsigned-tls-combined.pem"
+fi
 
 DEBUG=${DEBUG:-0}
 REPLACE_NODE_CONF=${REPLACE_NODE_CONF:-0}
@@ -240,30 +250,54 @@ get_self_host_ip() {
 }
 
 get_default_memory_limit() {
-  echo "$(awk '/MemTotal/ {printf "%d\n", (($2 / 1024 - 2330) > 100 ? ($2 / 1024 - 2330) : 100)}' /proc/meminfo)MB"
+  # Try to get container memory limit from cgroup (v2 then v1)
+  local container_memory_bytes=0
+
+  if [ -f /sys/fs/cgroup/memory.max ]; then
+    # cgroup v2
+    local mem_max=$(cat /sys/fs/cgroup/memory.max)
+    if [ "$mem_max" != "max" ]; then
+      container_memory_bytes=$mem_max
+    fi
+  elif [ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ]; then
+    # cgroup v1
+    container_memory_bytes=$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes)
+  fi
+
+  # If container memory limit is set and reasonable, calculate based on total memory
+  if [ "$container_memory_bytes" -gt 0 ] && [ "$container_memory_bytes" -lt 9223372036854771712 ]; then
+    # Calculate memory limit based on container size:
+    # - <4GB: 100MB
+    # - 4GB: minimum 2GB (50%)
+    # - >4GB: 75% of total
+    echo "$(awk -v mem_bytes="$container_memory_bytes" 'BEGIN {
+      total_mb = mem_bytes / 1024 / 1024
+      if (total_mb < 4096) {
+        printf "%d\n", 100
+      } else if (total_mb == 4096) {
+        printf "%d\n", 2048
+      } else {
+        limit_75 = total_mb * 0.75
+        printf "%d\n", limit_75
+      }
+    }')MB"
+  else
+    # Fall back to system memory from /proc/meminfo
+    echo "$(awk '/MemTotal/ {
+      total_mb = $2 / 1024
+      if (total_mb < 4096) {
+        printf "%d\n", 100
+      } else if (total_mb == 4096) {
+        printf "%d\n", 2048
+      } else {
+        limit_75 = total_mb * 0.75
+        printf "%d\n", limit_75
+      }
+    }' /proc/meminfo)MB"
+  fi
 }
 
 get_memory_limit() {
-
-  declare -A memory_limit_instance_type_map
-  memory_limit_instance_type_map=(
-    ["e2-standard-2"]="6GB"
-    ["e2-standard-4"]="14GB"
-    ["e2-custom-small-1024"]="100MB"
-    ["e2-medium"]="2GB"
-    ["e2-custom-4-8192"]="6GB"
-    ["e2-custom-8-16384"]="13GB"
-    ["e2-custom-16-32768"]="30GB"
-    ["e2-custom-32-65536"]="62GB"
-    ["t2.medium"]="2GB"
-    ["m6i.large"]="6GB"
-    ["m6i.xlarge"]="14GB"
-    ["c6i.xlarge"]="6GB"
-    ["c6i.2xlarge"]="13GB"
-    ["c6i.4xlarge"]="30GB"
-    ["c6i.8xlarge"]="62GB"
-  )
-
   # if memory limit is 1200M or 2200M, set it to 1GB or 2GB respectively
   if [[ $MEMORY_LIMIT == *"M" ]]; then
     if [[ $MEMORY_LIMIT == "1200M" ]]; then
@@ -273,20 +307,10 @@ get_memory_limit() {
     fi
   fi
 
-  if [[ -z $INSTANCE_TYPE && -z $MEMORY_LIMIT ]]; then
-    echo "INSTANCE_TYPE is not set"
+  if [[ -z $MEMORY_LIMIT ]]; then
     MEMORY_LIMIT=$(get_default_memory_limit)
   fi
 
-  instance_size_in_map=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
-
-  if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
-    MEMORY_LIMIT=$instance_size_in_map
-  elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
-    MEMORY_LIMIT=$(get_default_memory_limit)
-    echo "INSTANCE_TYPE is not set. Setting to default memory limit"
-  fi
-    
   echo "Memory Limit: $MEMORY_LIMIT"
 }
 
@@ -410,7 +434,7 @@ create_user() {
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CONFIG SET masterauth $ADMIN_PASSWORD
   fi
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER reset
-  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +READONLY +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +GRAPH.MEMORY +MEMORY +BGREWRITEAOF '+MODULE|LIST'
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +READONLY +MONITOR +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +GRAPH.MEMORY +MEMORY +BGREWRITEAOF '+MODULE|LIST'
   config_rewrite
 }
 
@@ -480,6 +504,30 @@ fix_namespace_in_config_files() {
   else
     echo "INSTANCE_ID not set, skipping namespace fix"
   fi
+  
+  # Fix DNS suffix mismatches when snapshot is restored in different cluster
+  if [[ -n "$DNS_SUFFIX" ]]; then
+    echo "Current DNS suffix: $DNS_SUFFIX"
+    
+    # Escape special sed characters (&, \, /) in DNS_SUFFIX for safe use in replacement string
+    local escaped_dns_suffix=$(echo "$DNS_SUFFIX" | sed 's/[&\\/]/\\&/g')
+    
+    # Check and fix node.conf
+    if [[ -f "$NODE_CONF_FILE" ]]; then
+      # First check if the file contains the current DNS suffix - if so, likely no replacement needed
+      # But we still run the replacement to handle mixed cases where some entries might be outdated
+      echo "Checking node.conf for DNS suffix mismatches"
+      # Replace old DNS suffixes with current one for specific configuration parameters
+      # This regex matches the Omnistrate DNS suffix structure: hc-<ID>.<REGION>.<CLOUD>.<HASH>.<TLD>
+      # Example: hc-abc123.us-central1.gcp.f2e0a955bb84.cloud
+      # Pattern: captures hostname (may contain underscores, must have at least one letter to avoid matching IPs), 
+      # then matches the DNS suffix structure and replaces it with the current DNS suffix
+      # The replacement is idempotent - if DNS suffix is already correct, it stays the same
+      sed -i -E "s/([a-zA-Z0-9_-]*[a-zA-Z][a-zA-Z0-9_-]*)\.hc-[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+\.[a-f0-9]+\.[a-zA-Z]+/\1.${escaped_dns_suffix}/g" "$NODE_CONF_FILE"
+    fi
+  else
+    echo "DNS_SUFFIX not set, skipping DNS suffix fix"
+  fi
 }
 
 # Create log files if they don't exist
@@ -535,6 +583,8 @@ if [ "$RUN_NODE" -eq "1" ]; then
       echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
       echo "tls-replication yes" >>$NODE_CONF_FILE
       echo "tls-auth-clients no" >>$NODE_CONF_FILE
+    else
+      sed -i "s|tls-ca-cert-file .*|tls-ca-cert-file $ROOT_CA_PATH|g" "$NODE_CONF_FILE"
     fi
   else
     if ! grep -q "^port $NODE_PORT" "$NODE_CONF_FILE"; then
@@ -550,12 +600,14 @@ if [ "$RUN_NODE" -eq "1" ]; then
 
   create_user
 
-  # If node should be master, add it to sentinel
+  # If node should be master, add it to sentinel — but only if sentinel does not already
+  # have a *different* node as master (which would mean a failover happened while this node
+  # was restarting and we must not overwrite it).
   if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
     echo "Adding master to sentinel"
     wait_until_sentinel_host_resolves
-
     wait_until_node_host_resolves $NODE_HOST $NODE_PORT
+
     log "Master Name: $MASTER_NAME\nNode Host: $NODE_HOST\nNode Port: $NODE_PORT\nSentinel Quorum: $SENTINEL_QUORUM"
     res=$(redis-cli -h $SENTINEL_HOST -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL monitor $MASTER_NAME $NODE_HOST $NODE_PORT $SENTINEL_QUORUM)
     if [[ $res == *"ERR"* && $res != *"Duplicate master name"* ]]; then

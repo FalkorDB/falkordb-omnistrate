@@ -75,7 +75,7 @@ x-clusterparam: &clusterparam
       type: Password
       modifiable: true
       required: true
-      export: false
+      export: true
     - key: RDBPersistenceConfig
       description: How often to save the RDB file to disk. Check the documentation for more information.
       name: RDB Persistence Config
@@ -191,11 +191,16 @@ x-pre-upgrade-hook: &preupgradehook
     set -euo pipefail
     echo "Running BGREWRITEAOF before upgrade"
 
-    adminpass=$(curl -s   --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt   -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"   https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)/secrets | grep '.*adminpassword.*"$' | awk 'NR==1{print $2}' | base64 -d)
+    if [[ -f /run/secrets/adminpassword ]]; then
+      adminpass=$(cat /run/secrets/adminpassword)
+    else
+      adminpass=$(curl -s   --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt   -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"   https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)/secrets | grep '.*adminpassword.*"$' | awk 'NR==1{print $2}' | tr -d '"' | base64 -d)
+    fi
     if [[ -z "$adminpass" ]]; then
         echo "ERROR: Failed to retrieve admin password from secret. Cannot proceed with Redis operations." >&2
         exit 1
     fi
+
     readonly NODE_PORT="${NODE_PORT:-6379}"
 
     # Build redis-cli options safely
@@ -280,7 +285,12 @@ x-post-upgrade-hook: &postupgradehook
     set -euo pipefail
     # Constants
     readonly LINK="Please refer to the documentation for instructions on how to resolve this issue: https://github.com/FalkorDB/runbooks/blob/main/alerts/SentinelSplitBrainAlertsRunbook.md"
-    adminpass=$(curl -s   --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt   -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"   https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)/secrets | grep '.*adminpassword.*"$' | awk 'NR==1{print $2}' | base64 -d)
+    if [[ -f /run/secrets/adminpassword ]]; then
+      adminpass=$(cat /run/secrets/adminpassword)
+    else
+      adminpass=$(curl -s   --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt   -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"   https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)/secrets | grep '.*adminpassword.*"$' | awk 'NR==1{print $2}' | tr -d '"' | base64 -d)
+    fi
+    
     if [[ -z "$adminpass" ]]; then
         echo "ERROR: Failed to retrieve admin password from secret. Cannot proceed with Redis operations." >&2
         exit 1
@@ -485,7 +495,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           node-s: falkordbPassword
       - key: RDBPersistenceConfig
@@ -666,7 +676,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
       - key: RDBPersistenceConfig
         description: How often to save the RDB file to disk. Check the documentation for more information.
         name: RDB Persistence Config
@@ -835,7 +845,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "200m"
             memory: 50Mi
     x-omnistrate-actionhooks:
       - scope: CLUSTER
@@ -974,7 +984,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           node-sz: falkordbPassword
       - key: RDBPersistenceConfig
@@ -1169,7 +1179,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           sentinel-sz: falkordbPassword
       - key: RDBPersistenceConfig
@@ -1349,7 +1359,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "100m"
             memory: 50Mi
         healthcheck-sentinel:
           imageNameWithTag: $FalkorDBHealthcheckImage
@@ -1361,7 +1371,7 @@ services:
         exporter-sentinel:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "100m"
             memory: 50Mi
           args:
             - "26379"
@@ -1376,9 +1386,9 @@ services:
       - scope: CLUSTER
         type: PRE_UPGRADE
         <<: *preupgradehook
-      - scope: CLUSTER
-        type: POST_UPGRADE
-        <<: *postupgradehook
+      # - scope: CLUSTER
+      #   type: POST_UPGRADE
+      #   <<: *postupgradehook
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -1570,7 +1580,7 @@ services:
         exporter-sentinel:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "200m"
             memory: 50Mi
           args:
             - "26379"
@@ -1591,7 +1601,7 @@ services:
         type: Password
         modifiable: false
         required: true
-        export: false
+        export: true
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1738,7 +1748,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           node-mz: falkordbPassword
       - key: RDBPersistenceConfig
@@ -1932,7 +1942,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           sentinel-mz: falkordbPassword
       - key: RDBPersistenceConfig
@@ -2112,7 +2122,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "100m"
             memory: 50Mi
         healthcheck-sentinel:
           imageNameWithTag: $FalkorDBHealthcheckImage
@@ -2124,7 +2134,7 @@ services:
         exporter-sentinel:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "100m"
             memory: 50Mi
           args:
             - "26379"
@@ -2139,9 +2149,9 @@ services:
       - scope: CLUSTER
         type: PRE_UPGRADE
         <<: *preupgradehook
-      - scope: CLUSTER
-        type: POST_UPGRADE
-        <<: *postupgradehook
+      # - scope: CLUSTER
+      #   type: POST_UPGRADE
+      #   <<: *postupgradehook
       - scope: NODE
         type: STARTUP_CHECK
         commandTemplate: |
@@ -2332,7 +2342,7 @@ services:
         exporter-sentinel:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "200m"
             memory: 50Mi
           args:
             - "26379"
@@ -2353,7 +2363,7 @@ services:
         type: Password
         modifiable: false
         required: true
-        export: false
+        export: true
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -2485,7 +2495,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           cluster-sz: falkordbPassword
       - key: RDBPersistenceConfig
@@ -2695,7 +2705,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "200m"
             memory: 50Mi
           args:
             - "6379"
@@ -2853,7 +2863,7 @@ services:
         type: Password
         modifiable: true
         required: true
-        export: false
+        export: true
         parameterDependencyMap:
           cluster-mz: falkordbPassword
       - key: RDBPersistenceConfig
@@ -3061,7 +3071,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "200m"
             memory: 50Mi
           args:
             - "6379"

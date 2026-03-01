@@ -10,16 +10,26 @@ on:
   pull_request:
     types: [closed]
 
-env: 
-  GCP_NETWORK_NAME: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || inputs.ref-name }}
-  AWS_NETWORK_NAME: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || inputs.ref-name }}
-
 jobs:
   delete-networks:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Compute sanitized network names
+        id: sanitize-networks
+        run: |
+          # Compute branch suffix for network names
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          else
+            BRANCH_NAME="${{ inputs.ref-name }}"
+          fi
+          # Replace / with -
+          SANITIZED_NAME="${BRANCH_NAME//\//-}"
+          echo "GCP_NETWORK_NAME=gcp-network-$SANITIZED_NAME" >> $GITHUB_ENV
+          echo "AWS_NETWORK_NAME=aws-network-$SANITIZED_NAME" >> $GITHUB_ENV
 
       - name: Delete Omnistrate Custom Network - GCP
         uses: ./.github/actions/delete-omnistrate-custom-network
@@ -53,6 +63,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Sanitize tier name
+        id: sanitize-tier
+        run: |
+          # Sanitize tier name by replacing / with -
+          TIER_NAME="${{ matrix.plans.tier-name }}"
+          SANITIZED_TIER_NAME="${TIER_NAME//\//-}"
+          echo "SANITIZED_TIER_NAME=$SANITIZED_TIER_NAME" >> $GITHUB_ENV
+
       - name: Delete Service Plan
         uses: ./.github/actions/delete-omnistrate-service-plan
         continue-on-error: true
@@ -62,4 +80,4 @@ jobs:
           service-id: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
           environment-id: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}
           # The clsosed PR's ref name will be the product tier name
-          product-tier-name: ${{ matrix.plans.tier-name }}
+          product-tier-name: ${{ env.SANITIZED_TIER_NAME }}

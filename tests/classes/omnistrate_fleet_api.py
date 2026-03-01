@@ -57,7 +57,7 @@ class OmnistrateFleetAPI:
             total=20,
             backoff_factor=2,
             status_forcelist=[403, 429, 500, 502, 503, 504],
-            allowed_methods=["GET", "POST", "PUT", "DELETE"],
+            allowed_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
         )
 
         self._session.headers.update(

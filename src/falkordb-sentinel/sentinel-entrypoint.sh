@@ -37,6 +37,7 @@ SENTINEL_HOST=sentinel-$(echo $RESOURCE_ALIAS | cut -d "-" -f 2)-0.$LOCAL_DNS_SU
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
+SELFSIGNED_CA_PATH="$TLS_MOUNT_PATH/selfsigned-ca.crt"
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
 AUTH_CONNECTION_STRING="-a $ADMIN_PASSWORD --no-auth-warning"
 
@@ -55,6 +56,16 @@ if [[ "$DATA_DIR" != '/data' ]]; then
 fi
 
 if [[ $(basename "$DATA_DIR") != 'data' ]]; then DATA_DIR=$DATA_DIR/data; fi
+
+# If TLS is enabled and selfsigned-ca.crt exists, create a combined CA cert file
+if [[ "$TLS" == "true" ]] && [[ -f "$SELFSIGNED_CA_PATH" ]]; then
+  if ! cat "$ROOT_CA_PATH" "$SELFSIGNED_CA_PATH" > "$DATA_DIR/selfsigned-tls-combined.pem"; then
+    echo "Failed to create combined CA cert file"
+    exit 1
+  fi
+  ROOT_CA_PATH="$DATA_DIR/selfsigned-tls-combined.pem"
+  TLS_CONNECTION_STRING="--tls --cacert $ROOT_CA_PATH"
+fi
 
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
@@ -131,6 +142,30 @@ fix_namespace_in_config_files() {
   else
     echo "INSTANCE_ID not set, skipping namespace fix"
   fi
+  
+  # Fix DNS suffix mismatches when snapshot is restored in different cluster
+  if [[ -n "$DNS_SUFFIX" ]]; then
+    echo "Current DNS suffix: $DNS_SUFFIX"
+    
+    # Escape special sed characters (&, \, /) in DNS_SUFFIX for safe use in replacement string
+    local escaped_dns_suffix=$(echo "$DNS_SUFFIX" | sed 's/[&\\/]/\\&/g')
+    
+    # Check and fix sentinel.conf
+    if [[ -f "$SENTINEL_CONF_FILE" ]]; then
+      # First check if the file contains the current DNS suffix - if so, likely no replacement needed
+      # But we still run the replacement to handle mixed cases where some entries might be outdated
+      echo "Checking sentinel.conf for DNS suffix mismatches"
+      # Replace old DNS suffixes with current one for specific configuration parameters
+      # This regex matches the Omnistrate DNS suffix structure: hc-<ID>.<REGION>.<CLOUD>.<HASH>.<TLD>
+      # Example: hc-abc123.us-central1.gcp.f2e0a955bb84.cloud
+      # Pattern: captures hostname (may contain underscores, must have at least one letter to avoid matching IPs), 
+      # then matches the DNS suffix structure and replaces it with the current DNS suffix
+      # The replacement is idempotent - if DNS suffix is already correct, it stays the same
+      sed -i -E "s/([a-zA-Z0-9_-]*[a-zA-Z][a-zA-Z0-9_-]*)\.hc-[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+\.[a-f0-9]+\.[a-zA-Z]+/\1.${escaped_dns_suffix}/g" "$SENTINEL_CONF_FILE"
+    fi
+  else
+    echo "DNS_SUFFIX not set, skipping DNS suffix fix"
+  fi
 }
 
 # If sentinel.conf doesn't exist or $REPLACE_SENTINEL_CONF=1, copy it from /falkordb
@@ -170,6 +205,8 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
       echo "tls-ca-cert-file $ROOT_CA_PATH" >>$SENTINEL_CONF_FILE
       echo "tls-replication yes" >>$SENTINEL_CONF_FILE
       echo "tls-auth-clients no" >>$SENTINEL_CONF_FILE
+    else
+      sed -i "s|tls-ca-cert-file .*|tls-ca-cert-file $ROOT_CA_PATH|g" "$SENTINEL_CONF_FILE"
     fi
   else
     echo "port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE
@@ -201,6 +238,24 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
   stdout_logfile=$SENTINEL_LOG_FILE_PATH
   stderr_logfile=$SENTINEL_LOG_FILE_PATH
   " >$DATA_DIR/supervisord.conf
+
+  # Add split-brain-monitor only if NODE_INDEX is 0 and HOSTNAME starts with sentinel-
+  if [[ "$NODE_INDEX" == "0" && "$HOSTNAME" =~ ^sentinel.* ]]; then
+    echo "Adding split-brain-monitor to supervisord configuration"
+    echo "
+  [program:split-brain-monitor]
+  command=/usr/local/bin/split-brain-monitor.sh
+  autorestart=true
+  stdout_logfile=/dev/stdout
+  stdout_logfile_maxbytes=0
+  stderr_logfile=/dev/stderr
+  stderr_logfile_maxbytes=0
+  startretries=3
+  startsecs=10
+    " >>$DATA_DIR/supervisord.conf
+  else
+    echo "Skipping split-brain-monitor (NODE_INDEX=$NODE_INDEX, HOSTNAME=$HOSTNAME)"
+  fi
 
   tail -F $SENTINEL_LOG_FILE_PATH &
 

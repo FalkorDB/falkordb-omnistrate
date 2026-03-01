@@ -37,6 +37,7 @@ SENTINEL_HOST=sentinel-$(echo $RESOURCE_ALIAS | cut -d "-" -f 2)-0.$LOCAL_DNS_SU
 SENTINEL_PORT=${SENTINEL_PORT:-26379}
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
 TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
+SELFSIGNED_CA_PATH="$TLS_MOUNT_PATH/selfsigned-ca.crt"
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
 AUTH_CONNECTION_STRING="-a $ADMIN_PASSWORD --no-auth-warning"
 
@@ -55,6 +56,16 @@ if [[ "$DATA_DIR" != '/data' ]]; then
 fi
 
 if [[ $(basename "$DATA_DIR") != 'data' ]]; then DATA_DIR=$DATA_DIR/data; fi
+
+# If TLS is enabled and selfsigned-ca.crt exists, create a combined CA cert file
+if [[ "$TLS" == "true" ]] && [[ -f "$SELFSIGNED_CA_PATH" ]]; then
+  if ! cat "$ROOT_CA_PATH" "$SELFSIGNED_CA_PATH" > "$DATA_DIR/selfsigned-tls-combined.pem"; then
+    echo "Failed to create combined CA cert file"
+    exit 1
+  fi
+  ROOT_CA_PATH="$DATA_DIR/selfsigned-tls-combined.pem"
+  TLS_CONNECTION_STRING="--tls --cacert $ROOT_CA_PATH"
+fi
 
 SENTINEL_CONF_FILE=$DATA_DIR/sentinel.conf
 SENTINEL_LOG_FILE_PATH=$(if [[ $SAVE_LOGS_TO_FILE -eq 1 ]]; then echo $DATA_DIR/sentinel_$DATE_NOW.log; else echo ""; fi)
@@ -194,6 +205,8 @@ if [[ "$RUN_SENTINEL" -eq "1" ]] && ([[ "$NODE_INDEX" == "0" || "$NODE_INDEX" ==
       echo "tls-ca-cert-file $ROOT_CA_PATH" >>$SENTINEL_CONF_FILE
       echo "tls-replication yes" >>$SENTINEL_CONF_FILE
       echo "tls-auth-clients no" >>$SENTINEL_CONF_FILE
+    else
+      sed -i "s|tls-ca-cert-file .*|tls-ca-cert-file $ROOT_CA_PATH|g" "$SENTINEL_CONF_FILE"
     fi
   else
     echo "port $SENTINEL_PORT" >>$SENTINEL_CONF_FILE

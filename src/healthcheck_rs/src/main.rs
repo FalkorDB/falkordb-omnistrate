@@ -29,7 +29,7 @@ data:
       "skip_all": false,
       "skip_liveness": false,
       "skip_readiness": false,
-      "skip_startup": true
+      "skip_startup": true                  
     }
 */
 
@@ -51,15 +51,31 @@ struct HealthConfig {
     skip_startup: Option<bool>,
 }
 static TOKIO_RT: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
-    tokio::runtime::Builder::new_current_thread()
+    // Must be multi_thread (even with 1 worker) so that hyper/kube background
+    // tasks (connection-pool keep-alive, idle-connection eviction, TLS session
+    // management, etc.) are driven continuously by the worker thread between
+    // block_on calls.  With new_current_thread those tasks only run *inside*
+    // block_on; between probe invocations they queue up and never drain, which
+    // was the root cause of the observed memory leak.
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(1)
         .enable_all()
         .build()
         .expect("failed to build tokio runtime")
 });
 
+// Persistent kube client — keeps the connection warm and avoids a new TLS
+// handshake on every cache miss.  This is safe because the multi_thread runtime
+// above continuously drains the client's internal cleanup tasks.
 static K8S_CLIENT: Lazy<RwLock<Option<kube::Client>>> = Lazy::new(|| RwLock::new(None));
+
 static HEALTH_CONFIG_CACHE: Lazy<RwLock<Option<(Instant, HealthConfig)>>> =
     Lazy::new(|| RwLock::new(None));
+
+// Compiled once at first use; regex::Regex::new is expensive and must not be
+// called on every probe invocation.
+static REDIS_ROLE_REGEX: Lazy<regex::Regex> =
+    Lazy::new(|| regex::Regex::new(r"role:(\w+)").expect("invalid role regex"));
 
 const HEALTH_CONFIG_TTL: Duration = Duration::from_secs(5);
 
@@ -144,7 +160,7 @@ fn get_health_config_from_configmap() -> Result<HealthConfig, Box<dyn std::error
         let name = env::var("HEALTH_CONFIG_NAME").unwrap_or_else(|_| "health-config".into());
         let ns = get_namespace()?;
 
-        // Bootstrap client once
+        // Bootstrap the persistent client once.
         {
             let mut guard = K8S_CLIENT.write().unwrap();
             if guard.is_none() {
@@ -169,7 +185,7 @@ fn get_health_config_from_configmap() -> Result<HealthConfig, Box<dyn std::error
                     Ok(HealthConfig::default())
                 }
             }
-            Ok(Err(err)) => Ok(HealthConfig::default()),
+            Ok(Err(_)) => Ok(HealthConfig::default()),
             Err(_) => Ok(HealthConfig::default()),
         }
     })?;
@@ -211,10 +227,13 @@ fn parse_health_config_from_data(
         config.skip_startup = Some(skip_startup_str.trim().to_lowercase() == "true");
     }
 
-    // Alternatively, if you want to support JSON format in the configmap:
+    // If a JSON blob is present under "config.json" it takes full precedence
+    // over the individual keys parsed above — the entire struct is replaced.
+    // Use one format or the other; mixing both means individual keys are ignored.
     if let Some(json_config) = data.get("config.json") {
-        if let Ok(parsed_config) = serde_json::from_str::<HealthConfig>(json_config) {
-            return Ok(parsed_config);
+        match serde_json::from_str::<HealthConfig>(json_config) {
+            Ok(parsed_config) => return Ok(parsed_config),
+            Err(e) => eprintln!("healthcheck: failed to parse config.json, falling back to individual keys: {}", e),
         }
     }
 
@@ -292,12 +311,10 @@ fn get_redis_client(is_sentinel: bool) -> Result<redis::Client, redis::RedisErro
     let node_port = get_node_port(is_sentinel);
     let redis_url = get_redis_url(&password, &node_port);
 
-    let client = redis::Client::open(redis_url).map_err(|err| {
+    redis::Client::open(redis_url).map_err(|err| {
         eprintln!("Failed to create Redis client: {}", err);
         err
-    })?;
-
-    return Ok(client);
+    })
 }
 
 fn check_node_readiness(
@@ -368,12 +385,11 @@ fn check_sentinel(con: &mut redis::Connection) -> Result<bool, redis::RedisError
         )));
     }
 
-    return Ok(true);
+    Ok(true)
 }
 
 fn get_redis_role(db_info: &str) -> Result<&str, redis::RedisError> {
-    let role_regex = regex::Regex::new(r"role:(\w+)").unwrap();
-    role_regex
+    REDIS_ROLE_REGEX
         .captures(db_info)
         .and_then(|caps| caps.get(1).map(|m| m.as_str()))
         .ok_or_else(|| redis::RedisError::from((redis::ErrorKind::ResponseError, "Role not found")))

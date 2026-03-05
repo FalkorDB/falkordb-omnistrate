@@ -1,11 +1,12 @@
 use k8s_openapi::api::core::v1::ConfigMap;
-use kube::{Api, Client}; // Removed unused Config import
+use kube::{Api, Client};
 use once_cell::sync::Lazy;
 use rouille::{router, Response, Server};
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::env;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::RwLock;
 use std::time::{Duration, Instant};
 
@@ -79,6 +80,48 @@ static REDIS_ROLE_REGEX: Lazy<regex::Regex> =
 
 const HEALTH_CONFIG_TTL: Duration = Duration::from_secs(5);
 
+// Maximum number of probe requests handled concurrently.  When this is
+// exceeded the handler short-circuits immediately (200 OK for liveness/startup,
+// 503 for readiness) rather than queuing unbounded work.  This caps both thread
+// usage and Tokio task pressure regardless of how hard the caller hammers us.
+//
+// Sizing for the default 30Mi container memory limit:
+//   - Idle base:          ~7Mi
+//   - 8 threads resident: ~0.4Mi
+//   - Active work (8 simultaneous Redis/k8s calls): ~1Mi
+//   - Total peak:         ~8.5Mi = ~28% of 30Mi  → safe headroom
+//
+// Production reality: kubelet + monitor-sidecar together generate <5 req/s
+// with at most 2-5 simultaneous in-flight requests, so 8 is well above real
+// demand.  Override with MAX_IN_FLIGHT env var if needed.
+fn max_in_flight() -> usize {
+    env::var("MAX_IN_FLIGHT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(8)
+}
+
+// Rouille thread-pool cap — each thread reserves an 8Mi virtual stack on Linux
+// (resident pages are smaller but still add up under load).  Keep this equal
+// to MAX_IN_FLIGHT: there is no benefit in having more threads than concurrent
+// request slots.  Override with MAX_ROUILLE_THREADS env var if needed.
+fn max_rouille_threads() -> usize {
+    env::var("MAX_ROUILLE_THREADS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or_else(max_in_flight)
+}
+
+static IN_FLIGHT: AtomicUsize = AtomicUsize::new(0);
+
+/// RAII guard: increments IN_FLIGHT on creation, always decrements on drop.
+struct InFlightGuard;
+impl Drop for InFlightGuard {
+    fn drop(&mut self) {
+        IN_FLIGHT.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let is_sentinel = args.get(1).map_or(false, |arg| arg == "sentinel");
@@ -108,7 +151,9 @@ fn start_health_check_server(is_sentinel: bool) {
             (GET) (/startup) => { handle_health_check_with_config(is_sentinel, |_, _| Ok(true), &redis_client, "startup") },
             _ => Response::empty_404()
         )
-    }).unwrap();
+    })
+    .unwrap()
+    .pool_size(max_rouille_threads());
 
     println!("Listening on {}", server.server_addr());
     server.run();
@@ -127,6 +172,23 @@ where
     if env::var("SKIP_HEALTH_CHECK").as_deref() == Ok("true") {
         return Response::text("OK");
     }
+
+    // Concurrency cap — prevents unbounded memory growth under extreme probe
+    // rates.  The guard decrements IN_FLIGHT automatically when it drops,
+    // covering every return path below.
+    let in_flight = IN_FLIGHT.fetch_add(1, Ordering::Relaxed);
+    if in_flight >= max_in_flight() {
+        IN_FLIGHT.fetch_sub(1, Ordering::Relaxed);
+        eprintln!("healthcheck: overloaded ({} in-flight), short-circuiting /{}", in_flight, check_type);
+        // Liveness/startup: the process is alive, just busy — return OK so
+        // kubelet does not kill us and make things worse.
+        // Readiness: signal that we cannot serve right now.
+        return match check_type {
+            "readiness" => Response::text("Overloaded").with_status_code(503),
+            _ => Response::text("OK"),
+        };
+    }
+    let _guard = InFlightGuard;
 
     // Check configmap overrides
     if let Ok(config) = get_health_config_from_configmap() {

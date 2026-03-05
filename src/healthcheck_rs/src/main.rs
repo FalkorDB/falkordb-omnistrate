@@ -1,11 +1,12 @@
 use k8s_openapi::api::core::v1::ConfigMap;
-use kube::{Api, Client}; // Removed unused Config import
+use kube::{Api, Client};
 use once_cell::sync::Lazy;
 use rouille::{router, Response, Server};
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::env;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::RwLock;
 use std::time::{Duration, Instant};
 
@@ -29,7 +30,7 @@ data:
       "skip_all": false,
       "skip_liveness": false,
       "skip_readiness": false,
-      "skip_startup": true
+      "skip_startup": true                  
     }
 */
 
@@ -51,17 +52,75 @@ struct HealthConfig {
     skip_startup: Option<bool>,
 }
 static TOKIO_RT: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
-    tokio::runtime::Builder::new_current_thread()
+    // Must be multi_thread (even with 1 worker) so that hyper/kube background
+    // tasks (connection-pool keep-alive, idle-connection eviction, TLS session
+    // management, etc.) are driven continuously by the worker thread between
+    // block_on calls.  With new_current_thread those tasks only run *inside*
+    // block_on; between probe invocations they queue up and never drain, which
+    // was the root cause of the observed memory leak.
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(1)
         .enable_all()
         .build()
         .expect("failed to build tokio runtime")
 });
 
+// Persistent kube client — keeps the connection warm and avoids a new TLS
+// handshake on every cache miss.  This is safe because the multi_thread runtime
+// above continuously drains the client's internal cleanup tasks.
 static K8S_CLIENT: Lazy<RwLock<Option<kube::Client>>> = Lazy::new(|| RwLock::new(None));
+
 static HEALTH_CONFIG_CACHE: Lazy<RwLock<Option<(Instant, HealthConfig)>>> =
     Lazy::new(|| RwLock::new(None));
 
+// Compiled once at first use; regex::Regex::new is expensive and must not be
+// called on every probe invocation.
+static REDIS_ROLE_REGEX: Lazy<regex::Regex> =
+    Lazy::new(|| regex::Regex::new(r"role:(\w+)").expect("invalid role regex"));
+
 const HEALTH_CONFIG_TTL: Duration = Duration::from_secs(5);
+
+// Maximum number of probe requests handled concurrently.  When this is
+// exceeded the handler short-circuits immediately (200 OK for liveness/startup,
+// 503 for readiness) rather than queuing unbounded work.  This caps both thread
+// usage and Tokio task pressure regardless of how hard the caller hammers us.
+//
+// Sizing for the default 30Mi container memory limit:
+//   - Idle base:          ~7Mi
+//   - 8 threads resident: ~0.4Mi
+//   - Active work (8 simultaneous Redis/k8s calls): ~1Mi
+//   - Total peak:         ~8.5Mi = ~28% of 30Mi  → safe headroom
+//
+// Production reality: kubelet + monitor-sidecar together generate <5 req/s
+// with at most 2-5 simultaneous in-flight requests, so 8 is well above real
+// demand.  Override with MAX_IN_FLIGHT env var if needed.
+fn max_in_flight() -> usize {
+    env::var("MAX_IN_FLIGHT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(8)
+}
+
+// Rouille thread-pool cap — each thread reserves an 8Mi virtual stack on Linux
+// (resident pages are smaller but still add up under load).  Keep this equal
+// to MAX_IN_FLIGHT: there is no benefit in having more threads than concurrent
+// request slots.  Override with MAX_ROUILLE_THREADS env var if needed.
+fn max_rouille_threads() -> usize {
+    env::var("MAX_ROUILLE_THREADS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or_else(max_in_flight)
+}
+
+static IN_FLIGHT: AtomicUsize = AtomicUsize::new(0);
+
+/// RAII guard: increments IN_FLIGHT on creation, always decrements on drop.
+struct InFlightGuard;
+impl Drop for InFlightGuard {
+    fn drop(&mut self) {
+        IN_FLIGHT.fetch_sub(1, Ordering::Relaxed);
+    }
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -92,7 +151,9 @@ fn start_health_check_server(is_sentinel: bool) {
             (GET) (/startup) => { handle_health_check_with_config(is_sentinel, |_, _| Ok(true), &redis_client, "startup") },
             _ => Response::empty_404()
         )
-    }).unwrap();
+    })
+    .unwrap()
+    .pool_size(max_rouille_threads());
 
     println!("Listening on {}", server.server_addr());
     server.run();
@@ -111,6 +172,23 @@ where
     if env::var("SKIP_HEALTH_CHECK").as_deref() == Ok("true") {
         return Response::text("OK");
     }
+
+    // Concurrency cap — prevents unbounded memory growth under extreme probe
+    // rates.  The guard decrements IN_FLIGHT automatically when it drops,
+    // covering every return path below.
+    let in_flight = IN_FLIGHT.fetch_add(1, Ordering::Relaxed);
+    if in_flight >= max_in_flight() {
+        IN_FLIGHT.fetch_sub(1, Ordering::Relaxed);
+        eprintln!("healthcheck: overloaded ({} in-flight), short-circuiting /{}", in_flight, check_type);
+        // Liveness/startup: the process is alive, just busy — return OK so
+        // kubelet does not kill us and make things worse.
+        // Readiness: signal that we cannot serve right now.
+        return match check_type {
+            "readiness" => Response::text("Overloaded").with_status_code(503),
+            _ => Response::text("OK"),
+        };
+    }
+    let _guard = InFlightGuard;
 
     // Check configmap overrides
     if let Ok(config) = get_health_config_from_configmap() {
@@ -144,7 +222,7 @@ fn get_health_config_from_configmap() -> Result<HealthConfig, Box<dyn std::error
         let name = env::var("HEALTH_CONFIG_NAME").unwrap_or_else(|_| "health-config".into());
         let ns = get_namespace()?;
 
-        // Bootstrap client once
+        // Bootstrap the persistent client once.
         {
             let mut guard = K8S_CLIENT.write().unwrap();
             if guard.is_none() {
@@ -169,7 +247,7 @@ fn get_health_config_from_configmap() -> Result<HealthConfig, Box<dyn std::error
                     Ok(HealthConfig::default())
                 }
             }
-            Ok(Err(err)) => Ok(HealthConfig::default()),
+            Ok(Err(_)) => Ok(HealthConfig::default()),
             Err(_) => Ok(HealthConfig::default()),
         }
     })?;
@@ -211,10 +289,13 @@ fn parse_health_config_from_data(
         config.skip_startup = Some(skip_startup_str.trim().to_lowercase() == "true");
     }
 
-    // Alternatively, if you want to support JSON format in the configmap:
+    // If a JSON blob is present under "config.json" it takes full precedence
+    // over the individual keys parsed above — the entire struct is replaced.
+    // Use one format or the other; mixing both means individual keys are ignored.
     if let Some(json_config) = data.get("config.json") {
-        if let Ok(parsed_config) = serde_json::from_str::<HealthConfig>(json_config) {
-            return Ok(parsed_config);
+        match serde_json::from_str::<HealthConfig>(json_config) {
+            Ok(parsed_config) => return Ok(parsed_config),
+            Err(e) => eprintln!("healthcheck: failed to parse config.json, falling back to individual keys: {}", e),
         }
     }
 
@@ -292,12 +373,10 @@ fn get_redis_client(is_sentinel: bool) -> Result<redis::Client, redis::RedisErro
     let node_port = get_node_port(is_sentinel);
     let redis_url = get_redis_url(&password, &node_port);
 
-    let client = redis::Client::open(redis_url).map_err(|err| {
+    redis::Client::open(redis_url).map_err(|err| {
         eprintln!("Failed to create Redis client: {}", err);
         err
-    })?;
-
-    return Ok(client);
+    })
 }
 
 fn check_node_readiness(
@@ -368,12 +447,11 @@ fn check_sentinel(con: &mut redis::Connection) -> Result<bool, redis::RedisError
         )));
     }
 
-    return Ok(true);
+    Ok(true)
 }
 
 fn get_redis_role(db_info: &str) -> Result<&str, redis::RedisError> {
-    let role_regex = regex::Regex::new(r"role:(\w+)").unwrap();
-    role_regex
+    REDIS_ROLE_REGEX
         .captures(db_info)
         .and_then(|caps| caps.get(1).map(|m| m.as_str()))
         .ok_or_else(|| redis::RedisError::from((redis::ErrorKind::ResponseError, "Role not found")))

@@ -16,6 +16,8 @@ RUN apt-get update -y \
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
 
-COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck /usr/local/bin/healthcheck
+COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck     /usr/local/bin/healthcheck
+COPY --from=healthcheck_builder /healthcheck/target/release/healthcheck_old /usr/local/bin/healthcheck_old
+COPY --from=healthcheck_builder /healthcheck/target/release/stress           /usr/local/bin/stress
 
 ENTRYPOINT ["/usr/local/bin/healthcheck"]

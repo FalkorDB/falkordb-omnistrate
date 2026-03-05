@@ -518,7 +518,7 @@ services:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
             cpu: "20m"
-            memory: 30Mi
+            memory: 50Mi
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:

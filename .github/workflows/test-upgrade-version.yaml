@@ -1,0 +1,189 @@
+name: Test Upgrade Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      service_id:
+        description: "Omnistrate service ID (overrides OMNISTRATE_SERVICE_ID var)"
+        required: false
+        type: string
+      environment_id:
+        description: "Omnistrate environment ID (overrides OMNISTRATE_ENVIRONMENT_ID var)"
+        required: false
+        type: string
+
+      free_new_version:
+        description: "Free — target version (e.g. 61.0)"
+        required: false
+        type: string
+      free_old_versions:
+        description: "Free — comma-separated source versions (e.g. 58.0,59.0)"
+        required: false
+        type: string
+
+      startup_new_version:
+        description: "Startup — target version (e.g. 61.0)"
+        required: false
+        type: string
+      startup_old_versions:
+        description: "Startup — comma-separated source versions (e.g. 58.0,59.0)"
+        required: false
+        type: string
+
+      pro_new_version:
+        description: "Pro — target version (e.g. 61.0)"
+        required: false
+        type: string
+      pro_old_versions:
+        description: "Pro — comma-separated source versions (e.g. 58.0,59.0)"
+        required: false
+        type: string
+
+      enterprise_new_version:
+        description: "Enterprise — target version (e.g. 61.0)"
+        required: false
+        type: string
+      enterprise_old_versions:
+        description: "Enterprise — comma-separated source versions (e.g. 58.0,59.0)"
+        required: false
+        type: string
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Generate test matrix
+        id: set-matrix
+        run: |
+          python3 - <<'EOF'
+          import json, os
+
+          def versions(old_str):
+              return [v.strip() for v in old_str.split(',') if v.strip()] if old_str.strip() else []
+
+          # Per-tier new/old versions from inputs
+          tier_versions = {
+              "FalkorDB Free": (
+                  "${{ inputs.free_new_version }}",
+                  versions("${{ inputs.free_old_versions }}"),
+              ),
+              "FalkorDB Startup": (
+                  "${{ inputs.startup_new_version }}",
+                  versions("${{ inputs.startup_old_versions }}"),
+              ),
+              "FalkorDB Pro": (
+                  "${{ inputs.pro_new_version }}",
+                  versions("${{ inputs.pro_old_versions }}"),
+              ),
+              "FalkorDB Enterprise": (
+                  "${{ inputs.enterprise_new_version }}",
+                  versions("${{ inputs.enterprise_old_versions }}"),
+              ),
+          }
+
+          # (ref_name, resource_key, instance_name, instance_type, host_count, cluster_replicas, custom_network)
+          tiers = [
+              # Free – only one resource key
+              ("FalkorDB Free",       "free",                "free-upgradeTest",                   "t2.medium", "",  "",  ""),
+              # Startup – only standalone
+              ("FalkorDB Startup",    "standalone",          "startup-upgradeTest",                "t2.medium", "",  "",  ""),
+              # Pro – standalone, single-Zone, multi-Zone (m6i.large, no custom network)
+              ("FalkorDB Pro",        "standalone",          "pro-standalone-upgradeTest",         "m6i.large", "",  "",  ""),
+              ("FalkorDB Pro",        "single-Zone",         "pro-single-zone-upgradeTest",        "m6i.large", "",  "",  ""),
+              ("FalkorDB Pro",        "multi-Zone",          "pro-multi-zone-upgradeTest",         "m6i.large", "",  "",  ""),
+              # Enterprise – standalone, single-Zone, multi-Zone, cluster variants (t2.medium, custom network)
+              ("FalkorDB Enterprise", "standalone",          "enterprise-standalone-upgradeTest",  "t2.medium", "",  "",  "aws-network-main"),
+              ("FalkorDB Enterprise", "single-Zone",         "enterprise-single-zone-upgradeTest", "t2.medium", "",  "",  "aws-network-main"),
+              ("FalkorDB Enterprise", "multi-Zone",          "enterprise-multi-zone-upgradeTest",  "t2.medium", "",  "",  "aws-network-main"),
+              ("FalkorDB Enterprise", "cluster-Single-Zone", "enterprise-cluster-sz-upgradeTest",  "t2.medium", "6", "1", "aws-network-main"),
+              ("FalkorDB Enterprise", "cluster-Multi-Zone",  "enterprise-cluster-mz-upgradeTest",  "t2.medium", "6", "1", "aws-network-main"),
+          ]
+
+          entries = []
+          for ref_name, rkey, iname, itype, hcount, creplicas, cnet in tiers:
+              new_version, old_version_list = tier_versions[ref_name]
+              if not new_version or not old_version_list:
+                  continue
+              for old_version in old_version_list:
+                  entries.append({
+                      "name":             f"{ref_name}/{rkey} — {old_version} → {new_version}",
+                      "old_version":      old_version,
+                      "new_version":      new_version,
+                      "ref_name":         ref_name,
+                      "resource_key":     rkey,
+                      "instance_name":    iname,
+                      "instance_type":    itype,
+                      "host_count":       hcount,
+                      "cluster_replicas": creplicas,
+                      "custom_network":   cnet,
+                  })
+
+          if not entries:
+              raise SystemExit("No test matrix entries generated — check that at least one tier has both new and old versions set.")
+
+          matrix = json.dumps({"include": entries})
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write(f"matrix={matrix}\n")
+          EOF
+
+  test-upgrade:
+    name: ${{ matrix.name }}
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Cache Poetry virtualenv
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+
+      - name: Install Poetry and dependencies
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
+          poetry install
+
+      - name: Run upgrade test
+        env:
+          OLD_VERSION:     ${{ matrix.old_version }}
+          NEW_VERSION:     ${{ matrix.new_version }}
+          REF_NAME:        ${{ matrix.ref_name }}
+          SUBSCRIPTION_ID: ${{ vars.SUBSCRIPTION_ID }}
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+
+          SERVICE_ID="${{ inputs.service_id || vars.OMNISTRATE_SERVICE_ID }}"
+          ENVIRONMENT_ID="${{ inputs.environment_id || vars.OMNISTRATE_ENVIRONMENT_ID }}"
+
+          EXTRA_ARGS=()
+          [[ -n "${{ matrix.host_count }}" ]]       && EXTRA_ARGS+=(--host-count       "${{ matrix.host_count }}")
+          [[ -n "${{ matrix.cluster_replicas }}" ]] && EXTRA_ARGS+=(--cluster-replicas "${{ matrix.cluster_replicas }}")
+          [[ -n "${{ matrix.custom_network }}" ]]   && EXTRA_ARGS+=(--custom-network   "${{ matrix.custom_network }}")
+
+          poetry run python -u tests/test_upgrade_version.py \
+            "${{ secrets.OMNISTRATE_USERNAME }}" \
+            "${{ secrets.OMNISTRATE_PASSWORD }}" \
+            aws us-east-2 \
+            --service-id     "$SERVICE_ID" \
+            --environment-id "$ENVIRONMENT_ID" \
+            --resource-key   "${{ matrix.resource_key }}" \
+            --instance-name  "${{ matrix.instance_name }}" \
+            --instance-type  "${{ matrix.instance_type }}" \
+            "${EXTRA_ARGS[@]}"

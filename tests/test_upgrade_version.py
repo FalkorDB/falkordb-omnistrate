@@ -183,7 +183,7 @@ def test_upgrade_version():
             AOFPersistenceConfig=args.aof_config,
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
-            product_tier_version=last_tier.version,
+            product_tier_version=os.getenv("OLD_VERSION"),
             custom_network_id=network.network_id if network else None,
         )
 
@@ -202,7 +202,7 @@ def test_upgrade_version():
         thread_signal = None
         error_signal = None
         thread = None
-        if "standalone" not in args.instance_name:
+        if "standalone" not in args.instance_name and "free" not in args.instance_name:
             thread_signal = threading.Event()
             error_signal = threading.Event()
             thread = threading.Thread(
@@ -216,12 +216,12 @@ def test_upgrade_version():
         instance.upgrade(
             service_id=args.service_id,
             product_tier_id=product_tier.product_tier_id,
-            source_version=last_tier.version,
-            target_version=preferred_tier.version,
+            source_version=os.getenv("OLD_VERSION"),
+            target_version=os.getenv("NEW_VERSION"),
             wait_until_ready=True,
         )
 
-        if "standalone" not in args.instance_name:
+        if "standalone" not in args.instance_name and "free" not in args.instance_name:
             thread_signal.set()
             thread.join()
 
@@ -238,7 +238,7 @@ def test_upgrade_version():
     # 7. Delete the instance
     instance.delete(False)
 
-    if "standalone" not in args.instance_name and error_signal.is_set():
+    if "standalone" not in args.instance_name and "free" not in args.instance_name and error_signal.is_set():
         raise ValueError("Test failed")
     else:
         logging.info("Test passed")

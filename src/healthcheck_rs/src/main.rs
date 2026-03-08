@@ -1,13 +1,15 @@
 use k8s_openapi::api::core::v1::ConfigMap;
 use kube::{Api, Client};
 use once_cell::sync::Lazy;
-use rouille::{router, Response, Server};
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::env;
+use std::io::{BufRead, BufReader, Write};
+use std::net::{TcpListener, TcpStream};
+use std::sync::{Arc, Mutex, RwLock};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Mutex, RwLock};
+use std::thread;
 use std::time::{Duration, Instant};
 
 // Example ConfigMap structure for health checks
@@ -107,17 +109,18 @@ static REDIS_ROLE_REGEX: Lazy<regex::Regex> =
 
 const HEALTH_CONFIG_TTL: Duration = Duration::from_secs(5);
 
-// Maximum number of probe requests handled concurrently.  When this is
-// exceeded the handler short-circuits immediately (200 OK for liveness/startup,
-// 503 for readiness) rather than queuing unbounded work.  This caps both thread
-// usage and Tokio task pressure regardless of how hard the caller hammers us.
+// --- Connection model (pre-threaded TCP server) ---
+// We spin up exactly max_connections() OS threads, each blocking on accept()
+// on a shared Arc<TcpListener>.  A connection is only accepted when a thread
+// is free to handle it.  This means:
 //
-// --- Connection model ---
-// Rouille uses a thread-per-connection model: one OS thread handles exactly one
-// TCP connection at a time (including HTTP/1.1 keep-alive).  Therefore
-// pool_size(N) is a hard TCP-connection limit: at most N connections are ever
-// processed simultaneously; any additional accepted sockets wait in the OS
-// backlog until a thread frees up.
+//   • At most max_connections() connections ever exist inside the process.
+//   • Additional connections queue in the OS kernel backlog (default ~128).
+//   • Beyond that the kernel issues TCP RST — the connection is rejected
+//     before our process even knows it existed.
+//   • There is NO extra in-process accept queue (unlike rouille + tiny_http
+//     which runs a background accept loop that eagerly ingests all connections
+//     into an unbounded work queue, causing the memory spike you observed).
 //
 // Known callers and their connection budgets:
 //   - kubelet liveness / readiness / startup probes  → up to 3 connections
@@ -167,7 +170,7 @@ fn main() {
 }
 
 fn start_health_check_server(is_sentinel: bool) {
-    let redis_client = get_redis_client(is_sentinel).unwrap();
+    let redis_client = Arc::new(get_redis_client(is_sentinel).unwrap());
     let port = env::var(if is_sentinel {
         "HEALTH_CHECK_PORT_SENTINEL"
     } else {
@@ -182,21 +185,91 @@ fn start_health_check_server(is_sentinel: bool) {
     });
 
     let addr = format!("localhost:{}", port);
-    let server = Server::new(addr, move |request| {
-        router!(request,
-            (GET) (/liveness) => { handle_health_check_with_config(is_sentinel, check_handler_liveness, &redis_client, "liveness") },
-            (GET) (/readiness) => { handle_health_check_with_config(is_sentinel, check_handler_readiness, &redis_client, "readiness") },
-            (GET) (/startup) => { handle_health_check_with_config(is_sentinel, |_, _| Ok(true), &redis_client, "startup") },
-            _ => Response::empty_404()
-        )
-    })
-    .unwrap()
-    // pool_size == TCP connection limit (1 thread per connection in rouille).
-    .pool_size(max_connections());
+    let listener = Arc::new(TcpListener::bind(&addr).expect("failed to bind port"));
+    println!(
+        "Listening on {} (max_connections={}, max_in_flight={})",
+        addr,
+        max_connections(),
+        max_in_flight()
+    );
 
-    println!("Listening on {} (max_connections={}, max_in_flight={})",
-        server.server_addr(), max_connections(), max_in_flight());
-    server.run();
+    // Spawn exactly max_connections() threads; each blocks on accept().
+    // A new connection is only dequeued from the OS backlog when a thread is
+    // free — no unbounded in-process queue, no memory accumulation.
+    let handles: Vec<_> = (0..max_connections())
+        .map(|_| {
+            let listener = listener.clone();
+            let redis_client = redis_client.clone();
+            thread::spawn(move || loop {
+                match listener.accept() {
+                    Ok((stream, _)) => serve_connection(stream, is_sentinel, &redis_client),
+                    Err(e) => eprintln!("healthcheck: accept error: {e}"),
+                }
+            })
+        })
+        .collect();
+
+    for h in handles {
+        let _ = h.join();
+    }
+}
+
+/// Handle one TCP connection: parse the HTTP request line, dispatch to the
+/// appropriate health-check handler, and write a single HTTP/1.1 response.
+/// Always sets Connection: close so the thread is freed immediately after.
+fn serve_connection(mut stream: TcpStream, is_sentinel: bool, redis_client: &redis::Client) {
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
+
+    // BufReader borrows stream mutably; the inner block limits the borrow so
+    // we can write to stream afterwards.
+    let path = {
+        let mut reader = BufReader::new(&mut stream);
+        let mut request_line = String::new();
+        if reader.read_line(&mut request_line).unwrap_or(0) == 0 {
+            return;
+        }
+        // Drain headers until the blank line separating headers from body.
+        loop {
+            let mut line = String::new();
+            match reader.read_line(&mut line) {
+                Ok(0) | Err(_) => return,
+                Ok(_) if line == "\r\n" || line == "\n" => break,
+                _ => {}
+            }
+        }
+        // Extract path from "GET /path HTTP/1.x"
+        request_line
+            .splitn(3, ' ')
+            .nth(1)
+            .unwrap_or("")
+            .to_owned()
+    };
+
+    let (status, body) = match path.as_str() {
+        "/liveness" => handle_health_check_with_config(
+            is_sentinel, check_handler_liveness, redis_client, "liveness",
+        ),
+        "/readiness" => handle_health_check_with_config(
+            is_sentinel, check_handler_readiness, redis_client, "readiness",
+        ),
+        "/startup" => handle_health_check_with_config(
+            is_sentinel, |_, _| Ok(true), redis_client, "startup",
+        ),
+        _ => (404u16, "Not Found"),
+    };
+
+    let reason = match status {
+        200 => "OK",
+        503 => "Service Unavailable",
+        404 => "Not Found",
+        _ => "Internal Server Error",
+    };
+    let _ = write!(
+        stream,
+        "HTTP/1.1 {status} {reason}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    );
 }
 
 fn handle_health_check_with_config<F>(
@@ -204,13 +277,13 @@ fn handle_health_check_with_config<F>(
     check_fn: F,
     redis_pool: &redis::Client,
     check_type: &str,
-) -> Response
+) -> (u16, &'static str)
 where
     F: Fn(bool, &redis::Client) -> Result<bool, redis::RedisError>,
 {
     // Check legacy environment variable first
     if env::var("SKIP_HEALTH_CHECK").as_deref() == Ok("true") {
-        return Response::text("OK");
+        return (200, "OK");
     }
 
     // Concurrency cap — prevents unbounded memory growth under extreme probe
@@ -224,8 +297,8 @@ where
         // kubelet does not kill us and make things worse.
         // Readiness: signal that we cannot serve right now.
         return match check_type {
-            "readiness" => Response::text("Overloaded").with_status_code(503),
-            _ => Response::text("OK"),
+            "readiness" => (503, "Overloaded"),
+            _ => (200, "OK"),
         };
     }
     let _guard = InFlightGuard;
@@ -233,20 +306,19 @@ where
     // Check configmap overrides
     if let Ok(config) = get_health_config_from_configmap() {
         if config.skip_all.unwrap_or(false) {
-            return Response::text("OK");
+            return (200, "OK");
         }
-
         match check_type {
-            "liveness" if config.skip_liveness.unwrap_or(false) => return Response::text("OK"),
-            "readiness" if config.skip_readiness.unwrap_or(false) => return Response::text("OK"),
-            "startup" if config.skip_startup.unwrap_or(false) => return Response::text("OK"),
+            "liveness" if config.skip_liveness.unwrap_or(false) => return (200, "OK"),
+            "readiness" if config.skip_readiness.unwrap_or(false) => return (200, "OK"),
+            "startup" if config.skip_startup.unwrap_or(false) => return (200, "OK"),
             _ => {}
         }
     }
 
     match check_fn(is_sentinel, redis_pool) {
-        Ok(true) => Response::text("OK"),
-        _ => Response::text("Not ready").with_status_code(500),
+        Ok(true) => (200, "OK"),
+        _ => (500, "Not ready"),
     }
 }
 

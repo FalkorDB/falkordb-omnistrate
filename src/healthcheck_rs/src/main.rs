@@ -365,8 +365,14 @@ fn get_health_config_from_configmap() -> Result<HealthConfig, Box<dyn std::error
                     Ok(HealthConfig::default())
                 }
             }
-            Ok(Err(_)) => Ok(HealthConfig::default()),
-            Err(_) => Ok(HealthConfig::default()),
+            Ok(Err(e)) => {
+                eprintln!("healthcheck: Kubernetes API error fetching ConfigMap \"{}\": {}; using defaults.", name, e);
+                Ok(HealthConfig::default())
+            }
+            Err(e) => {
+                eprintln!("healthcheck: timed out fetching ConfigMap \"{}\": {}; using defaults.", name, e);
+                Ok(HealthConfig::default())
+            }
         }
     })?;
 

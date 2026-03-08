@@ -466,7 +466,7 @@ fn check_handler_readiness(
         }
         let db_info: String = redis::cmd("INFO").query(con)?;
         if db_info.contains("cluster_enabled:1") {
-            return get_status_from_cluster_node_readiness(con);
+            return get_status_from_cluster_node_readiness(&db_info, con);
         }
         check_node_readiness(&db_info, con)
     })

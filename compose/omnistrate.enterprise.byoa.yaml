@@ -841,7 +841,7 @@ services:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
             cpu: "20m"
-            memory: 50Mi
+            memory: 30Mi
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
@@ -1355,7 +1355,7 @@ services:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
             cpu: "20m"
-            memory: 50Mi
+            memory: 30Mi
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
@@ -2118,7 +2118,7 @@ services:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
             cpu: "20m"
-            memory: 50Mi
+            memory: 30Mi
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
@@ -2701,7 +2701,7 @@ services:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
             cpu: "20m"
-            memory: 50Mi
+            memory: 30Mi
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
@@ -3067,7 +3067,7 @@ services:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
             cpu: "20m"
-            memory: 50Mi
+            memory: 30Mi
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:

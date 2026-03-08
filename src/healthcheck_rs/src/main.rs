@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::env;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::RwLock;
+use std::sync::{Mutex, RwLock};
 use std::time::{Duration, Instant};
 
 // Example ConfigMap structure for health checks
@@ -70,6 +70,33 @@ static TOKIO_RT: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
 // above continuously drains the client's internal cleanup tasks.
 static K8S_CLIENT: Lazy<RwLock<Option<kube::Client>>> = Lazy::new(|| RwLock::new(None));
 
+// Single persistent Redis connection — all probes share exactly one TCP
+// connection to Redis.  Protected by a Mutex so only one probe issues a Redis
+// command at a time.  If the connection is broken the error path drops it so
+// the next probe re-establishes it transparently via get_connection().
+static REDIS_CONN: Lazy<Mutex<Option<redis::Connection>>> = Lazy::new(|| Mutex::new(None));
+
+/// Runs `f` against the single shared Redis connection, reconnecting
+/// automatically if the connection is broken.
+fn with_redis_conn<T, F>(client: &redis::Client, f: F) -> Result<T, redis::RedisError>
+where
+    F: FnOnce(&mut redis::Connection) -> Result<T, redis::RedisError>,
+{
+    let mut guard = REDIS_CONN.lock().unwrap_or_else(|e| e.into_inner());
+    if guard.is_none() {
+        *guard = Some(client.get_connection()?);
+    }
+    let conn = guard.as_mut().unwrap();
+    match f(conn) {
+        Ok(v) => Ok(v),
+        Err(e) => {
+            // Drop the connection so the next probe reconnects cleanly.
+            *guard = None;
+            Err(e)
+        }
+    }
+}
+
 static HEALTH_CONFIG_CACHE: Lazy<RwLock<Option<(Instant, HealthConfig)>>> =
     Lazy::new(|| RwLock::new(None));
 
@@ -85,31 +112,42 @@ const HEALTH_CONFIG_TTL: Duration = Duration::from_secs(5);
 // 503 for readiness) rather than queuing unbounded work.  This caps both thread
 // usage and Tokio task pressure regardless of how hard the caller hammers us.
 //
-// Sizing for the default 30Mi container memory limit:
-//   - Idle base:          ~7Mi
-//   - 8 threads resident: ~0.4Mi
-//   - Active work (8 simultaneous Redis/k8s calls): ~1Mi
-//   - Total peak:         ~8.5Mi = ~28% of 30Mi  → safe headroom
+// --- Connection model ---
+// Rouille uses a thread-per-connection model: one OS thread handles exactly one
+// TCP connection at a time (including HTTP/1.1 keep-alive).  Therefore
+// pool_size(N) is a hard TCP-connection limit: at most N connections are ever
+// processed simultaneously; any additional accepted sockets wait in the OS
+// backlog until a thread frees up.
 //
-// Production reality: kubelet + monitor-sidecar together generate <5 req/s
-// with at most 2-5 simultaneous in-flight requests, so 8 is well above real
-// demand.  Override with MAX_IN_FLIGHT env var if needed.
+// Known callers and their connection budgets:
+//   - kubelet liveness / readiness / startup probes  → up to 3 connections
+//   - monitor sidecar                                → up to 3 connections
+//   - operational / debug tools                      → occasional 1-2 more
+// Total expected max: ~10.  Default is set accordingly.
+//
+// Sizing for the default 30Mi container memory limit:
+//   - Idle base:           ~7Mi
+//   - 10 threads resident: ~0.5Mi
+//   - Active work (10 simultaneous Redis/k8s calls): ~1.2Mi
+//   - Total peak:          ~8.7Mi = ~29% of 30Mi  → safe headroom
+//
+// Override with MAX_CONNECTIONS env var if needed.
+fn max_connections() -> usize {
+    env::var("MAX_CONNECTIONS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(10)
+}
+
+// Application-layer concurrency cap — an additional guard that fires *before*
+// handler logic runs (Redis / k8s calls).  Defaults to max_connections() since
+// there is no benefit allowing more in-flight work than we have threads.
+// Override with MAX_IN_FLIGHT env var if needed.
 fn max_in_flight() -> usize {
     env::var("MAX_IN_FLIGHT")
         .ok()
         .and_then(|v| v.parse().ok())
-        .unwrap_or(8)
-}
-
-// Rouille thread-pool cap — each thread reserves an 8Mi virtual stack on Linux
-// (resident pages are smaller but still add up under load).  Keep this equal
-// to MAX_IN_FLIGHT: there is no benefit in having more threads than concurrent
-// request slots.  Override with MAX_ROUILLE_THREADS env var if needed.
-fn max_rouille_threads() -> usize {
-    env::var("MAX_ROUILLE_THREADS")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or_else(max_in_flight)
+        .unwrap_or_else(max_connections)
 }
 
 static IN_FLIGHT: AtomicUsize = AtomicUsize::new(0);
@@ -153,9 +191,11 @@ fn start_health_check_server(is_sentinel: bool) {
         )
     })
     .unwrap()
-    .pool_size(max_rouille_threads());
+    // pool_size == TCP connection limit (1 thread per connection in rouille).
+    .pool_size(max_connections());
 
-    println!("Listening on {}", server.server_addr());
+    println!("Listening on {} (max_connections={}, max_in_flight={})",
+        server.server_addr(), max_connections(), max_in_flight());
     server.run();
 }
 
@@ -179,7 +219,7 @@ where
     let in_flight = IN_FLIGHT.fetch_add(1, Ordering::Relaxed);
     if in_flight >= max_in_flight() {
         IN_FLIGHT.fetch_sub(1, Ordering::Relaxed);
-        eprintln!("healthcheck: overloaded ({} in-flight), short-circuiting /{}", in_flight, check_type);
+        eprintln!("healthcheck: overloaded ({}/{} in-flight), short-circuiting /{}", in_flight, max_in_flight(), check_type);
         // Liveness/startup: the process is alive, just busy — return OK so
         // kubelet does not kill us and make things worse.
         // Readiness: signal that we cannot serve right now.
@@ -302,70 +342,50 @@ fn parse_health_config_from_data(
     Ok(config)
 }
 
-fn check_handler_liveness(_: bool, redis_pool: &redis::Client) -> Result<bool, redis::RedisError> {
-    let connection = redis_pool.get_connection();
-
-    match connection {
-        Ok(mut conn) => {
-            let response: redis::RedisResult<String> = redis::cmd("PING").query(&mut conn);
-
-            if response.is_err() {
-                let error = response.err().unwrap();
-
+fn check_handler_liveness(_: bool, redis_client: &redis::Client) -> Result<bool, redis::RedisError> {
+    with_redis_conn(redis_client, |conn| {
+        match redis::cmd("PING").query::<String>(conn) {
+            Ok(value) => {
+                if value.contains("PONG") || value.contains("BUSY") || value.contains("LOADING") {
+                    Ok(true)
+                } else {
+                    eprintln!("Unexpected PING response: {}", value);
+                    Err(redis::RedisError::from((
+                        redis::ErrorKind::ResponseError,
+                        "Unexpected PING response",
+                    )))
+                }
+            }
+            Err(error) => {
                 if error.kind() == redis::ErrorKind::BusyLoadingError {
                     eprintln!("Redis is busy loading data, returning true for liveness check.");
+                    // Return Ok so with_redis_conn keeps the connection alive.
                     return Ok(true);
                 }
-
                 eprintln!("Failed to send PING command: {:?}", error);
-                return Err(redis::RedisError::from((
+                Err(redis::RedisError::from((
                     redis::ErrorKind::IoError,
                     "Failed to send PING command",
-                )));
-            }
-
-            let value = response.as_ref().unwrap();
-
-            if value.contains("PONG") || value.contains("BUSY") || value.contains("LOADING") {
-                Ok(true)
-            } else {
-                eprintln!("Unexpected PING response: {}", value);
-                Err(redis::RedisError::from((
-                    redis::ErrorKind::ResponseError,
-                    "Unexpected PING response",
                 )))
             }
         }
-        Err(err) => {
-            eprintln!("Failed to get connection: {:?}", err);
-            Err(redis::RedisError::from((
-                redis::ErrorKind::IoError,
-                "Failed to get connection",
-            )))
-        }
-    }
+    })
 }
 
 fn check_handler_readiness(
     is_sentinel: bool,
-    redis_pool: &redis::Client,
+    redis_client: &redis::Client,
 ) -> Result<bool, redis::RedisError> {
-    if let Ok(mut con) = redis_pool.get_connection() {
+    with_redis_conn(redis_client, |con| {
         if is_sentinel {
-            return check_sentinel(&mut con);
+            return check_sentinel(con);
         }
-
-        let db_info: String = redis::cmd("INFO").query(&mut con)?;
+        let db_info: String = redis::cmd("INFO").query(con)?;
         if db_info.contains("cluster_enabled:1") {
-            return get_status_from_cluster_node_readiness(&mut con);
+            return get_status_from_cluster_node_readiness(con);
         }
-        check_node_readiness(&db_info, &mut con)
-    } else {
-        Err(redis::RedisError::from((
-            redis::ErrorKind::IoError,
-            "Failed to get connection",
-        )))
-    }
+        check_node_readiness(&db_info, con)
+    })
 }
 
 fn get_redis_client(is_sentinel: bool) -> Result<redis::Client, redis::RedisError> {

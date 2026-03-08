@@ -562,12 +562,38 @@ fn get_redis_role(db_info: &str) -> Result<&str, redis::RedisError> {
 }
 
 fn get_status_from_cluster_node_readiness(
+    db_info: &str,
     con: &mut redis::Connection,
 ) -> Result<bool, redis::RedisError> {
-    Ok(redis::cmd("CLUSTER")
+    let cluster_ok = redis::cmd("CLUSTER")
         .arg("INFO")
         .query::<String>(con)?
-        .contains("cluster_state:ok"))
+        .contains("cluster_state:ok");
+
+    if !cluster_ok {
+        return Ok(false);
+    }
+
+    // Block readiness on any node (master or replica) that is still loading
+    // its dataset into memory. CLUSTER INFO can return cluster_state:ok even
+    // while loading:1, so this must be checked explicitly.
+    if !db_info.contains("loading:0") {
+        return Ok(false);
+    }
+
+    // For cluster replica nodes, block readiness until the initial full sync
+    // with the master is complete. The relevant INFO parameters are:
+    //   master_sync_in_progress:1  – RDB transfer from master is ongoing
+    //   master_link_status:down    – replica not yet connected/synced to master
+    // The node must not become ready while either condition holds.
+    if db_info.contains("role:slave") {
+        return Ok(
+            db_info.contains("master_link_status:up")
+                && db_info.contains("master_sync_in_progress:0"),
+        );
+    }
+
+    Ok(true)
 }
 
 fn get_status_from_master_readiness(

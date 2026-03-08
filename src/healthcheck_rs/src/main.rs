@@ -86,7 +86,13 @@ where
 {
     let mut guard = REDIS_CONN.lock().unwrap_or_else(|e| e.into_inner());
     if guard.is_none() {
-        *guard = Some(client.get_connection()?);
+        match client.get_connection() {
+            Ok(conn) => *guard = Some(conn),
+            Err(e) => {
+                eprintln!("healthcheck: failed to connect to Redis: {:?}", e);
+                return Err(e);
+            }
+        }
     }
     let conn = guard.as_mut().unwrap();
     match f(conn) {

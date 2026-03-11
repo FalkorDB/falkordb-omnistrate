@@ -107,13 +107,16 @@ jobs:
               if not new_version or not old_version_list:
                   continue
               for old_version in old_version_list:
+                  # Append sanitized old version to instance name to avoid collisions
+                  # when multiple old_versions are tested in parallel (e.g. "58.0" → "58-0")
+                  versioned_iname = f"{iname}-{old_version.replace('.', '-')}"
                   entries.append({
                       "name":             f"{ref_name}/{rkey} — {old_version} → {new_version}",
                       "old_version":      old_version,
                       "new_version":      new_version,
                       "ref_name":         ref_name,
                       "resource_key":     rkey,
-                      "instance_name":    iname,
+                      "instance_name":    versioned_iname,
                       "instance_type":    itype,
                       "host_count":       hcount,
                       "cluster_replicas": creplicas,

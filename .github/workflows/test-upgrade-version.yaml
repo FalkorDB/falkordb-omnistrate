@@ -1,0 +1,140 @@
+name: Test Upgrade Version
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      service_id:
+        description: "Omnistrate service ID (overrides OMNISTRATE_INTERNAL_SERVICE_ID var)"
+        required: false
+        type: string
+      environment_id:
+        description: "Omnistrate environment ID (overrides OMNISTRATE_INTERNAL_PROD_ENVIRONMENT var)"
+        required: false
+        type: string
+
+      free_new_version:
+        description: "Free — target version (e.g. 61.0)"
+        required: false
+        type: string
+      free_old_versions:
+        description: "Free — comma-separated source versions (e.g. 58.0,59.0)"
+        required: false
+        type: string
+
+      startup_new_version:
+        description: "Startup — target version (e.g. 61.0)"
+        required: false
+        type: string
+      startup_old_versions:
+        description: "Startup — comma-separated source versions (e.g. 58.0,59.0)"
+        required: false
+        type: string
+
+      pro_new_version:
+        description: "Pro — target version (e.g. 61.0)"
+        required: false
+        type: string
+      pro_old_versions:
+        description: "Pro — comma-separated source versions (e.g. 58.0,59.0)"
+        required: false
+        type: string
+
+      enterprise_new_version:
+        description: "Enterprise — target version (e.g. 61.0)"
+        required: false
+        type: string
+      enterprise_old_versions:
+        description: "Enterprise — comma-separated source versions (e.g. 58.0,59.0)"
+        required: false
+        type: string
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate test matrix
+        id: set-matrix
+        env:
+          FREE_NEW:       ${{ inputs.free_new_version }}
+          FREE_OLD:       ${{ inputs.free_old_versions }}
+          STARTUP_NEW:    ${{ inputs.startup_new_version }}
+          STARTUP_OLD:    ${{ inputs.startup_old_versions }}
+          PRO_NEW:        ${{ inputs.pro_new_version }}
+          PRO_OLD:        ${{ inputs.pro_old_versions }}
+          ENTERPRISE_NEW: ${{ inputs.enterprise_new_version }}
+          ENTERPRISE_OLD: ${{ inputs.enterprise_old_versions }}
+          GITHUB_RUN_ID:  ${{ github.run_id }}
+        run: python3 scripts/generate_upgrade_matrix.py
+
+
+  test-upgrade:
+    name: ${{ matrix.name }}
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Cache Poetry virtualenv
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+
+      - name: Install Poetry and dependencies
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
+          poetry install
+
+      - name: Run upgrade test
+        env:
+          OLD_VERSION:     ${{ matrix.old_version }}
+          NEW_VERSION:     ${{ matrix.new_version }}
+          REF_NAME:        ${{ matrix.ref_name }}
+          SUBSCRIPTION_ID: sub-GJPV3NoNC0
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+
+          SERVICE_ID="${{ inputs.service_id || vars.OMNISTRATE_INTERNAL_SERVICE_ID }}"
+          ENVIRONMENT_ID="${{ inputs.environment_id || vars.OMNISTRATE_INTERNAL_PROD_ENVIRONMENT }}"
+
+          EXTRA_ARGS=()
+          [[ -n "${{ matrix.host_count }}" ]]       && EXTRA_ARGS+=(--host-count       "${{ matrix.host_count }}")
+          [[ -n "${{ matrix.cluster_replicas }}" ]] && EXTRA_ARGS+=(--cluster-replicas "${{ matrix.cluster_replicas }}")
+          [[ -n "${{ matrix.custom_network }}" ]]   && EXTRA_ARGS+=(--custom-network   "${{ matrix.custom_network }}")
+          [[ "${{ matrix.tls }}" == "true" ]]       && EXTRA_ARGS+=(--tls)
+
+          poetry run python -u tests/test_upgrade_version.py \
+            "${{ secrets.OMNISTRATE_USERNAME }}" \
+            "${{ secrets.OMNISTRATE_PASSWORD }}" \
+            aws us-east-2 \
+            --service-id     "$SERVICE_ID" \
+            --environment-id "$ENVIRONMENT_ID" \
+            --resource-key   "${{ matrix.resource_key }}" \
+            --instance-name  "${{ matrix.instance_name }}" \
+            --instance-type  "${{ matrix.instance_type }}" \
+            "${EXTRA_ARGS[@]}"

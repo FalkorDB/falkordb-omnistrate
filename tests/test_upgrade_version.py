@@ -90,6 +90,13 @@ def get_last_gh_tag():
 def test_upgrade_version():
     global instance
 
+    old_version = os.getenv("OLD_VERSION", "").strip()
+    new_version = os.getenv("NEW_VERSION", "").strip()
+    if not old_version:
+        raise ValueError("OLD_VERSION environment variable is not set or empty")
+    if not new_version:
+        raise ValueError("NEW_VERSION environment variable is not set or empty")
+
     omnistrate = OmnistrateFleetAPI(
         email=args.omnistrate_user,
         password=args.omnistrate_password,
@@ -183,7 +190,7 @@ def test_upgrade_version():
             AOFPersistenceConfig=args.aof_config,
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
-            product_tier_version=last_tier.version,
+            product_tier_version=old_version,
             custom_network_id=network.network_id if network else None,
         )
 
@@ -202,7 +209,7 @@ def test_upgrade_version():
         thread_signal = None
         error_signal = None
         thread = None
-        if "standalone" not in args.instance_name:
+        if args.resource_key not in ("standalone", "free"):
             thread_signal = threading.Event()
             error_signal = threading.Event()
             thread = threading.Thread(
@@ -216,12 +223,12 @@ def test_upgrade_version():
         instance.upgrade(
             service_id=args.service_id,
             product_tier_id=product_tier.product_tier_id,
-            source_version=last_tier.version,
-            target_version=preferred_tier.version,
+            source_version=old_version,
+            target_version=new_version,
             wait_until_ready=True,
         )
 
-        if "standalone" not in args.instance_name:
+        if args.resource_key not in ("standalone", "free"):
             thread_signal.set()
             thread.join()
 
@@ -238,7 +245,7 @@ def test_upgrade_version():
     # 7. Delete the instance
     instance.delete(False)
 
-    if "standalone" not in args.instance_name and error_signal.is_set():
+    if args.resource_key not in ("standalone", "free") and error_signal.is_set():
         raise ValueError("Test failed")
     else:
         logging.info("Test passed")

@@ -202,7 +202,7 @@ def test_upgrade_version():
         thread_signal = None
         error_signal = None
         thread = None
-        if "standalone" not in args.instance_name and "free" not in args.instance_name:
+        if args.resource_key not in ("standalone", "free"):
             thread_signal = threading.Event()
             error_signal = threading.Event()
             thread = threading.Thread(
@@ -221,7 +221,7 @@ def test_upgrade_version():
             wait_until_ready=True,
         )
 
-        if "standalone" not in args.instance_name and "free" not in args.instance_name:
+        if args.resource_key not in ("standalone", "free"):
             thread_signal.set()
             thread.join()
 
@@ -238,7 +238,7 @@ def test_upgrade_version():
     # 7. Delete the instance
     instance.delete(False)
 
-    if "standalone" not in args.instance_name and "free" not in args.instance_name and error_signal.is_set():
+    if args.resource_key not in ("standalone", "free") and error_signal.is_set():
         raise ValueError("Test failed")
     else:
         logging.info("Test passed")

@@ -40,7 +40,7 @@ parser.add_argument(
 )
 parser.add_argument("--instance-type", required=True)
 parser.add_argument("--storage-size", required=False, default="30")
-parser.add_argument("--tls", action=argparse.BooleanOptionalAction, default=False)
+parser.add_argument("--tls", action="store_true", default=False)
 parser.add_argument("--rdb-config", required=False, default="medium")
 parser.add_argument("--aof-config", required=False, default="always")
 parser.add_argument("--host-count", required=False, default="6")

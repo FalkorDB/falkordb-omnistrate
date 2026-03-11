@@ -126,7 +126,7 @@ jobs:
           [[ -n "${{ matrix.host_count }}" ]]       && EXTRA_ARGS+=(--host-count       "${{ matrix.host_count }}")
           [[ -n "${{ matrix.cluster_replicas }}" ]] && EXTRA_ARGS+=(--cluster-replicas "${{ matrix.cluster_replicas }}")
           [[ -n "${{ matrix.custom_network }}" ]]   && EXTRA_ARGS+=(--custom-network   "${{ matrix.custom_network }}")
-          if [[ "${{ matrix.tls }}" == "true" ]]; then EXTRA_ARGS+=(--tls); else EXTRA_ARGS+=(--no-tls); fi
+          [[ "${{ matrix.tls }}" == "true" ]]       && EXTRA_ARGS+=(--tls)
 
           poetry run python -u tests/test_upgrade_version.py \
             "${{ secrets.OMNISTRATE_USERNAME }}" \

@@ -4,7 +4,6 @@ permissions:
   contents: read
 
 on:
-  push:
   workflow_dispatch:
     inputs:
       service_id:
@@ -55,91 +54,35 @@ on:
 jobs:
   generate-matrix:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Generate test matrix
         id: set-matrix
-        run: |
-          python3 - <<'EOF'
-          import json, os
+        env:
+          FREE_NEW:       ${{ inputs.free_new_version }}
+          FREE_OLD:       ${{ inputs.free_old_versions }}
+          STARTUP_NEW:    ${{ inputs.startup_new_version }}
+          STARTUP_OLD:    ${{ inputs.startup_old_versions }}
+          PRO_NEW:        ${{ inputs.pro_new_version }}
+          PRO_OLD:        ${{ inputs.pro_old_versions }}
+          ENTERPRISE_NEW: ${{ inputs.enterprise_new_version }}
+          ENTERPRISE_OLD: ${{ inputs.enterprise_old_versions }}
+          GITHUB_RUN_ID:  ${{ github.run_id }}
+        run: python3 scripts/generate_upgrade_matrix.py
 
-          def versions(old_str):
-              return [v.strip() for v in old_str.split(',') if v.strip()] if old_str.strip() else []
-
-          # Per-tier new/old versions from inputs
-          tier_versions = {
-              "FalkorDB Free": (
-                  "${{ inputs.free_new_version }}",
-                  versions("${{ inputs.free_old_versions }}"),
-              ),
-              "FalkorDB Startup": (
-                  "${{ inputs.startup_new_version }}",
-                  versions("${{ inputs.startup_old_versions }}"),
-              ),
-              "FalkorDB Pro": (
-                  "${{ inputs.pro_new_version }}",
-                  versions("${{ inputs.pro_old_versions }}"),
-              ),
-              "FalkorDB Enterprise": (
-                  "${{ inputs.enterprise_new_version }}",
-                  versions("${{ inputs.enterprise_old_versions }}"),
-              ),
-          }
-
-          # (ref_name, resource_key, instance_name, instance_type, host_count, cluster_replicas, custom_network, tls)
-          tiers = [
-              # Free – only one resource key (no TLS)
-              ("FalkorDB Free",       "free",                "free-upgradeTest",                   "t2.medium", "",  "",  "",                False),
-              # Startup – only standalone
-              ("FalkorDB Startup",    "standalone",          "startup-upgradeTest",                "t2.medium", "",  "",  "",                True),
-              # Pro – standalone, single-Zone, multi-Zone (m6i.large, no custom network)
-              ("FalkorDB Pro",        "standalone",          "pro-standalone-upgradeTest",         "m6i.large", "",  "",  "",                True),
-              ("FalkorDB Pro",        "single-Zone",         "pro-single-zone-upgradeTest",        "m6i.large", "",  "",  "",                True),
-              ("FalkorDB Pro",        "multi-Zone",          "pro-multi-zone-upgradeTest",         "m6i.large", "",  "",  "",                True),
-              # Enterprise – standalone, single-Zone, multi-Zone, cluster variants (t2.medium, custom network)
-              ("FalkorDB Enterprise", "standalone",          "enterprise-standalone-upgradeTest",  "t2.medium", "",  "",  "aws-network-main", True),
-              ("FalkorDB Enterprise", "single-Zone",         "enterprise-single-zone-upgradeTest", "t2.medium", "",  "",  "aws-network-main", True),
-              ("FalkorDB Enterprise", "multi-Zone",          "enterprise-multi-zone-upgradeTest",  "t2.medium", "",  "",  "aws-network-main", True),
-              ("FalkorDB Enterprise", "cluster-Single-Zone", "enterprise-cluster-sz-upgradeTest",  "t2.medium", "6", "1", "aws-network-main", True),
-              ("FalkorDB Enterprise", "cluster-Multi-Zone",  "enterprise-cluster-mz-upgradeTest",  "t2.medium", "6", "1", "aws-network-main", True),
-          ]
-
-          entries = []
-          for ref_name, rkey, iname, itype, hcount, creplicas, cnet, tls in tiers:
-              new_version, old_version_list = tier_versions[ref_name]
-              if not new_version or not old_version_list:
-                  continue
-              for old_version in old_version_list:
-                  # Append sanitized old version to instance name to avoid collisions
-                  # when multiple old_versions are tested in parallel (e.g. "58.0" → "58-0")
-                  versioned_iname = f"{iname}-{old_version.replace('.', '-')}"
-                  entries.append({
-                      "name":             f"{ref_name}/{rkey} — {old_version} → {new_version}",
-                      "old_version":      old_version,
-                      "new_version":      new_version,
-                      "ref_name":         ref_name,
-                      "resource_key":     rkey,
-                      "instance_name":    versioned_iname,
-                      "instance_type":    itype,
-                      "host_count":       hcount,
-                      "cluster_replicas": creplicas,
-                      "custom_network":   cnet,
-                      "tls":              tls,
-                  })
-
-          if not entries:
-              raise SystemExit("No test matrix entries generated — check that at least one tier has both new and old versions set.")
-
-          matrix = json.dumps({"include": entries})
-          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
-              fh.write(f"matrix={matrix}\n")
-          EOF
 
   test-upgrade:
     name: ${{ matrix.name }}
     needs: generate-matrix
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
@@ -184,7 +127,7 @@ jobs:
           [[ -n "${{ matrix.host_count }}" ]]       && EXTRA_ARGS+=(--host-count       "${{ matrix.host_count }}")
           [[ -n "${{ matrix.cluster_replicas }}" ]] && EXTRA_ARGS+=(--cluster-replicas "${{ matrix.cluster_replicas }}")
           [[ -n "${{ matrix.custom_network }}" ]]   && EXTRA_ARGS+=(--custom-network   "${{ matrix.custom_network }}")
-          [[ "${{ matrix.tls }}" == "True" ]]       && EXTRA_ARGS+=(--tls)
+          [[ "${{ matrix.tls }}" == "true" ]]       && EXTRA_ARGS+=(--tls)
 
           poetry run python -u tests/test_upgrade_version.py \
             "${{ secrets.OMNISTRATE_USERNAME }}" \

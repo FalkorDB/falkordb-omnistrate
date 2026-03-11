@@ -267,7 +267,12 @@ class OmnistrateFleetInstance:
         if resource_id is None:
             raise Exception(f"Resource ID not found for instance {self.instance_id}")
 
-        self.disable_deletion_protection()
+        try:
+            self.disable_deletion_protection()
+        except Exception as e:
+            logging.warning(
+                f"Failed to disable deletion protection for instance {self.instance_id}, proceeding with deletion: {e}"
+            )
 
         response = self._fleet_api.client().delete(
             f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",

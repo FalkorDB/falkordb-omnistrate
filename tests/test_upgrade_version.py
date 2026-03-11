@@ -90,6 +90,13 @@ def get_last_gh_tag():
 def test_upgrade_version():
     global instance
 
+    old_version = os.getenv("OLD_VERSION", "").strip()
+    new_version = os.getenv("NEW_VERSION", "").strip()
+    if not old_version:
+        raise ValueError("OLD_VERSION environment variable is not set or empty")
+    if not new_version:
+        raise ValueError("NEW_VERSION environment variable is not set or empty")
+
     omnistrate = OmnistrateFleetAPI(
         email=args.omnistrate_user,
         password=args.omnistrate_password,
@@ -183,7 +190,7 @@ def test_upgrade_version():
             AOFPersistenceConfig=args.aof_config,
             hostCount=args.host_count,
             clusterReplicas=args.cluster_replicas,
-            product_tier_version=os.getenv("OLD_VERSION"),
+            product_tier_version=old_version,
             custom_network_id=network.network_id if network else None,
         )
 
@@ -216,8 +223,8 @@ def test_upgrade_version():
         instance.upgrade(
             service_id=args.service_id,
             product_tier_id=product_tier.product_tier_id,
-            source_version=os.getenv("OLD_VERSION"),
-            target_version=os.getenv("NEW_VERSION"),
+            source_version=old_version,
+            target_version=new_version,
             wait_until_ready=True,
         )
 

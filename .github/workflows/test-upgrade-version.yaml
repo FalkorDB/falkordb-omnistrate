@@ -87,26 +87,26 @@ jobs:
               ),
           }
 
-          # (ref_name, resource_key, instance_name, instance_type, host_count, cluster_replicas, custom_network)
+          # (ref_name, resource_key, instance_name, instance_type, host_count, cluster_replicas, custom_network, tls)
           tiers = [
-              # Free – only one resource key
-              ("FalkorDB Free",       "free",                "free-upgradeTest",                   "t2.medium", "",  "",  ""),
+              # Free – only one resource key (no TLS)
+              ("FalkorDB Free",       "free",                "free-upgradeTest",                   "t2.medium", "",  "",  "",                False),
               # Startup – only standalone
-              ("FalkorDB Startup",    "standalone",          "startup-upgradeTest",                "t2.medium", "",  "",  ""),
+              ("FalkorDB Startup",    "standalone",          "startup-upgradeTest",                "t2.medium", "",  "",  "",                True),
               # Pro – standalone, single-Zone, multi-Zone (m6i.large, no custom network)
-              ("FalkorDB Pro",        "standalone",          "pro-standalone-upgradeTest",         "m6i.large", "",  "",  ""),
-              ("FalkorDB Pro",        "single-Zone",         "pro-single-zone-upgradeTest",        "m6i.large", "",  "",  ""),
-              ("FalkorDB Pro",        "multi-Zone",          "pro-multi-zone-upgradeTest",         "m6i.large", "",  "",  ""),
+              ("FalkorDB Pro",        "standalone",          "pro-standalone-upgradeTest",         "m6i.large", "",  "",  "",                True),
+              ("FalkorDB Pro",        "single-Zone",         "pro-single-zone-upgradeTest",        "m6i.large", "",  "",  "",                True),
+              ("FalkorDB Pro",        "multi-Zone",          "pro-multi-zone-upgradeTest",         "m6i.large", "",  "",  "",                True),
               # Enterprise – standalone, single-Zone, multi-Zone, cluster variants (t2.medium, custom network)
-              ("FalkorDB Enterprise", "standalone",          "enterprise-standalone-upgradeTest",  "t2.medium", "",  "",  "aws-network-main"),
-              ("FalkorDB Enterprise", "single-Zone",         "enterprise-single-zone-upgradeTest", "t2.medium", "",  "",  "aws-network-main"),
-              ("FalkorDB Enterprise", "multi-Zone",          "enterprise-multi-zone-upgradeTest",  "t2.medium", "",  "",  "aws-network-main"),
-              ("FalkorDB Enterprise", "cluster-Single-Zone", "enterprise-cluster-sz-upgradeTest",  "t2.medium", "6", "1", "aws-network-main"),
-              ("FalkorDB Enterprise", "cluster-Multi-Zone",  "enterprise-cluster-mz-upgradeTest",  "t2.medium", "6", "1", "aws-network-main"),
+              ("FalkorDB Enterprise", "standalone",          "enterprise-standalone-upgradeTest",  "t2.medium", "",  "",  "aws-network-main", True),
+              ("FalkorDB Enterprise", "single-Zone",         "enterprise-single-zone-upgradeTest", "t2.medium", "",  "",  "aws-network-main", True),
+              ("FalkorDB Enterprise", "multi-Zone",          "enterprise-multi-zone-upgradeTest",  "t2.medium", "",  "",  "aws-network-main", True),
+              ("FalkorDB Enterprise", "cluster-Single-Zone", "enterprise-cluster-sz-upgradeTest",  "t2.medium", "6", "1", "aws-network-main", True),
+              ("FalkorDB Enterprise", "cluster-Multi-Zone",  "enterprise-cluster-mz-upgradeTest",  "t2.medium", "6", "1", "aws-network-main", True),
           ]
 
           entries = []
-          for ref_name, rkey, iname, itype, hcount, creplicas, cnet in tiers:
+          for ref_name, rkey, iname, itype, hcount, creplicas, cnet, tls in tiers:
               new_version, old_version_list = tier_versions[ref_name]
               if not new_version or not old_version_list:
                   continue
@@ -125,6 +125,7 @@ jobs:
                       "host_count":       hcount,
                       "cluster_replicas": creplicas,
                       "custom_network":   cnet,
+                      "tls":              tls,
                   })
 
           if not entries:
@@ -183,6 +184,7 @@ jobs:
           [[ -n "${{ matrix.host_count }}" ]]       && EXTRA_ARGS+=(--host-count       "${{ matrix.host_count }}")
           [[ -n "${{ matrix.cluster_replicas }}" ]] && EXTRA_ARGS+=(--cluster-replicas "${{ matrix.cluster_replicas }}")
           [[ -n "${{ matrix.custom_network }}" ]]   && EXTRA_ARGS+=(--custom-network   "${{ matrix.custom_network }}")
+          [[ "${{ matrix.tls }}" == "True" ]]       && EXTRA_ARGS+=(--tls)
 
           poetry run python -u tests/test_upgrade_version.py \
             "${{ secrets.OMNISTRATE_USERNAME }}" \

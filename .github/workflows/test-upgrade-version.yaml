@@ -51,6 +51,11 @@ on:
         required: false
         type: string
 
+      tls:
+        description: "Enable TLS for all tiers (overrides per-tier default)"
+        required: false
+        type: boolean
+
 jobs:
   generate-matrix:
     runs-on: ubuntu-latest
@@ -72,6 +77,7 @@ jobs:
           PRO_OLD:        ${{ inputs.pro_old_versions }}
           ENTERPRISE_NEW: ${{ inputs.enterprise_new_version }}
           ENTERPRISE_OLD: ${{ inputs.enterprise_old_versions }}
+          TLS:            ${{ inputs.tls }}
           GITHUB_RUN_ID:  ${{ github.run_id }}
         run: python3 scripts/generate_upgrade_matrix.py
 

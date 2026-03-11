@@ -12,6 +12,8 @@ PRO_NEW, PRO_OLD             : pro tier new/old version(s)
 ENTERPRISE_NEW, ENTERPRISE_OLD: enterprise tier new/old version(s)
 GITHUB_RUN_ID                : injected by GitHub Actions; appended to instance
                                names so concurrent workflow runs don't collide.
+TLS                          : optional boolean override ("true"/"false") for TLS
+                               across all tiers; if unset, per-tier defaults apply.
 """
 
 import json
@@ -45,6 +47,10 @@ tier_versions = {
 
 run_id = os.getenv("GITHUB_RUN_ID", "local")
 
+# Optional TLS override: if set, applies to all tiers instead of per-tier default.
+_tls_env = os.getenv("TLS", "").strip().lower()
+tls_override = True if _tls_env == "true" else (False if _tls_env == "false" else None)
+
 # fmt: off
 # (ref_name, resource_key, instance_name, instance_type, host_count, cluster_replicas, custom_network, tls)
 tiers = [
@@ -74,6 +80,7 @@ for ref_name, rkey, iname, itype, hcount, creplicas, cnet, tls in tiers:
         # Append sanitized old version + run ID to avoid collisions between
         # parallel matrix jobs AND concurrent workflow runs (e.g. "58.0" → "58-0-12345678")
         versioned_iname = f"{iname}-{old_version.replace('.', '-')}-{run_id}"
+        effective_tls = tls if tls_override is None else tls_override
         entries.append(
             {
                 "name": f"{ref_name}/{rkey} — {old_version} → {new_version}",
@@ -86,7 +93,7 @@ for ref_name, rkey, iname, itype, hcount, creplicas, cnet, tls in tiers:
                 "host_count": hcount,
                 "cluster_replicas": creplicas,
                 "custom_network": cnet,
-                "tls": tls,
+                "tls": effective_tls,
             }
         )
 

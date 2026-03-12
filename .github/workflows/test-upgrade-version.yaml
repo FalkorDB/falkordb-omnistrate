@@ -30,6 +30,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install requests
+        run: pip install requests --quiet
+
       - name: Fetch upgrade matrix from Omnistrate API
         id: set-matrix
         env:

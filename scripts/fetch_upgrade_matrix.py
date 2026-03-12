@@ -169,10 +169,17 @@ def resource_keys_with_running_instances(
     for inst in instances:
         if inst.get("productTierName") != tier_name:
             continue
-        inst_version = inst.get("productTierVersion", "")
+        # The version field name varies — check all known locations defensively.
+        result = inst.get("consumptionResourceInstanceResult", {})
+        inst_version = (
+            inst.get("productTierVersion")
+            or inst.get("tierVersion")
+            or result.get("productTierVersion")
+            or result.get("tierVersion")
+            or ""
+        )
         if inst_version != old_version:
             continue
-        result = inst.get("consumptionResourceInstanceResult", {})
         if result.get("status") != "RUNNING":
             continue
         topology = result.get("detailedNetworkTopology", {})
@@ -207,6 +214,11 @@ def build_matrix() -> list[dict]:
 
     log.info("Fetching all fleet instances...")
     all_instances = list_instances(session)
+    log.info(f"  total instances fetched: {len(all_instances)}")
+    if all_instances:
+        # Log the top-level keys of the first instance to help verify field names.
+        sample_keys = list(all_instances[0].keys())
+        log.info(f"  instance top-level fields (sample): {sample_keys}")
 
     entries: list[dict] = []
 

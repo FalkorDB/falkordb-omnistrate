@@ -239,21 +239,28 @@ def build_matrix() -> list[dict]:
         log.info(f"\n[{tier_name}] Fetching versions (id={tier_id})...")
         versions = get_tier_versions(session, tier_id)
 
-        preferred = next((v for v in versions if v["status"] == "Preferred"), None)
-        active = [v for v in versions if v["status"] == "Active"]
+        # Only consider non-deprecated versions.
+        valid = [v for v in versions if v["status"] != "Deprecated"]
 
-        if not preferred:
-            log.warning(f"[{tier_name}] No preferred version found, skipping")
-            continue
-        if not active:
-            log.info(f"[{tier_name}] No active versions — nothing to upgrade from")
+        if not valid:
+            log.warning(f"[{tier_name}] No valid versions found, skipping")
             continue
 
-        new_version = preferred["version"]
-        log.info(f"  preferred (target): {new_version}")
-        log.info(f"  active candidates:  {[v['version'] for v in active]}")
+        # Target = the highest version number regardless of Preferred/Active status.
+        latest = max(valid, key=lambda v: [int(x) for x in v["version"].split(".")])
+        new_version = latest["version"]
 
-        for old_ver in active:
+        # Old candidates = every other valid version (anything that's not the latest).
+        old_candidates = [v for v in valid if v["version"] != new_version]
+
+        if not old_candidates:
+            log.info(f"[{tier_name}] Only one version exists — nothing to upgrade from")
+            continue
+
+        log.info(f"  latest (target):   {new_version}")
+        log.info(f"  old candidates:    {[v['version'] for v in old_candidates]}")
+
+        for old_ver in old_candidates:
             old_version = old_ver["version"]
 
             # For ALL tiers: only test versions that have at least one RUNNING instance.

@@ -6,8 +6,6 @@ x-omnistrate-service-plan:
     byoaDeployment:
       AwsAccountId: "$AwsAccountId"
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
-      AzureSubscriptionId: "$AzureSubscriptionId"
-      AzureTenantId: "$AzureTenantId"
   metering:
     gcsBucketName: $MeteringBucketName
   validPaymentMethodRequired: false

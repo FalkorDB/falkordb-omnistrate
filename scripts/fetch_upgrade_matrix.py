@@ -2,9 +2,12 @@
 Automatically generate the GitHub Actions test matrix for upgrade tests.
 
 Calls the Omnistrate API to discover:
-  - new_version  = the PREFERRED tier version (the one new customers get)
-  - old_versions = ACTIVE versions that have at least one RUNNING instance
-                   on a resource_key covered by this test suite
+  - new_version  = the highest version number across all non-deprecated tier
+                   versions (chosen by max() on the version tuple, not by
+                   Preferred/Active status).
+  - old_versions = all non-deprecated versions whose version number is lower
+                   than new_version AND that have at least one RUNNING instance
+                   on a resource_key covered by this test suite.
 
 For Pro and Enterprise the resource_key is further filtered: only
 resource_keys (standalone / single-Zone / multi-Zone / cluster-*) that have
@@ -23,9 +26,10 @@ GITHUB_RUN_ID         : Injected by GitHub Actions; appended to instance names.
 
 Optional
 --------
-TLS          : "true"/"false" — override per-tier TLS default for all tiers
-DRY_RUN      : "true" — print the planned upgrades to stdout and exit without
-               writing GITHUB_OUTPUT; useful for debugging / previewing.
+TLS      : "true"/"false" — override per-tier TLS default for all tiers;
+           absent or "use-default" leaves per-tier defaults unchanged.
+DRY_RUN  : "true" — log the planned upgrades, write an empty matrix to
+           GITHUB_OUTPUT (if set), and exit without running tests.
 """
 
 import json
@@ -52,7 +56,8 @@ ENV_ID = os.getenv("OMNISTRATE_ENV_ID") or os.getenv("OMNISTRATE_INTERNAL_PROD_E
 RUN_ID = os.getenv("GITHUB_RUN_ID", "local")
 DRY_RUN = os.getenv("DRY_RUN", "").strip().lower() == "true"
 
-# Optional TLS override: if set, applies to all tiers instead of per-tier default.
+# Optional TLS override: "true"/"false" override per-tier defaults; anything
+# else (absent, "use-default") leaves per-tier TLS values unchanged.
 _tls_env = os.getenv("TLS", "").strip().lower()
 TLS_OVERRIDE = True if _tls_env == "true" else (False if _tls_env == "false" else None)
 
@@ -310,11 +315,13 @@ def main():
         log.info(f"  {e['name']}")
 
     if DRY_RUN:
-        log.info("DRY_RUN=true — exiting without writing GITHUB_OUTPUT")
         github_output = os.environ.get("GITHUB_OUTPUT")
         if github_output:
+            log.info("DRY_RUN=true — writing empty matrix to GITHUB_OUTPUT and exiting")
             with open(github_output, "a") as fh:
                 fh.write("matrix=\n")
+        else:
+            log.info("DRY_RUN=true — exiting (no GITHUB_OUTPUT to write)")
         return
 
     matrix = json.dumps({"include": entries})

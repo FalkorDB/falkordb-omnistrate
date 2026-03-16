@@ -15,9 +15,14 @@ on:
         required: false
         type: string
       tls:
-        description: "Override TLS for all tiers (leave unset to use per-tier defaults)"
+        description: "Override TLS for all tiers (use-default = per-tier defaults)"
         required: false
-        type: boolean
+        type: choice
+        options:
+          - use-default
+          - "true"
+          - "false"
+        default: use-default
       dry_run:
         description: "Simulate only — print planned upgrades without running tests"
         required: false

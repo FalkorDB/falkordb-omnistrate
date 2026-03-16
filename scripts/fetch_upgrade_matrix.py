@@ -30,6 +30,9 @@ TLS      : "true"/"false" — override per-tier TLS default for all tiers;
            absent or "use-default" leaves per-tier defaults unchanged.
 DRY_RUN  : "true" — log the planned upgrades, write an empty matrix to
            GITHUB_OUTPUT (if set), and exit without running tests.
+TIER_FREE, TIER_STARTUP, TIER_PRO, TIER_ENTERPRISE
+         : "true"/"false" — include/exclude individual tiers
+           (all default to true when unset).
 """
 
 import json
@@ -60,6 +63,18 @@ DRY_RUN = os.getenv("DRY_RUN", "").strip().lower() == "true"
 # else (absent, "use-default") leaves per-tier TLS values unchanged.
 _tls_env = os.getenv("TLS", "").strip().lower()
 TLS_OVERRIDE = True if _tls_env == "true" else (False if _tls_env == "false" else None)
+
+# Per-tier enable flags — default to True when unset so the normal case
+# (no tier_* inputs provided) runs all tiers.
+def _tier_enabled(env_var: str) -> bool:
+    return os.getenv(env_var, "true").strip().lower() != "false"
+
+ENABLED_TIERS = {
+    "FalkorDB Free":       _tier_enabled("TIER_FREE"),
+    "FalkorDB Startup":    _tier_enabled("TIER_STARTUP"),
+    "FalkorDB Pro":        _tier_enabled("TIER_PRO"),
+    "FalkorDB Enterprise": _tier_enabled("TIER_ENTERPRISE"),
+}
 
 # ---------------------------------------------------------------------------
 # Per-tier static config — ORDER MATTERS: Free → Startup → Pro → Enterprise
@@ -236,6 +251,10 @@ def build_matrix() -> list[dict]:
     entries: list[dict] = []
 
     for tier_name, resource_configs in TIER_CONFIG.items():
+        if not ENABLED_TIERS.get(tier_name, True):
+            log.info(f"[{tier_name}] skipped (disabled by input)")
+            continue
+
         if tier_name not in tiers:
             log.warning(f"Tier '{tier_name}' not found in service plans, skipping")
             continue

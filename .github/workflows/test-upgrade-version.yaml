@@ -27,6 +27,26 @@ on:
         description: "Simulate only — print planned upgrades without running tests"
         required: false
         type: boolean
+      tier_free:
+        description: "Test FalkorDB Free tier (default: true)"
+        required: false
+        type: boolean
+        default: true
+      tier_startup:
+        description: "Test FalkorDB Startup tier (default: true)"
+        required: false
+        type: boolean
+        default: true
+      tier_pro:
+        description: "Test FalkorDB Pro tier (default: true)"
+        required: false
+        type: boolean
+        default: true
+      tier_enterprise:
+        description: "Test FalkorDB Enterprise tier (default: true)"
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   generate-matrix:
@@ -51,6 +71,10 @@ jobs:
           OMNISTRATE_ENV_ID:            ${{ inputs.environment_id || vars.OMNISTRATE_INTERNAL_PROD_ENVIRONMENT }}
           TLS:                          ${{ inputs.tls }}
           DRY_RUN:                      ${{ inputs.dry_run }}
+          TIER_FREE:                    ${{ inputs.tier_free }}
+          TIER_STARTUP:                 ${{ inputs.tier_startup }}
+          TIER_PRO:                     ${{ inputs.tier_pro }}
+          TIER_ENTERPRISE:              ${{ inputs.tier_enterprise }}
           GITHUB_RUN_ID:                ${{ github.run_id }}
         run: python3 scripts/fetch_upgrade_matrix.py
 

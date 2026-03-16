@@ -1,15 +1,17 @@
 """
 Automatically generate the GitHub Actions test matrix for upgrade tests.
 
-Instead of requiring manual version inputs, this script:
-1. Calls the Omnistrate API to discover tier versions:
-   - new_version  = the PREFERRED tier version (latest released)
-   - old_versions = all ACTIVE (non-preferred) versions that have at least one
-                    RUNNING instance on a resource_key that we test
-2. For Pro and Enterprise tiers, filters resource_keys by whether any RUNNING
-   customer instance actually uses that resource_key+version combination.
-   Free and Startup only have one resource_key each so no filtering is needed.
-3. Writes the resulting matrix JSON to GITHUB_OUTPUT (or prints to stdout locally).
+Calls the Omnistrate API to discover:
+  - new_version  = the PREFERRED tier version (the one new customers get)
+  - old_versions = ACTIVE versions that have at least one RUNNING instance
+                   on a resource_key covered by this test suite
+
+For Pro and Enterprise the resource_key is further filtered: only
+resource_keys (standalone / single-Zone / multi-Zone / cluster-*) that have
+at least one RUNNING customer instance on that specific old_version are tested.
+
+Execution order in the matrix: Free → Startup → Pro → Enterprise
+(GitHub Actions matrix jobs run in parallel but are listed in this order.)
 
 Required environment variables
 -------------------------------
@@ -17,14 +19,20 @@ OMNISTRATE_USERNAME   : Omnistrate account e-mail
 OMNISTRATE_PASSWORD   : Omnistrate account password
 OMNISTRATE_SERVICE_ID : Service ID (falls back to OMNISTRATE_INTERNAL_SERVICE_ID)
 OMNISTRATE_ENV_ID     : Environment ID (falls back to OMNISTRATE_INTERNAL_PROD_ENVIRONMENT)
-GITHUB_RUN_ID         : Injected by GitHub Actions; used in instance names to prevent
-                        cross-run collisions.
+GITHUB_RUN_ID         : Injected by GitHub Actions; appended to instance names.
+
+Optional
+--------
+TLS          : "true"/"false" — override per-tier TLS default for all tiers
+DRY_RUN      : "true" — print the planned upgrades to stdout and exit without
+               writing GITHUB_OUTPUT; useful for debugging / previewing.
 """
 
 import json
 import logging
 import os
 import sys
+import time
 
 import requests
 from requests.adapters import HTTPAdapter, Retry
@@ -42,15 +50,16 @@ PASSWORD = os.getenv("OMNISTRATE_PASSWORD", "")
 SERVICE_ID = os.getenv("OMNISTRATE_SERVICE_ID") or os.getenv("OMNISTRATE_INTERNAL_SERVICE_ID", "")
 ENV_ID = os.getenv("OMNISTRATE_ENV_ID") or os.getenv("OMNISTRATE_INTERNAL_PROD_ENVIRONMENT", "")
 RUN_ID = os.getenv("GITHUB_RUN_ID", "local")
+DRY_RUN = os.getenv("DRY_RUN", "").strip().lower() == "true"
 
 # Optional TLS override: if set, applies to all tiers instead of per-tier default.
 _tls_env = os.getenv("TLS", "").strip().lower()
 TLS_OVERRIDE = True if _tls_env == "true" else (False if _tls_env == "false" else None)
 
 # ---------------------------------------------------------------------------
-# Per-tier static config
-# (ref_name, resource_key, instance_name_prefix, instance_type,
-#  host_count, cluster_replicas, custom_network, tls)
+# Per-tier static config — ORDER MATTERS: Free → Startup → Pro → Enterprise
+# Tuple: (resource_key, instance_name_prefix, instance_type,
+#         host_count, cluster_replicas, custom_network, tls)
 # ---------------------------------------------------------------------------
 TIER_CONFIG = {
     "FalkorDB Free": [
@@ -73,20 +82,18 @@ TIER_CONFIG = {
     ],
 }
 
-# Tiers where we always test all resource_keys regardless of active instances
-ALWAYS_TEST_ALL_KEYS = {"FalkorDB Free", "FalkorDB Startup"}
-
 
 # ---------------------------------------------------------------------------
-# HTTP client
+# HTTP client with 429 retry (Retry-After aware)
 # ---------------------------------------------------------------------------
 
 def _make_session(token: str) -> requests.Session:
     session = requests.Session()
     retries = Retry(
-        total=5,
+        total=8,
         backoff_factor=2,
         status_forcelist=[429, 500, 502, 503, 504],
+        respect_retry_after_header=True,
         allowed_methods=["GET", "POST"],
     )
     session.mount("https://", HTTPAdapter(max_retries=retries))
@@ -95,6 +102,21 @@ def _make_session(token: str) -> requests.Session:
         "Authorization": f"Bearer {token}",
     })
     return session
+
+
+def _get(session: requests.Session, url: str) -> dict:
+    """GET with explicit 429 back-off on top of the adapter-level retry."""
+    for attempt in range(5):
+        r = session.get(url, timeout=60)
+        if r.status_code == 429:
+            wait = int(r.headers.get("Retry-After", 10)) + attempt * 5
+            log.warning(f"429 rate-limited on {url}, waiting {wait}s before retry {attempt+1}/5")
+            time.sleep(wait)
+            continue
+        r.raise_for_status()
+        return r.json()
+    r.raise_for_status()  # raise after all retries exhausted
+    return r.json()
 
 
 def get_token() -> str:
@@ -112,55 +134,42 @@ def get_token() -> str:
 # ---------------------------------------------------------------------------
 
 def get_product_tiers(session: requests.Session) -> dict[str, dict]:
-    """Return {tier_name: {productTierId, productTierKey, ...}} for the service."""
-    r = session.get(
-        f"{BASE_URL}/service/{SERVICE_ID}/environment/{ENV_ID}/service-plan",
-        timeout=60,
-    )
-    r.raise_for_status()
-    return {t["productTierName"]: t for t in r.json().get("servicePlans", [])}
+    """Return {tier_name: raw_tier_dict} for the service."""
+    data = _get(session, f"{BASE_URL}/service/{SERVICE_ID}/environment/{ENV_ID}/service-plan")
+    return {t["productTierName"]: t for t in data.get("servicePlans", [])}
 
 
 def get_tier_versions(session: requests.Session, tier_id: str) -> list[dict]:
     """Return raw tierVersionSets list for a product tier."""
-    r = session.get(
-        f"{BASE_URL}/service/{SERVICE_ID}/productTier/{tier_id}/version-set",
-        timeout=60,
-    )
-    r.raise_for_status()
-    return r.json().get("tierVersionSets", [])
+    data = _get(session, f"{BASE_URL}/service/{SERVICE_ID}/productTier/{tier_id}/version-set")
+    return data.get("tierVersionSets", [])
 
 
 def list_instances(session: requests.Session) -> list[dict]:
     """Return all fleet instances for the service+environment."""
-    r = session.get(
-        f"{BASE_URL}/fleet/service/{SERVICE_ID}/environment/{ENV_ID}/instances",
-        timeout=60,
-    )
-    r.raise_for_status()
-    return r.json().get("resourceInstances", [])
+    data = _get(session, f"{BASE_URL}/fleet/service/{SERVICE_ID}/environment/{ENV_ID}/instances")
+    return data.get("resourceInstances", [])
 
 
 # ---------------------------------------------------------------------------
-# Logic helpers
+# Core logic
 # ---------------------------------------------------------------------------
 
-def resource_keys_with_running_instances(
-    instances: list[dict], tier_name: str, old_version: str
+def running_resource_keys_for_version(
+    instances: list[dict], tier_name: str, version: str
 ) -> set[str]:
     """
     Return the set of resource_keys that have at least one RUNNING instance
-    for the given tier_name + old_version combination.
+    for the given (tier_name, version) pair.
 
-    The instance list item shape:
+    Instance list item shape (top-level keys logged on first run):
       {
         "productTierName": "FalkorDB Pro",
-        "productTierVersion": "73.0",          # version the instance is on
+        "productTierVersion": "73.0",   ← or tierVersion, or nested
         "consumptionResourceInstanceResult": {
           "status": "RUNNING",
           "detailedNetworkTopology": {
             "<resourceId>": {"resourceKey": "multi-Zone", ...},
-            ...
           }
         }
       }
@@ -169,8 +178,10 @@ def resource_keys_with_running_instances(
     for inst in instances:
         if inst.get("productTierName") != tier_name:
             continue
-        # The version field name varies — check all known locations defensively.
+
         result = inst.get("consumptionResourceInstanceResult", {})
+
+        # Version field name is not officially documented — check all known paths.
         inst_version = (
             inst.get("productTierVersion")
             or inst.get("tierVersion")
@@ -178,10 +189,12 @@ def resource_keys_with_running_instances(
             or result.get("tierVersion")
             or ""
         )
-        if inst_version != old_version:
+        if inst_version != version:
             continue
+
         if result.get("status") != "RUNNING":
             continue
+
         topology = result.get("detailedNetworkTopology", {})
         for resource_data in topology.values():
             rk = resource_data.get("resourceKey")
@@ -189,10 +202,6 @@ def resource_keys_with_running_instances(
                 found.add(rk)
     return found
 
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 def build_matrix() -> list[dict]:
     if not USERNAME or not PASSWORD:
@@ -216,10 +225,9 @@ def build_matrix() -> list[dict]:
     all_instances = list_instances(session)
     log.info(f"  total instances fetched: {len(all_instances)}")
     if all_instances:
-        # Log the top-level keys of the first instance to help verify field names.
-        sample_keys = list(all_instances[0].keys())
-        log.info(f"  instance top-level fields (sample): {sample_keys}")
+        log.info(f"  instance top-level fields (sample): {list(all_instances[0].keys())}")
 
+    # Ordered: Free → Startup → Pro → Enterprise
     entries: list[dict] = []
 
     for tier_name, resource_configs in TIER_CONFIG.items():
@@ -228,42 +236,39 @@ def build_matrix() -> list[dict]:
             continue
 
         tier_id = tiers[tier_name]["productTierId"]
-        log.info(f"Fetching versions for '{tier_name}' (id={tier_id})...")
+        log.info(f"\n[{tier_name}] Fetching versions (id={tier_id})...")
         versions = get_tier_versions(session, tier_id)
 
         preferred = next((v for v in versions if v["status"] == "Preferred"), None)
         active = [v for v in versions if v["status"] == "Active"]
 
         if not preferred:
-            log.warning(f"No preferred version found for '{tier_name}', skipping")
+            log.warning(f"[{tier_name}] No preferred version found, skipping")
             continue
         if not active:
-            log.info(f"No active (old) versions found for '{tier_name}', nothing to upgrade from")
+            log.info(f"[{tier_name}] No active versions — nothing to upgrade from")
             continue
 
         new_version = preferred["version"]
-        log.info(f"  preferred (new): {new_version}")
-        log.info(f"  active (old candidates): {[v['version'] for v in active]}")
+        log.info(f"  preferred (target): {new_version}")
+        log.info(f"  active candidates:  {[v['version'] for v in active]}")
 
         for old_ver in active:
             old_version = old_ver["version"]
 
-            if tier_name in ALWAYS_TEST_ALL_KEYS:
-                # Free / Startup: single resource_key, always test
-                active_resource_keys = {resource_configs[0][0]}
-            else:
-                # Pro / Enterprise: only test resource_keys with real RUNNING instances
-                active_resource_keys = resource_keys_with_running_instances(
-                    all_instances, tier_name, old_version
-                )
-                if not active_resource_keys:
-                    log.info(f"  [{tier_name}] no RUNNING instances on version {old_version}, skipping")
-                    continue
-                log.info(f"  [{tier_name}] version {old_version} → active resource_keys: {active_resource_keys}")
+            # For ALL tiers: only test versions that have at least one RUNNING instance.
+            # For Free/Startup this still checks, there's just only one resource_key possible.
+            active_rkeys = running_resource_keys_for_version(all_instances, tier_name, old_version)
+
+            if not active_rkeys:
+                log.info(f"  [{old_version}] no RUNNING instances — skipping")
+                continue
+
+            log.info(f"  [{old_version}] RUNNING resource_keys: {active_rkeys}")
 
             for (rkey, iname_prefix, itype, hcount, creplicas, cnet, tls) in resource_configs:
-                if rkey not in active_resource_keys:
-                    log.info(f"  [{tier_name}/{rkey}] no instances on {old_version}, skipping")
+                if rkey not in active_rkeys:
+                    log.info(f"    {rkey}: no instances — skipping")
                     continue
 
                 versioned_iname = f"{iname_prefix}-{old_version.replace('.', '-')}-{RUN_ID}"
@@ -281,7 +286,7 @@ def build_matrix() -> list[dict]:
                     "custom_network":   cnet,
                     "tls":              effective_tls,
                 })
-                log.info(f"  ✓ Added: {tier_name}/{rkey} {old_version} → {new_version}")
+                log.info(f"    ✓ {rkey}: {old_version} → {new_version}")
 
     return entries
 
@@ -290,14 +295,22 @@ def main():
     entries = build_matrix()
 
     if not entries:
-        log.error(
-            "No test matrix entries generated — no active versions with RUNNING instances found."
-        )
+        log.error("No test matrix entries — no active versions with RUNNING instances found.")
         sys.exit(1)
 
-    matrix = json.dumps({"include": entries})
-    log.info(f"Matrix: {len(entries)} test(s) generated")
+    log.info(f"\n=== Planned upgrades ({len(entries)} total) ===")
+    for e in entries:
+        log.info(f"  {e['name']}")
 
+    if DRY_RUN:
+        log.info("DRY_RUN=true — exiting without writing GITHUB_OUTPUT")
+        github_output = os.environ.get("GITHUB_OUTPUT")
+        if github_output:
+            with open(github_output, "a") as fh:
+                fh.write("matrix=\n")
+        return
+
+    matrix = json.dumps({"include": entries})
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output:
         with open(github_output, "a") as fh:

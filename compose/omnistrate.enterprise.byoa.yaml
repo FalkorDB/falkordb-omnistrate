@@ -6,6 +6,8 @@ x-omnistrate-service-plan:
     byoaDeployment:
       AwsAccountId: "$AwsAccountId"
       AwsBootstrapRoleAccountArn: "$AwsBootstrapRoleAccountArn"
+      AzureSubscriptionId: "$AzureSubscriptionId"
+      AzureTenantId: "$AzureTenantId"
   metering:
     gcsBucketName: $MeteringBucketName
   validPaymentMethodRequired: false
@@ -644,6 +646,8 @@ services:
         - cloudProvider: gcp
           apiParam: nodeInstanceType
         - cloudProvider: aws
+          apiParam: nodeInstanceType
+        - cloudProvider: azure
           apiParam: nodeInstanceType
     x-omnistrate-api-params:
       - key: nodeInstanceType
@@ -2659,6 +2663,9 @@ services:
           aws:
             instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
+          azure:
+            instanceStorageType: AZURE::STANDARD_SSD
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -3027,6 +3034,9 @@ services:
           aws:
             instanceStorageType: AWS::EBS_GP3
             instanceStorageSizeGi: 200
+          azure:
+            instanceStorageType: AZURE::STANDARD_SSD
+            instanceStorageSizeGi: 200
     secrets:
       - source: adminpasspath
         target: /run/secrets/adminpassword
@@ -3054,6 +3064,7 @@ services:
       - FALKORDB_TIMEOUT_DEFAULT=$var.falkorDBTimeoutDefault
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
+      - SKIP_HEALTH_CHECK=false
       - CLUSTER_REPLICAS=1
     ports:
       - "6379"

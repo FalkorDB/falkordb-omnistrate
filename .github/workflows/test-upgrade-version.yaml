@@ -14,77 +14,75 @@ on:
         description: "Omnistrate environment ID (overrides OMNISTRATE_INTERNAL_PROD_ENVIRONMENT var)"
         required: false
         type: string
-
-      free_new_version:
-        description: "Free — target version (e.g. 61.0)"
-        required: false
-        type: string
-      free_old_versions:
-        description: "Free — comma-separated source versions (e.g. 58.0,59.0)"
-        required: false
-        type: string
-
-      startup_new_version:
-        description: "Startup — target version (e.g. 61.0)"
-        required: false
-        type: string
-      startup_old_versions:
-        description: "Startup — comma-separated source versions (e.g. 58.0,59.0)"
-        required: false
-        type: string
-
-      pro_new_version:
-        description: "Pro — target version (e.g. 61.0)"
-        required: false
-        type: string
-      pro_old_versions:
-        description: "Pro — comma-separated source versions (e.g. 58.0,59.0)"
-        required: false
-        type: string
-
-      enterprise_new_version:
-        description: "Enterprise — target version (e.g. 61.0)"
-        required: false
-        type: string
-      enterprise_old_versions:
-        description: "Enterprise — comma-separated source versions (e.g. 58.0,59.0)"
-        required: false
-        type: string
-
       tls:
-        description: "Enable TLS for all tiers (overrides per-tier default)"
+        description: "Override TLS for all tiers (use-default = per-tier defaults)"
+        required: false
+        type: choice
+        options:
+          - use-default
+          - "true"
+          - "false"
+        default: use-default
+      dry_run:
+        description: "Simulate only — print planned upgrades without running tests"
         required: false
         type: boolean
+      tier_free:
+        description: "Test FalkorDB Free tier (default: true)"
+        required: false
+        type: boolean
+        default: true
+      tier_startup:
+        description: "Test FalkorDB Startup tier (default: true)"
+        required: false
+        type: boolean
+        default: true
+      tier_pro:
+        description: "Test FalkorDB Pro tier (default: true)"
+        required: false
+        type: boolean
+        default: true
+      tier_enterprise:
+        description: "Test FalkorDB Enterprise tier (default: true)"
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   generate-matrix:
     runs-on: ubuntu-latest
-    permissions: {}
+    permissions:
+      contents: read
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate test matrix
+      - name: Install requests
+        run: pip install requests --quiet
+
+      - name: Fetch upgrade matrix from Omnistrate API
         id: set-matrix
         env:
-          FREE_NEW:       ${{ inputs.free_new_version }}
-          FREE_OLD:       ${{ inputs.free_old_versions }}
-          STARTUP_NEW:    ${{ inputs.startup_new_version }}
-          STARTUP_OLD:    ${{ inputs.startup_old_versions }}
-          PRO_NEW:        ${{ inputs.pro_new_version }}
-          PRO_OLD:        ${{ inputs.pro_old_versions }}
-          ENTERPRISE_NEW: ${{ inputs.enterprise_new_version }}
-          ENTERPRISE_OLD: ${{ inputs.enterprise_old_versions }}
-          TLS:            ${{ inputs.tls }}
-          GITHUB_RUN_ID:  ${{ github.run_id }}
-        run: python3 scripts/generate_upgrade_matrix.py
+          OMNISTRATE_USERNAME:          ${{ secrets.OMNISTRATE_USERNAME }}
+          OMNISTRATE_PASSWORD:          ${{ secrets.OMNISTRATE_PASSWORD }}
+          OMNISTRATE_SERVICE_ID:        ${{ inputs.service_id || vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          OMNISTRATE_ENV_ID:            ${{ inputs.environment_id || vars.OMNISTRATE_INTERNAL_PROD_ENVIRONMENT }}
+          TLS:                          ${{ inputs.tls }}
+          DRY_RUN:                      ${{ inputs.dry_run }}
+          TIER_FREE:                    ${{ inputs.tier_free }}
+          TIER_STARTUP:                 ${{ inputs.tier_startup }}
+          TIER_PRO:                     ${{ inputs.tier_pro }}
+          TIER_ENTERPRISE:              ${{ inputs.tier_enterprise }}
+          GITHUB_RUN_ID:                ${{ github.run_id }}
+        run: python3 scripts/fetch_upgrade_matrix.py
 
 
   test-upgrade:
     name: ${{ matrix.name }}
     needs: generate-matrix
+    if: ${{ !inputs.dry_run && needs.generate-matrix.outputs.matrix != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

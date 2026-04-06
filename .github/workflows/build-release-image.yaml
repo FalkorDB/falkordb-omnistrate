@@ -24,14 +24,17 @@ env:
   HEALTHCHECK_IMAGE_NAME: falkordb-cloud-healthcheck
   FALKORDB_EXPORTER_IMAGE_NAME: falkordb-cloud-exporter
   FALKORDB_SENTINEL_IMAGE_NAME: falkordb-cloud-sentinel
-  FALKORDB_VERSION: v4.16.5
+  FALKORDB_VERSION: v4.16.9
   
 jobs:
   build-and-push:
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-22.04-arm' || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      security-events: write
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         platform: [amd64, arm64]
         image:
@@ -52,7 +55,7 @@ jobs:
         shell: cat {0}
       
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
 
@@ -66,16 +69,16 @@ jobs:
           fi
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           build-args: FALKORDB_VERSION=${{ env.FALKORDB_VERSION }}
           platforms: linux/${{ matrix.platform }}
@@ -86,6 +89,23 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.image.image_name }}-${{ matrix.platform }}
           tags: falkordb/${{ matrix.image.image_name }}:${{ steps.set_tag.outputs.tag }}, falkordb/${{ matrix.image.image_name }}:latest-${{ matrix.platform }}
 
+      - name: Scan image with Grype
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v6
+        id: grype
+        with:
+          image: falkordb/${{ matrix.image.image_name }}:${{ steps.set_tag.outputs.tag }}-${{ matrix.platform }}
+          fail-build: true
+          severity-cutoff: high
+          output-format: sarif
+          only-fixed: true
+          config: .github/grype.yaml
+
+      - name: Upload Grype SARIF report
+        uses: github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc # v3
+        if: always()
+        with:
+          sarif_file: ${{ steps.grype.outputs.sarif }}
+          category: grype-${{ matrix.image.image_name }}-${{ matrix.platform }}
 
   create-image-manifest:
     needs: build-and-push
@@ -101,10 +121,10 @@ jobs:
           fi
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
@@ -145,7 +165,7 @@ jobs:
     steps:
       - name: Checkout
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
 
@@ -182,8 +202,8 @@ jobs:
         if: ${{ contains( vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) && (matrix.plans.key == 'pro' || matrix.plans.key == 'enterprise') }}
         working-directory: compose
         run: |
-          sed -i 's/- e2-medium//g' ${{ matrix.plans.file }}
-          sed -i 's/- t2.medium//g' ${{ matrix.plans.file }}
+          sed -i 's/- "e2-medium"//g' ${{ matrix.plans.file }}
+          sed -i 's/- "t2.medium"//g' ${{ matrix.plans.file }}
 
       - name: Enable snapshotBeforeDeletion
         if: ${{ contains( vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) && (matrix.plans.key != 'free')}}
@@ -193,7 +213,7 @@ jobs:
           
       - name: Upload yaml to artifacts
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
-        uses: actions/upload-artifact@v4 
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.plans.file }}
           path: compose/${{ matrix.plans.file }}

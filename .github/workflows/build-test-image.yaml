@@ -7,6 +7,7 @@ on:
       - "src/**"
       - "tests/**"
       - "compose/**"
+      - ".github/workflows/**"
   push:
     tags:
       - "v*"
@@ -14,6 +15,7 @@ on:
       - "src/**"
       - "tests/**"
       - "compose/**"
+      - ".github/workflows/**"
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
@@ -41,7 +43,7 @@ env:
   HEALTHCHECK_IMAGE_NAME: falkordb-cloud-healthcheck
   FALKORDB_EXPORTER_IMAGE_NAME: falkordb-cloud-exporter
   FALKORDB_SENTINEL_IMAGE_NAME: falkordb-cloud-sentinel
-  FALKORDB_VERSION: v4.16.5
+  FALKORDB_VERSION: v4.16.9
   FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
   PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
   ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
@@ -73,7 +75,7 @@ jobs:
     steps:
       - name: Create runners
         id: create-runner
-        uses: FalkorDB/gce-github-runner@install_docker
+        uses: FalkorDB/gce-github-runner@afc782cd7ea95146eac57b53d27fc08489d14d1b # install_docker
         with:
           token: ${{ secrets.GH_SA_TOKEN }}
           project_id: ${{ vars.GCP_PROJECT_ID }}
@@ -89,8 +91,11 @@ jobs:
 
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - dockerfile: ./src/falkordb-node/Dockerfile
@@ -107,15 +112,15 @@ jobs:
             image-name: falkordb-cloud-sentinel
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Cache Docker layers
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ matrix.image-name }}-${{ hashFiles(matrix.dockerfile) }}
@@ -123,13 +128,13 @@ jobs:
             ${{ runner.os }}-buildx-${{ matrix.image-name }}-
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           build-args: FALKORDB_VERSION=${{ env.FALKORDB_VERSION }}
           context: .
@@ -138,6 +143,24 @@ jobs:
           tags: falkordb/${{ matrix.image-name }}:dev-${{ github.event.head_commit.id || github.run_id }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
+
+      - name: Scan image with Grype
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v6
+        id: grype
+        with:
+          image: falkordb/${{ matrix.image-name }}:dev-${{ github.event.head_commit.id || github.run_id }}
+          fail-build: true
+          severity-cutoff: high
+          output-format: sarif
+          only-fixed: true
+          config: .github/grype.yaml
+
+      - name: Upload Grype SARIF report
+        uses: github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc # v3
+        if: always()
+        with:
+          sarif_file: ${{ steps.grype.outputs.sarif }}
+          category: grype-${{ matrix.image-name }}
 
   omnistrate-update-plans:
     needs: build-and-push
@@ -174,7 +197,7 @@ jobs:
             tier-name: enterprise-byoa-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
@@ -202,7 +225,7 @@ jobs:
           sed -i "s/\${{ matrix.plans.plan-name }}/$SANITIZED_TIER_NAME/g" ${{ matrix.plans.file }}
 
       - name: Upload yaml as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.plans.file }}
           path: compose/${{ matrix.plans.file }}
@@ -237,7 +260,7 @@ jobs:
     if: contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
@@ -601,7 +624,7 @@ jobs:
     steps:
       - name: Checkout
         if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
@@ -621,14 +644,14 @@ jobs:
           
       - name: Setup python
         if: ((matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')) && matrix.instances.runner_label == ''
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.x"
 
       - name: Cache Poetry virtualenv
         if: (matrix.instances.if == 'basic') || (matrix.instances.if == 'full' && env.TEST_MODE == 'full')
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/pypoetry/virtualenvs
           key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
@@ -784,7 +807,7 @@ jobs:
     if: ${{ contains(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || inputs.test_mode == 'full' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
@@ -828,7 +851,7 @@ jobs:
           - machine_label: cluster-${{ github.run_id }}-${{ github.run_number }}
           - machine_label: replication-${{ github.run_id }}-${{ github.run_number }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: ./.github/actions/cleanup-runner
         with:
           service_account_key: ${{ secrets.GCP_SA_KEY }}

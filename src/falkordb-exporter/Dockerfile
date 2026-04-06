@@ -1,4 +1,4 @@
-FROM falkordb/redis_exporter:v1.70.2-alpine as redis_exporter
+FROM falkordb/redis_exporter:v1.71.1-alpine AS redis_exporter
 
 FROM alpine:latest
 
@@ -17,7 +17,8 @@ ENV GID=1000
 
 ENV FALKORDB_HOME=/var/lib/falkordb
 
-RUN mkdir -p /var/lib/falkordb && \
+RUN apk upgrade --no-cache && \
+    mkdir -p /var/lib/falkordb && \
     chmod 700 /var/lib/falkordb && \
     chmod +x /usr/local/bin/exporter-entrypoint.sh && \
     addgroup \
@@ -33,5 +34,7 @@ RUN mkdir -p /var/lib/falkordb && \
     chown -R "$USER":"$GROUPNAME" "${FALKORDB_HOME}" && \
     chmod 700 "${FALKORDB_HOME}" && \
     chown -R "$USER":"$GROUPNAME" /falkordb
+
+USER $USER:$GROUPNAME
 
 ENTRYPOINT [ "/usr/local/bin/exporter-entrypoint.sh" ]

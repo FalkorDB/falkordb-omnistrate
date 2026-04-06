@@ -1184,6 +1184,8 @@ services:
         required: true
         export: true
         defaultValue: "falkordb"
+        parameterDependencyMap:
+          sentinel-sz: falkordbUser
       - key: falkordbPassword
         description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
@@ -1376,7 +1378,7 @@ services:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
             cpu: "20m"
-            memory: 30Mi
+            memory: 50Mi
           args:
             - sentinel
         exporter-sentinel:
@@ -1537,7 +1539,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: standard_b2ls_v2
+          name: standard_d2als_v6
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
@@ -1549,6 +1551,7 @@ services:
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
+      - FALKORDB_USER=$var.falkordbUser
       - DATA_DIR=/var/lib/falkordb
       - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
       - NODE_HOST=$sys.network.node.externalEndpoint
@@ -1585,7 +1588,7 @@ services:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
             cpu: "20m"
-            memory: 30Mi
+            memory: 50Mi
           args:
             - sentinel
         exporter-sentinel:
@@ -1606,6 +1609,14 @@ services:
         required: true
         export: true
         defaultValue: "false"
+      - key: falkordbUser
+        description: Choose a default username for your database
+        name: FalkorDB User
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "falkordb"
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
@@ -1947,6 +1958,8 @@ services:
         required: true
         export: true
         defaultValue: "falkordb"
+        parameterDependencyMap:
+          sentinel-mz: falkordbUser
       - key: falkordbPassword
         description: Choose a default password for your database. Updating this value after deployment will restart the instance.
         name: FalkorDB Password
@@ -2139,7 +2152,7 @@ services:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
             cpu: "20m"
-            memory: 30Mi
+            memory: 50Mi
           args:
             - sentinel
         exporter-sentinel:
@@ -2299,7 +2312,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: standard_b2ls_v2
+          name: standard_d2als_v6
     environment:
       - RUN_NODE=0
       - RUN_SENTINEL=1
@@ -2311,6 +2324,7 @@ services:
       - DEBUG=0
       - SENTINEL_PORT=26379
       - TLS=$var.enableTLS
+      - FALKORDB_USER=$var.falkordbUser
       - DATA_DIR=/var/lib/falkordb
       - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt
       - NODE_HOST=$sys.network.node.externalEndpoint
@@ -2347,7 +2361,7 @@ services:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:
             cpu: "20m"
-            memory: 30Mi
+            memory: 50Mi
           args:
             - sentinel
         exporter-sentinel:
@@ -2368,6 +2382,14 @@ services:
         required: true
         export: true
         defaultValue: "false"
+      - key: falkordbUser
+        description: Choose a default username for your database
+        name: FalkorDB User
+        type: String
+        modifiable: false
+        required: true
+        export: true
+        defaultValue: "falkordb"
       - key: falkordbPassword
         description: Choose a default password for your database
         name: FalkorDB Password
@@ -2807,7 +2829,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: standard_b2ls_v2
+          name: standard_d2als_v6
     <<: *rebalanceparam
     environment:
       - IS_MULTI_ZONE=0
@@ -3175,7 +3197,7 @@ services:
         - cloudProvider: aws
           name: t3a.small
         - cloudProvider: azure
-          name: standard_b2ls_v2
+          name: standard_d2als_v6
     <<: *rebalanceparam
     environment:
       - IS_MULTI_ZONE=1

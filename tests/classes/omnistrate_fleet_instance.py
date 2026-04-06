@@ -239,6 +239,23 @@ class OmnistrateFleetInstance:
             ):
                 return key
 
+    def disable_deletion_protection(self):
+        """Disable deletion protection on the instance."""
+
+        if not self.instance_id:
+            return
+
+        response = self._fleet_api.client().patch(
+            f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}/metadata",
+            timeout=60,
+            data=json.dumps({"deletionProtection": False}),
+        )
+
+        self._fleet_api.handle_response(
+            response,
+            f"Failed to disable deletion protection for instance {self.instance_id}",
+        )
+
     def delete(self, wait_for_delete: bool):
         """Delete the instance. Optionally wait for the instance to be deleted."""
 
@@ -250,10 +267,17 @@ class OmnistrateFleetInstance:
         if resource_id is None:
             raise Exception(f"Resource ID not found for instance {self.instance_id}")
 
+        try:
+            self.disable_deletion_protection()
+        except Exception as e:
+            logging.warning(
+                f"Failed to disable deletion protection for instance {self.instance_id}, proceeding with deletion: {e}"
+            )
+
         response = self._fleet_api.client().delete(
             f"{self._fleet_api.base_url}/fleet/service/{self.service_id}/environment/{self.service_environment_id}/instance/{self.instance_id}",
             timeout=60,
-            data=json.dumps({"resourceId": resource_id}),
+            data=json.dumps({"resourceId": resource_id, "skipFinalSnapshot": True}),
         )
 
         self._fleet_api.handle_response(

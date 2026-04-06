@@ -393,7 +393,7 @@ wait_for_hosts() {
 create_user() {
   echo "Creating falkordb user"
   redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER reset
-  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +READONLY +MONITOR +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +CLUSTER +COMMAND +GRAPH.MEMORY +MEMORY +BGREWRITEAOF '+MODULE|LIST'
+  redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING ACL SETUSER $FALKORDB_USER on ">$FALKORDB_PASSWORD" ~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +READONLY +MONITOR +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +CLUSTER +COMMAND +GRAPH.MEMORY +GRAPH.UDF +MEMORY +BGREWRITEAOF '+MODULE|LIST'
 }
 
 get_default_memory_limit() {
@@ -554,12 +554,42 @@ run_node() {
       echo "tls-port $NODE_PORT" >>$NODE_CONF_FILE
       echo "tls-cert-file $TLS_MOUNT_PATH/tls.crt" >>$NODE_CONF_FILE
       echo "tls-key-file $TLS_MOUNT_PATH/tls.key" >>$NODE_CONF_FILE
+      echo "tls-client-cert-file $TLS_MOUNT_PATH/selfsigned-tls.crt" >>$NODE_CONF_FILE
+      echo "tls-client-key-file $TLS_MOUNT_PATH/selfsigned-tls.key" >>$NODE_CONF_FILE
       echo "tls-ca-cert-file $ROOT_CA_PATH" >>$NODE_CONF_FILE
       echo "tls-cluster yes" >>$NODE_CONF_FILE
-      echo "tls-auth-clients no" >>$NODE_CONF_FILE
+      echo "tls-auth-clients optional" >>$NODE_CONF_FILE
       echo "tls-replication yes" >>$NODE_CONF_FILE
     else
+      sed -i "s|tls-port .*|tls-port $NODE_PORT|g" "$NODE_CONF_FILE"
+      sed -i "s|tls-cert-file .*|tls-cert-file $TLS_MOUNT_PATH/tls.crt|g" "$NODE_CONF_FILE"
+      sed -i "s|tls-key-file .*|tls-key-file $TLS_MOUNT_PATH/tls.key|g" "$NODE_CONF_FILE"
+      if grep -q "^tls-client-cert-file " "$NODE_CONF_FILE"; then
+        sed -i "s|tls-client-cert-file .*|tls-client-cert-file $TLS_MOUNT_PATH/selfsigned-tls.crt|g" "$NODE_CONF_FILE"
+      else
+        echo "tls-client-cert-file $TLS_MOUNT_PATH/selfsigned-tls.crt" >>$NODE_CONF_FILE
+      fi
+      if grep -q "^tls-client-key-file " "$NODE_CONF_FILE"; then
+        sed -i "s|tls-client-key-file .*|tls-client-key-file $TLS_MOUNT_PATH/selfsigned-tls.key|g" "$NODE_CONF_FILE"
+      else
+        echo "tls-client-key-file $TLS_MOUNT_PATH/selfsigned-tls.key" >>$NODE_CONF_FILE
+      fi
       sed -i "s|tls-ca-cert-file .*|tls-ca-cert-file $ROOT_CA_PATH|g" "$NODE_CONF_FILE"
+      if grep -q "^tls-cluster " "$NODE_CONF_FILE"; then
+        sed -i "s|tls-cluster .*|tls-cluster yes|g" "$NODE_CONF_FILE"
+      else
+        echo "tls-cluster yes" >>$NODE_CONF_FILE
+      fi
+      if grep -q "^tls-auth-clients " "$NODE_CONF_FILE"; then
+        sed -i "s|tls-auth-clients .*|tls-auth-clients optional|g" "$NODE_CONF_FILE"
+      else
+        echo "tls-auth-clients optional" >>$NODE_CONF_FILE
+      fi
+      if grep -q "^tls-replication " "$NODE_CONF_FILE"; then
+        sed -i "s|tls-replication .*|tls-replication yes|g" "$NODE_CONF_FILE"
+      else
+        echo "tls-replication yes" >>$NODE_CONF_FILE
+      fi
     fi
   else
     echo "port $NODE_PORT" >>$NODE_CONF_FILE
@@ -624,6 +654,11 @@ if [[ "$TLS" == "true" ]]; then
     set -e
     echo 'Refreshing node certificate'
     redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-cert-file $TLS_MOUNT_PATH/tls.crt
+    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-key-file $TLS_MOUNT_PATH/tls.key
+    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-client-cert-file $TLS_MOUNT_PATH/selfsigned-tls.crt
+    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-client-key-file $TLS_MOUNT_PATH/selfsigned-tls.key
+    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-auth-clients optional
+    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-ca-cert-file $ROOT_CA_PATH
     " >$DATA_DIR/cert_rotate_node.sh
     chmod +x $DATA_DIR/cert_rotate_node.sh
   fi

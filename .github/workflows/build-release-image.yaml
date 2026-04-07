@@ -94,8 +94,6 @@ jobs:
         id: grype
         with:
           image: falkordb/${{ matrix.image.image_name }}:${{ steps.set_tag.outputs.tag }}
-          registry-username: ${{ secrets.DOCKER_USERNAME }}
-          registry-password: ${{ secrets.DOCKER_PASSWORD }}
           fail-build: true
           severity-cutoff: high
           output-format: sarif

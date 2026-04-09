@@ -178,7 +178,7 @@ services:
             [
               "sh",
               "-c",
-              'mkdir -p /tmp/cores && if [ -f /data/enable_core_dump ]; then echo /tmp/cores/core-%e-%p-%t > /proc/sys/kernel/core_pattern && echo "[$(date +%FT%T%z)] Core dumps ENABLED, pattern: /tmp/cores/core-%e-%p-%t"; else echo /dev/null > /proc/sys/kernel/core_pattern && echo "[$(date +%FT%T%z)] Core dumps disabled (default)"; fi && while true; do sleep 3600; done',
+              'mkdir -p /data/cores && if [ -f /data/enable_core_dump ]; then echo /data/cores/core-%e-%p-%t > /proc/sys/kernel/core_pattern && echo "[$(date +%FT%T%z)] Core dumps ENABLED, pattern: /data/cores/core-%e-%p-%t"; else echo /dev/null > /proc/sys/kernel/core_pattern && echo "[$(date +%FT%T%z)] Core dumps disabled (default)"; fi && while true; do sleep 3600; done',
             ]
         healthcheck:
           imageNameWithTag: $FalkorDBHealthcheckImage

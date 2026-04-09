@@ -514,6 +514,24 @@ services:
       enableMultiZone: false
       enableEndpointPerReplica: true
       sidecars:
+        core_dump:
+          imageNameWithTag: busybox:latest
+          resourceLimits:
+            cpu: "20m"
+            memory: "32Mi"
+          securityContext:
+            runAsGroup: 0
+            runAsNonRoot: false
+            runAsUser: 0
+            capabilities:
+              add:
+                - SYS_RESOURCE
+          command:
+            [
+              "sh",
+              "-c",
+              'mkdir -p /tmp/cores && if [ -f /data/enable_core_dump ]; then echo /tmp/cores/core-%e-%p-%t > /proc/sys/kernel/core_pattern && echo "[$(date +%FT%T%z)] Core dumps ENABLED, pattern: /tmp/cores/core-%e-%p-%t"; else echo /dev/null > /proc/sys/kernel/core_pattern && echo "[$(date +%FT%T%z)] Core dumps disabled (default)"; fi && while true; do sleep 3600; done',
+            ]
         healthcheck:
           imageNameWithTag: $FalkorDBHealthcheckImage
           resourceLimits:

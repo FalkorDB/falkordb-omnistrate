@@ -130,7 +130,7 @@ x-core-dump-sidecar: &core_dump_sidecar
     [
       "sh",
       "-c",
-      'mkdir -p /data/cores && if [ -f /data/enable_core_dump ]; then echo /data/cores/core-%e-%p-%t > /proc/sys/kernel/core_pattern && echo "[$(date +%FT%T%z)] Core dumps ENABLED, pattern: /data/cores/core-%e-%p-%t"; expiration=$(sed -n "s/^expiration:[[:space:]]*\([0-9]*\)/\1/p" /data/enable_core_dump | head -1); expiration=${expiration:-7}; find /data/cores -maxdepth 1 -name "core-*" -mtime +${expiration} -delete && echo "[$(date +%FT%T%z)] Removed core dumps older than ${expiration} days"; else echo /dev/null > /proc/sys/kernel/core_pattern && echo "[$(date +%FT%T%z)] Core dumps disabled (default)"; fi',
+      'mkdir -p /data/coredump && if [ -f /data/enable_core_dump ]; then echo /data/coredump/core-%e-%p-%t > /proc/sys/kernel/core_pattern && echo "[$(date +%FT%T%z)] Core dumps ENABLED, pattern: /data/coredump/core-%e-%p-%t"; expiration=$(sed -n "s/^expiration:[[:space:]]*\([0-9]*\)/\1/p" /data/enable_core_dump | head -1); expiration=${expiration:-7}; find /data/coredump -maxdepth 1 -name "core-*" -mtime +${expiration} -delete && echo "[$(date +%FT%T%z)] Removed core dumps older than ${expiration} days"; else echo /dev/null > /proc/sys/kernel/core_pattern && echo "[$(date +%FT%T%z)] Core dumps disabled (default)"; fi',
     ]
 
 services:

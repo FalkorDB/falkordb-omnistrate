@@ -65,15 +65,26 @@ normalize_optional_config_values() {
 }
 
 prepare_data_dir() {
-  if [[ "$DATA_DIR" != '/data' ]]; then
-    mkdir -p "$DATA_DIR"
-    if [[ -d '/data' ]] && [[ ! -e "$DATA_DIR/data" ]]; then
-      ln -s /data "$DATA_DIR"
-    fi
-  fi
-
+  # Ensure DATA_DIR ends with /data
   if [[ $(basename "$DATA_DIR") != 'data' ]]; then
     DATA_DIR="$DATA_DIR/data"
+  fi
+
+  # If DATA_DIR is /data (the volume mount itself), nothing to do
+  if [[ "$DATA_DIR" == '/data' ]]; then
+    return
+  fi
+
+  # Create parent directory for DATA_DIR
+  mkdir -p "$(dirname "$DATA_DIR")"
+
+  # If the /data volume mount exists and DATA_DIR is not yet created,
+  # symlink DATA_DIR -> /data so all files land on the persistent volume.
+  # Otherwise just create the directory.
+  if [[ -d '/data' ]] && [[ ! -e "$DATA_DIR" ]]; then
+    ln -s /data "$DATA_DIR"
+  elif [[ ! -e "$DATA_DIR" ]]; then
+    mkdir -p "$DATA_DIR"
   fi
 }
 

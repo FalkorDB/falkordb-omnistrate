@@ -133,6 +133,7 @@ ensure_run_bgrewriteaof_script() {
 set -e
 AOF_FILE_SIZE_TO_MONITOR=${AOF_FILE_SIZE_TO_MONITOR:-5}
 ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
+DATA_DIR=${DATA_DIR:-/var/lib/falkordb/data}
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
 size=$(stat -c%s $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof)
 if [ $size -gt $((AOF_FILE_SIZE_TO_MONITOR * 1024 * 1024)) ]; then

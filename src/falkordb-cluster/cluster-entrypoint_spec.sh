@@ -526,6 +526,55 @@ EOF
     End
   End
 
+  Describe "ensure_run_bgrewriteaof_script()"
+    It "creates the script file in DATA_DIR"
+      FALKORDB_HOME="$temp_dir/falkordb_home"
+      mkdir -p "$FALKORDB_HOME"
+
+      When call ensure_run_bgrewriteaof_script
+      The status should be success
+      The output should include "Creating run_bgrewriteaof script"
+      The output should include "run_bgrewriteaof script created"
+      The file "$DATA_DIR/run_bgrewriteaof" should be exist
+      The file "$DATA_DIR/run_bgrewriteaof" should be executable
+    End
+
+    It "creates a symlink in FALKORDB_HOME"
+      FALKORDB_HOME="$temp_dir/falkordb_home"
+      mkdir -p "$FALKORDB_HOME"
+
+      When call ensure_run_bgrewriteaof_script
+      The status should be success
+      The output should include "run_bgrewriteaof script created"
+      The path "$FALKORDB_HOME/run_bgrewriteaof" should be exist
+      The path "$FALKORDB_HOME/run_bgrewriteaof" should be symlink
+    End
+
+    It "generates a script with correct shebang and content"
+      FALKORDB_HOME="$temp_dir/falkordb_home"
+      mkdir -p "$FALKORDB_HOME"
+
+      When call ensure_run_bgrewriteaof_script
+      The status should be success
+      The output should include "run_bgrewriteaof script created"
+      The contents of file "$DATA_DIR/run_bgrewriteaof" should include "#!/bin/bash"
+      The contents of file "$DATA_DIR/run_bgrewriteaof" should include "set -e"
+      The contents of file "$DATA_DIR/run_bgrewriteaof" should include "AOF_FILE_SIZE_TO_MONITOR"
+      The contents of file "$DATA_DIR/run_bgrewriteaof" should include "BGREWRITEAOF"
+      The contents of file "$DATA_DIR/run_bgrewriteaof" should include "appendonlydir"
+    End
+
+    It "skips creation when script already exists"
+      FALKORDB_HOME="$temp_dir/falkordb_home"
+      mkdir -p "$FALKORDB_HOME"
+      echo "#!/bin/bash" > "$FALKORDB_HOME/run_bgrewriteaof"
+
+      When call ensure_run_bgrewriteaof_script
+      The status should be success
+      The output should include "run_bgrewriteaof script already exists"
+    End
+  End
+
   Describe "LDAP_ENABLED feature flag"
     It "defaults to false in initialize_defaults"
       When call initialize_defaults

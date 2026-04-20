@@ -530,7 +530,7 @@ services:
       - TLS=$var.enableTLS
       - FALKORDB_USER=$var.falkordbUser
       - FALKORDB_UPGRADE_PASSWORD=$func.random(string, 16, 20)
-      - DATA_DIR=/var/lib/falkordb
+      - DATA_DIR=/var/lib/falkordb/data
       - RANDOM_NODE_PORT=$sys.network.node.externalPorts["6379"]
       - MEMORY_LIMIT=$var.memoryRequestsAndLimits
       - ROOT_CA_PATH=/etc/ssl/certs/ca-certificates.crt

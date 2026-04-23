@@ -346,6 +346,29 @@ EOF
   End
 
   Describe "prepare_data_dir()"
+    # Helper: mirrors prepare_data_dir logic but uses FAKE_VOLUME instead of /data
+    # so we can test volume-mount behaviour without root access.
+    _testable_prepare_data_dir() {
+      if [[ $(basename "$DATA_DIR") != 'data' ]]; then
+        DATA_DIR="$DATA_DIR/data"
+      fi
+      if [[ "$DATA_DIR" == "$FAKE_VOLUME" ]]; then
+        return
+      fi
+      mkdir -p "$(dirname "$DATA_DIR")"
+      if [[ -d "$FAKE_VOLUME" ]] && [[ ! -e "$DATA_DIR" ]]; then
+        ln -s "$FAKE_VOLUME" "$DATA_DIR"
+      elif [[ ! -e "$DATA_DIR" ]]; then
+        mkdir -p "$DATA_DIR"
+      fi
+    }
+
+    _readlink_data_dir() { readlink "$DATA_DIR"; }
+    _is_symlink() { test -L "$1" && echo "yes" || echo "no"; }
+    _path_exists() { test -e "$1" && echo "yes" || echo "no"; }
+
+    # --- basename normalisation ---
+
     It "appends /data when basename is not data"
       DATA_DIR="$temp_dir/newdir"
 
@@ -363,12 +386,185 @@ EOF
       The variable DATA_DIR should eq "${temp_dir}/otherparent/data"
     End
 
-    It "skips mkdir when DATA_DIR is /data"
+    It "normalises the production compose value /var/lib/falkordb/data"
+      DATA_DIR="$temp_dir/var/lib/falkordb/data"
+
+      When call prepare_data_dir
+      The status should be success
+      The variable DATA_DIR should eq "${temp_dir}/var/lib/falkordb/data"
+    End
+
+    # --- /data short-circuit ---
+
+    It "returns immediately when DATA_DIR is /data"
       DATA_DIR="/data"
 
       When call prepare_data_dir
       The status should be success
       The variable DATA_DIR should eq "/data"
+    End
+
+    # --- symlink creation (volume present) ---
+
+    It "creates symlink DATA_DIR -> volume when volume mount exists"
+      FAKE_VOLUME="$temp_dir/volume"
+      mkdir -p "$FAKE_VOLUME"
+      DATA_DIR="$temp_dir/falkordb/data"
+
+      When call _testable_prepare_data_dir
+      The status should be success
+      The variable DATA_DIR should eq "${temp_dir}/falkordb/data"
+      The path "$DATA_DIR" should be symlink
+    End
+
+    It "symlink target resolves to the volume mount"
+      FAKE_VOLUME="$temp_dir/volume"
+      mkdir -p "$FAKE_VOLUME"
+      DATA_DIR="$temp_dir/falkordb/data"
+      _testable_prepare_data_dir
+
+      When call _readlink_data_dir
+      The status should be success
+      The output should eq "$FAKE_VOLUME"
+    End
+
+    It "files written through DATA_DIR land on the volume"
+      FAKE_VOLUME="$temp_dir/volume"
+      mkdir -p "$FAKE_VOLUME"
+      DATA_DIR="$temp_dir/falkordb/data"
+      _testable_prepare_data_dir
+      echo "test-payload" > "$DATA_DIR/probe.txt"
+
+      When call cat "$FAKE_VOLUME/probe.txt"
+      The status should be success
+      The output should eq "test-payload"
+    End
+
+    It "creates parent directories that do not exist yet"
+      FAKE_VOLUME="$temp_dir/volume"
+      mkdir -p "$FAKE_VOLUME"
+      DATA_DIR="$temp_dir/deep/nested/path/data"
+
+      When call _testable_prepare_data_dir
+      The status should be success
+      The path "${temp_dir}/deep/nested/path" should be directory
+      The path "$DATA_DIR" should be symlink
+    End
+
+    # --- fallback (no volume) ---
+
+    It "creates a real directory when no volume mount exists"
+      FAKE_VOLUME="$temp_dir/nonexistent_volume"
+      DATA_DIR="$temp_dir/falkordb/data"
+
+      When call _testable_prepare_data_dir
+      The status should be success
+      The path "$DATA_DIR" should be directory
+    End
+
+    It "fallback directory is not a symlink"
+      FAKE_VOLUME="$temp_dir/nonexistent_volume"
+      DATA_DIR="$temp_dir/falkordb/data"
+      _testable_prepare_data_dir
+
+      When call _is_symlink "$DATA_DIR"
+      The output should eq "no"
+    End
+
+    # --- idempotency ---
+
+    It "leaves an existing directory untouched"
+      FAKE_VOLUME="$temp_dir/volume"
+      mkdir -p "$FAKE_VOLUME"
+      DATA_DIR="$temp_dir/falkordb/data"
+      mkdir -p "$DATA_DIR"
+      echo "existing" > "$DATA_DIR/existing.txt"
+
+      When call _testable_prepare_data_dir
+      The status should be success
+      The contents of file "$DATA_DIR/existing.txt" should eq "existing"
+    End
+
+    It "existing directory is not replaced by symlink"
+      FAKE_VOLUME="$temp_dir/volume"
+      mkdir -p "$FAKE_VOLUME"
+      DATA_DIR="$temp_dir/falkordb/data"
+      mkdir -p "$DATA_DIR"
+      _testable_prepare_data_dir
+
+      When call _is_symlink "$DATA_DIR"
+      The output should eq "no"
+    End
+
+    It "leaves an existing symlink untouched"
+      FAKE_VOLUME="$temp_dir/volume"
+      mkdir -p "$FAKE_VOLUME"
+      DATA_DIR="$temp_dir/falkordb/data"
+      mkdir -p "$(dirname "$DATA_DIR")"
+      ln -s "$FAKE_VOLUME" "$DATA_DIR"
+
+      When call _testable_prepare_data_dir
+      The status should be success
+      The path "$DATA_DIR" should be symlink
+    End
+
+    It "existing symlink target is preserved"
+      FAKE_VOLUME="$temp_dir/volume"
+      mkdir -p "$FAKE_VOLUME"
+      DATA_DIR="$temp_dir/falkordb/data"
+      mkdir -p "$(dirname "$DATA_DIR")"
+      ln -s "$FAKE_VOLUME" "$DATA_DIR"
+      _testable_prepare_data_dir
+
+      When call _readlink_data_dir
+      The output should eq "$FAKE_VOLUME"
+    End
+
+    # --- regression: old bug created DATA_DIR as regular dir before symlinking ---
+
+    It "REGRESSION: DATA_DIR is a symlink (not regular dir) when volume exists"
+      FAKE_VOLUME="$temp_dir/volume"
+      mkdir -p "$FAKE_VOLUME"
+      DATA_DIR="$temp_dir/falkordb/data"
+
+      When call _testable_prepare_data_dir
+      The status should be success
+      # The old code did mkdir -p "$DATA_DIR" first, creating a regular dir,
+      # then ln -s /data "$DATA_DIR" would create a CHILD symlink
+      # "$DATA_DIR/data -> /data" instead of making DATA_DIR itself a symlink.
+      The path "$DATA_DIR" should be symlink
+    End
+
+    It "REGRESSION: no nested data/data child symlink exists"
+      FAKE_VOLUME="$temp_dir/volume"
+      mkdir -p "$FAKE_VOLUME"
+      DATA_DIR="$temp_dir/falkordb/data"
+      _testable_prepare_data_dir
+
+      When call _path_exists "$DATA_DIR/data"
+      The output should eq "no"
+    End
+
+    It "REGRESSION: only parent dir is created, not DATA_DIR itself before symlink"
+      FAKE_VOLUME="$temp_dir/volume"
+      mkdir -p "$FAKE_VOLUME"
+      DATA_DIR="$temp_dir/lib/falkordb/data"
+      _testable_prepare_data_dir
+
+      When call _is_symlink "${temp_dir}/lib/falkordb"
+      # Parent must be a real directory, not a symlink
+      The output should eq "no"
+    End
+
+    It "REGRESSION: DATA_DIR itself is the symlink, not its parent"
+      FAKE_VOLUME="$temp_dir/volume"
+      mkdir -p "$FAKE_VOLUME"
+      DATA_DIR="$temp_dir/lib/falkordb/data"
+
+      When call _testable_prepare_data_dir
+      The status should be success
+      The path "${temp_dir}/lib/falkordb" should be directory
+      The path "$DATA_DIR" should be symlink
     End
   End
 
@@ -421,6 +617,45 @@ EOF
       When call add_ldap_config_to_conf
       The status should be success
       The output should include "LDAP module already present in node.conf"
+    End
+  End
+
+  Describe "ensure_run_bgrewriteaof_script()"
+    It "creates the script file in DATA_DIR"
+      FALKORDB_HOME="$temp_dir/falkordb_home"
+      mkdir -p "$FALKORDB_HOME"
+
+      When call ensure_run_bgrewriteaof_script
+      The status should be success
+      The output should include "Creating run_bgrewriteaof script"
+      The output should include "run_bgrewriteaof script created"
+      The file "$DATA_DIR/run_bgrewriteaof" should be exist
+      The file "$DATA_DIR/run_bgrewriteaof" should be executable
+    End
+
+    It "creates a symlink in FALKORDB_HOME"
+      FALKORDB_HOME="$temp_dir/falkordb_home"
+      mkdir -p "$FALKORDB_HOME"
+
+      When call ensure_run_bgrewriteaof_script
+      The status should be success
+      The output should include "run_bgrewriteaof script created"
+      The path "$FALKORDB_HOME/run_bgrewriteaof" should be exist
+      The path "$FALKORDB_HOME/run_bgrewriteaof" should be symlink
+    End
+
+    It "generates a script with correct shebang and content"
+      FALKORDB_HOME="$temp_dir/falkordb_home"
+      mkdir -p "$FALKORDB_HOME"
+
+      When call ensure_run_bgrewriteaof_script
+      The status should be success
+      The output should include "run_bgrewriteaof script created"
+      The contents of file "$DATA_DIR/run_bgrewriteaof" should include "#!/bin/bash"
+      The contents of file "$DATA_DIR/run_bgrewriteaof" should include "set -e"
+      The contents of file "$DATA_DIR/run_bgrewriteaof" should include "AOF_FILE_SIZE_TO_MONITOR"
+      The contents of file "$DATA_DIR/run_bgrewriteaof" should include "BGREWRITEAOF"
+      The contents of file "$DATA_DIR/run_bgrewriteaof" should include "appendonlydir"
     End
   End
 

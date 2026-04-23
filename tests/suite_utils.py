@@ -158,20 +158,20 @@ def zero_downtime_worker(
                     retries_left -= 1
                     
                     if is_stale_master_error(e) and retries_left > 0:
-                        # Retry on stale master error if we have retries left
+                        # Retry on stale master or transient connection errors
                         logging.warning(
-                            f"Connection to stale master detected in zero-downtime worker "
+                            f"Transient error in zero-downtime worker "
                             f"({3 - retries_left}/3 attempts): {e}"
                         )
                         # Force connection reset and retry
                         instance._connection = None
-                        time.sleep(35)  # Wait for sentinel to update (30s down-after + 5s buffer)
+                        time.sleep(35)  # Wait for node to come back
                         db = instance.create_connection(
                             ssl=ssl, force_reconnect=True, network_type=network_type
                         )
                         g = db.select_graph(key)
                     else:
-                        # Either not a stale master error, or no retries left
+                        # Either not a transient error, or no retries left
                         raise
             
             time.sleep(2)

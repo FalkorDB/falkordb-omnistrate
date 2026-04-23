@@ -103,6 +103,10 @@ def test_deploy_instance():
 
     logging.info(f"Product tier id: {product_tier.product_tier_id} for {args.ref_name}")
 
+    # Resolve latest version
+    latest_version = product_tier.latest_major_version
+    logging.info(f"Latest version: {latest_version}")
+
     # Create omnistrate instance
     network = None
     if args.custom_network:
@@ -132,6 +136,8 @@ def test_deploy_instance():
             description=args.instance_description,
             falkordb_user="falkordb",
             falkordb_password=secrets.token_hex(16),
+            product_tier_version=latest_version,
+            custom_tags=[{"key": "falkordb-internal", "value": "testing-pipeline"}],
             nodeInstanceType=args.instance_type,
             storageSize=args.storage_size,
             enableTLS=args.tls,

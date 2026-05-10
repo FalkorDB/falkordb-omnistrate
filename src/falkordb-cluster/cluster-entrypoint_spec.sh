@@ -841,14 +841,12 @@ EOF
       : > "$calls_file"
       redis-cli() {
         echo "$*" >> "$calls_file"
-        if [[ "$*" == *"CONFIG GET cluster-node-timeout"* ]]; then
+        if [[ "${@: -3:1}" == "CONFIG" && "${@: -2:1}" == "GET" && "${@: -1:1}" == "cluster-node-timeout" ]]; then
           printf 'cluster-node-timeout\n5000\n'
         else
           printf 'OK\n'
         fi
       }
-      AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
-      TLS_CONNECTION_STRING=""
 
       When call sync_cluster_node_timeout
       The status should be success
@@ -863,8 +861,6 @@ EOF
         echo "$*" >> "$calls_file"
         printf 'cluster-node-timeout\n30000\n'
       }
-      AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
-      TLS_CONNECTION_STRING=""
 
       When call sync_cluster_node_timeout
       The status should be success
@@ -874,8 +870,6 @@ EOF
 
     It "handles redis-cli connection failure gracefully"
       redis-cli() { echo "Could not connect to Redis" >&2; return 1; }
-      AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
-      TLS_CONNECTION_STRING=""
 
       When call sync_cluster_node_timeout
       The status should be success

@@ -828,6 +828,7 @@ sync_cluster_node_timeout() {
     return
   fi
 
+  # Redis CONFIG GET output is two lines: key on line 1 and value on line 2.
   current_timeout=$(printf '%s\n' "$config_output" | sed -n '2p')
 
   if [[ -z "$current_timeout" || "$current_timeout" == ERR* ]]; then

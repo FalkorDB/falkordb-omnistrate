@@ -835,6 +835,44 @@ EOF
     End
   End
 
+  Describe "sync_cluster_node_timeout()"
+    It "updates cluster-node-timeout when an old value is detected"
+      redis-cli() {
+        if [[ "$*" == *"CONFIG GET cluster-node-timeout"* ]]; then
+          printf 'cluster-node-timeout\n5000\n'
+        else
+          printf 'OK\n'
+        fi
+      }
+      AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
+      TLS_CONNECTION_STRING=""
+
+      When call sync_cluster_node_timeout
+      The status should be success
+      The output should include "Updating cluster-node-timeout from 5000 to 30000"
+    End
+
+    It "keeps cluster-node-timeout unchanged when already 30000"
+      redis-cli() { printf 'cluster-node-timeout\n30000\n'; }
+      AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
+      TLS_CONNECTION_STRING=""
+
+      When call sync_cluster_node_timeout
+      The status should be success
+      The output should include "already up to date: 30000"
+    End
+
+    It "handles redis-cli connection failure gracefully"
+      redis-cli() { echo "ERR Connection refused" >&2; return 1; }
+      AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
+      TLS_CONNECTION_STRING=""
+
+      When call sync_cluster_node_timeout
+      The status should be success
+      The output should include "Could not read cluster-node-timeout"
+    End
+  End
+
   Describe "cluster template defaults"
     It "sets cluster-node-timeout to 30000 in node.conf template"
       When call grep "^cluster-node-timeout " ./node.conf

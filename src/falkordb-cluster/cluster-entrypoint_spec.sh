@@ -855,7 +855,7 @@ EOF
 
       When call sync_cluster_node_timeout
       The status should be success
-      The output should include "Could not set cluster-node-timeout to 30000"
+      The output should include "Warning: Could not set cluster-node-timeout to 30000"
     End
   End
 

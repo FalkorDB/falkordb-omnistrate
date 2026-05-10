@@ -824,7 +824,7 @@ sync_cluster_node_timeout() {
 
   echo "Setting cluster-node-timeout to $desired_timeout"
   if ! "${redis_cli_args[@]}" CONFIG SET cluster-node-timeout "$desired_timeout"; then
-    echo "Could not set cluster-node-timeout to $desired_timeout"
+    echo "Warning: Could not set cluster-node-timeout to $desired_timeout. Continuing startup with current runtime value."
   fi
 }
 

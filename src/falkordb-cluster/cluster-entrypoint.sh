@@ -812,7 +812,6 @@ sync_ldap_server_url() {
 }
 
 sync_cluster_node_timeout() {
-  local config_output current_timeout
   local desired_timeout="30000"
   local -a redis_cli_args=(redis-cli --raw -p "$NODE_PORT")
 
@@ -823,24 +822,9 @@ sync_cluster_node_timeout() {
     redis_cli_args+=(--tls --cacert "$ROOT_CA_PATH")
   fi
 
-  if ! config_output=$("${redis_cli_args[@]}" CONFIG GET cluster-node-timeout 2>&1); then
-    echo "Could not read cluster-node-timeout from running config"
-    return
-  fi
-
-  # Redis CONFIG GET output is two lines: key on line 1 and value on line 2.
-  current_timeout=$(printf '%s\n' "$config_output" | sed -n '2p')
-
-  if [[ -z "$current_timeout" || "$current_timeout" == ERR* ]]; then
-    echo "cluster-node-timeout not set or error reading config"
-    return
-  fi
-
-  if [[ "$current_timeout" != "$desired_timeout" ]]; then
-    echo "Updating cluster-node-timeout from $current_timeout to $desired_timeout"
-    "${redis_cli_args[@]}" CONFIG SET cluster-node-timeout "$desired_timeout"
-  else
-    echo "cluster-node-timeout is already up to date: $current_timeout"
+  echo "Setting cluster-node-timeout to $desired_timeout"
+  if ! "${redis_cli_args[@]}" CONFIG SET cluster-node-timeout "$desired_timeout"; then
+    echo "Could not set cluster-node-timeout to $desired_timeout"
   fi
 }
 

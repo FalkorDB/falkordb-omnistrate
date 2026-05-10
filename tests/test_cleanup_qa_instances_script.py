@@ -61,20 +61,22 @@ class CleanupQaInstancesScriptTests(unittest.TestCase):
     ):
         get_response = Mock()
         get_response.raise_for_status.return_value = None
-        get_response.json.return_value = [
-            {
-                "id": "hc-delete-me",
-                "cloudProvider": "gcp",
-                "accountID": "app-plane-dev-f7a2434f",
-                "currentNumberOfDeployments": 0,
-            },
-            {
-                "id": "hc-keep-me",
-                "cloudProvider": "aws",
-                "accountID": "637423310747",
-                "currentNumberOfDeployments": 2,
-            },
-        ]
+        get_response.json.return_value = {
+            "hostClusters": [
+                {
+                    "id": "hc-delete-me",
+                    "cloudProvider": "gcp",
+                    "accountID": "app-plane-dev-f7a2434f",
+                    "currentNumberOfDeployments": 0,
+                },
+                {
+                    "id": "hc-keep-me",
+                    "cloudProvider": "aws",
+                    "accountID": "637423310747",
+                    "currentNumberOfDeployments": 2,
+                },
+            ]
+        }
         mock_get.return_value = get_response
 
         delete_response = Mock()

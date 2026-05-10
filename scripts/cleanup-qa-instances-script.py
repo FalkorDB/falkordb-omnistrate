@@ -116,7 +116,12 @@ def cleanup_deployment_cells(headers):
         timeout=60,
     )
     response.raise_for_status()
-    host_clusters = response.json()
+    payload = response.json()
+    if isinstance(payload, dict):
+        host_clusters = payload.get("hostClusters", [])
+    else:
+        host_clusters = payload
+
     if not isinstance(host_clusters, list):
         raise ValueError(
             f"Unexpected response format from /fleet/host-clusters: "

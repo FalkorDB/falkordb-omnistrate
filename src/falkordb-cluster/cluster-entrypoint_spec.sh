@@ -856,6 +856,7 @@ EOF
       When call sync_cluster_node_timeout
       The status should be success
       The output should include "Warning: Could not set cluster-node-timeout to 30000"
+      The stderr should include "Could not connect to Redis"
     End
   End
 

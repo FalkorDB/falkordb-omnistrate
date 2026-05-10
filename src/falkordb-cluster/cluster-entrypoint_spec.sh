@@ -863,7 +863,7 @@ EOF
     End
 
     It "handles redis-cli connection failure gracefully"
-      redis-cli() { echo "ERR Connection refused" >&2; return 1; }
+      redis-cli() { echo "Could not connect to Redis" >&2; return 1; }
       AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
       TLS_CONNECTION_STRING=""
 

@@ -53,6 +53,16 @@ class CleanupQaInstancesScriptTests(unittest.TestCase):
                 }
             )
         )
+        self.assertFalse(
+            cleanup_qa_instances_script.should_delete_deployment_cell(
+                {
+                    "id": "hc-20vidasdi",
+                    "cloudProvider": "aws",
+                    "accountID": "637423310747",
+                    "currentNumberOfDeployments": 0,
+                }
+            )
+        )
 
     @patch.object(cleanup_qa_instances_script.requests, "delete")
     @patch.object(cleanup_qa_instances_script.requests, "get")
@@ -74,6 +84,12 @@ class CleanupQaInstancesScriptTests(unittest.TestCase):
                     "cloudProvider": "aws",
                     "accountID": "637423310747",
                     "currentNumberOfDeployments": 2,
+                },
+                {
+                    "id": "hc-vqoxdmrqs",
+                    "cloudProvider": "gcp",
+                    "accountID": "app-plane-dev-f7a2434f",
+                    "currentNumberOfDeployments": 0,
                 },
             ]
         }

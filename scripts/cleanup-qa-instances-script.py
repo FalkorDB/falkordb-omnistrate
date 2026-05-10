@@ -11,6 +11,10 @@ TARGET_DEPLOYMENT_ACCOUNTS = {
     ("aws", "637423310747"),
     ("gcp", "app-plane-dev-f7a2434f"),
 }
+DEPLOYMENT_CELL_DELETION_BLACKLIST = {
+    "hc-20vidasdi",
+    "hc-vqoxdmrqs",
+}
 
 
 def get_auth_headers():
@@ -94,6 +98,10 @@ def cleanup_instances(headers):
 
 
 def should_delete_deployment_cell(host_cluster):
+    host_cluster_id = str(host_cluster.get("id", ""))
+    if host_cluster_id in DEPLOYMENT_CELL_DELETION_BLACKLIST:
+        return False
+
     cloud_provider = str(host_cluster.get("cloudProvider", "")).lower()
     account_id = str(host_cluster.get("accountID", ""))
     deployments = host_cluster.get("currentNumberOfDeployments")

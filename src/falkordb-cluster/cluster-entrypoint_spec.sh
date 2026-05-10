@@ -834,4 +834,12 @@ EOF
       The output should include "not set or error"
     End
   End
+
+  Describe "cluster template defaults"
+    It "sets cluster-node-timeout to 30000 in node.conf template"
+      When call grep "^cluster-node-timeout " ./node.conf
+      The status should be success
+      The output should eq "cluster-node-timeout 30000"
+    End
+  End
 End

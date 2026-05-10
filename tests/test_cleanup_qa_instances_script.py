@@ -45,6 +45,14 @@ class CleanupQaInstancesScriptTests(unittest.TestCase):
                 }
             )
         )
+        self.assertFalse(
+            cleanup_qa_instances_script.should_delete_deployment_cell(
+                {
+                    "cloudProvider": "aws",
+                    "accountID": "637423310747",
+                }
+            )
+        )
 
     @patch.object(cleanup_qa_instances_script.requests, "delete")
     @patch.object(cleanup_qa_instances_script.requests, "get")

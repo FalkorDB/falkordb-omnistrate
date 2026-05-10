@@ -97,9 +97,15 @@ def should_delete_deployment_cell(host_cluster):
     cloud_provider = str(host_cluster.get("cloudProvider", "")).lower()
     account_id = str(host_cluster.get("accountID", ""))
     deployments = host_cluster.get("currentNumberOfDeployments")
+    if deployments is None:
+        return False
+    try:
+        deployments_count = int(deployments)
+    except (TypeError, ValueError):
+        return False
     return (
         (cloud_provider, account_id) in TARGET_DEPLOYMENT_ACCOUNTS
-        and deployments == 0
+        and deployments_count == 0
     )
 
 
@@ -112,7 +118,10 @@ def cleanup_deployment_cells(headers):
     response.raise_for_status()
     host_clusters = response.json()
     if not isinstance(host_clusters, list):
-        raise ValueError("Unexpected response format from /fleet/host-clusters")
+        raise ValueError(
+            f"Unexpected response format from /fleet/host-clusters: "
+            f"expected list, got {type(host_clusters).__name__}"
+        )
 
     for host_cluster in host_clusters:
         if not should_delete_deployment_cell(host_cluster):

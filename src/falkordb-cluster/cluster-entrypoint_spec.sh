@@ -837,7 +837,10 @@ EOF
 
   Describe "sync_cluster_node_timeout()"
     It "updates cluster-node-timeout when an old value is detected"
+      calls_file="$temp_dir/redis_calls.log"
+      : > "$calls_file"
       redis-cli() {
+        echo "$*" >> "$calls_file"
         if [[ "$*" == *"CONFIG GET cluster-node-timeout"* ]]; then
           printf 'cluster-node-timeout\n5000\n'
         else
@@ -850,16 +853,23 @@ EOF
       When call sync_cluster_node_timeout
       The status should be success
       The output should include "Updating cluster-node-timeout from 5000 to 30000"
+      The contents of file "$calls_file" should include "CONFIG SET cluster-node-timeout 30000"
     End
 
     It "keeps cluster-node-timeout unchanged when already 30000"
-      redis-cli() { printf 'cluster-node-timeout\n30000\n'; }
+      calls_file="$temp_dir/redis_calls.log"
+      : > "$calls_file"
+      redis-cli() {
+        echo "$*" >> "$calls_file"
+        printf 'cluster-node-timeout\n30000\n'
+      }
       AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
       TLS_CONNECTION_STRING=""
 
       When call sync_cluster_node_timeout
       The status should be success
       The output should include "already up to date: 30000"
+      The contents of file "$calls_file" should not include "CONFIG SET cluster-node-timeout 30000"
     End
 
     It "handles redis-cli connection failure gracefully"

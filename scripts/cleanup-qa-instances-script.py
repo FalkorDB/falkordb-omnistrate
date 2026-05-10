@@ -6,6 +6,7 @@ import time
 import requests
 
 BASE_URL = "https://api.omnistrate.cloud/2022-09-01-00"
+SUCCESS_STATUS_CODES = (200, 202, 204)
 TARGET_DEPLOYMENT_ACCOUNTS = {
     ("aws", "637423310747"),
     ("gcp", "app-plane-dev-f7a2434f"),
@@ -57,7 +58,6 @@ def cleanup_instances(headers):
         raise KeyError(str(e)) from e
 
     for instance in instances:
-        time.sleep(5)
         instance_id = instance["consumptionResourceInstanceResult"]["id"]
         print(instance_id)
 
@@ -84,12 +84,13 @@ def cleanup_instances(headers):
             json={"resourceId": resource_id},
             timeout=60,
         )
-        if response.status_code == 200:
+        if response.status_code in SUCCESS_STATUS_CODES:
             print(f"Instance {instance_id} deleted: {response.status_code}")
         else:
             print(
                 f"Failed to delete instance {instance_id}: {response.status_code}: {response.text}"
             )
+        time.sleep(5)
 
 
 def should_delete_deployment_cell(host_cluster):
@@ -126,7 +127,7 @@ def cleanup_deployment_cells(headers):
             headers=headers,
             timeout=60,
         )
-        if delete_response.status_code in (200, 202, 204):
+        if delete_response.status_code in SUCCESS_STATUS_CODES:
             print(f"Deployment cell {host_cluster_id} deleted")
         else:
             print(

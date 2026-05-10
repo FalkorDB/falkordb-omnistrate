@@ -6,7 +6,7 @@ import time
 import requests
 
 BASE_URL = "https://api.omnistrate.cloud/2022-09-01-00"
-TARGET_DEPLOYMENT_CELL_ACCOUNTS = {
+TARGET_DEPLOYMENT_ACCOUNTS = {
     ("aws", "637423310747"),
     ("gcp", "app-plane-dev-f7a2434f"),
 }
@@ -56,7 +56,7 @@ def cleanup_instances(headers):
         print("Unexpected response format: 'resourceInstances' key not found")
         raise KeyError(str(e)) from e
 
-    for instance in (instances for instances in instances):
+    for instance in instances:
         time.sleep(5)
         instance_id = instance["consumptionResourceInstanceResult"]["id"]
         print(instance_id)
@@ -97,7 +97,7 @@ def should_delete_deployment_cell(host_cluster):
     account_id = str(host_cluster.get("accountID", ""))
     deployments = host_cluster.get("currentNumberOfDeployments")
     return (
-        (cloud_provider, account_id) in TARGET_DEPLOYMENT_CELL_ACCOUNTS
+        (cloud_provider, account_id) in TARGET_DEPLOYMENT_ACCOUNTS
         and deployments == 0
     )
 

@@ -14,7 +14,7 @@ Contains Omnistrate YAML configuration files for different deployment scenarios 
 
 ### `scripts/`
 Contains utility scripts for managing and debugging FalkorDB instances:
-- `cleanup-qa-instances-script.py`: Script to clean up QA instances.
+- `cleanup-qa-instances-script.py`: Script to clean up QA instances and empty deployment cells for test accounts.
 - `download-debug-so.sh`: Script to download debug shared objects.
 
 ### `src/`

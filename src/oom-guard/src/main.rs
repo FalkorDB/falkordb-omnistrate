@@ -1,5 +1,3 @@
-use nix::sys::signal::{self, Signal};
-use nix::unistd::Pid;
 use std::env;
 use std::fs;
 use std::io::Write;
@@ -13,45 +11,45 @@ enum CgroupVersion {
     V1 { base: PathBuf },
 }
 
-struct ProcessInfo {
-    redis_pid: u32,
-    entrypoint_pid: u32,
+/// Write mode for dump files.
+enum DumpMode {
+    /// Overwrite the file each time (70% and 80%).
+    Overwrite,
+    /// Append with separator (90%).
+    Append,
 }
 
 fn main() {
-    let threshold: f64 = env::var("OOM_PREEMPT_THRESHOLD")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(0.90);
-
-    eprintln!(
-        "[oom-guard] starting — threshold={:.0}%",
-        threshold * 100.0
-    );
+    eprintln!("[oom-guard] starting — dump thresholds: 70%, 80%, 90%");
 
     let mut memory_limit: Option<u64> = None;
     let mut cgroup: Option<CgroupVersion> = None;
-    let mut cached_proc: Option<ProcessInfo> = None;
+    let mut cached_pid: Option<u32> = None;
+    let mut dump_70_done = false;
+    let mut dump_80_done = false;
+    let mut dump_90_done = false;
 
     loop {
         // 1. Adjust OOM scores for redis-server and healthcheck processes.
         adjust_oom_scores();
 
         // 2. Discover redis-server PID (cache it, re-discover if /proc/<pid> vanishes).
-        if cached_proc
-            .as_ref()
-            .map_or(true, |p| !Path::new(&format!("/proc/{}", p.redis_pid)).exists())
+        if cached_pid
+            .map_or(true, |pid| !Path::new(&format!("/proc/{}", pid)).exists())
         {
-            cached_proc = discover_redis_process();
+            cached_pid = discover_redis_pid();
             // Reset cgroup info when PID changes — the cgroup path is PID-dependent.
             memory_limit = None;
             cgroup = None;
+            dump_70_done = false;
+            dump_80_done = false;
+            dump_90_done = false;
         }
 
-        if let Some(ref proc_info) = cached_proc {
+        if let Some(redis_pid) = cached_pid {
             // 3. Discover cgroup paths on first iteration (or after PID change).
             if cgroup.is_none() {
-                cgroup = discover_cgroup(proc_info.redis_pid);
+                cgroup = discover_cgroup(redis_pid);
             }
 
             if let Some(ref cg) = cgroup {
@@ -68,43 +66,51 @@ fn main() {
                 }
 
                 if let (Some(limit), Some(current)) = (memory_limit, read_memory_current(cg)) {
-                    let usage_ratio = current as f64 / limit as f64;
+                    let usage_pct = current as f64 / limit as f64 * 100.0;
 
-                    if usage_ratio >= threshold {
-                        let timestamp = format_timestamp();
+                    // 90% — append (keeps history across multiple spikes)
+                    if !dump_90_done && usage_pct >= 90.0 {
                         let msg = format!(
-                            "[{}] OOM_PREEMPT: memory usage {} bytes ({:.1}%) exceeds threshold ({:.0}% of {} bytes). \
-                             Dumping debug info and sending SIGTERM to entrypoint (pid {}).",
-                            timestamp,
-                            current,
-                            usage_ratio * 100.0,
-                            threshold * 100.0,
-                            limit,
-                            proc_info.entrypoint_pid,
+                            "[{}] OOM_CRITICAL: {:.1}% — {} / {} bytes",
+                            format_timestamp(), usage_pct, current, limit,
                         );
                         eprintln!("{}", msg);
+                        dump_redis_info(&msg, "/data/oom_dump_90.log", DumpMode::Append);
+                        dump_90_done = true;
+                    }
 
-                        // Dump Redis debug info to file.
-                        dump_redis_info(&msg);
+                    // 80% — overwrite (latest snapshot only)
+                    if !dump_80_done && usage_pct >= 80.0 {
+                        let msg = format!(
+                            "[{}] OOM_WARNING: {:.1}% — {} / {} bytes",
+                            format_timestamp(), usage_pct, current, limit,
+                        );
+                        eprintln!("{}", msg);
+                        dump_redis_info(&msg, "/data/oom_dump_80.log", DumpMode::Overwrite);
+                        dump_80_done = true;
+                    }
 
-                        // Send SIGTERM to entrypoint (parent of redis-server).
-                        if let Err(e) = signal::kill(
-                            Pid::from_raw(proc_info.entrypoint_pid as i32),
-                            Signal::SIGTERM,
-                        ) {
-                            eprintln!(
-                                "[oom-guard] failed to send SIGTERM to pid {}: {}",
-                                proc_info.entrypoint_pid, e
-                            );
-                        } else {
-                            eprintln!(
-                                "[oom-guard] SIGTERM sent to entrypoint pid {}",
-                                proc_info.entrypoint_pid
-                            );
-                        }
+                    // 70% — overwrite (latest snapshot only)
+                    if !dump_70_done && usage_pct >= 70.0 {
+                        let msg = format!(
+                            "[{}] OOM_INFO: {:.1}% — {} / {} bytes",
+                            format_timestamp(), usage_pct, current, limit,
+                        );
+                        eprintln!("{}", msg);
+                        dump_redis_info(&msg, "/data/oom_dump_70.log", DumpMode::Overwrite);
+                        dump_70_done = true;
+                    }
 
-                        // Exit to avoid repeated signals.
-                        std::process::exit(0);
+                    // Reset flags if memory drops back below threshold
+                    // (allows re-dump on next spike)
+                    if usage_pct < 70.0 {
+                        dump_70_done = false;
+                    }
+                    if usage_pct < 80.0 {
+                        dump_80_done = false;
+                    }
+                    if usage_pct < 90.0 {
+                        dump_90_done = false;
                     }
                 }
             }
@@ -164,8 +170,8 @@ fn adjust_oom_scores() {
 // Process discovery
 // ---------------------------------------------------------------------------
 
-/// Find the redis-server PID and its parent (entrypoint) PID.
-fn discover_redis_process() -> Option<ProcessInfo> {
+/// Find the redis-server PID.
+fn discover_redis_pid() -> Option<u32> {
     let proc_dir = fs::read_dir("/proc").ok()?;
 
     for entry in proc_dir.flatten() {
@@ -189,31 +195,10 @@ fn discover_redis_process() -> Option<ProcessInfo> {
             Err(_) => continue,
         };
 
-        // Read PPid from /proc/<pid>/status to find the entrypoint.
-        let entrypoint_pid = read_ppid(redis_pid).unwrap_or(1);
-
-        eprintln!(
-            "[oom-guard] discovered redis-server pid={}, entrypoint pid={}",
-            redis_pid, entrypoint_pid
-        );
-
-        return Some(ProcessInfo {
-            redis_pid,
-            entrypoint_pid,
-        });
+        eprintln!("[oom-guard] discovered redis-server pid={}", redis_pid);
+        return Some(redis_pid);
     }
 
-    None
-}
-
-/// Read PPid from /proc/<pid>/status.
-fn read_ppid(pid: u32) -> Option<u32> {
-    let status = fs::read_to_string(format!("/proc/{}/status", pid)).ok()?;
-    for line in status.lines() {
-        if let Some(rest) = line.strip_prefix("PPid:") {
-            return rest.trim().parse().ok();
-        }
-    }
     None
 }
 
@@ -223,18 +208,10 @@ fn read_ppid(pid: u32) -> Option<u32> {
 
 /// Discover the cgroup path for the redis-server container.
 ///
-/// Strategy 1: Read /proc/<pid>/cgroup to learn the container's cgroup path,
-///   then access it from the sidecar's own /sys/fs/cgroup mount.  This works
-///   in shared-PID-namespace pods without needing SYS_PTRACE.
-/// Strategy 2: Access via /proc/<pid>/root/sys/fs/cgroup/ (needs SYS_PTRACE).
-/// Strategy 3: Fall back to the sidecar's own cgroup (pod-level).
+/// Strategy 1: Access via /proc/<pid>/root/sys/fs/cgroup/ (needs SYS_PTRACE).
+/// Strategy 2: Fall back to the sidecar's own cgroup (pod-level).
 fn discover_cgroup(redis_pid: u32) -> Option<CgroupVersion> {
-    // --- Strategy 1: parse /proc/<pid>/cgroup ---------------------------------
-    if let Some(cg) = discover_cgroup_via_proc(redis_pid) {
-        return Some(cg);
-    }
-
-    // --- Strategy 2: /proc/<pid>/root/ traversal ------------------------------
+    // --- Strategy 1: /proc/<pid>/root/ traversal (needs SYS_PTRACE) -----------
     let proc_root = format!("/proc/{}/root", redis_pid);
 
     let v2_base = PathBuf::from(format!("{}/sys/fs/cgroup", proc_root));
@@ -249,7 +226,7 @@ fn discover_cgroup(redis_pid: u32) -> Option<CgroupVersion> {
         return Some(CgroupVersion::V1 { base: v1_base });
     }
 
-    // --- Strategy 3: sidecar's own cgroup (pod-level fallback) ----------------
+    // --- Strategy 2: sidecar's own cgroup (pod-level fallback) ----------------
     let local_v2 = PathBuf::from("/sys/fs/cgroup");
     if local_v2.join("memory.current").exists() {
         eprintln!("[oom-guard] WARNING: using local cgroup v2 (pod-level) — may reflect sidecar limits, not service container");
@@ -263,66 +240,6 @@ fn discover_cgroup(redis_pid: u32) -> Option<CgroupVersion> {
     }
 
     eprintln!("[oom-guard] WARNING: could not discover cgroup for redis-server");
-    None
-}
-
-/// Read /proc/<pid>/cgroup and resolve the container's cgroup path under
-/// the sidecar's /sys/fs/cgroup mount.
-fn discover_cgroup_via_proc(redis_pid: u32) -> Option<CgroupVersion> {
-    let cgroup_file = format!("/proc/{}/cgroup", redis_pid);
-    let content = fs::read_to_string(&cgroup_file).ok()?;
-
-    for line in content.lines() {
-        // Format: "hierarchy-ID:controller-list:cgroup-path"
-        //   v2: "0::/kubepods/burstable/pod<uid>/<cid>"
-        //   v1: "6:memory:/kubepods/burstable/pod<uid>/<cid>"
-        let parts: Vec<&str> = line.splitn(3, ':').collect();
-        if parts.len() != 3 {
-            continue;
-        }
-
-        // cgroup v2 unified hierarchy
-        if parts[0] == "0" && parts[1].is_empty() {
-            let rel = parts[2].trim_start_matches('/');
-            let base = if rel.is_empty() {
-                PathBuf::from("/sys/fs/cgroup")
-            } else {
-                PathBuf::from(format!("/sys/fs/cgroup/{}", rel))
-            };
-            if base.join("memory.current").exists() {
-                eprintln!(
-                    "[oom-guard] using cgroup v2 via /proc/{}/cgroup -> {}",
-                    redis_pid,
-                    base.display()
-                );
-                return Some(CgroupVersion::V2 { base });
-            }
-        }
-
-        // cgroup v1 memory controller
-        if parts[1] == "memory" {
-            let rel = parts[2].trim_start_matches('/');
-            let base = if rel.is_empty() {
-                PathBuf::from("/sys/fs/cgroup/memory")
-            } else {
-                PathBuf::from(format!("/sys/fs/cgroup/memory/{}", rel))
-            };
-            if base.join("memory.usage_in_bytes").exists() {
-                eprintln!(
-                    "[oom-guard] using cgroup v1 via /proc/{}/cgroup -> {}",
-                    redis_pid,
-                    base.display()
-                );
-                return Some(CgroupVersion::V1 { base });
-            }
-        }
-    }
-
-    eprintln!(
-        "[oom-guard] /proc/{}/cgroup did not resolve to accessible memory files (content: {:?})",
-        redis_pid,
-        content.trim()
-    );
     None
 }
 
@@ -368,8 +285,8 @@ fn read_memory_current(cg: &CgroupVersion) -> Option<u64> {
 // Redis info dump
 // ---------------------------------------------------------------------------
 
-/// Connect to Redis and dump diagnostic info to /data/oom_dump_info.log.
-fn dump_redis_info(trigger_msg: &str) {
+/// Connect to Redis and dump diagnostic info to the given path.
+fn dump_redis_info(trigger_msg: &str, dump_path: &str, mode: DumpMode) {
     let node_port = env::var("NODE_PORT").unwrap_or_else(|_| "6379".to_string());
     let password = get_redis_password();
     let tls = env::var("TLS").unwrap_or_default();
@@ -381,7 +298,13 @@ fn dump_redis_info(trigger_msg: &str) {
     };
 
     let mut output = String::with_capacity(64 * 1024);
-    output.push_str("=== OOM PREEMPT DUMP ===\n");
+
+    // For append mode, add a separator between runs.
+    if matches!(mode, DumpMode::Append) {
+        output.push_str("\n------------------------------------------------------------\n");
+    }
+
+    output.push_str("=== OOM DUMP ===\n");
     output.push_str(trigger_msg);
     output.push('\n');
     output.push('\n');
@@ -424,15 +347,21 @@ fn dump_redis_info(trigger_msg: &str) {
         }
     }
 
-    output.push_str("=== END OOM PREEMPT DUMP ===\n");
+    output.push_str("=== END OOM DUMP ===\n");
 
-    // Write to /data/oom_dump_info.log.
-    let dump_path = "/data/oom_dump_info.log";
-    match fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(dump_path)
-    {
+    let file_result = match mode {
+        DumpMode::Overwrite => fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(dump_path),
+        DumpMode::Append => fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(dump_path),
+    };
+
+    match file_result {
         Ok(mut f) => {
             if let Err(e) = f.write_all(output.as_bytes()) {
                 eprintln!("[oom-guard] failed to write dump file: {}", e);

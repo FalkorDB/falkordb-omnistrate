@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-nix = { version = "0.29", features = ["signal", "process"] }
 redis = { version = "0.32.3", features = ["tls-native-tls"] }
 
 [dependencies.openssl]

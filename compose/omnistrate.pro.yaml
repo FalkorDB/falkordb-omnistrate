@@ -764,6 +764,8 @@ services:
       - FALKORDB_RESULT_SET_SIZE=$var.falkorDBResultSetSize
       - FALKORDB_QUERY_MEM_CAPACITY=$var.falkorDBQueryMemCapacity
       - SKIP_HEALTH_CHECK=false
+      - LDAP_ENABLED=true
+      - LDAP_AUTH_SERVER_URL=ldaps://ldap-auth-service.ldap-auth.svc.cluster.local:3390
     ports:
       - "6379:6379"
     x-omnistrate-capabilities:

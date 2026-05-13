@@ -1,0 +1,14 @@
+# 
+prefix=/Users/muhammadqadora/github/falkordb-omnistrate/src/oom-guard/target/release/build/openssl-sys-0bfe28a6f6c0ad91/out/openssl-build/install
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include 
+enginesdir=${libdir}/engines-3
+modulesdir=${libdir}/ossl-modules
+
+Name: OpenSSL-libcrypto
+Description: OpenSSL cryptography library
+Version: 3.6.2
+Libs: -L${libdir} -lcrypto
+Libs.private: 
+Cflags: -I${includedir}

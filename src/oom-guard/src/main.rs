@@ -221,40 +221,108 @@ fn read_ppid(pid: u32) -> Option<u32> {
 // Cgroup discovery and reading
 // ---------------------------------------------------------------------------
 
-/// Discover the cgroup path for the redis-server container by reading
-/// /proc/<redis_pid>/cgroup and resolving it through the process's own
-/// filesystem view at /proc/<redis_pid>/root/sys/fs/cgroup/.
+/// Discover the cgroup path for the redis-server container.
+///
+/// Strategy 1: Read /proc/<pid>/cgroup to learn the container's cgroup path,
+///   then access it from the sidecar's own /sys/fs/cgroup mount.  This works
+///   in shared-PID-namespace pods without needing SYS_PTRACE.
+/// Strategy 2: Access via /proc/<pid>/root/sys/fs/cgroup/ (needs SYS_PTRACE).
+/// Strategy 3: Fall back to the sidecar's own cgroup (pod-level).
 fn discover_cgroup(redis_pid: u32) -> Option<CgroupVersion> {
+    // --- Strategy 1: parse /proc/<pid>/cgroup ---------------------------------
+    if let Some(cg) = discover_cgroup_via_proc(redis_pid) {
+        return Some(cg);
+    }
+
+    // --- Strategy 2: /proc/<pid>/root/ traversal ------------------------------
     let proc_root = format!("/proc/{}/root", redis_pid);
 
-    // Try cgroup v2: /proc/<pid>/root/sys/fs/cgroup/memory.current
     let v2_base = PathBuf::from(format!("{}/sys/fs/cgroup", proc_root));
     if v2_base.join("memory.current").exists() {
         eprintln!("[oom-guard] using cgroup v2 via {}", v2_base.display());
         return Some(CgroupVersion::V2 { base: v2_base });
     }
 
-    // Try cgroup v1: /proc/<pid>/root/sys/fs/cgroup/memory/
     let v1_base = PathBuf::from(format!("{}/sys/fs/cgroup/memory", proc_root));
     if v1_base.join("memory.usage_in_bytes").exists() {
         eprintln!("[oom-guard] using cgroup v1 via {}", v1_base.display());
         return Some(CgroupVersion::V1 { base: v1_base });
     }
 
-    // Fallback: try the sidecar's own /sys/fs/cgroup (pod-level).
+    // --- Strategy 3: sidecar's own cgroup (pod-level fallback) ----------------
     let local_v2 = PathBuf::from("/sys/fs/cgroup");
     if local_v2.join("memory.current").exists() {
-        eprintln!("[oom-guard] using local cgroup v2 (pod-level)");
+        eprintln!("[oom-guard] WARNING: using local cgroup v2 (pod-level) — may reflect sidecar limits, not service container");
         return Some(CgroupVersion::V2 { base: local_v2 });
     }
 
     let local_v1 = PathBuf::from("/sys/fs/cgroup/memory");
     if local_v1.join("memory.usage_in_bytes").exists() {
-        eprintln!("[oom-guard] using local cgroup v1 (pod-level)");
+        eprintln!("[oom-guard] WARNING: using local cgroup v1 (pod-level) — may reflect sidecar limits, not service container");
         return Some(CgroupVersion::V1 { base: local_v1 });
     }
 
     eprintln!("[oom-guard] WARNING: could not discover cgroup for redis-server");
+    None
+}
+
+/// Read /proc/<pid>/cgroup and resolve the container's cgroup path under
+/// the sidecar's /sys/fs/cgroup mount.
+fn discover_cgroup_via_proc(redis_pid: u32) -> Option<CgroupVersion> {
+    let cgroup_file = format!("/proc/{}/cgroup", redis_pid);
+    let content = fs::read_to_string(&cgroup_file).ok()?;
+
+    for line in content.lines() {
+        // Format: "hierarchy-ID:controller-list:cgroup-path"
+        //   v2: "0::/kubepods/burstable/pod<uid>/<cid>"
+        //   v1: "6:memory:/kubepods/burstable/pod<uid>/<cid>"
+        let parts: Vec<&str> = line.splitn(3, ':').collect();
+        if parts.len() != 3 {
+            continue;
+        }
+
+        // cgroup v2 unified hierarchy
+        if parts[0] == "0" && parts[1].is_empty() {
+            let rel = parts[2].trim_start_matches('/');
+            let base = if rel.is_empty() {
+                PathBuf::from("/sys/fs/cgroup")
+            } else {
+                PathBuf::from(format!("/sys/fs/cgroup/{}", rel))
+            };
+            if base.join("memory.current").exists() {
+                eprintln!(
+                    "[oom-guard] using cgroup v2 via /proc/{}/cgroup -> {}",
+                    redis_pid,
+                    base.display()
+                );
+                return Some(CgroupVersion::V2 { base });
+            }
+        }
+
+        // cgroup v1 memory controller
+        if parts[1] == "memory" {
+            let rel = parts[2].trim_start_matches('/');
+            let base = if rel.is_empty() {
+                PathBuf::from("/sys/fs/cgroup/memory")
+            } else {
+                PathBuf::from(format!("/sys/fs/cgroup/memory/{}", rel))
+            };
+            if base.join("memory.usage_in_bytes").exists() {
+                eprintln!(
+                    "[oom-guard] using cgroup v1 via /proc/{}/cgroup -> {}",
+                    redis_pid,
+                    base.display()
+                );
+                return Some(CgroupVersion::V1 { base });
+            }
+        }
+    }
+
+    eprintln!(
+        "[oom-guard] /proc/{}/cgroup did not resolve to accessible memory files (content: {:?})",
+        redis_pid,
+        content.trim()
+    );
     None
 }
 

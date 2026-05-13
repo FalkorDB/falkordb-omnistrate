@@ -792,6 +792,7 @@ services:
             capabilities:
               add:
                 - SYS_RESOURCE
+                - SYS_PTRACE
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: PRE_UPGRADE
@@ -1366,6 +1367,7 @@ services:
             capabilities:
               add:
                 - SYS_RESOURCE
+                - SYS_PTRACE
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: PRE_UPGRADE
@@ -2173,6 +2175,7 @@ services:
             capabilities:
               add:
                 - SYS_RESOURCE
+                - SYS_PTRACE
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: PRE_UPGRADE

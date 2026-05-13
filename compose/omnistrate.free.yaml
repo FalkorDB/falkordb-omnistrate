@@ -186,6 +186,7 @@ services:
             capabilities:
               add:
                 - SYS_RESOURCE
+                - SYS_PTRACE
     deploy:
       resources:
         limits:

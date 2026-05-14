@@ -10,6 +10,7 @@ SUCCESS_STATUS_CODES = (200, 202, 204)
 TARGET_DEPLOYMENT_ACCOUNTS = {
     ("aws", "637423310747"),
     ("gcp", "app-plane-dev-f7a2434f"),
+    ("azure", "e4cb0047-894c-46c9-9215-9ff400614e56")
 }
 DEPLOYMENT_CELL_DELETION_BLACKLIST = {
     "hc-20vidasdi",
@@ -145,7 +146,7 @@ def cleanup_deployment_cells(headers):
             continue
 
         delete_response = requests.delete(
-            f"{BASE_URL}/fleet/host-clusters/{host_cluster_id}",
+            f"{BASE_URL}/fleet/host-cluster/{host_cluster_id}",
             headers=headers,
             timeout=60,
         )

@@ -1,7 +1,7 @@
 use std::env;
 use std::fs;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::thread;
 use std::time::{Duration, SystemTime};
 
@@ -29,8 +29,8 @@ fn main() {
         // 1. Adjust OOM scores for redis-server and healthcheck processes.
         adjust_oom_scores();
 
-        // 2. Discover redis-server PID (cache it, re-discover if /proc/<pid> vanishes).
-        if cached_pid.map_or(true, |pid| !Path::new(&format!("/proc/{}", pid)).exists()) {
+        // 2. Discover redis-server PID (cache it, re-discover if stale or recycled).
+        if cached_pid.map_or(true, |pid| !is_redis_server(pid)) {
             cached_pid = discover_redis_pid();
             // Reset cgroup info when PID changes — the cgroup path is PID-dependent.
             memory_limit = None;
@@ -53,6 +53,10 @@ fn main() {
                             "[oom-guard] detected container memory limit: {} bytes ({:.0} MiB)",
                             limit,
                             limit as f64 / 1048576.0
+                        );
+                    } else {
+                        eprintln!(
+                            "[oom-guard] WARNING: no memory limit detected (unlimited cgroup); guard is inactive"
                         );
                     }
                 }
@@ -143,6 +147,13 @@ fn adjust_oom_scores() {
 // Process discovery
 // ---------------------------------------------------------------------------
 
+/// Check if a PID is still a running redis-server process.
+fn is_redis_server(pid: u32) -> bool {
+    fs::read_to_string(format!("/proc/{}/comm", pid))
+        .map(|c| c.trim().starts_with("redis-server"))
+        .unwrap_or(false)
+}
+
 /// Find the redis-server PID.
 fn discover_redis_pid() -> Option<u32> {
     let proc_dir = fs::read_dir("/proc").ok()?;
@@ -187,6 +198,14 @@ fn discover_redis_pid() -> Option<u32> {
 }
 
 fn terminate_redis(redis_pid: u32) {
+    if !is_redis_server(redis_pid) {
+        eprintln!(
+            "[oom-guard] pid={} is no longer redis-server, skipping SIGABRT",
+            redis_pid
+        );
+        return;
+    }
+
     let pid: libc::pid_t = match redis_pid.try_into() {
         Ok(pid) => pid,
         Err(_) => {
@@ -315,8 +334,11 @@ fn dump_redis_info(trigger_msg: &str, dump_path: &str, mode: DumpMode) {
     match build_redis_connection_info() {
         Ok(connection_info) => match redis::Client::open(connection_info) {
             Ok(client) => {
-                match client.get_connection() {
+                let timeout = Duration::from_secs(3);
+                match client.get_connection_with_timeout(timeout) {
                     Ok(mut con) => {
+                        let _ = con.set_read_timeout(Some(timeout));
+                        let _ = con.set_write_timeout(Some(timeout));
                         // Collect diagnostic commands.
                         for cmd_name in &[
                             "INFO ALL",
@@ -467,8 +489,7 @@ fn format_timestamp() -> String {
     match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
         Ok(d) => {
             let secs = d.as_secs();
-            // Simple UTC timestamp: seconds since epoch.
-            format!("{}Z", secs)
+            format!("epoch={}", secs)
         }
         Err(_) => "unknown".to_string(),
     }

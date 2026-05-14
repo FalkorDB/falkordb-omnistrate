@@ -94,10 +94,10 @@ fn main() {
                         dump_70_done = true;
                     }
 
-                    // 90% — append diagnostics, then ask Redis to shut down cleanly.
+                    // 90% — append diagnostics, then abort Redis to get a core dump.
                     if !dump_90_done && usage_pct >= 90.0 {
                         let msg = format!(
-                            "[{}] OOM_CRITICAL: {:.1}% — {} / {} bytes; sending SIGTERM to redis-server pid={}",
+                            "[{}] OOM_CRITICAL: {:.1}% — {} / {} bytes; sending SIGABRT to redis-server pid={}",
                             format_timestamp(),
                             usage_pct,
                             current,
@@ -231,28 +231,28 @@ fn terminate_redis(redis_pid: u32) {
         Ok(pid) => pid,
         Err(_) => {
             eprintln!(
-                "[oom-guard] failed to send SIGTERM: redis-server pid={} is out of range",
+                "[oom-guard] failed to send SIGABRT: redis-server pid={} is out of range",
                 redis_pid
             );
             return;
         }
     };
 
-    let result = unsafe { libc::kill(pid, libc::SIGTERM) };
+    let result = unsafe { libc::kill(pid, libc::SIGABRT) };
     if result == 0 {
-        eprintln!("[oom-guard] sent SIGTERM to redis-server pid={}", redis_pid);
+        eprintln!("[oom-guard] sent SIGABRT to redis-server pid={}", redis_pid);
         return;
     }
 
     let err = std::io::Error::last_os_error();
     if err.raw_os_error() == Some(libc::ESRCH) {
         eprintln!(
-            "[oom-guard] redis-server pid={} already exited before SIGTERM",
+            "[oom-guard] redis-server pid={} already exited before SIGABRT",
             redis_pid
         );
     } else {
         eprintln!(
-            "[oom-guard] failed to send SIGTERM to redis-server pid={}: {}",
+            "[oom-guard] failed to send SIGABRT to redis-server pid={}: {}",
             redis_pid, err
         );
     }

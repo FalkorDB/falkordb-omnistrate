@@ -13,20 +13,16 @@ enum CgroupVersion {
 
 /// Write mode for dump files.
 enum DumpMode {
-    /// Overwrite the file each time (70%).
-    Overwrite,
-    /// Append with separator (80%).
+    /// Append with separator (90%).
     Append,
 }
 
 fn main() {
-    eprintln!("[oom-guard] starting — dump thresholds: 70%, 80%, 90%");
+    eprintln!("[oom-guard] starting — dump threshold: 90%");
 
     let mut memory_limit: Option<u64> = None;
     let mut cgroup: Option<CgroupVersion> = None;
     let mut cached_pid: Option<u32> = None;
-    let mut dump_70_done = false;
-    let mut dump_80_done = false;
     let mut dump_90_done = false;
 
     loop {
@@ -39,8 +35,6 @@ fn main() {
             // Reset cgroup info when PID changes — the cgroup path is PID-dependent.
             memory_limit = None;
             cgroup = None;
-            dump_70_done = false;
-            dump_80_done = false;
             dump_90_done = false;
         }
 
@@ -66,34 +60,6 @@ fn main() {
                 if let (Some(limit), Some(current)) = (memory_limit, read_memory_current(cg)) {
                     let usage_pct = current as f64 / limit as f64 * 100.0;
 
-                    // 80% — append (keeps history across multiple spikes)
-                    if !dump_80_done && usage_pct >= 80.0 {
-                        let msg = format!(
-                            "[{}] OOM_WARNING: {:.1}% — {} / {} bytes",
-                            format_timestamp(),
-                            usage_pct,
-                            current,
-                            limit,
-                        );
-                        eprintln!("{}", msg);
-                        dump_redis_info(&msg, "/data/oom_dump_80.log", DumpMode::Append);
-                        dump_80_done = true;
-                    }
-
-                    // 70% — overwrite (latest snapshot only)
-                    if !dump_70_done && usage_pct >= 70.0 {
-                        let msg = format!(
-                            "[{}] OOM_INFO: {:.1}% — {} / {} bytes",
-                            format_timestamp(),
-                            usage_pct,
-                            current,
-                            limit,
-                        );
-                        eprintln!("{}", msg);
-                        dump_redis_info(&msg, "/data/oom_dump_70.log", DumpMode::Overwrite);
-                        dump_70_done = true;
-                    }
-
                     // 90% — append diagnostics, then abort Redis to get a core dump.
                     if !dump_90_done && usage_pct >= 90.0 {
                         let msg = format!(
@@ -110,14 +76,8 @@ fn main() {
                         dump_90_done = true;
                     }
 
-                    // Reset flags if memory drops back below threshold
+                    // Reset flag if memory drops back below threshold
                     // (allows re-dump on next spike)
-                    if usage_pct < 70.0 {
-                        dump_70_done = false;
-                    }
-                    if usage_pct < 80.0 {
-                        dump_80_done = false;
-                    }
                     if usage_pct < 90.0 {
                         dump_90_done = false;
                     }
@@ -398,11 +358,6 @@ fn dump_redis_info(trigger_msg: &str, dump_path: &str, mode: DumpMode) {
     output.push_str("=== END OOM DUMP ===\n");
 
     let file_result = match mode {
-        DumpMode::Overwrite => fs::OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(dump_path),
         DumpMode::Append => fs::OpenOptions::new()
             .create(true)
             .append(true)

@@ -435,9 +435,9 @@ fn dump_redis_info(trigger_msg: &str, dump_path: &str, mode: DumpMode) {
         Ok(mut f) => {
             if let Err(e) = f.write_all(output.as_bytes()) {
                 eprintln!("[oom-guard] failed to write dump file: {}", e);
-                emit_dump_to_stdout(&output);
+                // Fall back to stderr so the info is not lost.
+                eprint!("{}", output);
             } else {
-                emit_dump_to_stdout(&output);
                 eprintln!("[oom-guard] dump written to {}", dump_path);
             }
         }
@@ -489,16 +489,6 @@ fn get_redis_port(tls_enabled: bool) -> Result<u16, String> {
 
     port.parse::<u16>()
         .map_err(|e| format!("invalid Redis port '{}': {}", port, e))
-}
-
-fn emit_dump_to_stdout(output: &str) {
-    let mut stdout = std::io::stdout();
-    if let Err(e) = stdout
-        .write_all(output.as_bytes())
-        .and_then(|_| stdout.flush())
-    {
-        eprintln!("[oom-guard] failed to write dump to stdout: {}", e);
-    }
 }
 
 /// Read the Redis password from env or secrets file.

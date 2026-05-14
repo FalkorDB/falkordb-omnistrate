@@ -13,21 +13,20 @@ enum CgroupVersion {
 
 /// Write mode for dump files.
 enum DumpMode {
-    /// Overwrite the file each time (70% and 80%).
+    /// Overwrite the file each time (70%).
     Overwrite,
-    /// Append with separator (90%).
+    /// Append with separator (80%).
     Append,
 }
 
 fn main() {
-    eprintln!("[oom-guard] starting — dump thresholds: 70%, 80%, 90%");
+    eprintln!("[oom-guard] starting — dump thresholds: 70%, 80%");
 
     let mut memory_limit: Option<u64> = None;
     let mut cgroup: Option<CgroupVersion> = None;
     let mut cached_pid: Option<u32> = None;
     let mut dump_70_done = false;
     let mut dump_80_done = false;
-    let mut dump_90_done = false;
 
     loop {
         // 1. Adjust OOM scores for redis-server and healthcheck processes.
@@ -43,7 +42,6 @@ fn main() {
             cgroup = None;
             dump_70_done = false;
             dump_80_done = false;
-            dump_90_done = false;
         }
 
         if let Some(redis_pid) = cached_pid {
@@ -68,25 +66,14 @@ fn main() {
                 if let (Some(limit), Some(current)) = (memory_limit, read_memory_current(cg)) {
                     let usage_pct = current as f64 / limit as f64 * 100.0;
 
-                    // 90% — append (keeps history across multiple spikes)
-                    if !dump_90_done && usage_pct >= 90.0 {
-                        let msg = format!(
-                            "[{}] OOM_CRITICAL: {:.1}% — {} / {} bytes",
-                            format_timestamp(), usage_pct, current, limit,
-                        );
-                        eprintln!("{}", msg);
-                        dump_redis_info(&msg, "/data/oom_dump_90.log", DumpMode::Append);
-                        dump_90_done = true;
-                    }
-
-                    // 80% — overwrite (latest snapshot only)
+                    // 80% — append (keeps history across multiple spikes)
                     if !dump_80_done && usage_pct >= 80.0 {
                         let msg = format!(
                             "[{}] OOM_WARNING: {:.1}% — {} / {} bytes",
                             format_timestamp(), usage_pct, current, limit,
                         );
                         eprintln!("{}", msg);
-                        dump_redis_info(&msg, "/data/oom_dump_80.log", DumpMode::Overwrite);
+                        dump_redis_info(&msg, "/data/oom_dump_80.log", DumpMode::Append);
                         dump_80_done = true;
                     }
 
@@ -108,9 +95,6 @@ fn main() {
                     }
                     if usage_pct < 80.0 {
                         dump_80_done = false;
-                    }
-                    if usage_pct < 90.0 {
-                        dump_90_done = false;
                     }
                 }
             }

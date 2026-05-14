@@ -834,4 +834,37 @@ EOF
       The output should include "not set or error"
     End
   End
+
+  Describe "sync_cluster_node_timeout()"
+    It "sets cluster-node-timeout to 30000"
+      calls_file="$temp_dir/redis_calls.log"
+      : > "$calls_file"
+      redis-cli() {
+        echo "$*" >> "$calls_file"
+        printf 'OK\n'
+      }
+
+      When call sync_cluster_node_timeout
+      The status should be success
+      The output should include "Setting cluster-node-timeout to 30000"
+      The contents of file "$calls_file" should include "CONFIG SET cluster-node-timeout 30000"
+    End
+
+    It "handles redis-cli connection failure gracefully"
+      redis-cli() { echo "Could not connect to Redis" >&2; return 1; }
+
+      When call sync_cluster_node_timeout
+      The status should be success
+      The output should include "Warning: Could not set cluster-node-timeout to 30000"
+      The stderr should include "Could not connect to Redis"
+    End
+  End
+
+  Describe "cluster template defaults"
+    It "sets cluster-node-timeout to 30000 in node.conf template"
+      When call grep "^cluster-node-timeout " ./node.conf
+      The status should be success
+      The output should eq "cluster-node-timeout 30000"
+    End
+  End
 End

@@ -811,7 +811,25 @@ sync_ldap_server_url() {
   fi
 }
 
+sync_cluster_node_timeout() {
+  local desired_timeout="30000"
+  local -a redis_cli_args=(redis-cli --raw -p "$NODE_PORT")
+
+  if [[ -n "$ADMIN_PASSWORD" ]]; then
+    redis_cli_args+=(-a "$ADMIN_PASSWORD" --no-auth-warning)
+  fi
+  if [[ "$TLS" == "true" ]]; then
+    redis_cli_args+=(--tls --cacert "$ROOT_CA_PATH")
+  fi
+
+  echo "Setting cluster-node-timeout to $desired_timeout"
+  if ! "${redis_cli_args[@]}" CONFIG SET cluster-node-timeout "$desired_timeout"; then
+    echo "Warning: Could not set cluster-node-timeout to $desired_timeout. Continuing startup with current runtime value."
+  fi
+}
+
 post_start_configuration() {
+  sync_cluster_node_timeout
   if [[ "$LDAP_ENABLED" == "true" ]]; then
     sync_ldap_server_url
   fi

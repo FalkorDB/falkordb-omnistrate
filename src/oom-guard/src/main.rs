@@ -20,28 +20,28 @@ enum DumpMode {
 }
 
 fn main() {
-    eprintln!("[oom-guard] starting — dump thresholds: 70%, 80%");
+    eprintln!("[oom-guard] starting — dump thresholds: 70%, 80%, 90%");
 
     let mut memory_limit: Option<u64> = None;
     let mut cgroup: Option<CgroupVersion> = None;
     let mut cached_pid: Option<u32> = None;
     let mut dump_70_done = false;
     let mut dump_80_done = false;
+    let mut dump_90_done = false;
 
     loop {
         // 1. Adjust OOM scores for redis-server and healthcheck processes.
         adjust_oom_scores();
 
         // 2. Discover redis-server PID (cache it, re-discover if /proc/<pid> vanishes).
-        if cached_pid
-            .map_or(true, |pid| !Path::new(&format!("/proc/{}", pid)).exists())
-        {
+        if cached_pid.map_or(true, |pid| !Path::new(&format!("/proc/{}", pid)).exists()) {
             cached_pid = discover_redis_pid();
             // Reset cgroup info when PID changes — the cgroup path is PID-dependent.
             memory_limit = None;
             cgroup = None;
             dump_70_done = false;
             dump_80_done = false;
+            dump_90_done = false;
         }
 
         if let Some(redis_pid) = cached_pid {
@@ -70,7 +70,10 @@ fn main() {
                     if !dump_80_done && usage_pct >= 80.0 {
                         let msg = format!(
                             "[{}] OOM_WARNING: {:.1}% — {} / {} bytes",
-                            format_timestamp(), usage_pct, current, limit,
+                            format_timestamp(),
+                            usage_pct,
+                            current,
+                            limit,
                         );
                         eprintln!("{}", msg);
                         dump_redis_info(&msg, "/data/oom_dump_80.log", DumpMode::Append);
@@ -81,11 +84,30 @@ fn main() {
                     if !dump_70_done && usage_pct >= 70.0 {
                         let msg = format!(
                             "[{}] OOM_INFO: {:.1}% — {} / {} bytes",
-                            format_timestamp(), usage_pct, current, limit,
+                            format_timestamp(),
+                            usage_pct,
+                            current,
+                            limit,
                         );
                         eprintln!("{}", msg);
                         dump_redis_info(&msg, "/data/oom_dump_70.log", DumpMode::Overwrite);
                         dump_70_done = true;
+                    }
+
+                    // 90% — append diagnostics, then ask Redis to shut down cleanly.
+                    if !dump_90_done && usage_pct >= 90.0 {
+                        let msg = format!(
+                            "[{}] OOM_CRITICAL: {:.1}% — {} / {} bytes; sending SIGTERM to redis-server pid={}",
+                            format_timestamp(),
+                            usage_pct,
+                            current,
+                            limit,
+                            redis_pid,
+                        );
+                        eprintln!("{}", msg);
+                        dump_redis_info(&msg, "/data/oom_dump_90.log", DumpMode::Append);
+                        terminate_redis(redis_pid);
+                        dump_90_done = true;
                     }
 
                     // Reset flags if memory drops back below threshold
@@ -95,6 +117,9 @@ fn main() {
                     }
                     if usage_pct < 80.0 {
                         dump_80_done = false;
+                    }
+                    if usage_pct < 90.0 {
+                        dump_90_done = false;
                     }
                 }
             }
@@ -119,7 +144,11 @@ fn adjust_oom_scores() {
         let name = entry.file_name();
         let name_str = name.to_string_lossy();
         // Only look at numeric directories (PIDs).
-        if !name_str.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+        if !name_str
+            .chars()
+            .next()
+            .map_or(false, |c| c.is_ascii_digit())
+        {
             continue;
         }
         let pid_path = entry.path();
@@ -157,11 +186,16 @@ fn adjust_oom_scores() {
 /// Find the redis-server PID.
 fn discover_redis_pid() -> Option<u32> {
     let proc_dir = fs::read_dir("/proc").ok()?;
+    let mut best_pid: Option<u32> = None;
 
     for entry in proc_dir.flatten() {
         let name = entry.file_name();
         let name_str = name.to_string_lossy().to_string();
-        if !name_str.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+        if !name_str
+            .chars()
+            .next()
+            .map_or(false, |c| c.is_ascii_digit())
+        {
             continue;
         }
 
@@ -179,11 +213,49 @@ fn discover_redis_pid() -> Option<u32> {
             Err(_) => continue,
         };
 
-        eprintln!("[oom-guard] discovered redis-server pid={}", redis_pid);
-        return Some(redis_pid);
+        if best_pid.map_or(true, |pid| redis_pid < pid) {
+            best_pid = Some(redis_pid);
+        }
     }
 
-    None
+    if let Some(redis_pid) = best_pid {
+        eprintln!("[oom-guard] discovered redis-server pid={}", redis_pid);
+        Some(redis_pid)
+    } else {
+        None
+    }
+}
+
+fn terminate_redis(redis_pid: u32) {
+    let pid: libc::pid_t = match redis_pid.try_into() {
+        Ok(pid) => pid,
+        Err(_) => {
+            eprintln!(
+                "[oom-guard] failed to send SIGTERM: redis-server pid={} is out of range",
+                redis_pid
+            );
+            return;
+        }
+    };
+
+    let result = unsafe { libc::kill(pid, libc::SIGTERM) };
+    if result == 0 {
+        eprintln!("[oom-guard] sent SIGTERM to redis-server pid={}", redis_pid);
+        return;
+    }
+
+    let err = std::io::Error::last_os_error();
+    if err.raw_os_error() == Some(libc::ESRCH) {
+        eprintln!(
+            "[oom-guard] redis-server pid={} already exited before SIGTERM",
+            redis_pid
+        );
+    } else {
+        eprintln!(
+            "[oom-guard] failed to send SIGTERM to redis-server pid={}: {}",
+            redis_pid, err
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -193,7 +265,6 @@ fn discover_redis_pid() -> Option<u32> {
 /// Discover the cgroup path for the redis-server container.
 ///
 /// Strategy 1: Access via /proc/<pid>/root/sys/fs/cgroup/ (needs SYS_PTRACE).
-/// Strategy 2: Fall back to the sidecar's own cgroup (pod-level).
 fn discover_cgroup(redis_pid: u32) -> Option<CgroupVersion> {
     // --- Strategy 1: /proc/<pid>/root/ traversal (needs SYS_PTRACE) -----------
     let proc_root = format!("/proc/{}/root", redis_pid);
@@ -210,17 +281,15 @@ fn discover_cgroup(redis_pid: u32) -> Option<CgroupVersion> {
         return Some(CgroupVersion::V1 { base: v1_base });
     }
 
-    // --- Strategy 2: sidecar's own cgroup (pod-level fallback) ----------------
+    // Refuse the sidecar's local cgroup: it may not be the Redis container cgroup.
     let local_v2 = PathBuf::from("/sys/fs/cgroup");
     if local_v2.join("memory.current").exists() {
-        eprintln!("[oom-guard] WARNING: using local cgroup v2 (pod-level) — may reflect sidecar limits, not service container");
-        return Some(CgroupVersion::V2 { base: local_v2 });
+        eprintln!("[oom-guard] WARNING: refusing local cgroup v2 fallback because it may not belong to redis-server");
     }
 
     let local_v1 = PathBuf::from("/sys/fs/cgroup/memory");
     if local_v1.join("memory.usage_in_bytes").exists() {
-        eprintln!("[oom-guard] WARNING: using local cgroup v1 (pod-level) — may reflect sidecar limits, not service container");
-        return Some(CgroupVersion::V1 { base: local_v1 });
+        eprintln!("[oom-guard] WARNING: refusing local cgroup v1 fallback because it may not belong to redis-server");
     }
 
     eprintln!("[oom-guard] WARNING: could not discover cgroup for redis-server");
@@ -271,16 +340,6 @@ fn read_memory_current(cg: &CgroupVersion) -> Option<u64> {
 
 /// Connect to Redis and dump diagnostic info to the given path.
 fn dump_redis_info(trigger_msg: &str, dump_path: &str, mode: DumpMode) {
-    let node_port = env::var("NODE_PORT").unwrap_or_else(|_| "6379".to_string());
-    let password = get_redis_password();
-    let tls = env::var("TLS").unwrap_or_default();
-
-    let redis_url = if tls == "true" {
-        format!("rediss://:{}@localhost:{}", password, node_port)
-    } else {
-        format!("redis://:{}@localhost:{}", password, node_port)
-    };
-
     let mut output = String::with_capacity(64 * 1024);
 
     // For append mode, add a separator between runs.
@@ -293,39 +352,44 @@ fn dump_redis_info(trigger_msg: &str, dump_path: &str, mode: DumpMode) {
     output.push('\n');
     output.push('\n');
 
-    match redis::Client::open(redis_url.as_str()) {
-        Ok(client) => {
-            match client.get_connection() {
-                Ok(mut con) => {
-                    // Collect diagnostic commands.
-                    for cmd_name in &[
-                        "INFO ALL",
-                        "CLIENT LIST",
-                        "MEMORY DOCTOR",
-                        "MEMORY MALLOC-STATS",
-                        "DBSIZE",
-                    ] {
-                        output.push_str(&format!("--- {} ---\n", cmd_name));
+    match build_redis_connection_info() {
+        Ok(connection_info) => match redis::Client::open(connection_info) {
+            Ok(client) => {
+                match client.get_connection() {
+                    Ok(mut con) => {
+                        // Collect diagnostic commands.
+                        for cmd_name in &[
+                            "INFO ALL",
+                            "CLIENT LIST",
+                            "MEMORY DOCTOR",
+                            "MEMORY MALLOC-STATS",
+                            "DBSIZE",
+                        ] {
+                            output.push_str(&format!("--- {} ---\n", cmd_name));
 
-                        let parts: Vec<&str> = cmd_name.split_whitespace().collect();
-                        let result: Result<redis::Value, _> = if parts.len() == 1 {
-                            redis::cmd(parts[0]).query(&mut con)
-                        } else {
-                            redis::cmd(parts[0]).arg(parts[1]).query(&mut con)
-                        };
+                            let parts: Vec<&str> = cmd_name.split_whitespace().collect();
+                            let result: Result<redis::Value, _> = if parts.len() == 1 {
+                                redis::cmd(parts[0]).query(&mut con)
+                            } else {
+                                redis::cmd(parts[0]).arg(parts[1]).query(&mut con)
+                            };
 
-                        match result {
-                            Ok(val) => output.push_str(&format_redis_value(&val)),
-                            Err(e) => output.push_str(&format!("ERROR: {}\n", e)),
+                            match result {
+                                Ok(val) => output.push_str(&format_redis_value(&val)),
+                                Err(e) => output.push_str(&format!("ERROR: {}\n", e)),
+                            }
+                            output.push('\n');
                         }
-                        output.push('\n');
+                    }
+                    Err(e) => {
+                        output.push_str(&format!("ERROR: failed to connect to Redis: {}\n", e));
                     }
                 }
-                Err(e) => {
-                    output.push_str(&format!("ERROR: failed to connect to Redis: {}\n", e));
-                }
             }
-        }
+            Err(e) => {
+                output.push_str(&format!("ERROR: failed to create Redis client: {}\n", e));
+            }
+        },
         Err(e) => {
             output.push_str(&format!("ERROR: failed to create Redis client: {}\n", e));
         }
@@ -349,7 +413,9 @@ fn dump_redis_info(trigger_msg: &str, dump_path: &str, mode: DumpMode) {
         Ok(mut f) => {
             if let Err(e) = f.write_all(output.as_bytes()) {
                 eprintln!("[oom-guard] failed to write dump file: {}", e);
+                emit_dump_to_stdout(&output);
             } else {
+                emit_dump_to_stdout(&output);
                 eprintln!("[oom-guard] dump written to {}", dump_path);
             }
         }
@@ -358,6 +424,58 @@ fn dump_redis_info(trigger_msg: &str, dump_path: &str, mode: DumpMode) {
             // Fall back to stderr so the info is not lost.
             eprint!("{}", output);
         }
+    }
+}
+
+fn build_redis_connection_info() -> Result<redis::ConnectionInfo, String> {
+    let tls_enabled = env::var("TLS").as_deref() == Ok("true");
+    let port = get_redis_port(tls_enabled)?;
+    let host = if tls_enabled {
+        env::var("NODE_HOST").unwrap_or_else(|_| "localhost".to_string())
+    } else {
+        "localhost".to_string()
+    };
+
+    let addr = if tls_enabled {
+        redis::ConnectionAddr::TcpTls {
+            host,
+            port,
+            insecure: false,
+            tls_params: None,
+        }
+    } else {
+        redis::ConnectionAddr::Tcp(host, port)
+    };
+
+    Ok(redis::ConnectionInfo {
+        addr,
+        redis: redis::RedisConnectionInfo {
+            password: Some(get_redis_password()),
+            ..Default::default()
+        },
+    })
+}
+
+fn get_redis_port(tls_enabled: bool) -> Result<u16, String> {
+    let port = if tls_enabled {
+        env::var("RANDOM_NODE_PORT")
+            .or_else(|_| env::var("NODE_PORT"))
+            .unwrap_or_else(|_| "6379".to_string())
+    } else {
+        env::var("NODE_PORT").unwrap_or_else(|_| "6379".to_string())
+    };
+
+    port.parse::<u16>()
+        .map_err(|e| format!("invalid Redis port '{}': {}", port, e))
+}
+
+fn emit_dump_to_stdout(output: &str) {
+    let mut stdout = std::io::stdout();
+    if let Err(e) = stdout
+        .write_all(output.as_bytes())
+        .and_then(|_| stdout.flush())
+    {
+        eprintln!("[oom-guard] failed to write dump to stdout: {}", e);
     }
 }
 

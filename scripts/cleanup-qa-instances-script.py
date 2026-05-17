@@ -13,7 +13,7 @@ TARGET_DEPLOYMENT_ACCOUNTS = {
     ("azure", "e4cb0047-894c-46c9-9215-9ff400614e56")
 }
 DEPLOYMENT_CELL_DELETION_BLACKLIST = {
-    "hc-20vidasdi",
+    "hc-jx5tis6bc",
     "hc-vqoxdmrqs",
 }
 

@@ -2,9 +2,11 @@ ARG FALKORDB_VERSION=v4.18.7
 
 FROM falkordb/falkordb-server:$FALKORDB_VERSION
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+RUN mkdir -p /usr/share/debconf && \
+    printf '#!/bin/sh\nexec "$@"' > /usr/share/debconf/frontend && \
+    chmod +x /usr/share/debconf/frontend && \
+    apt-get update && \
     apt-get -f install -y && \
-    apt-get install -y --no-install-recommends debconf && \
     apt-get upgrade -y && \
     ln -sf /bin/true /usr/sbin/update-rc.d && \
     apt-get install -y --no-install-recommends bash curl jq openssl supervisor ca-certificates && \

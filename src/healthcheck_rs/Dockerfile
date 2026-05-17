@@ -10,7 +10,8 @@ RUN cargo build --release
 
 FROM debian:bullseye-slim
 
-RUN apt-get update -y \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update -y \
+	&& apt-get install -y --no-install-recommends debconf \
 	&& apt-get upgrade -y \
 	&& apt-get install -y --no-install-recommends openssl ca-certificates \
 	&& apt-get clean \

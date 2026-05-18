@@ -230,6 +230,22 @@ EOF
     End
   End
 
+  Describe "create_tls_rotation_job_script()"
+    It "rebuilds the combined CA bundle before restarting sentinel"
+      TLS=true
+      RUN_SENTINEL=1
+      BASE_ROOT_CA_PATH="/etc/ssl/certs/ca-certificates.crt"
+      TLS_MOUNT_PATH="/etc/tls"
+      SELFSIGNED_CA_PATH="$TLS_MOUNT_PATH/selfsigned-ca.crt"
+      COMBINED_CA_PATH="$DATA_DIR/selfsigned-tls-combined.pem"
+
+      When call create_tls_rotation_job_script
+      The status should be success
+      The contents of file "$DATA_DIR/cert_rotate_sentinel.sh" should include "cat \"$BASE_ROOT_CA_PATH\" \"$SELFSIGNED_CA_PATH\" > \"$COMBINED_CA_PATH\""
+      The contents of file "$DATA_DIR/cert_rotate_sentinel.sh" should include "supervisorctl -c $DATA_DIR/supervisord.conf restart redis-sentinel"
+    End
+  End
+
   Describe "full namespace+DNS+stale restore pipeline"
     It "rewrites namespace, DNS suffix, and strips stale state in correct order"
       INSTANCE_ID="instance-new"

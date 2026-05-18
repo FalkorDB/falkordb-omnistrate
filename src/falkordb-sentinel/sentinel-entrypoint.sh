@@ -60,6 +60,7 @@ initialize_defaults() {
   SENTINEL_HOST=sentinel-$(echo $RESOURCE_ALIAS | cut -d "-" -f 2)-0.$LOCAL_DNS_SUFFIX
   SENTINEL_PORT=${SENTINEL_PORT:-26379}
   ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
+  BASE_ROOT_CA_PATH=$ROOT_CA_PATH
   TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
   SELFSIGNED_CA_PATH="$TLS_MOUNT_PATH/selfsigned-ca.crt"
   MASTER_NAME=${MASTER_NAME:-master}
@@ -90,15 +91,17 @@ prepare_data_dir() {
   elif [[ ! -e "$DATA_DIR" ]]; then
     mkdir -p "$DATA_DIR"
   fi
+
+  COMBINED_CA_PATH="$DATA_DIR/selfsigned-tls-combined.pem"
 }
 
 prepare_tls_ca_bundle() {
   if [[ "$TLS" == "true" ]] && [[ -f "$SELFSIGNED_CA_PATH" ]]; then
-    if ! cat "$ROOT_CA_PATH" "$SELFSIGNED_CA_PATH" > "$DATA_DIR/selfsigned-tls-combined.pem"; then
+    if ! cat "$BASE_ROOT_CA_PATH" "$SELFSIGNED_CA_PATH" > "$COMBINED_CA_PATH"; then
       echo "Failed to create combined CA cert file"
       exit 1
     fi
-    ROOT_CA_PATH="$DATA_DIR/selfsigned-tls-combined.pem"
+    ROOT_CA_PATH="$COMBINED_CA_PATH"
   fi
 }
 
@@ -376,12 +379,15 @@ run_sentinel() {
 create_tls_rotation_job_script() {
   if [[ "$TLS" == "true" && $RUN_SENTINEL -eq 1 ]]; then
     echo "Creating sentinel certificate rotation job."
-    echo "
-    #!/bin/bash
-    set -e
-    echo 'Restarting sentinel'
-    supervisorctl -c $DATA_DIR/supervisord.conf restart redis-sentinel
-    " >$DATA_DIR/cert_rotate_sentinel.sh
+    cat >"$DATA_DIR/cert_rotate_sentinel.sh" <<EOF
+#!/bin/bash
+set -e
+if [[ -f "$SELFSIGNED_CA_PATH" ]]; then
+  cat "$BASE_ROOT_CA_PATH" "$SELFSIGNED_CA_PATH" > "$COMBINED_CA_PATH"
+fi
+echo 'Restarting sentinel'
+supervisorctl -c $DATA_DIR/supervisord.conf restart redis-sentinel
+EOF
     chmod +x $DATA_DIR/cert_rotate_sentinel.sh
   fi
 }

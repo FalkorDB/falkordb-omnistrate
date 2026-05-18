@@ -148,6 +148,7 @@ Describe "node-entrypoint.sh helpers"
 
       When call create_tls_rotation_job_script
       The status should be success
+      The output should include "Creating node certificate rotation job script"
       The contents of file "$DATA_DIR/cert_rotate_node.sh" should include "cat \"$BASE_ROOT_CA_PATH\" \"$SELFSIGNED_CA_PATH\" > \"$COMBINED_CA_PATH\""
       The contents of file "$DATA_DIR/cert_rotate_node.sh" should include "TLS_CONNECTION_STRING=\"--tls --cacert \$tls_ca_path\""
       The contents of file "$DATA_DIR/cert_rotate_node.sh" should include "CONFIG SET tls-ca-cert-file \$tls_ca_path"

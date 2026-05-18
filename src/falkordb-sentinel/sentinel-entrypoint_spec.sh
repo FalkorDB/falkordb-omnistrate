@@ -241,6 +241,7 @@ EOF
 
       When call create_tls_rotation_job_script
       The status should be success
+      The output should include "Creating sentinel certificate rotation job."
       The contents of file "$DATA_DIR/cert_rotate_sentinel.sh" should include "cat \"$BASE_ROOT_CA_PATH\" \"$SELFSIGNED_CA_PATH\" > \"$COMBINED_CA_PATH\""
       The contents of file "$DATA_DIR/cert_rotate_sentinel.sh" should include "supervisorctl -c $DATA_DIR/supervisord.conf restart redis-sentinel"
     End

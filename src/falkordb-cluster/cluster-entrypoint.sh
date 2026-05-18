@@ -46,6 +46,7 @@ initialize_defaults() {
   NODE_PORT=${NODE_PORT:-6379}
   BUS_PORT=${BUS_PORT:-16379}
   ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
+  BASE_ROOT_CA_PATH=$ROOT_CA_PATH
   TLS_MOUNT_PATH=${TLS_MOUNT_PATH:-/etc/tls}
   SELFSIGNED_CA_PATH="$TLS_MOUNT_PATH/selfsigned-ca.crt"
   DATA_DIR=${DATA_DIR:-"${FALKORDB_HOME}/data"}
@@ -86,15 +87,17 @@ prepare_data_dir() {
   elif [[ ! -e "$DATA_DIR" ]]; then
     mkdir -p "$DATA_DIR"
   fi
+
+  COMBINED_CA_PATH="$DATA_DIR/selfsigned-tls-combined.pem"
 }
 
 prepare_tls_ca_bundle() {
   if [[ "$TLS" == "true" ]] && [[ -f "$SELFSIGNED_CA_PATH" ]]; then
-    if ! cat "$ROOT_CA_PATH" "$SELFSIGNED_CA_PATH" > "$DATA_DIR/selfsigned-tls-combined.pem"; then
+    if ! cat "$BASE_ROOT_CA_PATH" "$SELFSIGNED_CA_PATH" > "$COMBINED_CA_PATH"; then
       echo "Failed to create combined CA cert file"
       exit 1
     fi
-    ROOT_CA_PATH="$DATA_DIR/selfsigned-tls-combined.pem"
+    ROOT_CA_PATH="$COMBINED_CA_PATH"
   fi
 }
 
@@ -856,17 +859,23 @@ ensure_cluster_membership() {
 create_tls_rotation_job_script() {
   if [[ "$TLS" == "true" && $RUN_NODE -eq 1 ]]; then
     echo "Creating node certificate rotation job script"
-    echo "
-    #!/bin/bash
-    set -e
-    echo 'Refreshing node certificate'
-    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-cert-file $TLS_MOUNT_PATH/tls.crt
-    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-key-file $TLS_MOUNT_PATH/tls.key
-    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-client-cert-file $TLS_MOUNT_PATH/selfsigned-tls.crt
-    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-client-key-file $TLS_MOUNT_PATH/selfsigned-tls.key
-    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-auth-clients optional
-    redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning $TLS_CONNECTION_STRING CONFIG SET tls-ca-cert-file $ROOT_CA_PATH
-    " > "$DATA_DIR/cert_rotate_node.sh"
+    cat >"$DATA_DIR/cert_rotate_node.sh" <<EOF
+#!/bin/bash
+set -e
+echo 'Refreshing node certificate'
+tls_ca_path="$BASE_ROOT_CA_PATH"
+if [[ -f "$SELFSIGNED_CA_PATH" ]]; then
+  cat "$BASE_ROOT_CA_PATH" "$SELFSIGNED_CA_PATH" > "$COMBINED_CA_PATH"
+  tls_ca_path="$COMBINED_CA_PATH"
+fi
+TLS_CONNECTION_STRING="--tls --cacert \$tls_ca_path"
+redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning \$TLS_CONNECTION_STRING CONFIG SET tls-cert-file $TLS_MOUNT_PATH/tls.crt
+redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning \$TLS_CONNECTION_STRING CONFIG SET tls-key-file $TLS_MOUNT_PATH/tls.key
+redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning \$TLS_CONNECTION_STRING CONFIG SET tls-client-cert-file $TLS_MOUNT_PATH/selfsigned-tls.crt
+redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning \$TLS_CONNECTION_STRING CONFIG SET tls-client-key-file $TLS_MOUNT_PATH/selfsigned-tls.key
+redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning \$TLS_CONNECTION_STRING CONFIG SET tls-auth-clients optional
+redis-cli -p $NODE_PORT -a \$(cat /run/secrets/adminpassword) --no-auth-warning \$TLS_CONNECTION_STRING CONFIG SET tls-ca-cert-file \$tls_ca_path
+EOF
     chmod +x "$DATA_DIR/cert_rotate_node.sh"
   fi
 }

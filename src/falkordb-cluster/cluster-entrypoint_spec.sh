@@ -185,6 +185,26 @@ EOF
     End
   End
 
+  Describe "create_tls_rotation_job_script()"
+    It "rebuilds the combined CA bundle before reloading TLS config"
+      TLS=true
+      RUN_NODE=1
+      ROOT_CA_PATH="$DATA_DIR/selfsigned-tls-combined.pem"
+      BASE_ROOT_CA_PATH="/etc/ssl/certs/ca-certificates.crt"
+      TLS_MOUNT_PATH="/etc/tls"
+      SELFSIGNED_CA_PATH="$TLS_MOUNT_PATH/selfsigned-ca.crt"
+      COMBINED_CA_PATH="$DATA_DIR/selfsigned-tls-combined.pem"
+      TLS_CONNECTION_STRING="--tls --cacert $ROOT_CA_PATH"
+
+      When call create_tls_rotation_job_script
+      The status should be success
+      The output should include "Creating node certificate rotation job script"
+      The contents of file "$DATA_DIR/cert_rotate_node.sh" should include "cat \"$BASE_ROOT_CA_PATH\" \"$SELFSIGNED_CA_PATH\" > \"$COMBINED_CA_PATH\""
+      The contents of file "$DATA_DIR/cert_rotate_node.sh" should include "TLS_CONNECTION_STRING=\"--tls --cacert \$tls_ca_path\""
+      The contents of file "$DATA_DIR/cert_rotate_node.sh" should include "CONFIG SET tls-ca-cert-file \$tls_ca_path"
+    End
+  End
+
   Describe "prepare_node_files_for_startup()"
     It "rewrites namespace and DNS suffix before resolving node IPs"
       INSTANCE_ID="instance-new"

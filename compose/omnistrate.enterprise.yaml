@@ -893,19 +893,6 @@ services:
           resourceLimits:
             cpu: "200m"
             memory: 50Mi
-        oom_guard:
-          imageNameWithTag: $OomGuardImage
-          resourceLimits:
-            cpu: "20m"
-            memory: "40Mi"
-          securityContext:
-            runAsGroup: 0
-            runAsNonRoot: false
-            runAsUser: 0
-            capabilities:
-              add:
-                - SYS_RESOURCE
-                - SYS_PTRACE
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: PRE_UPGRADE
@@ -1444,19 +1431,6 @@ services:
           resourceLimits:
             cpu: "200m"
             memory: 100Mi
-        oom_guard:
-          imageNameWithTag: $OomGuardImage
-          resourceLimits:
-            cpu: "20m"
-            memory: "40Mi"
-          securityContext:
-            runAsGroup: 0
-            runAsNonRoot: false
-            runAsUser: 0
-            capabilities:
-              add:
-                - SYS_RESOURCE
-                - SYS_PTRACE
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: PRE_UPGRADE
@@ -2231,19 +2205,6 @@ services:
           resourceLimits:
             cpu: "200m"
             memory: 100Mi
-        oom_guard:
-          imageNameWithTag: $OomGuardImage
-          resourceLimits:
-            cpu: "20m"
-            memory: "40Mi"
-          securityContext:
-            runAsGroup: 0
-            runAsNonRoot: false
-            runAsUser: 0
-            capabilities:
-              add:
-                - SYS_RESOURCE
-                - SYS_PTRACE
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: PRE_UPGRADE
@@ -2823,19 +2784,6 @@ services:
             - "9121"
             - "1"
             - "--is-cluster"
-        oom_guard:
-          imageNameWithTag: $OomGuardImage
-          resourceLimits:
-            cpu: "20m"
-            memory: "40Mi"
-          securityContext:
-            runAsGroup: 0
-            runAsNonRoot: false
-            runAsUser: 0
-            capabilities:
-              add:
-                - SYS_RESOURCE
-                - SYS_PTRACE
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: PRE_UPGRADE
@@ -3206,19 +3154,6 @@ services:
             - "9121"
             - "1"
             - "--is-cluster"
-        oom_guard:
-          imageNameWithTag: $OomGuardImage
-          resourceLimits:
-            cpu: "20m"
-            memory: "40Mi"
-          securityContext:
-            runAsGroup: 0
-            runAsNonRoot: false
-            runAsUser: 0
-            capabilities:
-              add:
-                - SYS_RESOURCE
-                - SYS_PTRACE
     x-omnistrate-actionhooks:
       - scope: CLUSTER
         type: PRE_UPGRADE

@@ -190,8 +190,19 @@ fn adjust_oom_scores() {
 /// Check if a PID is still a running redis-server process.
 fn is_redis_server(pid: u32) -> bool {
     fs::read_to_string(format!("/proc/{}/comm", pid))
-        .map(|c| c.trim().starts_with("redis-server"))
+        .map(|c| c.trim().starts_with("redis-server") && !is_sentinel_redis(pid))
         .unwrap_or(false)
+}
+
+/// Detect sentinel-mode redis processes (e.g. redis-server ... --sentinel).
+fn is_sentinel_redis(pid: u32) -> bool {
+    let cmdline = match fs::read(format!("/proc/{}/cmdline", pid)) {
+        Ok(bytes) => bytes,
+        Err(_) => return false,
+    };
+
+    let lower = String::from_utf8_lossy(&cmdline).to_ascii_lowercase();
+    lower.contains("--sentinel") || lower.contains("sentinel.conf") || lower.contains("[sentinel]")
 }
 
 /// Find the redis-server PID.
@@ -223,6 +234,11 @@ fn discover_redis_pid() -> Option<u32> {
             Ok(p) => p,
             Err(_) => continue,
         };
+
+        // Exclude sentinel sidecars that are also launched as redis-server.
+        if is_sentinel_redis(redis_pid) {
+            continue;
+        }
 
         if best_pid.map_or(true, |pid| redis_pid < pid) {
             best_pid = Some(redis_pid);

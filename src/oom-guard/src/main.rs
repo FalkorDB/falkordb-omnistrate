@@ -110,8 +110,13 @@ fn main() {
                         );
                         eprintln!("{}", msg);
                         dump_redis_info(&msg, "/data/oom_dump_90.log", DumpMode::Append);
-                        terminate_redis(redis_pid);
-                        dump_90_done = true;
+                        match terminate_redis(redis_pid) {
+                            Ok(()) => dump_90_done = true,
+                            Err(err) => eprintln!(
+                                "[oom-guard] failed to terminate redis-server pid={}: {}",
+                                redis_pid, err
+                            ),
+                        }
                     }
 
                     // Reset flags if memory drops back below threshold
@@ -253,43 +258,29 @@ fn discover_redis_pid() -> Option<u32> {
     }
 }
 
-fn terminate_redis(redis_pid: u32) {
+fn terminate_redis(redis_pid: u32) -> Result<(), String> {
     if !is_redis_server(redis_pid) {
-        eprintln!(
-            "[oom-guard] pid={} is no longer redis-server, skipping SIGABRT",
-            redis_pid
-        );
-        return;
+        return Err("pid is no longer redis-server; skipping SIGABRT".to_string());
     }
 
     let pid: libc::pid_t = match redis_pid.try_into() {
         Ok(pid) => pid,
         Err(_) => {
-            eprintln!(
-                "[oom-guard] failed to send SIGABRT: redis-server pid={} is out of range",
-                redis_pid
-            );
-            return;
+            return Err("redis-server pid is out of range".to_string());
         }
     };
 
     let result = unsafe { libc::kill(pid, libc::SIGABRT) };
     if result == 0 {
         eprintln!("[oom-guard] sent SIGABRT to redis-server pid={}", redis_pid);
-        return;
+        return Ok(());
     }
 
     let err = std::io::Error::last_os_error();
     if err.raw_os_error() == Some(libc::ESRCH) {
-        eprintln!(
-            "[oom-guard] redis-server pid={} already exited before SIGABRT",
-            redis_pid
-        );
+        Err("redis-server already exited before SIGABRT".to_string())
     } else {
-        eprintln!(
-            "[oom-guard] failed to send SIGABRT to redis-server pid={}: {}",
-            redis_pid, err
-        );
+        Err(err.to_string())
     }
 }
 

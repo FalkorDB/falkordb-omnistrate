@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 libc = "0.2"
-redis = { version = "0.32.3", features = ["tls-native-tls"] }
+redis = { version = "=0.32.3", features = ["tls-native-tls"] }
 
 [dependencies.openssl]
 version = "0.10.73"

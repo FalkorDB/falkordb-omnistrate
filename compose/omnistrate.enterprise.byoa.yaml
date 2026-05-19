@@ -888,7 +888,7 @@ services:
         oom_guard:
           imageNameWithTag: $OomGuardImage
           resourceLimits:
-            cpu: "15m"
+            cpu: "10m"
             memory: "32Mi"
           securityContext:
             runAsGroup: 0
@@ -1438,7 +1438,7 @@ services:
         oom_guard:
           imageNameWithTag: $OomGuardImage
           resourceLimits:
-            cpu: "15m"
+            cpu: "10m"
             memory: "32Mi"
           securityContext:
             runAsGroup: 0
@@ -2225,7 +2225,7 @@ services:
         oom_guard:
           imageNameWithTag: $OomGuardImage
           resourceLimits:
-            cpu: "15m"
+            cpu: "10m"
             memory: "32Mi"
           securityContext:
             runAsGroup: 0
@@ -2817,7 +2817,7 @@ services:
         oom_guard:
           imageNameWithTag: $OomGuardImage
           resourceLimits:
-            cpu: "15m"
+            cpu: "10m"
             memory: "32Mi"
           securityContext:
             runAsGroup: 0
@@ -3200,7 +3200,7 @@ services:
         oom_guard:
           imageNameWithTag: $OomGuardImage
           resourceLimits:
-            cpu: "15m"
+            cpu: "10m"
             memory: "32Mi"
           securityContext:
             runAsGroup: 0

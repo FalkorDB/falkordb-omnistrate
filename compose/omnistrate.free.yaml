@@ -177,7 +177,7 @@ services:
         oom_guard:
           imageNameWithTag: $OomGuardImage
           resourceLimits:
-            cpu: "10m"
+            cpu: "20m"
             memory: "32Mi"
           securityContext:
             runAsGroup: 0

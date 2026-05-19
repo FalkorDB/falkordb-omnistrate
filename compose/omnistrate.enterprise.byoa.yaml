@@ -889,7 +889,7 @@ services:
           imageNameWithTag: $OomGuardImage
           resourceLimits:
             cpu: "20m"
-            memory: "40Mi"
+            memory: "32Mi"
           securityContext:
             runAsGroup: 0
             runAsNonRoot: false
@@ -1439,7 +1439,7 @@ services:
           imageNameWithTag: $OomGuardImage
           resourceLimits:
             cpu: "20m"
-            memory: "40Mi"
+            memory: "32Mi"
           securityContext:
             runAsGroup: 0
             runAsNonRoot: false
@@ -2226,7 +2226,7 @@ services:
           imageNameWithTag: $OomGuardImage
           resourceLimits:
             cpu: "20m"
-            memory: "40Mi"
+            memory: "32Mi"
           securityContext:
             runAsGroup: 0
             runAsNonRoot: false
@@ -2818,7 +2818,7 @@ services:
           imageNameWithTag: $OomGuardImage
           resourceLimits:
             cpu: "20m"
-            memory: "40Mi"
+            memory: "32Mi"
           securityContext:
             runAsGroup: 0
             runAsNonRoot: false
@@ -3201,7 +3201,7 @@ services:
           imageNameWithTag: $OomGuardImage
           resourceLimits:
             cpu: "20m"
-            memory: "40Mi"
+            memory: "32Mi"
           securityContext:
             runAsGroup: 0
             runAsNonRoot: false

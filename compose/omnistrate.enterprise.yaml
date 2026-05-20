@@ -1656,7 +1656,7 @@ services:
         exporter-sentinel:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "200m"
             memory: 50Mi
           args:
             - "26379"
@@ -2442,7 +2442,7 @@ services:
         exporter-sentinel:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "200m"
             memory: 50Mi
           args:
             - "26379"

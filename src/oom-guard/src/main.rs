@@ -98,7 +98,7 @@ fn main() {
                         dump_80_done = true;
                     }
 
-                    // 90% — append diagnostics, then abort Redis to get a core dump.
+                    // 90% — abort Redis first (time-critical), then collect diagnostics.
                     if !dump_90_done && usage_pct >= 90.0 {
                         let msg = format!(
                             "[{}] OOM_CRITICAL: {:.1}% — {} / {} bytes; sending SIGABRT to redis-server pid={}",
@@ -109,7 +109,6 @@ fn main() {
                             redis_pid,
                         );
                         eprintln!("{}", msg);
-                        dump_redis_info(&msg, "/data/oom_dump_90.log", DumpMode::Append);
                         match terminate_redis(redis_pid) {
                             Ok(()) => dump_90_done = true,
                             Err(err) => eprintln!(
@@ -117,6 +116,9 @@ fn main() {
                                 redis_pid, err
                             ),
                         }
+                        // Collect diagnostics after the kill; Redis may still
+                        // respond briefly, and dump_redis_info handles errors.
+                        dump_redis_info(&msg, "/data/oom_dump_90.log", DumpMode::Append);
                     }
 
                     // Reset flags if memory drops back below threshold
@@ -441,17 +443,22 @@ fn dump_redis_info(trigger_msg: &str, dump_path: &str, mode: DumpMode) {
     match file_result {
         Ok(mut f) => {
             if let Err(e) = f.write_all(output.as_bytes()) {
-                eprintln!("[oom-guard] failed to write dump file: {}", e);
-                // Fall back to stderr so the info is not lost.
-                eprint!("{}", output);
+                eprintln!(
+                    "[oom-guard] failed to write dump file: {}; discarding {} bytes of diagnostics",
+                    e,
+                    output.len()
+                );
             } else {
                 eprintln!("[oom-guard] dump written to {}", dump_path);
             }
         }
         Err(e) => {
-            eprintln!("[oom-guard] failed to open {}: {}", dump_path, e);
-            // Fall back to stderr so the info is not lost.
-            eprint!("{}", output);
+            eprintln!(
+                "[oom-guard] failed to open {}: {}; discarding {} bytes of diagnostics",
+                dump_path,
+                e,
+                output.len()
+            );
         }
     }
 }

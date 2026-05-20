@@ -151,6 +151,7 @@ jobs:
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           build-args: FALKORDB_VERSION=${{ env.FALKORDB_VERSION }}
+          platforms: linux/amd64,linux/arm64
           context: .
           file: ${{ matrix.dockerfile }}
           push: true
@@ -414,8 +415,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "t4g.medium"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -427,8 +428,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "t4g.medium"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -440,8 +441,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: multi-Zone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "t4g.medium"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -453,10 +454,10 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Single-Zone
-            instanceType: "t2.medium"
+            instanceType: "t4g.medium"
             hostCount: "6"
             clusterReplicas: "1"
-            newInstanceType: "m6i.large"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -468,10 +469,10 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Multi-Zone
-            instanceType: "t2.medium"
+            instanceType: "t4g.medium"
             hostCount: "6"
             clusterReplicas: "1"
-            newInstanceType: "m6i.large"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -569,8 +570,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "t4g.medium"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
 
           - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
@@ -581,8 +582,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "t4g.medium"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
 
           - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
@@ -593,8 +594,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: multi-Zone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "t4g.medium"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
 
           ######################## PRIVATE • GCP (INTERNAL) ########################
@@ -619,8 +620,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "t4g.medium"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
             tls: true
           - name: "[26] pro/SingleZone/TLS - AWS/us-east-2 - Grouped"
@@ -631,8 +632,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "t4g.medium"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
             tls: true
     steps:
@@ -744,7 +745,7 @@ jobs:
   #           subscriptionId: sub-GJPV3NoNC0
   #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
   #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-  #           extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-upgrade' --instance-description 'test-standalone-upgrade' --instance-type '"t2.medium"' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+  #           extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-upgrade' --instance-description 'test-standalone-upgrade' --instance-type '"t4g.medium"' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
   #         - name: PRO/SingleZone - AWS/us-east-2 - Upgrade Version
   #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
   #           testFile: test_upgrade_version.py
@@ -754,7 +755,7 @@ jobs:
   #           subscriptionId: sub-GJPV3NoNC0
   #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
   #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-  #           extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-upgrade' --instance-description 'test-replication-upgrade' --instance-type '"t2.medium"' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+  #           extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-upgrade' --instance-description 'test-replication-upgrade' --instance-type '"t4g.medium"' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
   #         - name: PRO/ClusterSingleZone - AWS/us-east-2 - Upgrade Version
   #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
   #           testFile: test_upgrade_version.py
@@ -764,7 +765,7 @@ jobs:
   #           subscriptionId: sub-GJPV3NoNC0
   #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
   #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-  #           extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-upgrade' --instance-description 'test-cluster-upgrade' --instance-type '"t2.medium"' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
+  #           extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-upgrade' --instance-description 'test-cluster-upgrade' --instance-type '"t4g.medium"' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
 
   #   steps:
   #     - name: Checkout

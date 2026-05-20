@@ -1564,7 +1564,7 @@ services:
         - cloudProvider: gcp
           name: e2-small
         - cloudProvider: aws
-          name: t3a.small
+          name: t4g.small
         - cloudProvider: azure
           name: standard_d2als_v6
     environment:
@@ -2337,7 +2337,7 @@ services:
         - cloudProvider: gcp
           name: e2-small
         - cloudProvider: aws
-          name: t3a.small
+          name: t4g.small
         - cloudProvider: azure
           name: standard_d2als_v6
     environment:
@@ -2854,7 +2854,7 @@ services:
         - cloudProvider: gcp
           name: e2-small
         - cloudProvider: aws
-          name: t3a.small
+          name: t4g.small
         - cloudProvider: azure
           name: standard_d2als_v6
     <<: *rebalanceparam
@@ -3222,7 +3222,7 @@ services:
         - cloudProvider: gcp
           name: e2-small
         - cloudProvider: aws
-          name: t3a.small
+          name: t4g.small
         - cloudProvider: azure
           name: standard_d2als_v6
     <<: *rebalanceparam

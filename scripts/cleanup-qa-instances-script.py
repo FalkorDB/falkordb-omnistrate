@@ -19,10 +19,17 @@ DEPLOYMENT_CELL_DELETION_BLACKLIST = {
 
 
 def get_auth_headers():
-    payload = {
-        "email": os.environ["OMNISTRATE_USERNAME"],
-        "password": os.environ["OMNISTRATE_PASSWORD"],
-    }
+    api_key = os.environ.get("OMNISTRATE_API_KEY")
+    if api_key:
+        payload = {
+            "email": "apikey@apikeys.invalid",
+            "password": api_key,
+        }
+    else:
+        payload = {
+            "email": os.environ["OMNISTRATE_USERNAME"],
+            "password": os.environ["OMNISTRATE_PASSWORD"],
+        }
     response = requests.post(url=f"{BASE_URL}/signin", json=payload, timeout=60)
     if response.status_code != 200:
         raise ConnectionError(

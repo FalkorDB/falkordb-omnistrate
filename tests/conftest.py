@@ -114,6 +114,7 @@ def cfg(pytestconfig):
         "orig_cluster_replicas": int(opt("--cluster-replicas")),
         "orig_instance_type": opt("--instance-type"),
         # Auth (env)
+        "omnistrate_api_key": os.getenv("OMNISTRATE_API_KEY"),
         "omnistrate_user": os.getenv("OMNISTRATE_USERNAME"),
         "omnistrate_password": os.getenv("OMNISTRATE_PASSWORD"),
     }
@@ -124,12 +125,14 @@ def cfg(pytestconfig):
 @pytest.fixture(scope="session")
 def omnistrate(cfg):
     logging.info("Creating OmnistrateFleetAPI instance")
+    if cfg["omnistrate_api_key"]:
+        return OmnistrateFleetAPI(api_key=cfg["omnistrate_api_key"])
     if not cfg["omnistrate_user"] or not cfg["omnistrate_password"]:
         logging.error(
-            "Missing OMNISTRATE_USERNAME / OMNISTRATE_PASSWORD in environment"
+            "Missing OMNISTRATE_API_KEY or OMNISTRATE_USERNAME / OMNISTRATE_PASSWORD in environment"
         )
         raise RuntimeError(
-            "Missing OMNISTRATE_USERNAME / OMNISTRATE_PASSWORD in environment."
+            "Missing OMNISTRATE_API_KEY or OMNISTRATE_USERNAME / OMNISTRATE_PASSWORD in environment."
         )
     return OmnistrateFleetAPI(
         email=cfg["omnistrate_user"], password=cfg["omnistrate_password"]

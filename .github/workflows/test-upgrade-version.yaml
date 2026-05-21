@@ -69,8 +69,7 @@ jobs:
       - name: Fetch upgrade matrix from Omnistrate API
         id: set-matrix
         env:
-          OMNISTRATE_USERNAME:          ${{ secrets.OMNISTRATE_USERNAME }}
-          OMNISTRATE_PASSWORD:          ${{ secrets.OMNISTRATE_PASSWORD }}
+          OMNISTRATE_API_KEY:          ${{ secrets.OMNISTRATE_API_KEY }}
           OMNISTRATE_SERVICE_ID:        ${{ inputs.service_id || vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
           OMNISTRATE_ENV_ID:            ${{ inputs.environment_id || vars.OMNISTRATE_INTERNAL_PROD_ENVIRONMENT }}
           TLS:                          ${{ inputs.tls }}
@@ -138,9 +137,8 @@ jobs:
           [[ "${{ matrix.tls }}" == "true" ]]       && EXTRA_ARGS+=(--tls)
 
           poetry run python -u tests/test_upgrade_version.py \
-            "${{ secrets.OMNISTRATE_USERNAME }}" \
-            "${{ secrets.OMNISTRATE_PASSWORD }}" \
             aws us-east-2 \
+            --api-key "${{ secrets.OMNISTRATE_API_KEY }}" \
             --service-id     "$SERVICE_ID" \
             --environment-id "$ENVIRONMENT_ID" \
             --resource-key   "${{ matrix.resource_key }}" \

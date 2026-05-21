@@ -35,16 +35,14 @@ jobs:
         uses: ./.github/actions/delete-omnistrate-custom-network
         continue-on-error: true
         with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          api-key: ${{ secrets.OMNISTRATE_API_KEY }}
           custom_network_name: ${{ env.GCP_NETWORK_NAME }}
 
       - name: Delete Omnistrate Custom Network - AWS
         continue-on-error: true
         uses: ./.github/actions/delete-omnistrate-custom-network
         with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          api-key: ${{ secrets.OMNISTRATE_API_KEY }}
           custom_network_name: ${{ env.AWS_NETWORK_NAME }}
 
   delete-service-plan:
@@ -75,8 +73,7 @@ jobs:
         uses: ./.github/actions/delete-omnistrate-service-plan
         continue-on-error: true
         with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          api-key: ${{ secrets.OMNISTRATE_API_KEY }}
           service-id: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
           environment-id: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}
           # The clsosed PR's ref name will be the product tier name

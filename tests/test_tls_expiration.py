@@ -38,12 +38,13 @@ class TLSCertificateMonitor:
 
     def __init__(
         self,
-        omnistrate_user: str,
-        omnistrate_password: str,
-        pagerduty_routing_key: str,
-        service_id: str,
-        env_id: str,
+        omnistrate_user: str = None,
+        omnistrate_password: str = None,
+        pagerduty_routing_key: str = None,
+        service_id: str = None,
+        env_id: str = None,
         skip_free_tier: bool = True,
+        api_key: str = None,
     ):
         """
         Initialize the TLS certificate monitor.
@@ -55,8 +56,12 @@ class TLSCertificateMonitor:
             days_threshold: Number of days before expiration to trigger alert
             instance_filter: Filter string like "service:FalkorDB,environment:Prod,status:RUNNING"
             skip_free_tier: Whether to skip free tier instances
+            api_key: Omnistrate API key (alternative to user/password)
         """
-        self.omnistrate_api = OmnistrateFleetAPI(omnistrate_user, omnistrate_password)
+        if api_key:
+            self.omnistrate_api = OmnistrateFleetAPI(api_key=api_key)
+        else:
+            self.omnistrate_api = OmnistrateFleetAPI(omnistrate_user, omnistrate_password)
         self.pagerduty_routing_key = pagerduty_routing_key
         self.service_id = service_id
         self.env_id = env_id
@@ -464,8 +469,6 @@ def main():
     parser = argparse.ArgumentParser(
         description="Monitor TLS certificate expiration for Omnistrate instances"
     )
-    parser.add_argument("omnistrate_user", help="Omnistrate username/email")
-    parser.add_argument("omnistrate_password", help="Omnistrate password")
     parser.add_argument(
         "pagerduty_routing_key", help="PagerDuty Events API v2 routing key"
     )
@@ -473,6 +476,9 @@ def main():
         "service_id", help="Omnistrate service ID to check (e.g. FalkorDB)"
     )
     parser.add_argument("env_id", help="Omnistrate environment ID to check (e.g. Prod)")
+    parser.add_argument("--api-key", default=os.getenv("OMNISTRATE_API_KEY"), help="Omnistrate API key")
+    parser.add_argument("--omnistrate-user", default=os.getenv("OMNISTRATE_USERNAME"), help="Omnistrate username/email")
+    parser.add_argument("--omnistrate-password", default=os.getenv("OMNISTRATE_PASSWORD"), help="Omnistrate password")
     parser.add_argument(
         "--include-free-tier",
         action="store_true",
@@ -495,6 +501,7 @@ def main():
         service_id=args.service_id,
         env_id=args.env_id,
         skip_free_tier=not args.include_free_tier,
+        api_key=args.api_key,
     )
 
     # Run the check

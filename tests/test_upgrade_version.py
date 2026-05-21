@@ -20,10 +20,11 @@ from classes.omnistrate_types import TierVersionStatus
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
 
 parser = argparse.ArgumentParser()
-parser.add_argument("omnistrate_user")
-parser.add_argument("omnistrate_password")
 parser.add_argument("cloud_provider", choices=["aws", "gcp", "azure"])
 parser.add_argument("region")
+parser.add_argument("--api-key", default=os.getenv("OMNISTRATE_API_KEY"))
+parser.add_argument("--omnistrate-user", default=os.getenv("OMNISTRATE_USERNAME"))
+parser.add_argument("--omnistrate-password", default=os.getenv("OMNISTRATE_PASSWORD"))
 
 parser.add_argument(
     "--subscription-id", required=False, default=os.getenv("SUBSCRIPTION_ID")
@@ -96,10 +97,13 @@ def test_upgrade_version():
     if not new_version:
         raise ValueError("NEW_VERSION environment variable is not set or empty")
 
-    omnistrate = OmnistrateFleetAPI(
-        email=args.omnistrate_user,
-        password=args.omnistrate_password,
-    )
+    if args.api_key:
+        omnistrate = OmnistrateFleetAPI(api_key=args.api_key)
+    else:
+        omnistrate = OmnistrateFleetAPI(
+            email=args.omnistrate_user,
+            password=args.omnistrate_password,
+        )
 
     if not args.service_id:
         raise ValueError(f"Missing service ID")

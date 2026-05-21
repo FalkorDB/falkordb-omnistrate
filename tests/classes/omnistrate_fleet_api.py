@@ -22,9 +22,17 @@ class OmnistrateFleetAPI:
 
     _session = None
 
-    def __init__(self, email: str, password: str):
-        self._email = email
-        self._password = password
+    def __init__(self, email: str = None, password: str = None, api_key: str = None):
+        if api_key:
+            self._email = "apikey@apikeys.invalid"
+            self._password = api_key
+        elif email and password:
+            self._email = email
+            self._password = password
+        else:
+            raise ValueError(
+                "Either api_key or both email and password must be provided"
+            )
 
     def handle_response(self, response, message):
         if response.status_code >= 300 or response.status_code < 200:

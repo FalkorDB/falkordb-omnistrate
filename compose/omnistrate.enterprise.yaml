@@ -1421,7 +1421,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "100m"
+            cpu: "150m"
             memory: 50Mi
         healthcheck-sentinel:
           imageNameWithTag: $FalkorDBHealthcheckImage
@@ -2208,7 +2208,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "100m"
+            cpu: "150m"
             memory: 50Mi
         healthcheck-sentinel:
           imageNameWithTag: $FalkorDBHealthcheckImage

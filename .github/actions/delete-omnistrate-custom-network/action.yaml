@@ -22,7 +22,7 @@ runs:
     - -c
     - |
       if [ -n "${{ inputs.api-key }}" ]; then
-        echo "${{ inputs.api-key }}" | /usr/local/bin/omnistrate-ctl login --api-key-stdin
+        /usr/local/bin/omnistrate-ctl login --email "apikey@apikeys.invalid" --password "${{ inputs.api-key }}"
       else
         /usr/local/bin/omnistrate-ctl login --email ${{ inputs.username }} --password ${{ inputs.password }}
       fi && /usr/local/bin/omnistrate-ctl custom-network delete ${{ inputs.custom_network_name }}

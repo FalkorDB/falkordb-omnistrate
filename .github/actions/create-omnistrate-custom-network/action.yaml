@@ -32,7 +32,7 @@ runs:
     - -c
     - |
       if [ -n "${{ inputs.api-key }}" ]; then
-        /usr/local/bin/omnistrate-ctl login --email "apikey@apikeys.invalid" --password "${{ inputs.api-key }}"
+        echo "${{ inputs.api-key }}" | /usr/local/bin/omnistrate-ctl login --api-key-stdin
       else
         /usr/local/bin/omnistrate-ctl login --email ${{ inputs.username }} --password ${{ inputs.password }}
       fi && /usr/local/bin/omnistrate-ctl custom-network list -o json | grep -q '${{ inputs.name }}' || /usr/local/bin/omnistrate-ctl custom-network create --cloud-provider ${{ inputs.cloud_provider }} --region ${{ inputs.region }} --cidr ${{ inputs.cidr }} --name '${{ inputs.name }}'

@@ -29,7 +29,7 @@ runs:
     - |
       apk add jq && \
       if [ -n "${{ inputs.api-key }}" ]; then
-        /usr/local/bin/omnistrate-ctl login --email "apikey@apikeys.invalid" --password "${{ inputs.api-key }}"
+        echo "${{ inputs.api-key }}" | /usr/local/bin/omnistrate-ctl login --api-key-stdin
       else
         /usr/local/bin/omnistrate-ctl login --email "${{ inputs.username }}" --password "${{ inputs.password }}"
       fi && \

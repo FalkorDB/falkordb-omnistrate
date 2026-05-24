@@ -488,7 +488,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: standalone
-            instanceType: "e2-standard-4"
+            instanceType: "e2-medium"
             maxmemory: "2GB"
             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -500,7 +500,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: single-Zone
-            instanceType: "e2-standard-4"
+            instanceType: "e2-medium"
             maxmemory: "2GB"
             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -512,7 +512,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: multi-Zone
-            instanceType: "e2-standard-4"
+            instanceType: "e2-medium"
             maxmemory: "2GB"
             customNetwork: gcp-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -524,7 +524,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: cluster-Single-Zone
-            instanceType: "e2-standard-4"
+            instanceType: "e2-medium"
             hostCount: "6"
             clusterReplicas: "1"
             maxmemory: "2GB"
@@ -538,7 +538,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: cluster-Multi-Zone
-            instanceType: "e2-standard-4"
+            instanceType: "e2-medium"
             hostCount: "6"
             clusterReplicas: "1"
             maxmemory: "2GB"
@@ -611,7 +611,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: multi-Zone
-            instanceType: "e2-standard-4"
+            instanceType: "e2-medium"
             maxmemory: "2GB"
             networkType: INTERNAL
           ######################## PRO • AWS (TLS) ########################

@@ -52,7 +52,6 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 BASE_URL = os.getenv("OMNISTRATE_BASE_URL", "https://api.omnistrate.cloud/2022-09-01-00")
-API_KEY = os.getenv("OMNISTRATE_API_KEY", "")
 USERNAME = os.getenv("OMNISTRATE_USERNAME", "")
 PASSWORD = os.getenv("OMNISTRATE_PASSWORD", "")
 SERVICE_ID = os.getenv("OMNISTRATE_SERVICE_ID") or os.getenv("OMNISTRATE_INTERNAL_SERVICE_ID", "")
@@ -141,13 +140,9 @@ def _get(session: requests.Session, url: str) -> dict:
 
 
 def get_token() -> str:
-    if API_KEY:
-        payload = {"email": "apikey@apikeys.invalid", "password": API_KEY}
-    else:
-        payload = {"email": USERNAME, "password": PASSWORD}
     response = requests.post(
         f"{BASE_URL}/signin",
-        json=payload,
+        json={"email": USERNAME, "password": PASSWORD},
         timeout=30,
     )
     response.raise_for_status()

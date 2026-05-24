@@ -3,14 +3,11 @@ description: "Delete an Omnistrate service plan"
 
 inputs:
   username:
-    description: "The username to use for authentication (legacy, prefer api-key)"
-    required: false
+    description: "The username to use for authentication"
+    required: true
   password:
-    description: "The password to use for authentication (legacy, prefer api-key)"
-    required: false
-  api-key:
-    description: "Omnistrate API key for authentication"
-    required: false
+    description: "The password to use for authentication"
+    required: true
   service-id:
     description: "The ID of the service"
     required: true
@@ -27,17 +24,10 @@ runs:
     - name: Login
       shell: bash
       run: |
-        if [ -n "${{ inputs.api-key }}" ]; then
-          AUTH_EMAIL="apikey@apikeys.invalid"
-          AUTH_PASSWORD="${{ inputs.api-key }}"
-        else
-          AUTH_EMAIL="${{ inputs.username }}"
-          AUTH_PASSWORD="${{ inputs.password }}"
-        fi
         curl "https://api.omnistrate.cloud/2022-09-01-00/signin" \
           -X POST \
           -H "Content-Type: application/json" \
-          -d "{\"email\":\"${AUTH_EMAIL}\",\"password\":\"${AUTH_PASSWORD}\"}" \
+          -d "{\"email\":\"${{ inputs.username }}\",\"password\":\"${{ inputs.password }}\"}" \
           -o token.json
         echo "OMNISTRATE_TOKEN=$(jq -r .jwtToken token.json)" >> $GITHUB_ENV
 

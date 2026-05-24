@@ -2,14 +2,11 @@ name: List Omnistrate Instances
 description: Login and list Omnistrate instances filtered by criteria, returning TLS-enabled ones
 inputs:
   username:
-    description: Omnistrate email/username (legacy, prefer api-key)
-    required: false
+    description: Omnistrate email/username
+    required: true
   password:
-    description: Omnistrate password (legacy, prefer api-key)
-    required: false
-  api-key:
-    description: Omnistrate API key for authentication
-    required: false
+    description: Omnistrate password
+    required: true
   filter:
     description: Filter for instances (e.g. service:FalkorDB,environment:Prod,status:RUNNING)
     required: true
@@ -28,11 +25,7 @@ runs:
     - -c
     - |
       apk add jq && \
-      if [ -n "${{ inputs.api-key }}" ]; then
-        echo "${{ inputs.api-key }}" | /usr/local/bin/omnistrate-ctl login --api-key-stdin
-      else
-        /usr/local/bin/omnistrate-ctl login --email "${{ inputs.username }}" --password "${{ inputs.password }}"
-      fi && \
+      /usr/local/bin/omnistrate-ctl login --email "${{ inputs.username }}" --password "${{ inputs.password }}" && \
       instances_json=$(/usr/local/bin/omnistrate-ctl instance list -f "${{ inputs.filter }}" -o json) && \
 
       echo "[" > /github/workspace/filtered_instances.json

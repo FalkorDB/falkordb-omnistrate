@@ -15,8 +15,6 @@ SERVICE_ID = sys.argv[3]
 PRODUCT_TIER_ID = sys.argv[4]
 VERSIONS_STRING = len(sys.argv) > 5 and sys.argv[5] or None
 
-# Support API key: pass "apikey@apikeys.invalid" as user and the key as password
-OMNISTRATE_API_KEY = os.environ.get("OMNISTRATE_API_KEY", "")
 
 API_URL = "https://api.omnistrate.cloud/"
 API_VERSION = "2022-09-01-00"
@@ -26,16 +24,10 @@ API_SIGN_IN_PATH = os.getenv("API_SIGN_IN_PATH", f"{API_VERSION}/signin")
 def get_token():
     """Get a token to authenticate with the API."""
     headers = {"Content-Type": "application/json"}
-    if OMNISTRATE_API_KEY:
-        data = {
-            "email": "apikey@apikeys.invalid",
-            "password": OMNISTRATE_API_KEY,
-        }
-    else:
-        data = {
-            "email": OMNISTRATE_USER,
-            "password": OMNISTRATE_PASSWORD,
-        }
+    data = {
+        "email": OMNISTRATE_USER,
+        "password": OMNISTRATE_PASSWORD,
+    }
 
     print("Getting token")
     response = requests.post(

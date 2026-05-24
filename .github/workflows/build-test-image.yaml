@@ -110,8 +110,57 @@ jobs:
                     src/falkordb-node/node-entrypoint_spec.sh \
                     src/falkordb-sentinel/sentinel-entrypoint_spec.sh
 
-  build-and-push:
+  build-healthcheck:
     needs: shellspec
+    runs-on: ubuntu-latest
+    container: rust:1-slim-bullseye
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install build dependencies
+        run: |
+          apt-get update -y
+          apt-get install -y pkg-config build-essential cmake libtool openssl libssl-dev gcc-aarch64-linux-gnu
+
+      - name: Add ARM64 target
+        run: rustup target add aarch64-unknown-linux-gnu
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: "src/healthcheck_rs -> target"
+          shared-key: "healthcheck-build"
+          cache-on-failure: "true"
+
+      - name: Build for x86_64
+        working-directory: src/healthcheck_rs
+        run: cargo build --release --locked --target x86_64-unknown-linux-gnu
+
+      - name: Build for aarch64
+        working-directory: src/healthcheck_rs
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+          CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
+          CXX_aarch64_unknown_linux_gnu: aarch64-linux-gnu-g++
+        run: cargo build --release --locked --target aarch64-unknown-linux-gnu
+
+      - name: Prepare binaries
+        run: |
+          mkdir -p src/healthcheck_rs/bin
+          cp src/healthcheck_rs/target/x86_64-unknown-linux-gnu/release/healthcheck src/healthcheck_rs/bin/healthcheck-amd64
+          cp src/healthcheck_rs/target/aarch64-unknown-linux-gnu/release/healthcheck src/healthcheck_rs/bin/healthcheck-arm64
+
+      - name: Upload healthcheck binaries
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: healthcheck-binaries
+          path: src/healthcheck_rs/bin/
+
+  build-and-push:
+    needs: [shellspec, build-healthcheck]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -146,6 +195,13 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Download healthcheck binaries
+        if: matrix.image-name == 'falkordb-cloud-healthcheck'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: healthcheck-binaries
+          path: src/healthcheck_rs/bin/
 
       - name: Build and push
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
@@ -570,8 +626,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: "t4g.medium"
-            newInstanceType: "m6g.large"
+            instanceType: "AWS 2 vCPU, 4 GB"
+            newInstanceType: "AWS 2 vCPU, 8 GB"
             maxmemory: "2GB"
 
           - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
@@ -582,8 +638,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: "t4g.medium"
-            newInstanceType: "m6g.large"
+            instanceType: "AWS 2 vCPU, 4 GB"
+            newInstanceType: "AWS 2 vCPU, 8 GB"
             maxmemory: "2GB"
 
           - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
@@ -594,8 +650,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: multi-Zone
-            instanceType: "t4g.medium"
-            newInstanceType: "m6g.large"
+            instanceType: "AWS 2 vCPU, 4 GB"
+            newInstanceType: "AWS 2 vCPU, 8 GB"
             maxmemory: "2GB"
 
           ######################## PRIVATE • GCP (INTERNAL) ########################
@@ -608,7 +664,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: multi-Zone
-            instanceType: "e2-medium"
+            instanceType: "GCP 2 vCPU, 4 GB"
             maxmemory: "2GB"
             networkType: INTERNAL
           ######################## PRO • AWS (TLS) ########################
@@ -620,8 +676,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: "t4g.medium"
-            newInstanceType: "m6g.large"
+            instanceType: "AWS 2 vCPU, 4 GB"
+            newInstanceType: "AWS 2 vCPU, 8 GB"
             maxmemory: "2GB"
             tls: true
           - name: "[26] pro/SingleZone/TLS - AWS/us-east-2 - Grouped"
@@ -632,8 +688,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: "t4g.medium"
-            newInstanceType: "m6g.large"
+            instanceType: "AWS 2 vCPU, 4 GB"
+            newInstanceType: "AWS 2 vCPU, 8 GB"
             maxmemory: "2GB"
             tls: true
     steps:

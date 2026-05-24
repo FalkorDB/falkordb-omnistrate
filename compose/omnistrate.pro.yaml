@@ -794,7 +794,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "100m"
+            cpu: "200m"
             memory: 50Mi
         oom_guard: *oomguard
     x-omnistrate-actionhooks:

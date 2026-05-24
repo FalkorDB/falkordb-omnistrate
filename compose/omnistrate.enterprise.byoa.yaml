@@ -883,7 +883,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "100m"
+            cpu: "200m"
             memory: 50Mi
         oom_guard:
           imageNameWithTag: $OomGuardImage
@@ -2807,7 +2807,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "100m"
+            cpu: "200m"
             memory: 50Mi
           args:
             - "6379"
@@ -3190,7 +3190,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "100m"
+            cpu: "200m"
             memory: 50Mi
           args:
             - "6379"

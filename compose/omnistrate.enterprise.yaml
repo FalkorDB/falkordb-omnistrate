@@ -891,7 +891,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "100m"
             memory: 50Mi
         oom_guard:
           imageNameWithTag: $OomGuardImage
@@ -1442,7 +1442,7 @@ services:
         sentinel:
           imageNameWithTag: $FalkorDBSentinelImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "120m"
             memory: 100Mi
         oom_guard:
           imageNameWithTag: $OomGuardImage
@@ -2229,7 +2229,7 @@ services:
         sentinel:
           imageNameWithTag: $FalkorDBSentinelImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "120m"
             memory: 100Mi
         oom_guard:
           imageNameWithTag: $OomGuardImage
@@ -2816,7 +2816,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "100m"
             memory: 50Mi
           args:
             - "6379"
@@ -3199,7 +3199,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "100m"
             memory: 50Mi
           args:
             - "6379"

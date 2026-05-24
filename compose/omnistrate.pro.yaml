@@ -794,7 +794,7 @@ services:
         exporter:
           imageNameWithTag: $FalkorDBExporterImage
           resourceLimits:
-            cpu: "200m"
+            cpu: "100m"
             memory: 50Mi
         oom_guard: *oomguard
     x-omnistrate-actionhooks:
@@ -1357,7 +1357,7 @@ services:
         sentinel:
           imageNameWithTag: $FalkorDBSentinelImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "120m"
             memory: 100Mi
         oom_guard: *oomguard
     x-omnistrate-actionhooks:
@@ -2153,7 +2153,7 @@ services:
         sentinel:
           imageNameWithTag: $FalkorDBSentinelImage
           resourceLimits:
-            cpu: "50m"
+            cpu: "120m"
             memory: 100Mi
         oom_guard: *oomguard
     x-omnistrate-actionhooks:

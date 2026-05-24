@@ -1,4 +1,4 @@
-FROM rust:1-slim-bullseye AS builder
+FROM rust:1-slim-bookworm AS builder
 
 RUN apt-get update -y && apt-get install -y pkg-config build-essential cmake libtool openssl libssl-dev
 
@@ -8,7 +8,7 @@ COPY src/oom-guard/ /oom-guard
 
 RUN cargo build --release
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 RUN apt-get update -y \
 	&& apt-get upgrade -y \

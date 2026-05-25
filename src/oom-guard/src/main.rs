@@ -100,6 +100,7 @@ fn main() {
 
                     // 90% — abort Redis first (time-critical), then collect diagnostics.
                     if !dump_90_done && usage_pct >= 90.0 {
+                        dump_90_done = true;
                         let msg = format!(
                             "[{}] OOM_CRITICAL: {:.1}% — {} / {} bytes; sending SIGABRT to redis-server pid={}",
                             format_timestamp(),
@@ -109,29 +110,18 @@ fn main() {
                             redis_pid,
                         );
                         eprintln!("{}", msg);
-                        match terminate_redis(redis_pid) {
-                            Ok(()) => dump_90_done = true,
-                            Err(err) => eprintln!(
+                        if let Err(err) = terminate_redis(redis_pid) {
+                            eprintln!(
                                 "[oom-guard] failed to terminate redis-server pid={}: {}",
                                 redis_pid, err
-                            ),
+                            );
                         }
                         // Collect diagnostics after the kill; Redis may still
                         // respond briefly, and dump_redis_info handles errors.
                         dump_redis_info(&msg, "/data/oom_dump_90.log", DumpMode::Append);
                     }
 
-                    // Reset flags if memory drops back below threshold
-                    // (allows re-dump on next spike)
-                    if usage_pct < 70.0 {
-                        dump_70_done = false;
-                    }
-                    if usage_pct < 80.0 {
-                        dump_80_done = false;
-                    }
-                    if usage_pct < 90.0 {
-                        dump_90_done = false;
-                    }
+
                 }
             }
         }
@@ -427,6 +417,10 @@ fn dump_redis_info(trigger_msg: &str, dump_path: &str, mode: DumpMode) {
     }
 
     output.push_str("=== END OOM DUMP ===\n");
+
+    // Log to stdout so it appears in container logs.
+    print!("{}", output);
+    let _ = std::io::stdout().flush();
 
     let file_result = match mode {
         DumpMode::Overwrite => fs::OpenOptions::new()

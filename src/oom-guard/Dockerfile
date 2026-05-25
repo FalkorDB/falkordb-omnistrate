@@ -10,7 +10,7 @@ RUN cargo build --release
 
 FROM debian:bookworm-slim
 
-RUN apt-get update -y \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update -y \
 	&& apt-get upgrade -y \
 	&& apt-get install -y --no-install-recommends openssl ca-certificates \
 	&& apt-get clean \

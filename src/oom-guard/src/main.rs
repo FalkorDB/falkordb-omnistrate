@@ -25,6 +25,11 @@ enum DumpMode {
 fn main() {
     eprintln!("[oom-guard] starting — dump thresholds: 70%, 80%, 90%");
 
+    // Protect ourselves from the OOM killer so we can act before Redis is killed.
+    if fs::write("/proc/self/oom_score_adj", "-1000").is_err() {
+        eprintln!("[oom-guard] WARNING: could not set own oom_score_adj=-1000");
+    }
+
     let mut memory_limit: Option<u64> = None;
     let mut cgroup: Option<CgroupVersion> = None;
     let mut cached_pid: Option<u32> = None;
@@ -84,7 +89,7 @@ fn main() {
                 if let (Some(limit), Some(current)) = (memory_limit, read_memory_current(cg)) {
                     let usage_pct = current as f64 / limit as f64 * 100.0;
 
-                    // 70% — overwrite (latest snapshot only), re-arms after cooldown below threshold.
+                    // 70% — overwrite (latest snapshot only), re-arms after 5-min cooldown.
                     let can_dump_70 = dump_70_at.map_or(true, |t| {
                         t.elapsed() >= DUMP_COOLDOWN
                     });
@@ -101,7 +106,7 @@ fn main() {
                         dump_70_at = Some(Instant::now());
                     }
 
-                    // 80% — overwrite (latest snapshot only), re-arms after cooldown below threshold.
+                    // 80% — overwrite (latest snapshot only), re-arms after 5-min cooldown.
                     let can_dump_80 = dump_80_at.map_or(true, |t| {
                         t.elapsed() >= DUMP_COOLDOWN
                     });
@@ -165,11 +170,7 @@ fn adjust_oom_scores() {
         let name = entry.file_name();
         let name_str = name.to_string_lossy();
         // Only look at numeric directories (PIDs).
-        if !name_str
-            .chars()
-            .next()
-            .map_or(false, |c| c.is_ascii_digit())
-        {
+        if name_str.is_empty() || !name_str.chars().all(|c| c.is_ascii_digit()) {
             continue;
         }
         let pid_path = entry.path();
@@ -239,11 +240,7 @@ fn discover_redis_pid() -> Option<u32> {
     for entry in proc_dir.flatten() {
         let name = entry.file_name();
         let name_str = name.to_string_lossy().to_string();
-        if !name_str
-            .chars()
-            .next()
-            .map_or(false, |c| c.is_ascii_digit())
-        {
+        if name_str.is_empty() || !name_str.chars().all(|c| c.is_ascii_digit()) {
             continue;
         }
 
@@ -441,7 +438,7 @@ fn dump_redis_info(trigger_msg: &str, dump_path: &str, mode: DumpMode) {
             }
         },
         Err(e) => {
-            output.push_str(&format!("ERROR: failed to create Redis client: {}\n", e));
+            output.push_str(&format!("ERROR: failed to build Redis connection info: {}\n", e));
         }
     }
 
@@ -506,10 +503,13 @@ fn build_redis_connection_info() -> Result<redis::ConnectionInfo, String> {
         redis::ConnectionAddr::Tcp(host, port)
     };
 
+    let password = get_redis_password();
+    let password = if password.is_empty() { None } else { Some(password) };
+
     Ok(redis::ConnectionInfo {
         addr,
         redis: redis::RedisConnectionInfo {
-            password: Some(get_redis_password()),
+            password,
             ..Default::default()
         },
     })

@@ -3,7 +3,10 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 use std::thread;
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
+
+/// Cooldown before a 70%/80% threshold can re-fire (5 minutes).
+const DUMP_COOLDOWN: Duration = Duration::from_secs(300);
 
 /// How we read cgroup memory (v1 vs v2 paths differ).
 enum CgroupVersion {
@@ -25,8 +28,9 @@ fn main() {
     let mut memory_limit: Option<u64> = None;
     let mut cgroup: Option<CgroupVersion> = None;
     let mut cached_pid: Option<u32> = None;
-    let mut dump_70_done = false;
-    let mut dump_80_done = false;
+    let mut cached_start_time: Option<u64> = None;
+    let mut dump_70_at: Option<Instant> = None;
+    let mut dump_80_at: Option<Instant> = None;
     let mut dump_90_done = false;
 
     loop {
@@ -34,13 +38,23 @@ fn main() {
         adjust_oom_scores();
 
         // 2. Discover redis-server PID (cache it, re-discover if stale or recycled).
-        if cached_pid.map_or(true, |pid| !is_redis_server(pid)) {
+        let pid_changed = cached_pid.map_or(true, |pid| {
+            if !is_redis_server(pid) {
+                return true;
+            }
+            // Detect PID reuse: same number but different process start time.
+            let current_start = get_start_time(pid);
+            current_start != cached_start_time
+        });
+
+        if pid_changed {
             cached_pid = discover_redis_pid();
+            cached_start_time = cached_pid.and_then(get_start_time);
             // Reset cgroup info when PID changes — the cgroup path is PID-dependent.
             memory_limit = None;
             cgroup = None;
-            dump_70_done = false;
-            dump_80_done = false;
+            dump_70_at = None;
+            dump_80_at = None;
             dump_90_done = false;
         }
 
@@ -70,8 +84,11 @@ fn main() {
                 if let (Some(limit), Some(current)) = (memory_limit, read_memory_current(cg)) {
                     let usage_pct = current as f64 / limit as f64 * 100.0;
 
-                    // 70% — overwrite (latest snapshot only)
-                    if !dump_70_done && usage_pct >= 70.0 {
+                    // 70% — overwrite (latest snapshot only), re-arms after cooldown below threshold.
+                    let can_dump_70 = dump_70_at.map_or(true, |t| {
+                        t.elapsed() >= DUMP_COOLDOWN
+                    });
+                    if can_dump_70 && usage_pct >= 70.0 {
                         let msg = format!(
                             "[{}] OOM_INFO: {:.1}% — {} / {} bytes",
                             format_timestamp(),
@@ -81,11 +98,14 @@ fn main() {
                         );
                         eprintln!("{}", msg);
                         dump_redis_info(&msg, "/data/oom_dump_70.log", DumpMode::Overwrite);
-                        dump_70_done = true;
+                        dump_70_at = Some(Instant::now());
                     }
 
-                    // 80% — overwrite (latest snapshot only)
-                    if !dump_80_done && usage_pct >= 80.0 {
+                    // 80% — overwrite (latest snapshot only), re-arms after cooldown below threshold.
+                    let can_dump_80 = dump_80_at.map_or(true, |t| {
+                        t.elapsed() >= DUMP_COOLDOWN
+                    });
+                    if can_dump_80 && usage_pct >= 80.0 {
                         let msg = format!(
                             "[{}] OOM_WARNING: {:.1}% — {} / {} bytes",
                             format_timestamp(),
@@ -95,7 +115,7 @@ fn main() {
                         );
                         eprintln!("{}", msg);
                         dump_redis_info(&msg, "/data/oom_dump_80.log", DumpMode::Overwrite);
-                        dump_80_done = true;
+                        dump_80_at = Some(Instant::now());
                     }
 
                     // 90% — abort Redis first (time-critical), then collect diagnostics.
@@ -183,6 +203,15 @@ fn adjust_oom_scores() {
 // ---------------------------------------------------------------------------
 // Process discovery
 // ---------------------------------------------------------------------------
+
+/// Read the process start time (field 22 of /proc/<pid>/stat) to detect PID reuse.
+fn get_start_time(pid: u32) -> Option<u64> {
+    let stat = fs::read_to_string(format!("/proc/{}/stat", pid)).ok()?;
+    // Field 22 (0-indexed: 21) is starttime. Fields are space-separated,
+    // but field 2 (comm) may contain spaces inside parens. Skip past ")".
+    let after_comm = stat.rsplit_once(')')?.1;
+    after_comm.split_whitespace().nth(19)?.parse().ok()
+}
 
 /// Check if a PID is still a running redis-server process.
 fn is_redis_server(pid: u32) -> bool {

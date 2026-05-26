@@ -28,7 +28,7 @@ env:
   FALKORDB_VERSION: v4.18.7
   
 jobs:
-  build-healthcheck:
+  build-rust-binaries:
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     container: rust:1-slim-bullseye
@@ -49,16 +49,30 @@ jobs:
       - name: Cache Cargo
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          workspaces: "src/healthcheck_rs -> target"
-          shared-key: "healthcheck-release"
+          workspaces: |
+            src/healthcheck_rs -> target
+            src/oom-guard -> target
+          shared-key: "rust-binaries-release"
           cache-on-failure: "true"
 
-      - name: Build for x86_64
+      - name: Build healthcheck for x86_64
         working-directory: src/healthcheck_rs
         run: cargo build --release --locked --target x86_64-unknown-linux-gnu
 
-      - name: Build for aarch64
+      - name: Build healthcheck for aarch64
         working-directory: src/healthcheck_rs
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+          CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
+          CXX_aarch64_unknown_linux_gnu: aarch64-linux-gnu-g++
+        run: cargo build --release --locked --target aarch64-unknown-linux-gnu
+
+      - name: Build oom-guard for x86_64
+        working-directory: src/oom-guard
+        run: cargo build --release --locked --target x86_64-unknown-linux-gnu
+
+      - name: Build oom-guard for aarch64
+        working-directory: src/oom-guard
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
           CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
@@ -70,6 +84,9 @@ jobs:
           mkdir -p src/healthcheck_rs/bin
           cp src/healthcheck_rs/target/x86_64-unknown-linux-gnu/release/healthcheck src/healthcheck_rs/bin/healthcheck-amd64
           cp src/healthcheck_rs/target/aarch64-unknown-linux-gnu/release/healthcheck src/healthcheck_rs/bin/healthcheck-arm64
+          mkdir -p src/oom-guard/bin
+          cp src/oom-guard/target/x86_64-unknown-linux-gnu/release/oom-guard src/oom-guard/bin/oom-guard-amd64
+          cp src/oom-guard/target/aarch64-unknown-linux-gnu/release/oom-guard src/oom-guard/bin/oom-guard-arm64
 
       - name: Upload healthcheck binaries
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -77,8 +94,14 @@ jobs:
           name: healthcheck-binaries
           path: src/healthcheck_rs/bin/
 
+      - name: Upload oom-guard binaries
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: oom-guard-binaries
+          path: src/oom-guard/bin/
+
   build-and-push:
-    needs: build-healthcheck
+    needs: build-rust-binaries
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-22.04-arm' || 'ubuntu-latest' }}
     permissions:
@@ -136,6 +159,13 @@ jobs:
         with:
           name: healthcheck-binaries
           path: src/healthcheck_rs/bin/
+
+      - name: Download oom-guard binaries
+        if: matrix.image.image_name == 'falkordb-cloud-oom-guard'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: oom-guard-binaries
+          path: src/oom-guard/bin/
 
       - name: Build and push
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5

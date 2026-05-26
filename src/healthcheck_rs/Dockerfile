@@ -1,4 +1,4 @@
-FROM rust:1-slim-bookworm as healthcheck_builder
+FROM rust:1-slim-trixie AS healthcheck_builder
 
 RUN apt-get update -y && apt-get install -y pkg-config build-essential cmake libtool openssl libssl-dev
 
@@ -8,7 +8,7 @@ COPY src/healthcheck_rs/ /healthcheck
 
 RUN cargo build --release
 
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update -y \
 	&& apt-get install -y --no-install-recommends debconf \

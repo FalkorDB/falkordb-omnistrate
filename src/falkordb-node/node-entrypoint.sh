@@ -190,9 +190,12 @@ ROOT_CA_PATH=${ROOT_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
 DATA_DIR=${DATA_DIR:-/var/lib/falkordb/data}
 TLS_CONNECTION_STRING=$(if [[ $TLS == "true" ]]; then echo "--tls --cacert $ROOT_CA_PATH"; else echo ""; fi)
 size=0
+shopt -s nullglob
+if [[ $(basename "$DATA_DIR") != 'data' ]]; then DATA_DIR="$DATA_DIR/data"; fi
 for file in $DATA_DIR/appendonlydir/appendonly.aof.*.incr.aof; do
-  if [[ -f "$file" ]]; then
-    size=$((size + $(stat -c%s "$file")))
+  if [ -f "$file" ]; then
+    file_size=$(stat -c%s "$file")
+    size=$((size + file_size))
   fi
 done
 if [ $size -gt $((AOF_FILE_SIZE_TO_MONITOR * 1024 * 1024)) ]; then

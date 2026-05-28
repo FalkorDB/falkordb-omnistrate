@@ -1,3 +1,29 @@
+# Grype scan policy for FalkorDB Omnistrate images.
+#
+# The CI workflows (build-test-image.yaml, build-release-image.yaml) invoke
+# anchore/scan-action with `severity-cutoff: high` and `fail-build: true`,
+# so a build fails only on actionable High/Critical findings.
+#
+# `only-fixed: true` filters out CVEs that have no upstream fix available
+# (Debian `wont-fix` / `not-fixed` packages — e.g. residual libc6, libexpat1,
+# libtasn1-6, libncursesw6, python3.13, python3-pkg-resources CVEs in the
+# trixie base image inherited from `falkordb/falkordb-server`). Those cannot
+# be remediated from our Dockerfiles; they require an upstream Debian patch
+# or a base-image change in falkordb-server.
+#
+# Note: grype rates by NVD CVSS while trivy rates by the Debian Security
+# Tracker (distro-first). That is why the two scanners disagree on glibc /
+# libexpat / libcurl CVEs even when scanning the same image. We follow
+# grype's NVD view here but suppress purely upstream/unfixable noise.
+
 only-fixed: true
+
+# Roll GHSA / vendor advisory IDs up to their underlying CVE, so grype's
+# reports use the same identifier space as trivy and other scanners.
+by-cve: true
+
+# Explicit per-CVE ignores. Add new entries with a `reason:` and (when
+# possible) a link to the upstream tracker so we can revisit them.
 ignore:
   - vulnerability: CVE-2026-4519
+    reason: "Transitive system dependency in the Debian trixie base image; not reachable from our runtime paths. Re-evaluate when Debian publishes a fix."

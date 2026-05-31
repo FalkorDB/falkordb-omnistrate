@@ -381,37 +381,37 @@ services:
         export: true
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
-        name: Choose the instance type for your database
+        name: Instance Size
         type: String
         modifiable: true
         required: true
         export: true
-        options:
-          - "e2-medium"
-          - "e2-standard-2"
-          - "e2-highmem-2"
-          - "e2-standard-4"
-          - "e2-highmem-4"
-          - "e2-standard-8"
-          - "e2-highmem-8"
-          - "e2-custom-4-8192"
-          - "e2-custom-8-16384"
-          - "e2-custom-16-32768"
-          - "e2-custom-32-65536"
-          - "t2.medium"
-          - "m6i.large"
-          - "m6i.xlarge"
-          - "m6i.2xlarge"
-          - "m6i.4xlarge"
-          - "m6i.8xlarge"
-          - "r6i.large"
-          - "r6i.xlarge"
-          - "r6i.2xlarge"
-          - "r6i.4xlarge"
-          - "c6i.xlarge"
-          - "c6i.2xlarge"
-          - "c6i.4xlarge"
-          - "c6i.8xlarge"
+        labeledOptions:
+          "GCP 2vCPU, 4GB": "e2-medium"
+          "GCP 2vCPU, 8GB": "e2-standard-2"
+          "GCP 2vCPU, 16GB": "e2-highmem-2"
+          "GCP 4vCPU, 16GB": "e2-standard-4"
+          "GCP 4vCPU, 32GB": "e2-highmem-4"
+          "GCP 8vCPU, 32GB": "e2-standard-8"
+          "GCP 8vCPU, 64GB": "e2-highmem-8"
+          "GCP 4vCPU, 8GB": "e2-custom-4-8192"
+          "GCP 8vCPU, 16GB": "e2-custom-8-16384"
+          "GCP 16vCPU, 32GB": "e2-custom-16-32768"
+          "GCP 32vCPU, 64GB": "e2-custom-32-65536"
+          "AWS 2vCPU, 4GB": "t2.medium"
+          "AWS 2vCPU, 8GB": "m6i.large"
+          "AWS 4vCPU, 16GB": "m6i.xlarge"
+          "AWS 8vCPU, 32GB": "m6i.2xlarge"
+          "AWS 16vCPU, 64GB": "m6i.4xlarge"
+          "AWS 32vCPU, 128GB": "m6i.8xlarge"
+          "AWS 2vCPU, 16GB": "r6i.large"
+          "AWS 4vCPU, 32GB": "r6i.xlarge"
+          "AWS 8vCPU, 64GB": "r6i.2xlarge"
+          "AWS 16vCPU, 128GB": "r6i.4xlarge"
+          "AWS 4vCPU, 8GB": "c6i.xlarge"
+          "AWS 8vCPU, 16GB": "c6i.2xlarge"
+          "AWS 16vCPU, 32GB": "c6i.4xlarge"
+          "AWS 32vCPU, 64GB": "c6i.8xlarge"
         parameterDependencyMap:
           node-s: nodeInstanceType
       - key: enableTLS
@@ -583,37 +583,37 @@ services:
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
-        name: Choose the instance type for your database
+        name: Instance Size
         type: String
         modifiable: true
         required: true
         export: true
-        options:
-          - "e2-medium"
-          - "e2-standard-2"
-          - "e2-highmem-2"
-          - "e2-standard-4"
-          - "e2-highmem-4"
-          - "e2-standard-8"
-          - "e2-highmem-8"
-          - "e2-custom-4-8192"
-          - "e2-custom-8-16384"
-          - "e2-custom-16-32768"
-          - "e2-custom-32-65536"
-          - "t2.medium"
-          - "m6i.large"
-          - "m6i.xlarge"
-          - "m6i.2xlarge"
-          - "m6i.4xlarge"
-          - "m6i.8xlarge"
-          - "r6i.large"
-          - "r6i.xlarge"
-          - "r6i.2xlarge"
-          - "r6i.4xlarge"
-          - "c6i.xlarge"
-          - "c6i.2xlarge"
-          - "c6i.4xlarge"
-          - "c6i.8xlarge"
+        labeledOptions:
+          "GCP 2vCPU, 4GB": "e2-medium"
+          "GCP 2vCPU, 8GB": "e2-standard-2"
+          "GCP 2vCPU, 16GB": "e2-highmem-2"
+          "GCP 4vCPU, 16GB": "e2-standard-4"
+          "GCP 4vCPU, 32GB": "e2-highmem-4"
+          "GCP 8vCPU, 32GB": "e2-standard-8"
+          "GCP 8vCPU, 64GB": "e2-highmem-8"
+          "GCP 4vCPU, 8GB": "e2-custom-4-8192"
+          "GCP 8vCPU, 16GB": "e2-custom-8-16384"
+          "GCP 16vCPU, 32GB": "e2-custom-16-32768"
+          "GCP 32vCPU, 64GB": "e2-custom-32-65536"
+          "AWS 2vCPU, 4GB": "t2.medium"
+          "AWS 2vCPU, 8GB": "m6i.large"
+          "AWS 4vCPU, 16GB": "m6i.xlarge"
+          "AWS 8vCPU, 32GB": "m6i.2xlarge"
+          "AWS 16vCPU, 64GB": "m6i.4xlarge"
+          "AWS 32vCPU, 128GB": "m6i.8xlarge"
+          "AWS 2vCPU, 16GB": "r6i.large"
+          "AWS 4vCPU, 32GB": "r6i.xlarge"
+          "AWS 8vCPU, 64GB": "r6i.2xlarge"
+          "AWS 16vCPU, 128GB": "r6i.4xlarge"
+          "AWS 4vCPU, 8GB": "c6i.xlarge"
+          "AWS 8vCPU, 16GB": "c6i.2xlarge"
+          "AWS 16vCPU, 32GB": "c6i.4xlarge"
+          "AWS 32vCPU, 64GB": "c6i.8xlarge"
       - key: enableTLS
         description: Whether to enable TLS for the database
         name: Enable TLS
@@ -887,37 +887,37 @@ services:
         export: true
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
-        name: Choose the instance type for your database
+        name: Instance Size
         type: String
         modifiable: true
         required: true
         export: true
-        options:
-          - "e2-medium"
-          - "e2-standard-2"
-          - "e2-highmem-2"
-          - "e2-standard-4"
-          - "e2-highmem-4"
-          - "e2-standard-8"
-          - "e2-highmem-8"
-          - "e2-custom-4-8192"
-          - "e2-custom-8-16384"
-          - "e2-custom-16-32768"
-          - "e2-custom-32-65536"
-          - "t2.medium"
-          - "m6i.large"
-          - "m6i.xlarge"
-          - "m6i.2xlarge"
-          - "m6i.4xlarge"
-          - "m6i.8xlarge"
-          - "r6i.large"
-          - "r6i.xlarge"
-          - "r6i.2xlarge"
-          - "r6i.4xlarge"
-          - "c6i.xlarge"
-          - "c6i.2xlarge"
-          - "c6i.4xlarge"
-          - "c6i.8xlarge"
+        labeledOptions:
+          "GCP 2vCPU, 4GB": "e2-medium"
+          "GCP 2vCPU, 8GB": "e2-standard-2"
+          "GCP 2vCPU, 16GB": "e2-highmem-2"
+          "GCP 4vCPU, 16GB": "e2-standard-4"
+          "GCP 4vCPU, 32GB": "e2-highmem-4"
+          "GCP 8vCPU, 32GB": "e2-standard-8"
+          "GCP 8vCPU, 64GB": "e2-highmem-8"
+          "GCP 4vCPU, 8GB": "e2-custom-4-8192"
+          "GCP 8vCPU, 16GB": "e2-custom-8-16384"
+          "GCP 16vCPU, 32GB": "e2-custom-16-32768"
+          "GCP 32vCPU, 64GB": "e2-custom-32-65536"
+          "AWS 2vCPU, 4GB": "t2.medium"
+          "AWS 2vCPU, 8GB": "m6i.large"
+          "AWS 4vCPU, 16GB": "m6i.xlarge"
+          "AWS 8vCPU, 32GB": "m6i.2xlarge"
+          "AWS 16vCPU, 64GB": "m6i.4xlarge"
+          "AWS 32vCPU, 128GB": "m6i.8xlarge"
+          "AWS 2vCPU, 16GB": "r6i.large"
+          "AWS 4vCPU, 32GB": "r6i.xlarge"
+          "AWS 8vCPU, 64GB": "r6i.2xlarge"
+          "AWS 16vCPU, 128GB": "r6i.4xlarge"
+          "AWS 4vCPU, 8GB": "c6i.xlarge"
+          "AWS 8vCPU, 16GB": "c6i.2xlarge"
+          "AWS 16vCPU, 32GB": "c6i.4xlarge"
+          "AWS 32vCPU, 64GB": "c6i.8xlarge"
         parameterDependencyMap:
           node-sz: nodeInstanceType
 
@@ -1102,37 +1102,37 @@ services:
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
-        name: Choose the instance type for your database
+        name: Instance Size
         type: String
         modifiable: true
         required: true
         export: true
-        options:
-          - "e2-medium"
-          - "e2-standard-2"
-          - "e2-highmem-2"
-          - "e2-standard-4"
-          - "e2-highmem-4"
-          - "e2-standard-8"
-          - "e2-highmem-8"
-          - "e2-custom-4-8192"
-          - "e2-custom-8-16384"
-          - "e2-custom-16-32768"
-          - "e2-custom-32-65536"
-          - "t2.medium"
-          - "m6i.large"
-          - "m6i.xlarge"
-          - "m6i.2xlarge"
-          - "m6i.4xlarge"
-          - "m6i.8xlarge"
-          - "r6i.large"
-          - "r6i.xlarge"
-          - "r6i.2xlarge"
-          - "r6i.4xlarge"
-          - "c6i.xlarge"
-          - "c6i.2xlarge"
-          - "c6i.4xlarge"
-          - "c6i.8xlarge"
+        labeledOptions:
+          "GCP 2vCPU, 4GB": "e2-medium"
+          "GCP 2vCPU, 8GB": "e2-standard-2"
+          "GCP 2vCPU, 16GB": "e2-highmem-2"
+          "GCP 4vCPU, 16GB": "e2-standard-4"
+          "GCP 4vCPU, 32GB": "e2-highmem-4"
+          "GCP 8vCPU, 32GB": "e2-standard-8"
+          "GCP 8vCPU, 64GB": "e2-highmem-8"
+          "GCP 4vCPU, 8GB": "e2-custom-4-8192"
+          "GCP 8vCPU, 16GB": "e2-custom-8-16384"
+          "GCP 16vCPU, 32GB": "e2-custom-16-32768"
+          "GCP 32vCPU, 64GB": "e2-custom-32-65536"
+          "AWS 2vCPU, 4GB": "t2.medium"
+          "AWS 2vCPU, 8GB": "m6i.large"
+          "AWS 4vCPU, 16GB": "m6i.xlarge"
+          "AWS 8vCPU, 32GB": "m6i.2xlarge"
+          "AWS 16vCPU, 64GB": "m6i.4xlarge"
+          "AWS 32vCPU, 128GB": "m6i.8xlarge"
+          "AWS 2vCPU, 16GB": "r6i.large"
+          "AWS 4vCPU, 32GB": "r6i.xlarge"
+          "AWS 8vCPU, 64GB": "r6i.2xlarge"
+          "AWS 16vCPU, 128GB": "r6i.4xlarge"
+          "AWS 4vCPU, 8GB": "c6i.xlarge"
+          "AWS 8vCPU, 16GB": "c6i.2xlarge"
+          "AWS 16vCPU, 32GB": "c6i.4xlarge"
+          "AWS 32vCPU, 64GB": "c6i.8xlarge"
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas
@@ -1682,37 +1682,37 @@ services:
         export: true
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
-        name: Choose the instance type for your database
+        name: Instance Size
         type: String
         modifiable: true
         required: true
         export: true
-        options:
-          - "e2-medium"
-          - "e2-standard-2"
-          - "e2-highmem-2"
-          - "e2-standard-4"
-          - "e2-highmem-4"
-          - "e2-standard-8"
-          - "e2-highmem-8"
-          - "e2-custom-4-8192"
-          - "e2-custom-8-16384"
-          - "e2-custom-16-32768"
-          - "e2-custom-32-65536"
-          - "t2.medium"
-          - "m6i.large"
-          - "m6i.xlarge"
-          - "m6i.2xlarge"
-          - "m6i.4xlarge"
-          - "m6i.8xlarge"
-          - "r6i.large"
-          - "r6i.xlarge"
-          - "r6i.2xlarge"
-          - "r6i.4xlarge"
-          - "c6i.xlarge"
-          - "c6i.2xlarge"
-          - "c6i.4xlarge"
-          - "c6i.8xlarge"
+        labeledOptions:
+          "GCP 2vCPU, 4GB": "e2-medium"
+          "GCP 2vCPU, 8GB": "e2-standard-2"
+          "GCP 2vCPU, 16GB": "e2-highmem-2"
+          "GCP 4vCPU, 16GB": "e2-standard-4"
+          "GCP 4vCPU, 32GB": "e2-highmem-4"
+          "GCP 8vCPU, 32GB": "e2-standard-8"
+          "GCP 8vCPU, 64GB": "e2-highmem-8"
+          "GCP 4vCPU, 8GB": "e2-custom-4-8192"
+          "GCP 8vCPU, 16GB": "e2-custom-8-16384"
+          "GCP 16vCPU, 32GB": "e2-custom-16-32768"
+          "GCP 32vCPU, 64GB": "e2-custom-32-65536"
+          "AWS 2vCPU, 4GB": "t2.medium"
+          "AWS 2vCPU, 8GB": "m6i.large"
+          "AWS 4vCPU, 16GB": "m6i.xlarge"
+          "AWS 8vCPU, 32GB": "m6i.2xlarge"
+          "AWS 16vCPU, 64GB": "m6i.4xlarge"
+          "AWS 32vCPU, 128GB": "m6i.8xlarge"
+          "AWS 2vCPU, 16GB": "r6i.large"
+          "AWS 4vCPU, 32GB": "r6i.xlarge"
+          "AWS 8vCPU, 64GB": "r6i.2xlarge"
+          "AWS 16vCPU, 128GB": "r6i.4xlarge"
+          "AWS 4vCPU, 8GB": "c6i.xlarge"
+          "AWS 8vCPU, 16GB": "c6i.2xlarge"
+          "AWS 16vCPU, 32GB": "c6i.4xlarge"
+          "AWS 32vCPU, 64GB": "c6i.8xlarge"
         parameterDependencyMap:
           node-mz: nodeInstanceType
 
@@ -1897,37 +1897,37 @@ services:
     x-omnistrate-api-params:
       - key: nodeInstanceType
         description: The size of the node instance. Check the documentation for more information.
-        name: Choose the instance type for your database
+        name: Instance Size
         type: String
         modifiable: true
         required: true
         export: true
-        options:
-          - "e2-medium"
-          - "e2-standard-2"
-          - "e2-highmem-2"
-          - "e2-standard-4"
-          - "e2-highmem-4"
-          - "e2-standard-8"
-          - "e2-highmem-8"
-          - "e2-custom-4-8192"
-          - "e2-custom-8-16384"
-          - "e2-custom-16-32768"
-          - "e2-custom-32-65536"
-          - "t2.medium"
-          - "m6i.large"
-          - "m6i.xlarge"
-          - "m6i.2xlarge"
-          - "m6i.4xlarge"
-          - "m6i.8xlarge"
-          - "r6i.large"
-          - "r6i.xlarge"
-          - "r6i.2xlarge"
-          - "r6i.4xlarge"
-          - "c6i.xlarge"
-          - "c6i.2xlarge"
-          - "c6i.4xlarge"
-          - "c6i.8xlarge"
+        labeledOptions:
+          "GCP 2vCPU, 4GB": "e2-medium"
+          "GCP 2vCPU, 8GB": "e2-standard-2"
+          "GCP 2vCPU, 16GB": "e2-highmem-2"
+          "GCP 4vCPU, 16GB": "e2-standard-4"
+          "GCP 4vCPU, 32GB": "e2-highmem-4"
+          "GCP 8vCPU, 32GB": "e2-standard-8"
+          "GCP 8vCPU, 64GB": "e2-highmem-8"
+          "GCP 4vCPU, 8GB": "e2-custom-4-8192"
+          "GCP 8vCPU, 16GB": "e2-custom-8-16384"
+          "GCP 16vCPU, 32GB": "e2-custom-16-32768"
+          "GCP 32vCPU, 64GB": "e2-custom-32-65536"
+          "AWS 2vCPU, 4GB": "t2.medium"
+          "AWS 2vCPU, 8GB": "m6i.large"
+          "AWS 4vCPU, 16GB": "m6i.xlarge"
+          "AWS 8vCPU, 32GB": "m6i.2xlarge"
+          "AWS 16vCPU, 64GB": "m6i.4xlarge"
+          "AWS 32vCPU, 128GB": "m6i.8xlarge"
+          "AWS 2vCPU, 16GB": "r6i.large"
+          "AWS 4vCPU, 32GB": "r6i.xlarge"
+          "AWS 8vCPU, 64GB": "r6i.2xlarge"
+          "AWS 16vCPU, 128GB": "r6i.4xlarge"
+          "AWS 4vCPU, 8GB": "c6i.xlarge"
+          "AWS 8vCPU, 16GB": "c6i.2xlarge"
+          "AWS 16vCPU, 32GB": "c6i.4xlarge"
+          "AWS 32vCPU, 64GB": "c6i.8xlarge"
       - key: numReplicas
         description: Number of Replicas
         name: Number of Replicas

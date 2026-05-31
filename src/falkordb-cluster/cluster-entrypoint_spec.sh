@@ -791,6 +791,30 @@ EOF
     End
   End
 
+  Describe "create_user()"
+    It "grants required restore and role permissions to the user"
+      calls_file="$temp_dir/redis_calls.log"
+      : > "$calls_file"
+      FALKORDB_USER="falkordb"
+      FALKORDB_PASSWORD="secret"
+      AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
+      TLS_CONNECTION_STRING=""
+      redis-cli() {
+        echo "$*" >> "$calls_file"
+      }
+
+      When call create_user
+      The status should be success
+      The output should include "Creating falkordb user"
+      The contents of file "$calls_file" should include "ACL SETUSER falkordb on >secret"
+      The contents of file "$calls_file" should include "+SELECT"
+      The contents of file "$calls_file" should include "+RESTORE"
+      The contents of file "$calls_file" should include "+RESTORE-ASKING"
+      The contents of file "$calls_file" should include "+ROLE"
+      The contents of file "$calls_file" should include "+DEL"
+    End
+  End
+
   Describe "LDAP_ENABLED feature flag"
     It "defaults to false in initialize_defaults"
       When call initialize_defaults

@@ -24,7 +24,7 @@ jobs:
             -e OMNISTRATE_INTERNAL_SERVICE_ID='s-KgFDwg5vBS' \
             -e OMNISTRATE_INTERNAL_PROD_ENVIRONMENT='se-1iyXYFtYfA' \
             -v ${{ github.workspace }}/scripts:/scripts:ro \
-            ghcr.io/omnistrate/ctl:0.11.7 \
+            ghcr.io/omnistrate-oss/omnistrate-ctl:1.8.5 \
             -c "
               apk add jq && \
               echo \"$OMNISTRATE_PASSWORD\" | /usr/local/bin/omnistrate-ctl login --api-key-stdin && \

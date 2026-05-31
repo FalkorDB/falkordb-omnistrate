@@ -264,7 +264,7 @@ jobs:
         uses: ./.github/actions/update-omnistrate-plan
         id: update_omnistrate_plan
         with:
-          username: ${{ secrets.O_USERNAME }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
           password: ${{ secrets.OMNISTRATE_API_KEY }}
           file: compose/${{ matrix.plans.file }}
           service-name: ${{ matrix.plans.service-name }}
@@ -303,7 +303,7 @@ jobs:
         uses: ./.github/actions/create-omnistrate-custom-network
         id: create_custom_network_gcp
         with:
-          username: ${{ secrets.O_USERNAME }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
           password: ${{ secrets.OMNISTRATE_API_KEY }}
           cloud_provider: gcp
           region: us-central1
@@ -314,7 +314,7 @@ jobs:
         uses: ./.github/actions/create-omnistrate-custom-network
         id: create_custom_network_aws
         with:
-          username: ${{ secrets.O_USERNAME }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
           password: ${{ secrets.OMNISTRATE_API_KEY }}
           cloud_provider: aws
           region: us-east-2
@@ -325,7 +325,7 @@ jobs:
         uses: ./.github/actions/create-omnistrate-custom-network
         id: create_custom_network_azure
         with:
-          username: ${{ secrets.O_USERNAME }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
           password: ${{ secrets.OMNISTRATE_API_KEY }}
           cloud_provider: azure
           region: eastus2
@@ -689,7 +689,7 @@ jobs:
           SERVICE_ID: ${{ env.SERVICE_ID }}
           ENVIRONMENT_ID: ${{ env.ENVIRONMENT_ID }}
           SUBSCRIPTION_ID: ${{ env.SUBSCRIPTION_ID }}
-          OMNISTRATE_USERNAME: ${{ secrets.O_USERNAME }}
+          OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
           OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_API_KEY }}
         run: |
           set -euo pipefail
@@ -817,7 +817,7 @@ jobs:
   #         REF_NAME: ${{ matrix.instances.tierName }}
   #       run: |
   #         export PATH="~/.local/bin:$PATH"
-  #         poetry run python -u ./tests/${{ matrix.instances.testFile }} ${{ secrets.O_USERNAME }} ${{ secrets.OMNISTRATE_API_KEY }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
+  #         poetry run python -u ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_API_KEY_USERNAME}} ${{ secrets.OMNISTRATE_API_KEY }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
 
   delete-networks:
     runs-on: ubuntu-latest
@@ -833,7 +833,7 @@ jobs:
         uses: ./.github/actions/delete-omnistrate-custom-network
         continue-on-error: true
         with:
-          username: ${{ secrets.O_USERNAME }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
           password: ${{ secrets.OMNISTRATE_API_KEY }}
           custom_network_name: ${{ env.GCP_NETWORK_NAME }}
 
@@ -841,7 +841,7 @@ jobs:
         continue-on-error: true
         uses: ./.github/actions/delete-omnistrate-custom-network
         with:
-          username: ${{ secrets.O_USERNAME }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
           password: ${{ secrets.OMNISTRATE_API_KEY }}
           custom_network_name: ${{ env.AWS_NETWORK_NAME }}
 
@@ -849,7 +849,7 @@ jobs:
         continue-on-error: true
         uses: ./.github/actions/delete-omnistrate-custom-network
         with:
-          username: ${{ secrets.O_USERNAME }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
           password: ${{ secrets.OMNISTRATE_API_KEY }}
           custom_network_name: ${{ env.AZURE_NETWORK_NAME }}
 

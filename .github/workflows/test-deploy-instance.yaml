@@ -114,7 +114,7 @@ jobs:
           [[ "${{ matrix.tls }}" == "true" ]]      && EXTRA_ARGS+=(--tls)
 
           poetry run python -u tests/test_deploy_instance.py \
-            "${{ secrets.O_USERNAME }}" \
+            "${{ secrets.OMNISTRATE_API_KEY_USERNAME}}" \
             "${{ secrets.OMNISTRATE_API_KEY }}" \
             ${{ matrix.cloud_provider }} ${{ matrix.cloud_region }} \
             --service-id     "$SERVICE_ID" \

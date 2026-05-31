@@ -241,7 +241,7 @@ jobs:
         if: ${{ contains(vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) }}
         uses: ./.github/actions/update-omnistrate-plan
         with:
-          username: ${{ secrets.O_USERNAME }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
           password: ${{ secrets.OMNISTRATE_API_KEY }}
           file: compose/${{ matrix.plans.file }}
           service-name: ${{ matrix.plans.name }}

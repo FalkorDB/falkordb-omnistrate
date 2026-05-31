@@ -18,7 +18,7 @@ for instance in $instances; do
   described_instance=$(omnistrate-ctl instance describe "$instance" -o json)
   last_modified=$(echo "$described_instance" | jq -r '.consumptionResourceInstanceResult.last_modified_at')
   status=$(echo "$described_instance" | jq -r '.consumptionResourceInstanceResult.status')
-  deletion_protection=$(echo "$described_instance" | jq -r '.consumptionResourceInstanceResult.deletionProtection // false')
+  deletion_protection=$(echo "$described_instance" | jq -r '.consumptionResourceInstanceResult.resourceInstanceMetadata.deletionProtection // false')
   # Convert ISO 8601 timestamp to epoch time (BusyBox date supports -D flag)
   last_modified_epoch=$(date -D "%Y-%m-%dT%H:%M:%SZ" -d "$last_modified" +"%s")
   current_epoch=$(date +"%s")

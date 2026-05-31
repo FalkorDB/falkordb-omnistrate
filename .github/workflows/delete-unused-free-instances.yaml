@@ -19,8 +19,8 @@ jobs:
         run: |
           docker run --rm \
             --entrypoint /bin/sh \
-            -e OMNISTRATE_USERNAME='${{ secrets.OMNISTRATE_USERNAME }}' \
-            -e OMNISTRATE_PASSWORD='${{ secrets.OMNISTRATE_PASSWORD }}' \
+            -e OMNISTRATE_USERNAME='${{ secrets.O_USERNAME }}' \
+            -e OMNISTRATE_PASSWORD='${{ secrets.OMNISTRATE_API_KEY }}' \
             -e OMNISTRATE_INTERNAL_SERVICE_ID='s-KgFDwg5vBS' \
             -e OMNISTRATE_INTERNAL_PROD_ENVIRONMENT='se-1iyXYFtYfA' \
             -v ${{ github.workspace }}/scripts:/scripts:ro \

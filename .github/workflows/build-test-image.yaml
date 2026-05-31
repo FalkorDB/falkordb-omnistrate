@@ -573,8 +573,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "AWS 2vCPU, 4GB"
+            newInstanceType: "AWS 2vCPU, 8GB"
             maxmemory: "2GB"
 
           - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
@@ -585,8 +585,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "AWS 2vCPU, 4GB"
+            newInstanceType: "AWS 2vCPU, 8GB"
             maxmemory: "2GB"
 
           - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
@@ -597,8 +597,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: multi-Zone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "AWS 2vCPU, 4GB"
+            newInstanceType: "AWS 2vCPU, 8GB"
             maxmemory: "2GB"
 
           ######################## PRIVATE • GCP (INTERNAL) ########################
@@ -611,7 +611,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: multi-Zone
-            instanceType: "e2-medium"
+            instanceType: "GCP 2vCPU, 4GB"
             maxmemory: "2GB"
             networkType: INTERNAL
           ######################## PRO • AWS (TLS) ########################
@@ -623,8 +623,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "AWS 2vCPU, 4GB"
+            newInstanceType: "AWS 2vCPU, 8GB"
             maxmemory: "2GB"
             tls: true
           - name: "[26] pro/SingleZone/TLS - AWS/us-east-2 - Grouped"
@@ -635,8 +635,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "AWS 2vCPU, 4GB"
+            newInstanceType: "AWS 2vCPU, 8GB"
             maxmemory: "2GB"
             tls: true
     steps:

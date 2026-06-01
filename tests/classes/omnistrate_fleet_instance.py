@@ -40,50 +40,6 @@ class OmnistrateFleetInstance:
 
     falkordb_password: str = None
 
-    # Map legacy cloud-provider instance-type identifiers to the human-readable
-    # labels that the Omnistrate API now requires.  Values that already match a
-    # label (e.g. "AWS 2vCPU, 8GB") are passed through unchanged.
-    _INSTANCE_TYPE_MAP: dict[str, str] = {
-        # ── AWS ──────────────────────────────────────────────────────────────
-        "t2.medium":    "AWS 2vCPU, 4GB",
-        "t2.large":     "AWS 2vCPU, 8GB",
-        "t2.xlarge":    "AWS 4vCPU, 16GB",
-        "t2.2xlarge":   "AWS 8vCPU, 32GB",
-        "m6i.large":    "AWS 2vCPU, 8GB",
-        "m6i.xlarge":   "AWS 4vCPU, 16GB",
-        "m6i.2xlarge":  "AWS 8vCPU, 32GB",
-        "m6i.4xlarge":  "AWS 16vCPU, 64GB",
-        "m6i.8xlarge":  "AWS 32vCPU, 128GB",
-        # ── GCP ──────────────────────────────────────────────────────────────
-        "e2-medium":      "GCP 2vCPU, 4GB",
-        "e2-standard-2":  "GCP 2vCPU, 8GB",
-        "e2-standard-4":  "GCP 4vCPU, 16GB",
-        "e2-standard-8":  "GCP 8vCPU, 32GB",
-        "e2-standard-16": "GCP 16vCPU, 64GB",
-        "n2-standard-2":  "GCP 2vCPU, 8GB",
-        "n2-standard-4":  "GCP 4vCPU, 16GB",
-        "n2-standard-8":  "GCP 8vCPU, 32GB",
-        "n2-standard-16": "GCP 16vCPU, 64GB",
-    }
-
-    @classmethod
-    def _normalize_instance_type(cls, instance_type: str | None) -> str | None:
-        """Translate a legacy instance-type identifier to the current API label.
-
-        If *instance_type* is already in the new label format (or is ``None``),
-        it is returned unchanged so that callers using either convention work
-        transparently.
-        """
-        if instance_type is None:
-            return None
-        translated = cls._INSTANCE_TYPE_MAP.get(instance_type)
-        if translated is not None:
-            logging.debug(
-                "Translated instance type %r → %r", instance_type, translated
-            )
-            return translated
-        return instance_type
-
     def __init__(
         self,
         fleet_api: tests.classes.omnistrate_fleet_api.OmnistrateFleetAPI,
@@ -175,11 +131,6 @@ class OmnistrateFleetInstance:
 
         self.falkordb_password = falkordb_password
         self._network_type = network_type
-
-        if "nodeInstanceType" in kwargs:
-            kwargs["nodeInstanceType"] = self._normalize_instance_type(
-                kwargs["nodeInstanceType"]
-            )
 
         data = {
             "cloud_provider": deployment_cloud_provider,
@@ -438,7 +389,7 @@ class OmnistrateFleetInstance:
         """Update the instance type."""
 
         data = {
-            "nodeInstanceType": self._normalize_instance_type(new_instance_type),
+            "nodeInstanceType": new_instance_type,
         }
 
         return self.update_params(wait_until_ready, retry, **data)

@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 OMNISTRATE_API_BASE_URL="https://api.omnistrate.cloud/2022-09-01-00"
 OMNISTRATE_INTERNAL_SERVICE_ID="${OMNISTRATE_INTERNAL_SERVICE_ID:-s-KgFDwg5vBS}"

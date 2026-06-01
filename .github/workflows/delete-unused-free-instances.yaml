@@ -27,6 +27,6 @@ jobs:
             ghcr.io/omnistrate-oss/omnistrate-ctl:1.8.5 \
             -c "
               apk add jq && \
-              echo \"$OMNISTRATE_PASSWORD\" | /usr/local/bin/omnistrate-ctl login --api-key-stdin && \
+              echo \"\$OMNISTRATE_PASSWORD\" | /usr/local/bin/omnistrate-ctl login --api-key-stdin && \
               /bin/sh /scripts/delete-unused-stopped-free-instances.sh
             "

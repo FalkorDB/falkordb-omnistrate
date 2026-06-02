@@ -23,6 +23,7 @@ jobs:
             -e OMNISTRATE_PASSWORD='${{ secrets.OMNISTRATE_API_KEY }}' \
             -e OMNISTRATE_INTERNAL_SERVICE_ID='s-KgFDwg5vBS' \
             -e OMNISTRATE_INTERNAL_PROD_ENVIRONMENT='se-1iyXYFtYfA' \
+            -e BREVO_API_KEY='${{ secrets.BREVO_API_KEY }}' \
             -v ${{ github.workspace }}/scripts:/scripts:ro \
             ghcr.io/omnistrate-oss/omnistrate-ctl:1.8.5 \
             -c "

@@ -4,6 +4,7 @@ set -e
 OMNISTRATE_API_BASE_URL="https://api.omnistrate.cloud/2022-09-01-00"
 OMNISTRATE_INTERNAL_SERVICE_ID="${OMNISTRATE_INTERNAL_SERVICE_ID:-s-KgFDwg5vBS}"
 OMNISTRATE_INTERNAL_PROD_ENVIRONMENT="${OMNISTRATE_INTERNAL_PROD_ENVIRONMENT:-se-1iyXYFtYfA}"
+BREVO_API_URL="https://api.brevo.com/v3/smtp/email"
 
 auth_token=""
 if [ -n "${OMNISTRATE_USERNAME:-}" ] && [ -n "${OMNISTRATE_PASSWORD:-}" ]; then
@@ -41,6 +42,25 @@ for instance in $instances; do
 
     echo "Deleting unused stopped free instance: $instance (last modified $diff days ago - $last_modified)"
     omnistrate-ctl instance delete "$instance" --yes
+
+    # Send termination email to subscription owners via Brevo
+    if [ -n "${BREVO_API_KEY:-}" ] && [ -n "$auth_token" ]; then
+      subscription_id=$(echo "$described_instance" | jq -r '.subscriptionId // empty')
+      if [ -n "$subscription_id" ]; then
+        users_response=$(curl -sS --fail "${OMNISTRATE_API_BASE_URL}/fleet/service/${OMNISTRATE_INTERNAL_SERVICE_ID}/environment/${OMNISTRATE_INTERNAL_PROD_ENVIRONMENT}/users?subscriptionId=${subscription_id}" \
+          -H "Authorization: Bearer ${auth_token}" \
+          -H "Content-Type: application/json")
+        to_array=$(echo "$users_response" | jq -c '[.users[]? | {email: .email, name: .userName}]')
+        if [ "$to_array" != "[]" ] && [ -n "$to_array" ]; then
+          echo "Sending termination email to: $(echo "$to_array" | jq -r '.[].email' | tr '\n' ', ')"
+          curl -sS --fail "$BREVO_API_URL" \
+            -X POST \
+            -H "api-key: ${BREVO_API_KEY}" \
+            -H "Content-Type: application/json" \
+            --data-raw "{\"templateId\":2,\"to\":${to_array},\"params\":{\"instance_id\":\"${instance}\"}}" >/dev/null
+        fi
+      fi
+    fi
   else
     echo "Instance $instance was modified $diff days ago. Skipping."
   fi

@@ -43,21 +43,21 @@ for instance in $instances; do
     echo "Deleting unused stopped free instance: $instance (last modified $diff days ago - $last_modified)"
     omnistrate-ctl instance delete "$instance" --yes
 
-    # Send termination email to subscription owners via Brevo
+    # Send termination email to subscription owners via Brevo (best-effort)
     if [ -n "${BREVO_API_KEY:-}" ] && [ -n "$auth_token" ]; then
       subscription_id=$(echo "$described_instance" | jq -r '.subscriptionId // empty')
       if [ -n "$subscription_id" ]; then
-        users_response=$(curl -sS --fail "${OMNISTRATE_API_BASE_URL}/fleet/service/${OMNISTRATE_INTERNAL_SERVICE_ID}/environment/${OMNISTRATE_INTERNAL_PROD_ENVIRONMENT}/users?subscriptionId=${subscription_id}" \
+        users_response=$(curl -sS "${OMNISTRATE_API_BASE_URL}/fleet/service/${OMNISTRATE_INTERNAL_SERVICE_ID}/environment/${OMNISTRATE_INTERNAL_PROD_ENVIRONMENT}/users?subscriptionId=${subscription_id}" \
           -H "Authorization: Bearer ${auth_token}" \
-          -H "Content-Type: application/json")
-        to_array=$(echo "$users_response" | jq -c '[.users[]? | {email: .email, name: .userName}]')
-        if [ "$to_array" != "[]" ] && [ -n "$to_array" ]; then
+          -H "Content-Type: application/json") || true
+        to_array=$(echo "$users_response" | jq -c '[.users[]? | {email: .email, name: .userName}]' 2>/dev/null) || true
+        if [ -n "$to_array" ] && [ "$to_array" != "[]" ]; then
           echo "Sending termination email to: $(echo "$to_array" | jq -r '.[].email' | tr '\n' ', ')"
-          curl -sS --fail "$BREVO_API_URL" \
+          curl -sS "$BREVO_API_URL" \
             -X POST \
             -H "api-key: ${BREVO_API_KEY}" \
             -H "Content-Type: application/json" \
-            --data-raw "{\"templateId\":2,\"to\":${to_array},\"params\":{\"instance_id\":\"${instance}\"}}" >/dev/null
+            --data-raw "{\"templateId\":2,\"to\":${to_array},\"params\":{\"instance_id\":\"${instance}\"}}" >/dev/null || echo "Warning: failed to send termination email for instance $instance"
         fi
       fi
     fi

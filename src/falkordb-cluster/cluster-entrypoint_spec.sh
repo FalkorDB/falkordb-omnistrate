@@ -810,7 +810,13 @@ EOF
       The contents of file "$calls_file" should include "+SELECT"
       The contents of file "$calls_file" should include "+RESTORE"
       The contents of file "$calls_file" should include "+RESTORE-ASKING"
+      The contents of file "$calls_file" should include "+PSYNC"
+      The contents of file "$calls_file" should include "+REPLCONF"
       The contents of file "$calls_file" should include "+ROLE"
+      The contents of file "$calls_file" should include "+DUMP"
+      The contents of file "$calls_file" should include "+PTTL"
+      The contents of file "$calls_file" should include "+PEXPIRETIME"
+      The contents of file "$calls_file" should include "+SCAN"
       The contents of file "$calls_file" should include "+DEL"
     End
   End

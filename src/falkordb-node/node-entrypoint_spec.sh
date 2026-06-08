@@ -54,6 +54,14 @@ Describe "node-entrypoint.sh helpers"
       The output should eq "secret_val"
     End
 
+    Describe "node template defaults"
+      It "disables activedefrag in node.conf template"
+        When call grep "^activedefrag " ./node.conf
+        The status should be success
+        The output should eq "activedefrag no"
+      End
+    End
+
     It "falls back to environment variable when secret file missing"
       MY_TEST_VAR="env_val"
       When call read_secret_or_env "/nonexistent/path" "MY_TEST_VAR"

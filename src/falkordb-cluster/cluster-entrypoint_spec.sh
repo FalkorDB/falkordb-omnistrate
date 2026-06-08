@@ -916,5 +916,11 @@ EOF
       The status should be success
       The output should eq "cluster-node-timeout 30000"
     End
+
+    It "disables activedefrag in node.conf template"
+      When call grep "^activedefrag " ./node.conf
+      The status should be success
+      The output should eq "activedefrag no"
+    End
   End
 End

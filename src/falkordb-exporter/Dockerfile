@@ -1,4 +1,4 @@
-FROM falkordb/redis_exporter:v1.72.1-alpine AS redis_exporter
+FROM falkordb/redis_exporter:v1.72.2-alpine AS redis_exporter
 
 FROM alpine:latest
 

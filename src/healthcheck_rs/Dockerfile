@@ -13,7 +13,7 @@ FROM debian:trixie-slim
 RUN DEBIAN_FRONTEND=noninteractive apt-get update -y \
 	&& apt-get install -y --no-install-recommends debconf \
 	&& apt-get upgrade -y \
-	&& apt-get install -y --no-install-recommends openssl ca-certificates \
+	&& apt-get install -y --no-install-recommends openssl openssl-provider-legacy ca-certificates libssl3t64 \
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
 

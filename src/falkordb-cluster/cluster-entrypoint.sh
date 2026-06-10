@@ -493,11 +493,130 @@ wait_for_bgrewrite_to_finish() {
   done
 }
 
+is_local_cluster_master() {
+  local info
+
+  if ! info=$(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING INFO replication 2>/dev/null); then
+    return 1
+  fi
+
+  [[ "$info" =~ role:master ]]
+}
+
+select_failover_replica_endpoint() {
+  local master_id=$1
+  local cluster_nodes=$2
+  local line node_addr flags replica_master link host port hostname_part base_addr
+
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+
+    node_addr=$(echo "$line" | awk '{print $2}')
+    flags=$(echo "$line" | awk '{print $3}')
+    replica_master=$(echo "$line" | awk '{print $4}')
+    link=$(echo "$line" | awk '{print $8}')
+
+    if [[ "$replica_master" != "$master_id" || "$link" != "connected" ]]; then
+      continue
+    fi
+    if [[ "$flags" != *slave* || "$flags" == *fail* || "$flags" == *nofailover* || "$flags" == *myself* ]]; then
+      continue
+    fi
+
+    base_addr=${node_addr%%,*}
+    hostname_part=${node_addr#*,}
+    if [[ "$hostname_part" != "$node_addr" && -n "$hostname_part" ]]; then
+      host=${hostname_part%%:*}
+      port=${hostname_part#*:}
+      [[ "$port" == "$hostname_part" ]] && port=$NODE_PORT
+    else
+      host=${base_addr%%:*}
+      port=${base_addr#*:}
+      port=${port%%@*}
+      [[ -z "$port" || "$port" == "0" ]] && port=$NODE_PORT
+    fi
+
+    echo "$host:$port"
+    return 0
+  done <<<"$cluster_nodes"
+
+  return 1
+}
+
+wait_until_local_master_steps_down() {
+  local timeout_seconds=${FAILOVER_TIMEOUT_SECONDS:-5}
+  local deadline=$((SECONDS + timeout_seconds))
+  local info
+
+  if (( timeout_seconds <= 0 )); then
+    echo "Skipping wait for local node to step down after failover"
+    return 0
+  fi
+
+  while (( SECONDS < deadline )); do
+    if ! info=$(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING INFO replication 2>/dev/null); then
+      echo "Local node stopped responding while waiting for failover"
+      return 0
+    fi
+    if [[ ! "$info" =~ role:master ]]; then
+      echo "Local node is no longer master"
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "Timed out waiting for local node to step down after failover"
+  return 1
+}
+
+force_failover_if_cluster_master() {
+  local cluster_info master_id cluster_nodes replica_endpoint replica_host replica_port
+
+  if ! cluster_info=$(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER INFO 2>/dev/null); then
+    echo "Cluster info unavailable; skipping forced failover"
+    return 0
+  fi
+  if [[ "$cluster_info" != *cluster_state:* ]]; then
+    echo "Node is not running in cluster mode; skipping forced failover"
+    return 0
+  fi
+  if ! is_local_cluster_master; then
+    echo "Local node is not master; skipping forced failover"
+    return 0
+  fi
+
+  master_id=$(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER MYID 2>/dev/null | tr -d '\r')
+  if [[ -z "$master_id" ]]; then
+    echo "Could not determine local cluster node id; skipping forced failover"
+    return 0
+  fi
+
+  if ! cluster_nodes=$(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER NODES 2>/dev/null); then
+    echo "Could not read cluster nodes; skipping forced failover"
+    return 0
+  fi
+
+  if ! replica_endpoint=$(select_failover_replica_endpoint "$master_id" "$cluster_nodes"); then
+    echo "No healthy replica found for forced failover"
+    return 0
+  fi
+
+  replica_host=${replica_endpoint%:*}
+  replica_port=${replica_endpoint##*:}
+  echo "Requesting forced failover on replica $replica_host:$replica_port"
+  if redis-cli -h "$replica_host" -p "$replica_port" $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER FAILOVER FORCE; then
+    wait_until_local_master_steps_down || true
+  else
+    echo "Forced failover command failed; continuing shutdown"
+  fi
+}
+
 handle_sigterm() {
   echo "Caught SIGTERM"
   echo "Stopping FalkorDB"
 
   if [[ ! -z $falkordb_pid ]]; then
+    force_failover_if_cluster_master
     # perform bgrewriteaof before shutting down
     echo "Running BGREWRITEAOF before shutdown"
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF

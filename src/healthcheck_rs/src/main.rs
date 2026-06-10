@@ -1,14 +1,14 @@
 use k8s_openapi::api::core::v1::ConfigMap;
 use kube::{Api, Client};
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::env;
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::{Arc, Mutex, RwLock};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -32,7 +32,7 @@ data:
       "skip_all": false,
       "skip_liveness": false,
       "skip_readiness": false,
-      "skip_startup": true                  
+      "skip_startup": true
     }
 */
 
@@ -245,23 +245,25 @@ fn serve_connection(mut stream: TcpStream, is_sentinel: bool, redis_client: &red
             }
         }
         // Extract path from "GET /path HTTP/1.x"
-        request_line
-            .splitn(3, ' ')
-            .nth(1)
-            .unwrap_or("")
-            .to_owned()
+        request_line.splitn(3, ' ').nth(1).unwrap_or("").to_owned()
     };
 
     let (status, body) = match path.as_str() {
         "/liveness" => handle_health_check_with_config(
-            is_sentinel, check_handler_liveness, redis_client, "liveness",
+            is_sentinel,
+            check_handler_liveness,
+            redis_client,
+            "liveness",
         ),
         "/readiness" => handle_health_check_with_config(
-            is_sentinel, check_handler_readiness, redis_client, "readiness",
+            is_sentinel,
+            check_handler_readiness,
+            redis_client,
+            "readiness",
         ),
-        "/startup" => handle_health_check_with_config(
-            is_sentinel, |_, _| Ok(true), redis_client, "startup",
-        ),
+        "/startup" => {
+            handle_health_check_with_config(is_sentinel, |_, _| Ok(true), redis_client, "startup")
+        }
         _ => (404u16, "Not Found"),
     };
 
@@ -298,7 +300,12 @@ where
     let in_flight = IN_FLIGHT.fetch_add(1, Ordering::Relaxed);
     if in_flight >= max_in_flight() {
         IN_FLIGHT.fetch_sub(1, Ordering::Relaxed);
-        eprintln!("healthcheck: overloaded ({}/{} in-flight), short-circuiting /{}", in_flight, max_in_flight(), check_type);
+        eprintln!(
+            "healthcheck: overloaded ({}/{} in-flight), short-circuiting /{}",
+            in_flight,
+            max_in_flight(),
+            check_type
+        );
         // Liveness/startup: the process is alive, just busy — return OK so
         // kubelet does not kill us and make things worse.
         // Readiness: signal that we cannot serve right now.
@@ -423,14 +430,20 @@ fn parse_health_config_from_data(
     if let Some(json_config) = data.get("config.json") {
         match serde_json::from_str::<HealthConfig>(json_config) {
             Ok(parsed_config) => return Ok(parsed_config),
-            Err(e) => eprintln!("healthcheck: failed to parse config.json, falling back to individual keys: {}", e),
+            Err(e) => eprintln!(
+                "healthcheck: failed to parse config.json, falling back to individual keys: {}",
+                e
+            ),
         }
     }
 
     Ok(config)
 }
 
-fn check_handler_liveness(_: bool, redis_client: &redis::Client) -> Result<bool, redis::RedisError> {
+fn check_handler_liveness(
+    _: bool,
+    redis_client: &redis::Client,
+) -> Result<bool, redis::RedisError> {
     with_redis_conn(redis_client, |conn| {
         match redis::cmd("PING").query::<String>(conn) {
             Ok(value) => {
@@ -591,13 +604,74 @@ fn get_status_from_cluster_node_readiness(
     //   master_link_status:down    – replica not yet connected/synced to master
     // The node must not become ready while either condition holds.
     if db_info.contains("role:slave") {
-        return Ok(
-            db_info.contains("master_link_status:up")
-                && db_info.contains("master_sync_in_progress:0"),
-        );
+        let cluster_nodes = redis::cmd("CLUSTER").arg("NODES").query::<String>(con)?;
+        return Ok(db_info.contains("master_link_status:up")
+            && db_info.contains("master_sync_in_progress:0")
+            && cluster_replica_is_failover_ready(db_info, &cluster_nodes));
     }
 
     Ok(true)
+}
+
+fn cluster_replica_is_failover_ready(db_info: &str, cluster_nodes: &str) -> bool {
+    replication_offsets_caught_up(db_info)
+        && master_io_lag_is_acceptable(db_info)
+        && cluster_self_line_is_promotable_replica(cluster_nodes)
+}
+
+fn replication_offsets_caught_up(db_info: &str) -> bool {
+    match (
+        parse_u64_info_field(db_info, "slave_repl_offset"),
+        parse_u64_info_field(db_info, "master_repl_offset"),
+    ) {
+        (Some(slave_offset), Some(master_offset)) => slave_offset >= master_offset,
+        _ => true,
+    }
+}
+
+fn master_io_lag_is_acceptable(db_info: &str) -> bool {
+    let max_lag_seconds = env::var("FAILOVER_READY_MAX_MASTER_IO_LAG_SECONDS")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(5);
+
+    parse_u64_info_field(db_info, "master_last_io_seconds_ago")
+        .map(|lag_seconds| lag_seconds <= max_lag_seconds)
+        .unwrap_or(true)
+}
+
+fn cluster_self_line_is_promotable_replica(cluster_nodes: &str) -> bool {
+    let self_line = match cluster_nodes.lines().find(|line| {
+        line.split_whitespace()
+            .nth(2)
+            .map_or(false, |flags| flags.split(',').any(|flag| flag == "myself"))
+    }) {
+        Some(line) => line,
+        None => return false,
+    };
+
+    let fields: Vec<&str> = self_line.split_whitespace().collect();
+    if fields.len() < 8 {
+        return false;
+    }
+
+    let flags: Vec<&str> = fields[2].split(',').collect();
+    flags.contains(&"slave")
+        && !flags.contains(&"fail")
+        && !flags.contains(&"fail?")
+        && !flags.contains(&"nofailover")
+        && fields[3] != "-"
+        && fields[7] == "connected"
+}
+
+fn parse_u64_info_field(info: &str, field_name: &str) -> Option<u64> {
+    parse_info_field(info, field_name).and_then(|value| value.parse::<u64>().ok())
+}
+
+fn parse_info_field<'a>(info: &'a str, field_name: &str) -> Option<&'a str> {
+    let prefix = format!("{}:", field_name);
+    info.lines()
+        .find_map(|line| line.strip_prefix(&prefix).map(str::trim))
 }
 
 fn get_status_from_master_readiness(
@@ -630,4 +704,64 @@ fn resolve_host(host: &str) {
     }
 
     panic!("Failed to resolve host: {}", host);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const READY_REPLICA_INFO: &str = "role:slave\r\nloading:0\r\nmaster_link_status:up\r\nmaster_sync_in_progress:0\r\nmaster_last_io_seconds_ago:1\r\nslave_repl_offset:100\r\nmaster_repl_offset:100\r\n";
+
+    const READY_CLUSTER_NODES: &str = "master-id 10.0.0.1:6379@16379 master - 0 0 1 connected 0-16383\nreplica-id 10.0.0.2:6379@16379 myself,slave master-id 0 0 2 connected\n";
+
+    #[test]
+    fn cluster_replica_is_failover_ready_when_synced_and_promotable() {
+        assert!(cluster_replica_is_failover_ready(
+            READY_REPLICA_INFO,
+            READY_CLUSTER_NODES
+        ));
+    }
+
+    #[test]
+    fn cluster_replica_is_not_ready_when_replication_offset_lags() {
+        let info = READY_REPLICA_INFO.replace("slave_repl_offset:100", "slave_repl_offset:99");
+
+        assert!(!cluster_replica_is_failover_ready(
+            &info,
+            READY_CLUSTER_NODES
+        ));
+    }
+
+    #[test]
+    fn cluster_replica_is_not_ready_when_master_io_is_stale() {
+        let info = READY_REPLICA_INFO.replace(
+            "master_last_io_seconds_ago:1",
+            "master_last_io_seconds_ago:6",
+        );
+
+        assert!(!cluster_replica_is_failover_ready(
+            &info,
+            READY_CLUSTER_NODES
+        ));
+    }
+
+    #[test]
+    fn cluster_replica_is_not_ready_when_marked_nofailover() {
+        let nodes = READY_CLUSTER_NODES.replace("myself,slave", "myself,slave,nofailover");
+
+        assert!(!cluster_replica_is_failover_ready(
+            READY_REPLICA_INFO,
+            &nodes
+        ));
+    }
+
+    #[test]
+    fn cluster_replica_is_not_ready_when_disconnected() {
+        let nodes = READY_CLUSTER_NODES.replace(" connected", " disconnected");
+
+        assert!(!cluster_replica_is_failover_ready(
+            READY_REPLICA_INFO,
+            &nodes
+        ));
+    }
 }

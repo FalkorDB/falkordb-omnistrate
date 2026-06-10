@@ -14,6 +14,7 @@ FROM debian:bookworm-slim
 RUN DEBIAN_FRONTEND=noninteractive apt-get update -y \
 	&& apt-get upgrade -y \
 	&& apt-get install -y --no-install-recommends ca-certificates \
+	&& apt-get install -y --only-upgrade libssl3 openssl \
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
 

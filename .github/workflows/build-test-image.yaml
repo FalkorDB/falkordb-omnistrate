@@ -108,6 +108,7 @@ jobs:
         run: |
           export PATH="$HOME/.local/lib/shellspec:$PATH"
           shellspec src/falkordb-cluster/cluster-entrypoint_spec.sh \
+                    src/falkordb-exporter/exporter-entrypoint_spec.sh \
                     src/falkordb-node/node-entrypoint_spec.sh \
                     src/falkordb-sentinel/sentinel-entrypoint_spec.sh
 

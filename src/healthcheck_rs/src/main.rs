@@ -604,19 +604,16 @@ fn get_status_from_cluster_node_readiness(
     //   master_link_status:down    – replica not yet connected/synced to master
     // The node must not become ready while either condition holds.
     if db_info.contains("role:slave") {
-        let cluster_nodes = redis::cmd("CLUSTER").arg("NODES").query::<String>(con)?;
-        return Ok(db_info.contains("master_link_status:up")
-            && db_info.contains("master_sync_in_progress:0")
-            && cluster_replica_is_failover_ready(db_info, &cluster_nodes));
+        return Ok(cluster_replica_sync_is_complete(db_info));
     }
 
     Ok(true)
 }
 
-fn cluster_replica_is_failover_ready(db_info: &str, cluster_nodes: &str) -> bool {
-    replication_offsets_caught_up(db_info)
-        && master_io_lag_is_acceptable(db_info)
-        && cluster_self_line_is_promotable_replica(cluster_nodes)
+fn cluster_replica_sync_is_complete(db_info: &str) -> bool {
+    db_info.contains("master_link_status:up")
+        && db_info.contains("master_sync_in_progress:0")
+        && replication_offsets_caught_up(db_info)
 }
 
 fn replication_offsets_caught_up(db_info: &str) -> bool {
@@ -627,41 +624,6 @@ fn replication_offsets_caught_up(db_info: &str) -> bool {
         (Some(slave_offset), Some(master_offset)) => slave_offset >= master_offset,
         _ => true,
     }
-}
-
-fn master_io_lag_is_acceptable(db_info: &str) -> bool {
-    let max_lag_seconds = env::var("FAILOVER_READY_MAX_MASTER_IO_LAG_SECONDS")
-        .ok()
-        .and_then(|value| value.parse::<u64>().ok())
-        .unwrap_or(5);
-
-    parse_u64_info_field(db_info, "master_last_io_seconds_ago")
-        .map(|lag_seconds| lag_seconds <= max_lag_seconds)
-        .unwrap_or(true)
-}
-
-fn cluster_self_line_is_promotable_replica(cluster_nodes: &str) -> bool {
-    let self_line = match cluster_nodes.lines().find(|line| {
-        line.split_whitespace()
-            .nth(2)
-            .map_or(false, |flags| flags.split(',').any(|flag| flag == "myself"))
-    }) {
-        Some(line) => line,
-        None => return false,
-    };
-
-    let fields: Vec<&str> = self_line.split_whitespace().collect();
-    if fields.len() < 8 {
-        return false;
-    }
-
-    let flags: Vec<&str> = fields[2].split(',').collect();
-    flags.contains(&"slave")
-        && !flags.contains(&"fail")
-        && !flags.contains(&"fail?")
-        && !flags.contains(&"nofailover")
-        && fields[3] != "-"
-        && fields[7] == "connected"
 }
 
 fn parse_u64_info_field(info: &str, field_name: &str) -> Option<u64> {
@@ -710,58 +672,40 @@ fn resolve_host(host: &str) {
 mod tests {
     use super::*;
 
-    const READY_REPLICA_INFO: &str = "role:slave\r\nloading:0\r\nmaster_link_status:up\r\nmaster_sync_in_progress:0\r\nmaster_last_io_seconds_ago:1\r\nslave_repl_offset:100\r\nmaster_repl_offset:100\r\n";
-
-    const READY_CLUSTER_NODES: &str = "master-id 10.0.0.1:6379@16379 master - 0 0 1 connected 0-16383\nreplica-id 10.0.0.2:6379@16379 myself,slave master-id 0 0 2 connected\n";
+    const READY_REPLICA_INFO: &str = "role:slave\r\nloading:0\r\nmaster_link_status:up\r\nmaster_sync_in_progress:0\r\nslave_repl_offset:100\r\nmaster_repl_offset:100\r\n";
 
     #[test]
-    fn cluster_replica_is_failover_ready_when_synced_and_promotable() {
-        assert!(cluster_replica_is_failover_ready(
-            READY_REPLICA_INFO,
-            READY_CLUSTER_NODES
-        ));
+    fn cluster_replica_sync_is_complete_when_link_is_up_and_offsets_match() {
+        assert!(cluster_replica_sync_is_complete(READY_REPLICA_INFO));
     }
 
     #[test]
-    fn cluster_replica_is_not_ready_when_replication_offset_lags() {
+    fn cluster_replica_sync_is_incomplete_when_replication_offset_lags() {
         let info = READY_REPLICA_INFO.replace("slave_repl_offset:100", "slave_repl_offset:99");
 
-        assert!(!cluster_replica_is_failover_ready(
-            &info,
-            READY_CLUSTER_NODES
-        ));
+        assert!(!cluster_replica_sync_is_complete(&info));
     }
 
     #[test]
-    fn cluster_replica_is_not_ready_when_master_io_is_stale() {
-        let info = READY_REPLICA_INFO.replace(
-            "master_last_io_seconds_ago:1",
-            "master_last_io_seconds_ago:6",
-        );
+    fn cluster_replica_sync_is_incomplete_when_master_link_is_down() {
+        let info = READY_REPLICA_INFO.replace("master_link_status:up", "master_link_status:down");
 
-        assert!(!cluster_replica_is_failover_ready(
-            &info,
-            READY_CLUSTER_NODES
-        ));
+        assert!(!cluster_replica_sync_is_complete(&info));
     }
 
     #[test]
-    fn cluster_replica_is_not_ready_when_marked_nofailover() {
-        let nodes = READY_CLUSTER_NODES.replace("myself,slave", "myself,slave,nofailover");
+    fn cluster_replica_sync_is_incomplete_during_master_sync() {
+        let info =
+            READY_REPLICA_INFO.replace("master_sync_in_progress:0", "master_sync_in_progress:1");
 
-        assert!(!cluster_replica_is_failover_ready(
-            READY_REPLICA_INFO,
-            &nodes
-        ));
+        assert!(!cluster_replica_sync_is_complete(&info));
     }
 
     #[test]
-    fn cluster_replica_is_not_ready_when_disconnected() {
-        let nodes = READY_CLUSTER_NODES.replace(" connected", " disconnected");
+    fn cluster_replica_sync_does_not_require_offsets_when_missing() {
+        let info =
+            "role:slave\r\nloading:0\r\nmaster_link_status:up\r\nmaster_sync_in_progress:0\r\n";
 
-        assert!(!cluster_replica_is_failover_ready(
-            READY_REPLICA_INFO,
-            &nodes
-        ));
+        assert!(cluster_replica_sync_is_complete(info));
     }
 }

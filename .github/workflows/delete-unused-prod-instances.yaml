@@ -1,6 +1,7 @@
 name: Delete unused stopped prod instances
 
 on:
+  push:
   workflow_dispatch:
     inputs:
       dry_run:

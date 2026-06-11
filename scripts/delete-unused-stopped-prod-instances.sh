@@ -27,7 +27,7 @@ BREVO_TEMPLATE_ID="${BREVO_TEMPLATE_ID:-2}"
 AGE_THRESHOLD_MINUTES="${AGE_THRESHOLD_MINUTES:-20160}"
 DRY_RUN="${DRY_RUN:-true}"
 
-echo "Targeting environment '${OMNISTRATE_ENVIRONMENT_FILTER}' (id: ${OMNISTRATE_INTERNAL_ENVIRONMENT}), threshold: ${AGE_THRESHOLD_MINUTES} minutes"
+echo "Targeting environment '${OMNISTRATE_ENVIRONMENT_FILTER}', threshold: ${AGE_THRESHOLD_MINUTES} minutes"
 if [ "$DRY_RUN" = "true" ]; then
   echo "Running in DRY_RUN mode: no instances will be deleted and no emails will be sent."
 fi
@@ -43,6 +43,15 @@ fi
 # List all stopped instances in the target environment. Free tier instances are
 # skipped in the loop below since they are handled by a separate job.
 instances=$(omnistrate-ctl instance list -f "service:FalkorDB,environment:${OMNISTRATE_ENVIRONMENT_FILTER},status:STOPPED" -o json | jq -r '.[].instance_id')
+
+if [ -z "$instances" ]; then
+  echo "No stopped instances found in environment '${OMNISTRATE_ENVIRONMENT_FILTER}'. Nothing to do."
+  exit 0
+fi
+
+instance_count=$(printf '%s\n' "$instances" | grep -c .)
+echo "Found ${instance_count} stopped instance(s) in environment '${OMNISTRATE_ENVIRONMENT_FILTER}':"
+printf '  - %s\n' $instances
 
 for instance in $instances; do
   described_instance=$(omnistrate-ctl instance describe "$instance" -o json)

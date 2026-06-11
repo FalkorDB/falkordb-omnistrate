@@ -296,7 +296,7 @@ jobs:
         working-directory: compose
         run: |
           sed -i 's/"GCP 2vCPU, 4GB": "e2-medium"//g' ${{ matrix.plans.file }}
-          sed -i 's/"AWS 2vCPU, 4GB": "t2.medium"//g' ${{ matrix.plans.file }}
+          sed -i 's/"AWS 2vCPU, 4GB": "t4g.medium"//g' ${{ matrix.plans.file }}
       - name: Enable snapshotBeforeDeletion
         if: ${{ contains( vars.OMNISTRATE_RELEASE_PLANS, matrix.plans.key) && (matrix.plans.key != 'free')}}
         working-directory: compose

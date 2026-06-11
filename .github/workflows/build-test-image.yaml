@@ -167,6 +167,7 @@ jobs:
       - name: Scan image with Grype
         uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v6
         id: grype
+        if: matrix.platform == 'amd64'
         with:
           image: falkordb/${{ matrix.image.image_name }}:dev-${{ github.event.head_commit.id || github.run_id }}-${{ matrix.platform }}
           fail-build: true
@@ -177,7 +178,7 @@ jobs:
 
       - name: Upload Grype SARIF report
         uses: github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc # v3
-        if: always()
+        if: always() && matrix.platform == 'amd64'
         with:
           sarif_file: ${{ steps.grype.outputs.sarif }}
           category: grype-${{ matrix.image.image_name }}-${{ matrix.platform }}

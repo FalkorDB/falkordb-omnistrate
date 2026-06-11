@@ -113,6 +113,6 @@ for instance in $instances; do
       fi
     fi
   else
-    echo "Instance $instance (plan: $plan) was last modified $diff minutes ago with status $status. Skipping."
+    echo "Instance $instance (plan: $plan) does NOT meet the deletion requirement (stopped for >= ${AGE_THRESHOLD_MINUTES} minutes): status is '$status', stopped $diff minutes ago ($last_modified). Skipping."
   fi
 done

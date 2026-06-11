@@ -1,0 +1,42 @@
+name: Delete unused stopped prod instances
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (only report candidates, do not delete or email)'
+        type: boolean
+        default: true
+      age_threshold_days:
+        description: 'Minimum number of days an instance must have been stopped before deletion'
+        required: false
+        default: '14'
+
+jobs:
+  delete-unused-prod-instances:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Login and delete unused stopped prod instances
+        run: |
+          docker run --rm \
+            --entrypoint /bin/sh \
+            -e OMNISTRATE_USERNAME='${{ secrets.OMNISTRATE_API_KEY_USERNAME}}' \
+            -e OMNISTRATE_PASSWORD='${{ secrets.OMNISTRATE_API_KEY }}' \
+            -e OMNISTRATE_INTERNAL_SERVICE_ID='s-KgFDwg5vBS' \
+            -e OMNISTRATE_INTERNAL_PROD_ENVIRONMENT='se-1iyXYFtYfA' \
+            -e BREVO_API_KEY='${{ secrets.BREVO_API_KEY }}' \
+            -e DRY_RUN='${{ inputs.dry_run }}' \
+            -e AGE_THRESHOLD_DAYS='${{ inputs.age_threshold_days }}' \
+            -v ${{ github.workspace }}/scripts:/scripts:ro \
+            ghcr.io/omnistrate-oss/omnistrate-ctl:1.8.5 \
+            -c "
+              apk add jq && \
+              echo \"\$OMNISTRATE_PASSWORD\" | /usr/local/bin/omnistrate-ctl login --api-key-stdin && \
+              /bin/sh /scripts/delete-unused-stopped-prod-instances.sh
+            "

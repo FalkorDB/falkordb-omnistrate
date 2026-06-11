@@ -17,14 +17,20 @@ RUN python3 -m venv /rebalance/venv && \
   pip install --no-cache-dir -r /rebalance/src/requirements.txt && \
   pip uninstall -y pip
 
+FROM ${ALPINE_IMAGE} AS redis-cli
+
+RUN apk upgrade --no-cache && \
+  apk add --no-cache redis
+
 FROM ${ALPINE_IMAGE}
 
 RUN apk upgrade --no-cache && \
-  apk add --no-cache python3 redis
+  apk add --no-cache python3
 
 WORKDIR /rebalance
 
 COPY --from=builder /rebalance/ /rebalance/
+COPY --from=redis-cli /usr/bin/redis-cli /usr/bin/redis-cli
 
 # Create a non-root user
 RUN adduser -D -u 1000 rebalance && \

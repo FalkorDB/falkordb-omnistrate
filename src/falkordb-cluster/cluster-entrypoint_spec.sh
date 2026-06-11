@@ -910,6 +910,149 @@ EOF
     End
   End
 
+  Describe "force_failover_if_cluster_master()"
+    It "uses a short default wait budget before persistence shutdown"
+      redis-cli() { printf 'role:master\n'; }
+      sleep() {
+        SECONDS=$((SECONDS + 5))
+      }
+
+      When call wait_until_local_master_steps_down
+      The status should be failure
+      The output should include "Timed out waiting for local node to step down after failover"
+      unset -f redis-cli sleep
+    End
+
+    It "can skip waiting after requesting failover"
+      FAILOVER_TIMEOUT_SECONDS=0
+
+      When call wait_until_local_master_steps_down
+      The status should be success
+      The output should include "Skipping wait for local node to step down after failover"
+      unset FAILOVER_TIMEOUT_SECONDS
+    End
+
+    It "selects a connected replica for the local master"
+      cluster_nodes=$(cat <<'EOF'
+master-id 10.0.0.1:6379@16379 myself,master - 0 0 1 connected 0-100
+replica-id 10.0.0.2:6379@16379,cluster-sz-1.instance-new.hc-new.us-central1.gcp.beef.cloud:6379 slave master-id 0 0 2 connected
+failed-replica 10.0.0.3:6379@16379 slave,fail master-id 0 0 3 connected
+EOF
+)
+
+      When call select_failover_replica_endpoint "master-id" "$cluster_nodes"
+      The status should be success
+      The output should eq "10.0.0.2:6379 cluster-sz-1:6379 cluster-sz-1.instance-new.hc-new.us-central1.gcp.beef.cloud:6379"
+    End
+
+    It "tries the replica IP before pod DNS and hostname"
+      calls_file="$temp_dir/redis_calls.log"
+      : > "$calls_file"
+      AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
+      TLS_CONNECTION_STRING=""
+
+      redis-cli() {
+        echo "$*" >> "$calls_file"
+        if [[ "$*" == *"-h 10.0.0.2"* ]]; then
+          printf 'OK\n'
+          return 0
+        fi
+        return 1
+      }
+      timeout() { shift; "$@"; }
+
+      When call request_forced_failover_on_replica "10.0.0.2:6379 cluster-sz-1:6379 cluster-sz-1.instance-new.hc-new.us-central1.gcp.beef.cloud:6379"
+      The status should be success
+      The output should include "Requesting forced failover on replica 10.0.0.2:6379"
+      The output should not include "Requesting forced failover on replica cluster-sz-1:6379"
+      The contents of file "$calls_file" should include "-h 10.0.0.2 -p 6379 -a testpass --no-auth-warning CLUSTER FAILOVER FORCE"
+      The contents of file "$calls_file" should not include "--connect-timeout"
+      unset -f redis-cli timeout
+    End
+
+    It "falls back from replica IP to pod DNS before hostname"
+      calls_file="$temp_dir/redis_calls.log"
+      : > "$calls_file"
+      AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
+      TLS_CONNECTION_STRING=""
+
+      redis-cli() {
+        echo "$*" >> "$calls_file"
+        if [[ "$*" == *"-h 10.0.0.2"* ]]; then
+          echo "Connection refused" >&2
+          return 1
+        fi
+        if [[ "$*" == *"-h cluster-sz-1 "* ]]; then
+          printf 'OK\n'
+          return 0
+        fi
+        return 1
+      }
+      timeout() { shift; "$@"; }
+
+      When call request_forced_failover_on_replica "10.0.0.2:6379 cluster-sz-1:6379 cluster-sz-1.instance-new.hc-new.us-central1.gcp.beef.cloud:6379"
+      The status should be success
+      The output should include "Requesting forced failover on replica 10.0.0.2:6379"
+      The output should include "Requesting forced failover on replica cluster-sz-1:6379"
+      The output should not include "Requesting forced failover on replica cluster-sz-1.instance-new.hc-new.us-central1.gcp.beef.cloud:6379"
+      The stderr should include "Connection refused"
+      The contents of file "$calls_file" should include "-h 10.0.0.2 -p 6379 -a testpass --no-auth-warning CLUSTER FAILOVER FORCE"
+      The contents of file "$calls_file" should include "-h cluster-sz-1 -p 6379 -a testpass --no-auth-warning CLUSTER FAILOVER FORCE"
+      The contents of file "$calls_file" should not include "--connect-timeout"
+      unset -f redis-cli timeout
+    End
+
+    It "requests forced failover on a healthy replica before shutdown"
+      calls_file="$temp_dir/redis_calls.log"
+      : > "$calls_file"
+      AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
+      TLS_CONNECTION_STRING=""
+
+      redis-cli() {
+        echo "$*" >> "$calls_file"
+        case "$*" in
+          *"CLUSTER INFO"*) printf 'cluster_state:ok\n' ;;
+          *"INFO replication"*) printf 'role:master\n' ;;
+          *"CLUSTER MYID"*) printf 'master-id\n' ;;
+          *"CLUSTER NODES"*) printf 'master-id 10.0.0.1:6379@16379 myself,master - 0 0 1 connected 0-100\nreplica-id 10.0.0.2:6379@16379 slave master-id 0 0 2 connected\n' ;;
+          *"CLUSTER FAILOVER FORCE"*) printf 'OK\n' ;;
+        esac
+      }
+      timeout() { shift; "$@"; }
+
+      wait_until_local_master_steps_down() {
+        echo "waited" >> "$calls_file"
+      }
+
+      When call force_failover_if_cluster_master
+      The status should be success
+      The output should include "Requesting forced failover on replica 10.0.0.2:6379"
+      The contents of file "$calls_file" should include "-h 10.0.0.2 -p 6379 -a testpass --no-auth-warning CLUSTER FAILOVER FORCE"
+      The contents of file "$calls_file" should not include "--connect-timeout"
+      The contents of file "$calls_file" should include "waited"
+      unset -f redis-cli timeout wait_until_local_master_steps_down
+    End
+
+    It "skips failover when the local node is already a replica"
+      calls_file="$temp_dir/redis_calls.log"
+      : > "$calls_file"
+
+      redis-cli() {
+        echo "$*" >> "$calls_file"
+        case "$*" in
+          *"CLUSTER INFO"*) printf 'cluster_state:ok\n' ;;
+          *"INFO replication"*) printf 'role:slave\n' ;;
+        esac
+      }
+
+      When call force_failover_if_cluster_master
+      The status should be success
+      The output should include "Local node is not master; skipping forced failover"
+      The contents of file "$calls_file" should not include "CLUSTER FAILOVER FORCE"
+      unset -f redis-cli
+    End
+  End
+
   Describe "cluster template defaults"
     It "sets cluster-node-timeout to 30000 in node.conf template"
       When call grep "^cluster-node-timeout " ./node.conf

@@ -1,14 +1,14 @@
 use k8s_openapi::api::core::v1::ConfigMap;
 use kube::{Api, Client};
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::env;
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::{Arc, Mutex, RwLock};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -32,7 +32,7 @@ data:
       "skip_all": false,
       "skip_liveness": false,
       "skip_readiness": false,
-      "skip_startup": true                  
+      "skip_startup": true
     }
 */
 
@@ -245,23 +245,25 @@ fn serve_connection(mut stream: TcpStream, is_sentinel: bool, redis_client: &red
             }
         }
         // Extract path from "GET /path HTTP/1.x"
-        request_line
-            .splitn(3, ' ')
-            .nth(1)
-            .unwrap_or("")
-            .to_owned()
+        request_line.splitn(3, ' ').nth(1).unwrap_or("").to_owned()
     };
 
     let (status, body) = match path.as_str() {
         "/liveness" => handle_health_check_with_config(
-            is_sentinel, check_handler_liveness, redis_client, "liveness",
+            is_sentinel,
+            check_handler_liveness,
+            redis_client,
+            "liveness",
         ),
         "/readiness" => handle_health_check_with_config(
-            is_sentinel, check_handler_readiness, redis_client, "readiness",
+            is_sentinel,
+            check_handler_readiness,
+            redis_client,
+            "readiness",
         ),
-        "/startup" => handle_health_check_with_config(
-            is_sentinel, |_, _| Ok(true), redis_client, "startup",
-        ),
+        "/startup" => {
+            handle_health_check_with_config(is_sentinel, |_, _| Ok(true), redis_client, "startup")
+        }
         _ => (404u16, "Not Found"),
     };
 
@@ -298,7 +300,12 @@ where
     let in_flight = IN_FLIGHT.fetch_add(1, Ordering::Relaxed);
     if in_flight >= max_in_flight() {
         IN_FLIGHT.fetch_sub(1, Ordering::Relaxed);
-        eprintln!("healthcheck: overloaded ({}/{} in-flight), short-circuiting /{}", in_flight, max_in_flight(), check_type);
+        eprintln!(
+            "healthcheck: overloaded ({}/{} in-flight), short-circuiting /{}",
+            in_flight,
+            max_in_flight(),
+            check_type
+        );
         // Liveness/startup: the process is alive, just busy — return OK so
         // kubelet does not kill us and make things worse.
         // Readiness: signal that we cannot serve right now.
@@ -423,14 +430,20 @@ fn parse_health_config_from_data(
     if let Some(json_config) = data.get("config.json") {
         match serde_json::from_str::<HealthConfig>(json_config) {
             Ok(parsed_config) => return Ok(parsed_config),
-            Err(e) => eprintln!("healthcheck: failed to parse config.json, falling back to individual keys: {}", e),
+            Err(e) => eprintln!(
+                "healthcheck: failed to parse config.json, falling back to individual keys: {}",
+                e
+            ),
         }
     }
 
     Ok(config)
 }
 
-fn check_handler_liveness(_: bool, redis_client: &redis::Client) -> Result<bool, redis::RedisError> {
+fn check_handler_liveness(
+    _: bool,
+    redis_client: &redis::Client,
+) -> Result<bool, redis::RedisError> {
     with_redis_conn(redis_client, |conn| {
         match redis::cmd("PING").query::<String>(conn) {
             Ok(value) => {
@@ -591,13 +604,36 @@ fn get_status_from_cluster_node_readiness(
     //   master_link_status:down    – replica not yet connected/synced to master
     // The node must not become ready while either condition holds.
     if db_info.contains("role:slave") {
-        return Ok(
-            db_info.contains("master_link_status:up")
-                && db_info.contains("master_sync_in_progress:0"),
-        );
+        return Ok(cluster_replica_sync_is_complete(db_info));
     }
 
     Ok(true)
+}
+
+fn cluster_replica_sync_is_complete(db_info: &str) -> bool {
+    db_info.contains("master_link_status:up")
+        && db_info.contains("master_sync_in_progress:0")
+        && replication_offsets_caught_up(db_info)
+}
+
+fn replication_offsets_caught_up(db_info: &str) -> bool {
+    match (
+        parse_u64_info_field(db_info, "slave_repl_offset"),
+        parse_u64_info_field(db_info, "master_repl_offset"),
+    ) {
+        (Some(slave_offset), Some(master_offset)) => slave_offset >= master_offset,
+        _ => true,
+    }
+}
+
+fn parse_u64_info_field(info: &str, field_name: &str) -> Option<u64> {
+    parse_info_field(info, field_name).and_then(|value| value.parse::<u64>().ok())
+}
+
+fn parse_info_field<'a>(info: &'a str, field_name: &str) -> Option<&'a str> {
+    let prefix = format!("{}:", field_name);
+    info.lines()
+        .find_map(|line| line.strip_prefix(&prefix).map(str::trim))
 }
 
 fn get_status_from_master_readiness(
@@ -630,4 +666,46 @@ fn resolve_host(host: &str) {
     }
 
     panic!("Failed to resolve host: {}", host);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const READY_REPLICA_INFO: &str = "role:slave\r\nloading:0\r\nmaster_link_status:up\r\nmaster_sync_in_progress:0\r\nslave_repl_offset:100\r\nmaster_repl_offset:100\r\n";
+
+    #[test]
+    fn cluster_replica_sync_is_complete_when_link_is_up_and_offsets_match() {
+        assert!(cluster_replica_sync_is_complete(READY_REPLICA_INFO));
+    }
+
+    #[test]
+    fn cluster_replica_sync_is_incomplete_when_replication_offset_lags() {
+        let info = READY_REPLICA_INFO.replace("slave_repl_offset:100", "slave_repl_offset:99");
+
+        assert!(!cluster_replica_sync_is_complete(&info));
+    }
+
+    #[test]
+    fn cluster_replica_sync_is_incomplete_when_master_link_is_down() {
+        let info = READY_REPLICA_INFO.replace("master_link_status:up", "master_link_status:down");
+
+        assert!(!cluster_replica_sync_is_complete(&info));
+    }
+
+    #[test]
+    fn cluster_replica_sync_is_incomplete_during_master_sync() {
+        let info =
+            READY_REPLICA_INFO.replace("master_sync_in_progress:0", "master_sync_in_progress:1");
+
+        assert!(!cluster_replica_sync_is_complete(&info));
+    }
+
+    #[test]
+    fn cluster_replica_sync_does_not_require_offsets_when_missing() {
+        let info =
+            "role:slave\r\nloading:0\r\nmaster_link_status:up\r\nmaster_sync_in_progress:0\r\n";
+
+        assert!(cluster_replica_sync_is_complete(info));
+    }
 }

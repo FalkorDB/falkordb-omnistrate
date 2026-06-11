@@ -850,6 +850,7 @@ EOF
           *"SENTINEL failover master"*) printf 'OK\n' ;;
         esac
       }
+      timeout() { shift; "$@"; }
 
       wait_until_local_replication_master_steps_down() {
         echo "waited" >> "$calls_file"
@@ -858,9 +859,10 @@ EOF
       When call force_failover_if_replication_master
       The status should be success
       The output should include "Requesting sentinel failover for master"
-      The contents of file "$calls_file" should include "-p 26379 --connect-timeout 2 -a testpass --no-auth-warning SENTINEL failover master"
+      The contents of file "$calls_file" should include "-p 26379 -a testpass --no-auth-warning SENTINEL failover master"
+      The contents of file "$calls_file" should not include "--connect-timeout"
       The contents of file "$calls_file" should include "waited"
-      unset -f redis-cli wait_until_local_replication_master_steps_down
+      unset -f redis-cli timeout wait_until_local_replication_master_steps_down
     End
   End
 End

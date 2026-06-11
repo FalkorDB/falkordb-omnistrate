@@ -563,7 +563,7 @@ request_forced_failover_on_replica() {
     attempt=1
     while (( attempt <= attempts )); do
       echo "Requesting forced failover on replica $replica_host:$replica_port (attempt $attempt/$attempts)"
-      if redis-cli -h "$replica_host" -p "$replica_port" --connect-timeout "$connect_timeout" $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER FAILOVER FORCE; then
+      if timeout "$connect_timeout" redis-cli -h "$replica_host" -p "$replica_port" $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER FAILOVER FORCE; then
         return 0
       fi
       attempt=$((attempt + 1))

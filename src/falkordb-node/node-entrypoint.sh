@@ -300,7 +300,7 @@ request_sentinel_failover() {
 
   while (( attempt <= attempts )); do
     echo "Requesting sentinel failover for $MASTER_NAME (attempt $attempt/$attempts)"
-    if redis-cli -p $SENTINEL_PORT --connect-timeout "$connect_timeout" $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL failover $MASTER_NAME; then
+    if timeout "$connect_timeout" redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL failover $MASTER_NAME; then
       return 0
     fi
     attempt=$((attempt + 1))

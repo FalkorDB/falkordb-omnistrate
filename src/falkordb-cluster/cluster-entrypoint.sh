@@ -506,7 +506,7 @@ is_local_cluster_master() {
 select_failover_replica_endpoint() {
   local master_id=$1
   local cluster_nodes=$2
-  local line node_addr flags replica_master link host port hostname_part base_addr
+  local line node_addr flags replica_master link host port hostname_part base_addr base_host base_port pod_name endpoints
 
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
@@ -524,21 +524,51 @@ select_failover_replica_endpoint() {
     fi
 
     base_addr=${node_addr%%,*}
+    base_host=${base_addr%%:*}
+    base_port=${base_addr#*:}
+    base_port=${base_port%%@*}
+    [[ -z "$base_port" || "$base_port" == "0" ]] && base_port=$NODE_PORT
+
     hostname_part=${node_addr#*,}
+    endpoints="$base_host:$base_port"
     if [[ "$hostname_part" != "$node_addr" && -n "$hostname_part" ]]; then
       host=${hostname_part%%:*}
       port=${hostname_part#*:}
       [[ "$port" == "$hostname_part" ]] && port=$NODE_PORT
-    else
-      host=${base_addr%%:*}
-      port=${base_addr#*:}
-      port=${port%%@*}
-      [[ -z "$port" || "$port" == "0" ]] && port=$NODE_PORT
+      pod_name=${host%%.*}
+      if [[ -n "$pod_name" && "$pod_name" != "$base_host" && "$pod_name" != "$host" ]]; then
+        endpoints="$endpoints $pod_name:$port"
+      fi
+      if [[ -n "$host" && "$host" != "$base_host" ]]; then
+        endpoints="$endpoints $host:$port"
+      fi
     fi
 
-    echo "$host:$port"
+    echo "$endpoints"
     return 0
   done <<<"$cluster_nodes"
+
+  return 1
+}
+
+request_forced_failover_on_replica() {
+  local replica_endpoints=$1
+  local attempts=${FAILOVER_REDIS_CLI_ATTEMPTS:-2}
+  local connect_timeout=${FAILOVER_REDIS_CLI_CONNECT_TIMEOUT:-2}
+  local attempt endpoint replica_host replica_port
+
+  for endpoint in $replica_endpoints; do
+    replica_host=${endpoint%:*}
+    replica_port=${endpoint##*:}
+    attempt=1
+    while (( attempt <= attempts )); do
+      echo "Requesting forced failover on replica $replica_host:$replica_port (attempt $attempt/$attempts)"
+      if redis-cli -h "$replica_host" -p "$replica_port" --connect-timeout "$connect_timeout" $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER FAILOVER FORCE; then
+        return 0
+      fi
+      attempt=$((attempt + 1))
+    done
+  done
 
   return 1
 }
@@ -570,7 +600,7 @@ wait_until_local_master_steps_down() {
 }
 
 force_failover_if_cluster_master() {
-  local cluster_info master_id cluster_nodes replica_endpoint replica_host replica_port
+  local cluster_info master_id cluster_nodes replica_endpoints
 
   if ! cluster_info=$(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER INFO 2>/dev/null); then
     echo "Cluster info unavailable; skipping forced failover"
@@ -596,15 +626,12 @@ force_failover_if_cluster_master() {
     return 0
   fi
 
-  if ! replica_endpoint=$(select_failover_replica_endpoint "$master_id" "$cluster_nodes"); then
+  if ! replica_endpoints=$(select_failover_replica_endpoint "$master_id" "$cluster_nodes"); then
     echo "No healthy replica found for forced failover"
     return 0
   fi
 
-  replica_host=${replica_endpoint%:*}
-  replica_port=${replica_endpoint##*:}
-  echo "Requesting forced failover on replica $replica_host:$replica_port"
-  if redis-cli -h "$replica_host" -p "$replica_port" $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING CLUSTER FAILOVER FORCE; then
+  if request_forced_failover_on_replica "$replica_endpoints"; then
     wait_until_local_master_steps_down || true
   else
     echo "Forced failover command failed; continuing shutdown"

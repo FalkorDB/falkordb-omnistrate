@@ -942,7 +942,60 @@ EOF
 
       When call select_failover_replica_endpoint "master-id" "$cluster_nodes"
       The status should be success
-      The output should eq "cluster-sz-1.instance-new.hc-new.us-central1.gcp.beef.cloud:6379"
+      The output should eq "10.0.0.2:6379 cluster-sz-1:6379 cluster-sz-1.instance-new.hc-new.us-central1.gcp.beef.cloud:6379"
+    End
+
+    It "tries the replica IP before pod DNS and hostname"
+      calls_file="$temp_dir/redis_calls.log"
+      : > "$calls_file"
+      AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
+      TLS_CONNECTION_STRING=""
+
+      redis-cli() {
+        echo "$*" >> "$calls_file"
+        if [[ "$*" == *"-h 10.0.0.2"* ]]; then
+          printf 'OK\n'
+          return 0
+        fi
+        return 1
+      }
+
+      When call request_forced_failover_on_replica "10.0.0.2:6379 cluster-sz-1:6379 cluster-sz-1.instance-new.hc-new.us-central1.gcp.beef.cloud:6379"
+      The status should be success
+      The output should include "Requesting forced failover on replica 10.0.0.2:6379"
+      The output should not include "Requesting forced failover on replica cluster-sz-1:6379"
+      The contents of file "$calls_file" should include "-h 10.0.0.2 -p 6379 --connect-timeout 2 -a testpass --no-auth-warning CLUSTER FAILOVER FORCE"
+      unset -f redis-cli
+    End
+
+    It "falls back from replica IP to pod DNS before hostname"
+      calls_file="$temp_dir/redis_calls.log"
+      : > "$calls_file"
+      AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
+      TLS_CONNECTION_STRING=""
+
+      redis-cli() {
+        echo "$*" >> "$calls_file"
+        if [[ "$*" == *"-h 10.0.0.2"* ]]; then
+          echo "Connection refused" >&2
+          return 1
+        fi
+        if [[ "$*" == *"-h cluster-sz-1 "* ]]; then
+          printf 'OK\n'
+          return 0
+        fi
+        return 1
+      }
+
+      When call request_forced_failover_on_replica "10.0.0.2:6379 cluster-sz-1:6379 cluster-sz-1.instance-new.hc-new.us-central1.gcp.beef.cloud:6379"
+      The status should be success
+      The output should include "Requesting forced failover on replica 10.0.0.2:6379"
+      The output should include "Requesting forced failover on replica cluster-sz-1:6379"
+      The output should not include "Requesting forced failover on replica cluster-sz-1.instance-new.hc-new.us-central1.gcp.beef.cloud:6379"
+      The stderr should include "Connection refused"
+      The contents of file "$calls_file" should include "-h 10.0.0.2 -p 6379 --connect-timeout 2 -a testpass --no-auth-warning CLUSTER FAILOVER FORCE"
+      The contents of file "$calls_file" should include "-h cluster-sz-1 -p 6379 --connect-timeout 2 -a testpass --no-auth-warning CLUSTER FAILOVER FORCE"
+      unset -f redis-cli
     End
 
     It "requests forced failover on a healthy replica before shutdown"
@@ -969,7 +1022,7 @@ EOF
       When call force_failover_if_cluster_master
       The status should be success
       The output should include "Requesting forced failover on replica 10.0.0.2:6379"
-      The contents of file "$calls_file" should include "-h 10.0.0.2 -p 6379 -a testpass --no-auth-warning CLUSTER FAILOVER FORCE"
+      The contents of file "$calls_file" should include "-h 10.0.0.2 -p 6379 --connect-timeout 2 -a testpass --no-auth-warning CLUSTER FAILOVER FORCE"
       The contents of file "$calls_file" should include "waited"
       unset -f redis-cli wait_until_local_master_steps_down
     End

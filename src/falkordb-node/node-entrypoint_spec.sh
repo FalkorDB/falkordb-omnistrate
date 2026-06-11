@@ -791,4 +791,76 @@ EOF
       The output should include "not set or error"
     End
   End
+
+  Describe "force_failover_if_replication_master()"
+    It "uses a short default wait budget before persistence shutdown"
+      redis-cli() { printf 'role:master\n'; }
+      sleep() {
+        SECONDS=$((SECONDS + 5))
+      }
+
+      When call wait_until_local_replication_master_steps_down
+      The status should be failure
+      The output should include "Timed out waiting for local node to step down after sentinel failover"
+      unset -f redis-cli sleep
+    End
+
+    It "can skip waiting after requesting sentinel failover"
+      FAILOVER_TIMEOUT_SECONDS=0
+
+      When call wait_until_local_replication_master_steps_down
+      The status should be success
+      The output should include "Skipping wait for local node to step down after sentinel failover"
+      unset FAILOVER_TIMEOUT_SECONDS
+    End
+
+    It "skips when sentinel is not running"
+      RUN_SENTINEL=0
+
+      When call force_failover_if_replication_master
+      The status should be success
+      The output should include "Sentinel is not running; skipping forced replication failover"
+    End
+
+    It "skips when the local node is already a replica"
+      RUN_SENTINEL=1
+      AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
+      TLS_CONNECTION_STRING=""
+      redis-cli() { printf 'role:slave\n'; }
+
+      When call force_failover_if_replication_master
+      The status should be success
+      The output should include "Local node is not master; skipping forced replication failover"
+      unset -f redis-cli
+    End
+
+    It "requests sentinel failover before waiting for local master to step down"
+      calls_file="$temp_dir/redis_calls.log"
+      : > "$calls_file"
+      RUN_SENTINEL=1
+      SENTINEL_PORT=26379
+      MASTER_NAME="master"
+      AUTH_CONNECTION_STRING="-a testpass --no-auth-warning"
+      TLS_CONNECTION_STRING=""
+
+      redis-cli() {
+        echo "$*" >> "$calls_file"
+        case "$*" in
+          *"INFO replication"*) printf 'role:master\n' ;;
+          *"SENTINEL failover master"*) printf 'OK\n' ;;
+        esac
+      }
+
+      wait_until_local_replication_master_steps_down() {
+        echo "waited" >> "$calls_file"
+      }
+
+      When call force_failover_if_replication_master
+      The status should be success
+      The output should include "Requesting sentinel failover for master"
+      The contents of file "$calls_file" should include "-p 26379 --connect-timeout 2 -a testpass --no-auth-warning SENTINEL failover master"
+      The contents of file "$calls_file" should include "waited"
+      unset -f redis-cli wait_until_local_replication_master_steps_down
+    End
+  End
 End

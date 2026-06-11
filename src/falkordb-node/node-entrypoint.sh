@@ -257,29 +257,77 @@ dump_conf_files() {
   fi
 }
 
-remove_master_from_group() {
-  # If it's master and sentinel is running, trigger and wait for failover
-  if [[ $IS_REPLICA -eq 0 && $RUN_SENTINEL -eq 1 ]]; then
-    echo "Removing master from sentinel"
-    redis-cli -p $SENTINEL_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL failover $MASTER_NAME
-    sleep 5
-    tries=5
-    while true; do
-      master_info=$(redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication | grep role)
-      if [[ $master_info == *"role:master"* ]]; then
-        echo "Master is still alive"
-        sleep 2
-      else
-        echo "Master is down"
-        break
-      fi
-      tries=$((tries - 1))
-      if [[ $tries -eq 0 ]]; then
-        echo "Master did not failover"
-        break
-      fi
-    done
+is_local_replication_master() {
+  local info
+
+  if ! info=$(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING INFO replication 2>/dev/null); then
+    return 1
   fi
+
+  [[ "$info" =~ role:master ]]
+}
+
+wait_until_local_replication_master_steps_down() {
+  local timeout_seconds=${FAILOVER_TIMEOUT_SECONDS:-5}
+  local deadline=$((SECONDS + timeout_seconds))
+  local info
+
+  if (( timeout_seconds <= 0 )); then
+    echo "Skipping wait for local node to step down after sentinel failover"
+    return 0
+  fi
+
+  while (( SECONDS < deadline )); do
+    if ! info=$(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING INFO replication 2>/dev/null); then
+      echo "Local node stopped responding while waiting for sentinel failover"
+      return 0
+    fi
+    if [[ ! "$info" =~ role:master ]]; then
+      echo "Local node is no longer master"
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "Timed out waiting for local node to step down after sentinel failover"
+  return 1
+}
+
+request_sentinel_failover() {
+  local attempts=${FAILOVER_REDIS_CLI_ATTEMPTS:-2}
+  local connect_timeout=${FAILOVER_REDIS_CLI_CONNECT_TIMEOUT:-2}
+  local attempt=1
+
+  while (( attempt <= attempts )); do
+    echo "Requesting sentinel failover for $MASTER_NAME (attempt $attempt/$attempts)"
+    if redis-cli -p $SENTINEL_PORT --connect-timeout "$connect_timeout" $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SENTINEL failover $MASTER_NAME; then
+      return 0
+    fi
+    attempt=$((attempt + 1))
+  done
+
+  return 1
+}
+
+force_failover_if_replication_master() {
+  if [[ $RUN_SENTINEL -ne 1 ]]; then
+    echo "Sentinel is not running; skipping forced replication failover"
+    return 0
+  fi
+  if ! is_local_replication_master; then
+    echo "Local node is not master; skipping forced replication failover"
+    return 0
+  fi
+
+  if request_sentinel_failover; then
+    wait_until_local_replication_master_steps_down || true
+  else
+    echo "Sentinel failover command failed; continuing shutdown"
+  fi
+}
+
+remove_master_from_group() {
+  force_failover_if_replication_master
 }
 
 get_sentinels_list() {
@@ -322,13 +370,10 @@ handle_sigterm() {
   echo "Stopping FalkorDB"
 
   if [[ $RUN_NODE -eq 1 && ! -z $falkordb_pid ]]; then
-    #DO NOT USE is_replica FUNCTION
-    role=$(redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING info replication | grep role)
-    if [[ "$role" =~ ^role:master ]]; then IS_REPLICA=0; fi
+    force_failover_if_replication_master
     echo "Running BGREWRITEAOF before shutdown"
     redis-cli -p $NODE_PORT $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING BGREWRITEAOF
     wait_for_bgrewrite_to_finish
-    remove_master_from_group
     redis-cli $AUTH_CONNECTION_STRING $TLS_CONNECTION_STRING SHUTDOWN
   fi
 

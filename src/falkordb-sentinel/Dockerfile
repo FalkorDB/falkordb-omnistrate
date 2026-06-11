@@ -1,4 +1,4 @@
-ARG FALKORDB_VERSION=v4.18.7
+ARG FALKORDB_VERSION=v4.18.10
 
 FROM falkordb/falkordb-server:$FALKORDB_VERSION
 
@@ -12,7 +12,7 @@ RUN mkdir -p /usr/share/debconf && \
     apt-mark unhold tzdata && \
     ln -sf /bin/true /usr/sbin/update-rc.d && \
     apt-get install -y --no-install-recommends bash curl jq openssl supervisor ca-certificates && \
-    apt-get install -y --only-upgrade libgnutls30t64 && \
+    apt-get install -y --only-upgrade libgnutls30t64 libssl3t64 openssl-provider-legacy && \
     rm -rf /var/lib/apt/lists/*
 
 ADD https://secure.globalsign.com/cacert/root-r1.crt /usr/local/share/ca-certificates/GlobalSign_Root_CA_R1.crt

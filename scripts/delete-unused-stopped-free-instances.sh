@@ -1,4 +1,18 @@
 #!/bin/sh
+set -e
+
+OMNISTRATE_API_BASE_URL="https://api.omnistrate.cloud/2022-09-01-00"
+OMNISTRATE_INTERNAL_SERVICE_ID="${OMNISTRATE_INTERNAL_SERVICE_ID:-s-KgFDwg5vBS}"
+OMNISTRATE_INTERNAL_PROD_ENVIRONMENT="${OMNISTRATE_INTERNAL_PROD_ENVIRONMENT:-se-1iyXYFtYfA}"
+BREVO_API_URL="https://api.brevo.com/v3/smtp/email"
+
+auth_token=""
+if [ -n "${OMNISTRATE_USERNAME:-}" ] && [ -n "${OMNISTRATE_PASSWORD:-}" ]; then
+  auth_token=$(curl -sS "${OMNISTRATE_API_BASE_URL}/signin" \
+    -H "Content-Type: application/json" \
+    --data-raw "{\"email\":\"${OMNISTRATE_USERNAME}\",\"password\":\"${OMNISTRATE_PASSWORD}\"}" \
+    | jq -r '.jwtToken // empty')
+fi
 
 instances=$(omnistrate-ctl instance list -f service:FalkorDB,environment:Prod,plan:"FalkorDB Free",status:STOPPED -o json | jq -r '.[].instance_id')
 
@@ -6,13 +20,47 @@ for instance in $instances; do
   described_instance=$(omnistrate-ctl instance describe "$instance" -o json)
   last_modified=$(echo "$described_instance" | jq -r '.consumptionResourceInstanceResult.last_modified_at')
   status=$(echo "$described_instance" | jq -r '.consumptionResourceInstanceResult.status')
+  deletion_protection=$(echo "$described_instance" | jq -r '.consumptionResourceInstanceResult.resourceInstanceMetadata.deletionProtection // false')
   # Convert ISO 8601 timestamp to epoch time (BusyBox date supports -D flag)
   last_modified_epoch=$(date -D "%Y-%m-%dT%H:%M:%SZ" -d "$last_modified" +"%s")
   current_epoch=$(date +"%s")
   diff=$(( (current_epoch - last_modified_epoch) / 86400 ))
   if [ "$diff" -ge 7 ] && [ "$status" = "STOPPED" ]; then
+    if [ "$deletion_protection" = "true" ]; then
+      if [ -z "$auth_token" ]; then
+        echo "Deletion protection is enabled for $instance but no API token is available; skipping."
+        continue
+      fi
+
+      echo "Disabling deletion protection for instance: $instance"
+      curl -sS --fail "${OMNISTRATE_API_BASE_URL}/fleet/service/${OMNISTRATE_INTERNAL_SERVICE_ID}/environment/${OMNISTRATE_INTERNAL_PROD_ENVIRONMENT}/instance/${instance}/metadata" \
+        -X PATCH \
+        -H "Authorization: Bearer ${auth_token}" \
+        -H "Content-Type: application/json" \
+        --data-raw '{"deletionProtection":false}' >/dev/null
+    fi
+
     echo "Deleting unused stopped free instance: $instance (last modified $diff days ago - $last_modified)"
     omnistrate-ctl instance delete "$instance" --yes
+
+    # Send termination email to subscription owners via Brevo (best-effort)
+    if [ -n "${BREVO_API_KEY:-}" ] && [ -n "$auth_token" ]; then
+      subscription_id=$(echo "$described_instance" | jq -r '.subscriptionId // empty')
+      if [ -n "$subscription_id" ]; then
+        users_response=$(curl -sS "${OMNISTRATE_API_BASE_URL}/fleet/service/${OMNISTRATE_INTERNAL_SERVICE_ID}/environment/${OMNISTRATE_INTERNAL_PROD_ENVIRONMENT}/users?subscriptionId=${subscription_id}" \
+          -H "Authorization: Bearer ${auth_token}" \
+          -H "Content-Type: application/json") || true
+        to_array=$(echo "$users_response" | jq -c '[.users[]? | {email: .email, name: .userName}]' 2>/dev/null) || true
+        if [ -n "$to_array" ] && [ "$to_array" != "[]" ]; then
+          echo "Sending termination email to: $(echo "$to_array" | jq -r '.[].email' | tr '\n' ', ')"
+          curl -sS "$BREVO_API_URL" \
+            -X POST \
+            -H "api-key: ${BREVO_API_KEY}" \
+            -H "Content-Type: application/json" \
+            --data-raw "{\"templateId\":2,\"to\":${to_array},\"params\":{\"instance_id\":\"${instance}\"}}" >/dev/null || echo "Warning: failed to send termination email for instance $instance"
+        fi
+      fi
+    fi
   else
     echo "Instance $instance was modified $diff days ago. Skipping."
   fi

@@ -34,7 +34,7 @@ jobs:
             ref_name: "FalkorDB Free"
             resource_key: "free"
             instance_name_prefix: "deploy-free-aws"
-            instance_type: "t2.medium"
+            instance_type: "AWS 2vCPU, 4GB"
             cloud_provider: "aws"
             cloud_region: "us-east-2"
             tls: "false"
@@ -43,7 +43,7 @@ jobs:
             ref_name: "FalkorDB Free"
             resource_key: "free"
             instance_name_prefix: "deploy-free-gcp"
-            instance_type: "e2-medium"
+            instance_type: "GCP 2vCPU, 4GB"
             cloud_provider: "gcp"
             cloud_region: "us-central1"
             tls: "false"
@@ -52,7 +52,7 @@ jobs:
             ref_name: "FalkorDB Startup"
             resource_key: "standalone"
             instance_name_prefix: "deploy-startup"
-            instance_type: "t2.medium"
+            instance_type: "AWS 2vCPU, 4GB"
             cloud_provider: "aws"
             cloud_region: "us-east-2"
             tls: "true"
@@ -61,7 +61,7 @@ jobs:
             ref_name: "FalkorDB Pro"
             resource_key: "standalone"
             instance_name_prefix: "deploy-pro"
-            instance_type: "m6i.large"
+            instance_type: "AWS 2vCPU, 8GB"
             cloud_provider: "aws"
             cloud_region: "us-east-2"
             tls: "true"
@@ -114,8 +114,8 @@ jobs:
           [[ "${{ matrix.tls }}" == "true" ]]      && EXTRA_ARGS+=(--tls)
 
           poetry run python -u tests/test_deploy_instance.py \
-            "${{ secrets.OMNISTRATE_USERNAME }}" \
-            "${{ secrets.OMNISTRATE_PASSWORD }}" \
+            "${{ secrets.OMNISTRATE_API_KEY_USERNAME}}" \
+            "${{ secrets.OMNISTRATE_API_KEY }}" \
             ${{ matrix.cloud_provider }} ${{ matrix.cloud_region }} \
             --service-id     "$SERVICE_ID" \
             --environment-id "$ENVIRONMENT_ID" \

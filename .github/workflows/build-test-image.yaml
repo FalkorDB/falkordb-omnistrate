@@ -43,8 +43,8 @@ env:
   HEALTHCHECK_IMAGE_NAME: falkordb-cloud-healthcheck
   FALKORDB_EXPORTER_IMAGE_NAME: falkordb-cloud-exporter
   FALKORDB_SENTINEL_IMAGE_NAME: falkordb-cloud-sentinel
+  FALKORDB_VERSION: v4.18.10
   OOM_GUARD_IMAGE_NAME: falkordb-cloud-oom-guard
-  FALKORDB_VERSION: v4.18.7
   FREE_PLAN_NAME: free-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
   PRO_PLAN_NAME: pro-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
   ENTERPRISE_PLAN_NAME: enterprise-${{ contains(github.ref, 'refs/tags/v') && 'main' || github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
@@ -108,6 +108,7 @@ jobs:
         run: |
           export PATH="$HOME/.local/lib/shellspec:$PATH"
           shellspec src/falkordb-cluster/cluster-entrypoint_spec.sh \
+                    src/falkordb-exporter/exporter-entrypoint_spec.sh \
                     src/falkordb-node/node-entrypoint_spec.sh \
                     src/falkordb-sentinel/sentinel-entrypoint_spec.sh
 
@@ -351,8 +352,8 @@ jobs:
         uses: ./.github/actions/update-omnistrate-plan
         id: update_omnistrate_plan
         with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
+          password: ${{ secrets.OMNISTRATE_API_KEY }}
           file: compose/${{ matrix.plans.file }}
           service-name: ${{ matrix.plans.service-name }}
           environment: testing
@@ -390,8 +391,8 @@ jobs:
         uses: ./.github/actions/create-omnistrate-custom-network
         id: create_custom_network_gcp
         with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
+          password: ${{ secrets.OMNISTRATE_API_KEY }}
           cloud_provider: gcp
           region: us-central1
           cidr: "73.0.0.0/16"
@@ -401,8 +402,8 @@ jobs:
         uses: ./.github/actions/create-omnistrate-custom-network
         id: create_custom_network_aws
         with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
+          password: ${{ secrets.OMNISTRATE_API_KEY }}
           cloud_provider: aws
           region: us-east-2
           cidr: "73.0.0.0/16"
@@ -412,8 +413,8 @@ jobs:
         uses: ./.github/actions/create-omnistrate-custom-network
         id: create_custom_network_azure
         with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
+          password: ${{ secrets.OMNISTRATE_API_KEY }}
           cloud_provider: azure
           region: eastus2
           cidr: "73.0.0.0/16"
@@ -660,8 +661,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: "AWS 2 vCPU, 4 GB"
-            newInstanceType: "AWS 2 vCPU, 8 GB"
+            instanceType: "AWS 2vCPU, 4GB"
+            newInstanceType: "AWS 2vCPU, 8GB"
             maxmemory: "2GB"
 
           - name: "[19] pro/SingleZone - AWS/us-east-2 - Grouped"
@@ -672,8 +673,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: "AWS 2 vCPU, 4 GB"
-            newInstanceType: "AWS 2 vCPU, 8 GB"
+            instanceType: "AWS 2vCPU, 4GB"
+            newInstanceType: "AWS 2vCPU, 8GB"
             maxmemory: "2GB"
 
           - name: "[20] pro/MultiZone - AWS/us-east-2 - Grouped"
@@ -684,8 +685,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: multi-Zone
-            instanceType: "AWS 2 vCPU, 4 GB"
-            newInstanceType: "AWS 2 vCPU, 8 GB"
+            instanceType: "AWS 2vCPU, 4GB"
+            newInstanceType: "AWS 2vCPU, 8GB"
             maxmemory: "2GB"
 
           ######################## PRIVATE • GCP (INTERNAL) ########################
@@ -698,7 +699,7 @@ jobs:
             cloudProvider: gcp
             cloudRegion: us-central1
             resourceKey: multi-Zone
-            instanceType: "GCP 2 vCPU, 4 GB"
+            instanceType: "GCP 2vCPU, 4GB"
             maxmemory: "2GB"
             networkType: INTERNAL
           ######################## PRO • AWS (TLS) ########################
@@ -710,8 +711,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: "AWS 2 vCPU, 4 GB"
-            newInstanceType: "AWS 2 vCPU, 8 GB"
+            instanceType: "AWS 2vCPU, 4GB"
+            newInstanceType: "AWS 2vCPU, 8GB"
             maxmemory: "2GB"
             tls: true
           - name: "[26] pro/SingleZone/TLS - AWS/us-east-2 - Grouped"
@@ -722,8 +723,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: "AWS 2 vCPU, 4 GB"
-            newInstanceType: "AWS 2 vCPU, 8 GB"
+            instanceType: "AWS 2vCPU, 4GB"
+            newInstanceType: "AWS 2vCPU, 8GB"
             maxmemory: "2GB"
             tls: true
     steps:
@@ -776,8 +777,8 @@ jobs:
           SERVICE_ID: ${{ env.SERVICE_ID }}
           ENVIRONMENT_ID: ${{ env.ENVIRONMENT_ID }}
           SUBSCRIPTION_ID: ${{ env.SUBSCRIPTION_ID }}
-          OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
-          OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
+          OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
+          OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_API_KEY }}
         run: |
           set -euo pipefail
 
@@ -904,7 +905,7 @@ jobs:
   #         REF_NAME: ${{ matrix.instances.tierName }}
   #       run: |
   #         export PATH="~/.local/bin:$PATH"
-  #         poetry run python -u ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_USERNAME }} ${{ secrets.OMNISTRATE_PASSWORD }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
+  #         poetry run python -u ./tests/${{ matrix.instances.testFile }} ${{ secrets.OMNISTRATE_API_KEY_USERNAME}} ${{ secrets.OMNISTRATE_API_KEY }} ${{ env.CLOUD_PROVIDER }} ${{ env.CLOUD_REGION }} --service-id ${{ env.SERVICE_ID }} --environment-id ${{ env.ENVIRONMENT_ID }} ${{ env.extraParams }}
 
   delete-networks:
     runs-on: ubuntu-latest
@@ -920,24 +921,24 @@ jobs:
         uses: ./.github/actions/delete-omnistrate-custom-network
         continue-on-error: true
         with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
+          password: ${{ secrets.OMNISTRATE_API_KEY }}
           custom_network_name: ${{ env.GCP_NETWORK_NAME }}
 
       - name: Delete Omnistrate Custom Network - AWS
         continue-on-error: true
         uses: ./.github/actions/delete-omnistrate-custom-network
         with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
+          password: ${{ secrets.OMNISTRATE_API_KEY }}
           custom_network_name: ${{ env.AWS_NETWORK_NAME }}
 
       - name: Delete Omnistrate Custom Network - AZURE
         continue-on-error: true
         uses: ./.github/actions/delete-omnistrate-custom-network
         with:
-          username: ${{ secrets.OMNISTRATE_USERNAME }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
+          username: ${{ secrets.OMNISTRATE_API_KEY_USERNAME}}
+          password: ${{ secrets.OMNISTRATE_API_KEY }}
           custom_network_name: ${{ env.AZURE_NETWORK_NAME }}
 
       - name: Delete secrets directory

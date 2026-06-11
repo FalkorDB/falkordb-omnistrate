@@ -114,28 +114,29 @@ jobs:
 
   build-and-push:
     needs: shellspec
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-22.04-arm' || 'ubuntu-latest' }}
     permissions:
       contents: read
       security-events: write
     strategy:
       fail-fast: false
       matrix:
-        include:
+        platform: [amd64, arm64]
+        image:
           - dockerfile: ./src/falkordb-node/Dockerfile
-            image-name: falkordb-node
+            image_name: falkordb-node
           - dockerfile: ./src/falkordb-cluster/Dockerfile
-            image-name: falkordb-cluster
+            image_name: falkordb-cluster
           - dockerfile: ./src/falkordb-cluster-rebalance/Dockerfile
-            image-name: falkordb-cluster-rebalance
+            image_name: falkordb-cluster-rebalance
           - dockerfile: ./src/healthcheck_rs/Dockerfile
-            image-name: falkordb-cloud-healthcheck
+            image_name: falkordb-cloud-healthcheck
           - dockerfile: ./src/falkordb-exporter/Dockerfile
-            image-name: falkordb-cloud-exporter
+            image_name: falkordb-cloud-exporter
           - dockerfile: ./src/falkordb-sentinel/Dockerfile
-            image-name: falkordb-cloud-sentinel
+            image_name: falkordb-cloud-sentinel
           - dockerfile: ./src/oom-guard/Dockerfile
-            image-name: falkordb-cloud-oom-guard
+            image_name: falkordb-cloud-oom-guard
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -155,18 +156,20 @@ jobs:
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           build-args: FALKORDB_VERSION=${{ env.FALKORDB_VERSION }}
+          platforms: linux/${{ matrix.platform }}
           context: .
-          file: ${{ matrix.dockerfile }}
+          file: ${{ matrix.image.dockerfile }}
           push: true
-          tags: falkordb/${{ matrix.image-name }}:dev-${{ github.event.head_commit.id || github.run_id }}
-          cache-from: type=gha,scope=${{ matrix.image-name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image-name }}
+          tags: falkordb/${{ matrix.image.image_name }}:dev-${{ github.event.head_commit.id || github.run_id }}-${{ matrix.platform }}
+          cache-from: type=gha,scope=${{ matrix.image.image_name }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.image_name }}-${{ matrix.platform }}
 
       - name: Scan image with Grype
         uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v6
         id: grype
+        if: matrix.platform == 'amd64'
         with:
-          image: falkordb/${{ matrix.image-name }}:dev-${{ github.event.head_commit.id || github.run_id }}
+          image: falkordb/${{ matrix.image.image_name }}:dev-${{ github.event.head_commit.id || github.run_id }}-${{ matrix.platform }}
           fail-build: true
           severity-cutoff: high
           output-format: sarif
@@ -175,13 +178,37 @@ jobs:
 
       - name: Upload Grype SARIF report
         uses: github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc # v3
-        if: always()
+        if: always() && matrix.platform == 'amd64'
         with:
           sarif_file: ${{ steps.grype.outputs.sarif }}
-          category: grype-${{ matrix.image-name }}
+          category: grype-${{ matrix.image.image_name }}-${{ matrix.platform }}
+
+  create-image-manifest:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Create and push manifest lists
+        run: |
+          TAG="dev-${{ github.event.head_commit.id || github.run_id }}"
+          images=("${{ env.NODE_IMAGE_NAME }}" "${{ env.CLUSTER_IMAGE_NAME }}" "${{ env.CLUSTER_REBALANCE_IMAGE_NAME }}" "${{ env.HEALTHCHECK_IMAGE_NAME }}" "${{ env.FALKORDB_EXPORTER_IMAGE_NAME }}" "${{ env.FALKORDB_SENTINEL_IMAGE_NAME }}" "${{ env.OOM_GUARD_IMAGE_NAME }}")
+          for image in "${images[@]}"; do
+            docker buildx imagetools create \
+              --tag falkordb/$image:${TAG} \
+              falkordb/$image:${TAG}-amd64 \
+              falkordb/$image:${TAG}-arm64
+          done
 
   omnistrate-update-plans:
-    needs: build-and-push
+    needs: create-image-manifest
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -419,8 +446,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: standalone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "t4g.medium"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -432,8 +459,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: single-Zone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "t4g.medium"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -445,8 +472,8 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: multi-Zone
-            instanceType: "t2.medium"
-            newInstanceType: "m6i.large"
+            instanceType: "t4g.medium"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -458,10 +485,10 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Single-Zone
-            instanceType: "t2.medium"
+            instanceType: "t4g.medium"
             hostCount: "6"
             clusterReplicas: "1"
-            newInstanceType: "m6i.large"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -473,10 +500,10 @@ jobs:
             cloudProvider: aws
             cloudRegion: us-east-2
             resourceKey: cluster-Multi-Zone
-            instanceType: "t2.medium"
+            instanceType: "t4g.medium"
             hostCount: "6"
             clusterReplicas: "1"
-            newInstanceType: "m6i.large"
+            newInstanceType: "m6g.large"
             maxmemory: "2GB"
             customNetwork: aws-network-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'schedule' || github.ref_name }}
 
@@ -749,7 +776,7 @@ jobs:
   #           subscriptionId: sub-GJPV3NoNC0
   #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
   #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-  #           extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-upgrade' --instance-description 'test-standalone-upgrade' --instance-type '"t2.medium"' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+  #           extraParams: "--resource-key 'standalone' --instance-name 'test-standalone-upgrade' --instance-description 'test-standalone-upgrade' --instance-type '"t4g.medium"' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
   #         - name: PRO/SingleZone - AWS/us-east-2 - Upgrade Version
   #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
   #           testFile: test_upgrade_version.py
@@ -759,7 +786,7 @@ jobs:
   #           subscriptionId: sub-GJPV3NoNC0
   #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
   #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-  #           extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-upgrade' --instance-description 'test-replication-upgrade' --instance-type '"t2.medium"' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
+  #           extraParams: "--resource-key 'single-Zone' --instance-name 'test-replication-upgrade' --instance-description 'test-replication-upgrade' --instance-type '"t4g.medium"' --storage-size '30' --rdb-config 'medium' --aof-config 'always'"
   #         - name: PRO/ClusterSingleZone - AWS/us-east-2 - Upgrade Version
   #           if: ${{ contains(github.ref, 'refs/tags/v') || contains(github.ref, 'main') }}
   #           testFile: test_upgrade_version.py
@@ -769,7 +796,7 @@ jobs:
   #           subscriptionId: sub-GJPV3NoNC0
   #           serviceId: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
   #           environmentId: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT}}
-  #           extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-upgrade' --instance-description 'test-cluster-upgrade' --instance-type '"t2.medium"' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
+  #           extraParams: "--resource-key 'cluster-Single-Zone' --instance-name 'test-cluster-upgrade' --instance-description 'test-cluster-upgrade' --instance-type '"t4g.medium"' --storage-size '30' --rdb-config 'medium' --aof-config 'always' --cluster-replicas '1' --host-count '6'"
 
   #   steps:
   #     - name: Checkout

@@ -1,6 +1,15 @@
-FROM debian:bookworm-slim
+FROM rust:1-slim-bookworm AS builder
 
-ARG TARGETARCH
+# openssl is vendored (statically linked); only need C toolchain + cmake to build it from source.
+RUN apt-get update -y && apt-get install -y pkg-config build-essential cmake libtool
+
+WORKDIR /oom-guard
+
+COPY src/oom-guard/ /oom-guard
+
+RUN cargo build --release
+
+FROM debian:bookworm-slim
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update -y \
 	&& apt-get upgrade -y \
@@ -9,7 +18,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update -y \
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
 
-COPY src/oom-guard/bin/oom-guard-${TARGETARCH} /usr/local/bin/oom-guard
-RUN chmod +x /usr/local/bin/oom-guard
+COPY --from=builder /oom-guard/target/release/oom-guard /usr/local/bin/oom-guard
 
 ENTRYPOINT ["/usr/local/bin/oom-guard"]
